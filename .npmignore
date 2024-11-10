@@ -1,0 +1,6 @@
+example/
+tests/
+node_modules/
+*.log
+src/ 
+.DS_Store

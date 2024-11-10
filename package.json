@@ -1,0 +1,26 @@
+{
+	"name": "absolute-auth",
+	"description": "An authorization library for absolutejs",
+	"main": "dist/index.js",
+	"version": "0.1.0",
+	"scripts": {
+		"build": "bun build src/index.ts --outdir dist",
+		"test": "echo \"Error: no test specified\" && exit 1",
+		"format": "prettier --write \"./**/*.{js,jsx,ts,tsx,css,json}\"",
+		"dev": "bun run --watch example/server.ts"
+	},
+	"dependencies": {
+		"arctic": "^2.2.2",
+		"elysia": "^1.1.24"
+	},
+	"devDependencies": {
+		"@elysiajs/static": "^1.1.1",
+		"@neondatabase/serverless": "^0.10.3",
+		"@types/bun": "latest",
+		"@types/react": "^18.3.12",
+		"@types/react-dom": "^18.3.1",
+		"drizzle-orm": "^0.36.1",
+		"react-dom": "^18.3.1"
+	},
+	"module": "src/backend/server.ts"
+}
