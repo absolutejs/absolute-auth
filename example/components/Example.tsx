@@ -24,9 +24,7 @@ export const Example = () => {
 					setModalOpen={setModalOpen}
 				/>
 				<main style={mainDefault}>
-					<div
-						style={contentStyle}
-					>
+					<div style={contentStyle}>
 						<h1>Welcome to Absolute Auth Example</h1>
 						<p>Log in or sign up to test the authentication flow</p>
 						<p>

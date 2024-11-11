@@ -1,7 +1,12 @@
 import { useState } from 'react';
 import { useAuthStatus } from '../hooks/useAuthStatus';
 import { Head } from '../utils/Head';
-import { htmlDefault, bodyDefault, mainDefault, contentStyle } from '../utils/styles';
+import {
+	htmlDefault,
+	bodyDefault,
+	mainDefault,
+	contentStyle
+} from '../utils/styles';
 import { Navbar } from './Navbar';
 
 export const NotAuthorized = () => {
@@ -19,9 +24,7 @@ export const NotAuthorized = () => {
 					setModalOpen={setModalOpen}
 				/>
 				<main style={mainDefault}>
-					<div
-                        style={contentStyle}
-                    >
+					<div style={contentStyle}>
 						<h1>Not Authorized</h1>
 						<p>You must be logged in to view this page.</p>
 						<button onClick={() => setModalOpen(true)}>

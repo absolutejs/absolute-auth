@@ -83,4 +83,4 @@ export const contentStyle: CSSProperties = {
 	alignItems: 'center',
 	justifyContent: 'center',
 	height: '100%'
-}
+};

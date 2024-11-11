@@ -4,7 +4,7 @@
 	"main": "dist/index.js",
 	"version": "0.1.0",
 	"scripts": {
-		"build": "bun build src/index.ts --outdir dist",
+		"build": "bun build src/index.ts --outdir dist --minify --splitting",
 		"test": "echo \"Error: no test specified\" && exit 1",
 		"format": "prettier --write \"./**/*.{js,jsx,ts,tsx,css,json}\"",
 		"dev": "bun run --watch example/server.ts"
@@ -22,5 +22,5 @@
 		"drizzle-orm": "^0.36.1",
 		"react-dom": "^18.3.1"
 	},
-	"module": "src/backend/server.ts"
+	"module": "src/index.ts"
 }
