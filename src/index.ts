@@ -19,7 +19,6 @@ import { authorize } from './authorize';
 import { callback } from './callback';
 import { protectRoute } from './protectRoute';
 import { isValidUserInfoURLKey, isValidProviderKey } from './typeGuards';
-import { User } from '../example/dbSchema';
 
 export const absoluteAuth = <ConfigOptions extends Oauth2ConfigOptions>({
 	config,
@@ -86,17 +85,17 @@ export const absoluteAuth = <ConfigOptions extends Oauth2ConfigOptions>({
 		{} as ClientProviders
 	);
 
-	// TODO: Add User type to be passed in from parent
+	// TODO: Remove the any call by adding UserType correctly
 	return new Elysia()
 		.error('OAUTH2_REQUEST_ERROR', OAuth2RequestError)
 		.error('ARCTIC_FETCH_ERROR', ArcticFetchError)
 		.use(logout({ logoutRoute, onLogout }))
 		.use(revoke({ clientProviders, revokeRoute, onRevoke }))
-		.use(status<User>({ statusRoute, onStatus }))
+		.use(status<any>({ statusRoute, onStatus }))
 		.use(refresh({ clientProviders, refreshRoute, onRefresh }))
 		.use(authorize({ clientProviders, authorizeRoute, onAuthorize }))
 		.use(
-			callback<User>({
+			callback<any>({
 				clientProviders,
 				callbackRoute,
 				onCallback,
@@ -104,6 +103,6 @@ export const absoluteAuth = <ConfigOptions extends Oauth2ConfigOptions>({
 				createUser
 			})
 		)
-		.use(protectRoute<User>())
+		.use(protectRoute<any>())
 		.as('plugin');
 };

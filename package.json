@@ -1,14 +1,29 @@
 {
+	"version": "0.1.0",
 	"name": "absolute-auth",
 	"description": "An authorization library for absolutejs",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/alexkahndev/absolute-auth.git"
+	},
 	"main": "dist/index.js",
-	"version": "0.1.0",
+	"license": "CC BY-NC 4.0",
+	"author": "Alex Kahn",
 	"scripts": {
-		"build": "bun build src/index.ts --outdir dist --minify --splitting",
+		"build": "bun build src/index.ts --outdir dist --minify --splitting && tsc  --emitDeclarationOnly --isolatedDeclarations --outDir dist",
+		"build:types": "tsc --emitDeclarationOnly --outDir dist",
 		"test": "echo \"Error: no test specified\" && exit 1",
 		"format": "prettier --write \"./**/*.{js,jsx,ts,tsx,css,json}\"",
 		"dev": "bun run --watch example/server.ts"
 	},
+	"keywords": [
+		"authorization",
+		"authentication",
+		"absolutejs",
+		"elysia",
+		"oauth"
+	],
+	"types": "dist/index.d.ts",
 	"dependencies": {
 		"arctic": "^2.2.2",
 		"elysia": "^1.1.24"
@@ -22,5 +37,5 @@
 		"drizzle-orm": "^0.36.1",
 		"react-dom": "^18.3.1"
 	},
-	"module": "src/index.ts"
+	"module": "dist/index.js"
 }

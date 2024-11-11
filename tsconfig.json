@@ -3,6 +3,7 @@
 		"target": "ESNext",
 		"module": "ESNext",
 		"moduleResolution": "bundler",
+		"declaration": true,
 		"jsx": "react-jsx",
 		"esModuleInterop": true,
 		"forceConsistentCasingInFileNames": true,
@@ -10,6 +11,9 @@
 		"noImplicitAny": true,
 		"skipLibCheck": true,
 		"types": ["bun-types"],
+		"rootDir": "src",
+		"outDir": "dist",
 		"lib": ["DOM", "DOM.Iterable", "ESNext"]
-	}
+	},
+	"include": ["src"]
 }
