@@ -10,7 +10,7 @@
 	"license": "CC BY-NC 4.0",
 	"author": "Alex Kahn",
 	"scripts": {
-		"build": "bun build src/index.ts --outdir dist --minify --splitting && tsc  --emitDeclarationOnly --isolatedDeclarations --outDir dist",
+		"build": "bun build src/index.ts --outdir dist --minify --splitting && tsc  --emitDeclarationOnly --isolatedDeclarations --outFile dist/index.d.ts",
 		"build:types": "tsc --emitDeclarationOnly --outDir dist",
 		"test": "echo \"Error: no test specified\" && exit 1",
 		"format": "prettier --write \"./**/*.{js,jsx,ts,tsx,css,json}\"",

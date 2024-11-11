@@ -13,7 +13,9 @@
 		"types": ["bun-types"],
 		"rootDir": "src",
 		"outDir": "dist",
-		"lib": ["DOM", "DOM.Iterable", "ESNext"]
+		"lib": ["DOM", "DOM.Iterable", "ESNext"],
+		"declarationMap": true,
+		"outFile": "dist/index.d.ts"
 	},
 	"include": ["src"]
 }
