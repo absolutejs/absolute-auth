@@ -1,5 +1,5 @@
 import Elysia from 'elysia';
-import { schema } from './dbSchema';
+import { schema, type User } from './dbSchema';
 import { getLocalIPAddress } from './utils/networking';
 import { neon } from '@neondatabase/serverless';
 import { drizzle } from 'drizzle-orm/neon-http';
@@ -70,7 +70,7 @@ new Elysia()
 		})
 	)
 	.use(
-		absoluteAuth({
+		absoluteAuth<User>({
 			config: {
 				Google: {
 					credentials: [
