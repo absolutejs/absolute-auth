@@ -16,7 +16,7 @@
 .DS_Store
 *.pem
 /build/*.js
-
+/example/build/
 # debug
 npm-debug.log*
 yarn-debug.log*
