@@ -157,9 +157,8 @@ export const normalizedProviderKeys = Object.keys(providers).reduce(
 );
 
 export const userInfoURLs: Record<string, string> = {
-	AmazonCognito: 
-		'https://{region}.amazonaws.com/{userPoolId}/.well-known/openid-configuration'
-	, // Replace {region} and {userPoolId}
+	AmazonCognito:
+		'https://{region}.amazonaws.com/{userPoolId}/.well-known/openid-configuration', // Replace {region} and {userPoolId}
 	AniList: 'https://graphql.anilist.co', // User info available via GraphQL
 	Apple: 'https://appleid.apple.com/auth/token', // Apple doesn't provide a dedicated userinfo endpoint, but tokens can be used to get data
 	Atlassian: 'https://api.atlassian.com/me',
@@ -173,16 +172,13 @@ export const userInfoURLs: Record<string, string> = {
 	Dropbox: 'https://api.dropboxapi.com/2/users/get_current_account',
 	Facebook: 'https://graph.facebook.com/me',
 	Figma: 'https://api.figma.com/v1/me',
-	Intuit: 
-		'https://accounts.platform.intuit.com/v1/openid_connect/userinfo'
-	,
+	Intuit: 'https://accounts.platform.intuit.com/v1/openid_connect/userinfo',
 	GitHub: 'https://api.github.com/user',
 	GitLab: 'https://gitlab.com/api/v4/user',
 	Google: 'https://www.googleapis.com/userinfo/v2/me',
 	Kakao: 'https://kapi.kakao.com/v2/user/me',
-	KeyCloak: 
-		'https://{your_domain}/auth/realms/{realm}/protocol/openid-connect/userinfo'
-	, // Replace {your_domain} and {realm}
+	KeyCloak:
+		'https://{your_domain}/auth/realms/{realm}/protocol/openid-connect/userinfo', // Replace {your_domain} and {realm}
 	Lichess: 'https://lichess.org/api/account',
 	Line: 'https://api.line.me/v2/profile',
 	Linear: 'https://api.linear.app/v1/me',
@@ -195,9 +191,7 @@ export const userInfoURLs: Record<string, string> = {
 	Patreon: 'https://www.patreon.com/api/oauth2/v2/identity',
 	Reddit: 'https://oauth.reddit.com/api/v1/me',
 	Roblox: 'https://apis.roblox.com/users/v1/users/me',
-	Salesforce: 
-		'https://login.salesforce.com/services/oauth2/userinfo'
-	,
+	Salesforce: 'https://login.salesforce.com/services/oauth2/userinfo',
 	Shikimori: 'https://shikimori.one/api/users/whoami',
 	Slack: 'https://slack.com/api/users.identity',
 	Spotify: 'https://api.spotify.com/v1/me',
@@ -215,9 +209,7 @@ export const userInfoURLs: Record<string, string> = {
 };
 
 export const issuerURLs: Record<string, string> = {
-	AmazonCognito: 
-		'https://cognito-idp.{region}.amazonaws.com/{userPoolId}'
-	, // {region} and {userPoolId} need to be replaced
+	AmazonCognito: 'https://cognito-idp.{region}.amazonaws.com/{userPoolId}', // {region} and {userPoolId} need to be replaced
 	AniList: 'https://anilist.co/api/v2/oauth/authorize',
 	Apple: 'https://appleid.apple.com',
 	Atlassian: 'https://auth.atlassian.com',
@@ -241,9 +233,7 @@ export const issuerURLs: Record<string, string> = {
 	Line: 'https://access.line.me/oauth2/v2.1/authorize',
 	Linear: 'https://linear.app/oauth/authorize',
 	LinkedIn: 'https://www.linkedin.com/oauth/v2/authorization',
-	MicrosoftEntraId: 
-		'https://login.microsoftonline.com/{tenant}/v2.0'
-	, // Replace {tenant} if needed
+	MicrosoftEntraId: 'https://login.microsoftonline.com/{tenant}/v2.0', // Replace {tenant} if needed
 	MyAnimeList: 'https://myanimelist.net/v1/oauth2/authorize',
 	Notion: 'https://api.notion.com/v1/oauth/authorize',
 	Okta: 'https://{yourOktaDomain}/oauth2/default/v1/authorize', // Replace {yourOktaDomain}
@@ -251,9 +241,7 @@ export const issuerURLs: Record<string, string> = {
 	Patreon: 'https://www.patreon.com/oauth2/authorize',
 	Reddit: 'https://www.reddit.com/api/v1/authorize',
 	Roblox: 'https://apis.roblox.com/oauth/v1/authorize',
-	Salesforce: 
-		'https://login.salesforce.com/services/oauth2/authorize'
-	,
+	Salesforce: 'https://login.salesforce.com/services/oauth2/authorize',
 	Shikimori: 'https://shikimori.one/oauth/authorize',
 	Slack: 'https://slack.com/oauth/v2/authorize',
 	Spotify: 'https://accounts.spotify.com/authorize',

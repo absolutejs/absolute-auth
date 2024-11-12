@@ -42,8 +42,8 @@ export type GetUser<UserType> = ({
 	authProvider: string;
 }) => Promise<UserType | null>;
 
-export type AbsoluteAuthProps<ConfigOptions extends Oauth2ConfigOptions> = {
-	config: ConfigOptions;
+export type AbsoluteAuthProps = {
+	config: Oauth2ConfigOptions;
 	authorizeRoute?: string;
 	callbackRoute?: string;
 	refreshRoute?: string;

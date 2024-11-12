@@ -6,11 +6,7 @@ import {
 	userInfoURLs
 } from './providers';
 import { OAuth2RequestError, ArcticFetchError } from 'arctic';
-import type {
-	AbsoluteAuthProps,
-	ClientProviders,
-	Oauth2ConfigOptions
-} from './types';
+import type { AbsoluteAuthProps, ClientProviders } from './types';
 import { logout } from './logout';
 import { revoke } from './revoke';
 import { status } from './status';
@@ -20,7 +16,7 @@ import { callback } from './callback';
 import { protectRoute } from './protectRoute';
 import { isValidUserInfoURLKey, isValidProviderKey } from './typeGuards';
 
-export const absoluteAuth = <ConfigOptions extends Oauth2ConfigOptions>({
+export const absoluteAuth = <UserType>({
 	config,
 	authorizeRoute,
 	callbackRoute,
@@ -36,7 +32,7 @@ export const absoluteAuth = <ConfigOptions extends Oauth2ConfigOptions>({
 	onRevoke,
 	createUser,
 	getUser
-}: AbsoluteAuthProps<ConfigOptions>) => {
+}: AbsoluteAuthProps) => {
 	const clientProviders = Object.entries(config).reduce(
 		(acc, [provider, options = {}]) => {
 			const normalizedProvider = provider.toLowerCase();
@@ -46,7 +42,10 @@ export const absoluteAuth = <ConfigOptions extends Oauth2ConfigOptions>({
 			const userInfoURLKey =
 				normalizedUserInfoURLKeys[normalizedProvider];
 
-			if (!originalProviderKey || !isValidProviderKey(originalProviderKey)) {
+			if (
+				!originalProviderKey ||
+				!isValidProviderKey(originalProviderKey)
+			) {
 				console.error(`Provider ${provider} is not supported`);
 				return acc;
 			}
@@ -91,11 +90,11 @@ export const absoluteAuth = <ConfigOptions extends Oauth2ConfigOptions>({
 		.error('ARCTIC_FETCH_ERROR', ArcticFetchError)
 		.use(logout({ logoutRoute, onLogout }))
 		.use(revoke({ clientProviders, revokeRoute, onRevoke }))
-		.use(status<any>({ statusRoute, onStatus }))
+		.use(status<UserType>({ statusRoute, onStatus }))
 		.use(refresh({ clientProviders, refreshRoute, onRefresh }))
 		.use(authorize({ clientProviders, authorizeRoute, onAuthorize }))
 		.use(
-			callback<any>({
+			callback<UserType>({
 				clientProviders,
 				callbackRoute,
 				onCallback,
@@ -103,6 +102,6 @@ export const absoluteAuth = <ConfigOptions extends Oauth2ConfigOptions>({
 				createUser
 			})
 		)
-		.use(protectRoute<any>())
+		.use(protectRoute<UserType>())
 		.as('plugin');
 };

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { User } from '../dbSchema';
+import type { User } from '../dbSchema';
 
 export const useAuthStatus = () => {
 	const [userIdentity, setUserIdentity] = useState<User | null>(null);

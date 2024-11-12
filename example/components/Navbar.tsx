@@ -1,12 +1,11 @@
-import { Dispatch, SetStateAction, useState } from 'react';
+import type { Dispatch, SetStateAction } from 'react';
 import { buttonStyle } from '../utils/styles';
 import { Modal } from './Modal';
 import { AuthOptions } from './AuthOptions';
-import { User } from '../dbSchema';
+import type { User } from '../dbSchema';
 
 type NavbarProps = {
 	userIdentity: User | null;
-
 	setUserIdentity: Dispatch<SetStateAction<User | null>>;
 	modalOpen: boolean;
 	setModalOpen: Dispatch<SetStateAction<boolean>>;
