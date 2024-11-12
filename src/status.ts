@@ -1,5 +1,5 @@
 import Elysia from 'elysia';
-import { OAuthEventHandler } from './types';
+import type { OAuthEventHandler } from './types';
 import { sessionStore } from './sessionStore';
 
 type StatusProps = {

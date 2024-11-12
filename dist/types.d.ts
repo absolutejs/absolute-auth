@@ -46,5 +46,5 @@ export type ClientProviders = Record<string, {
     providerInstance: InstanceType<(typeof providers)[Providers]>;
     scopes: string[];
     searchParams: [string, string][];
-    userInfoURL?: URL;
+    userInfoURL?: string;
 }>;

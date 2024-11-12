@@ -6,7 +6,7 @@ import {
 	userInfoURLs
 } from './providers';
 import { OAuth2RequestError, ArcticFetchError } from 'arctic';
-import {
+import type {
 	AbsoluteAuthProps,
 	ClientProviders,
 	Oauth2ConfigOptions
@@ -46,14 +46,14 @@ export const absoluteAuth = <ConfigOptions extends Oauth2ConfigOptions>({
 			const userInfoURLKey =
 				normalizedUserInfoURLKeys[normalizedProvider];
 
-			if (!isValidProviderKey(originalProviderKey)) {
+			if (!originalProviderKey || !isValidProviderKey(originalProviderKey)) {
 				console.error(`Provider ${provider} is not supported`);
 				return acc;
 			}
 
 			const Provider = providers[originalProviderKey];
 
-			let userInfoURL: URL | undefined;
+			let userInfoURL: string | undefined;
 
 			if (isValidUserInfoURLKey(userInfoURLKey)) {
 				userInfoURL = userInfoURLs[userInfoURLKey];

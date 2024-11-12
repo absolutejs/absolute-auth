@@ -1,5 +1,5 @@
 import Elysia from 'elysia';
-import {
+import type {
 	ClientProviders,
 	CreateUser,
 	GetUser,

@@ -10,8 +10,7 @@
 	"license": "CC BY-NC 4.0",
 	"author": "Alex Kahn",
 	"scripts": {
-		"build": "bun build src/index.ts --outdir dist --minify --splitting && tsc  --emitDeclarationOnly --isolatedDeclarations --outDir dist",
-		"build:types": "tsc --emitDeclarationOnly --outDir dist",
+		"build": "bun build src/index.ts --outdir dist --minify --splitting && tsc --emitDeclarationOnly --isolatedDeclarations --project tsconfig.dts.json",
 		"test": "echo \"Error: no test specified\" && exit 1",
 		"format": "prettier --write \"./**/*.{js,jsx,ts,tsx,css,json}\"",
 		"dev": "bun run --watch example/server.ts"
@@ -35,7 +34,8 @@
 		"@types/react": "^18.3.12",
 		"@types/react-dom": "^18.3.1",
 		"drizzle-orm": "^0.36.1",
-		"react-dom": "^18.3.1"
+		"react-dom": "^18.3.1",
+		"tsup": "^8.3.5"
 	},
 	"module": "dist/index.js"
 }

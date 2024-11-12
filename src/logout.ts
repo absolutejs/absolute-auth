@@ -1,5 +1,5 @@
 import Elysia from 'elysia';
-import { OAuthEventHandler } from './types';
+import type { OAuthEventHandler } from './types';
 
 type LogoutProps = {
 	logoutRoute?: string;

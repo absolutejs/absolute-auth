@@ -1,5 +1,5 @@
 import Elysia from 'elysia';
-import { ClientProviders, OAuthEventHandler } from './types';
+import type { ClientProviders, OAuthEventHandler } from './types';
 import { isValidProviderKey } from './typeGuards';
 
 type RevokeProps = {

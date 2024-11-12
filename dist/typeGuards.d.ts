@@ -1,6 +1,6 @@
 import { OAuth2Tokens } from 'arctic';
 import { providers, userInfoURLs, issuerURLs } from './providers';
-import { Providers } from './types';
+import type { Providers } from './types';
 export declare const isRefreshableProvider: (provider: InstanceType<(typeof providers)[Providers]>) => provider is InstanceType<(typeof providers)[Providers]> & {
     refreshAccessToken: () => Promise<OAuth2Tokens>;
 };
