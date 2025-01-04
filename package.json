@@ -10,7 +10,7 @@
 	"license": "CC BY-NC 4.0",
 	"author": "Alex Kahn",
 	"scripts": {
-		"build": "bun build src/index.ts --outdir dist --minify --splitting && tsc --emitDeclarationOnly --isolatedDeclarations --project tsconfig.dts.json",
+		"build": "bun build src/index.ts --outdir dist --minify --splitting && tsc --emitDeclarationOnly --project tsconfig.dts.json",
 		"test": "echo \"Error: no test specified\" && exit 1",
 		"format": "prettier --write \"./**/*.{js,jsx,ts,tsx,css,json}\"",
 		"dev": "bun run --watch example/server.ts",
@@ -27,19 +27,22 @@
 	],
 	"types": "dist/index.d.ts",
 	"dependencies": {
-		"arctic": "^2.2.2",
-		"elysia": "^1.1.24"
+		"arctic": "3.0.0",
+		"elysia": "1.2.9"
 	},
 	"devDependencies": {
-		"@elysiajs/static": "^1.1.1",
-		"@neondatabase/serverless": "^0.10.3",
-		"@types/bun": "latest",
-		"@types/react": "^18.3.12",
-		"@types/react-dom": "^18.3.1",
-		"drizzle-orm": "^0.36.1",
-		"react-dom": "^18.3.1",
-		"tsup": "^8.3.5",
-		"drizzle-kit": "^0.28.0"
+		"@elysiajs/static": "1.2.0",
+		"@neondatabase/serverless": "0.10.4",
+		"@types/bun": "1.1.14",
+		"@types/react": "19.0.2",
+		"@types/react-dom": "19.0.2",
+		"drizzle-kit": "0.28.0",
+		"drizzle-orm": "0.36.1",
+		"prettier": "3.4.2",
+		"react": "19.0.0",
+		"react-dom": "19.0.0",
+		"tsup": "8.3.5",
+		"typescript": "^5.7.2"
 	},
 	"module": "dist/index.js"
 }

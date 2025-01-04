@@ -1,7 +1,7 @@
 import { eq } from 'drizzle-orm';
-import { DatabaseFunctionProps, NewUser } from './dbSchema';
+import type { DatabaseFunctionProps, NewUser } from '../db/schema';
 
-export const getUser = async ({
+export const getDBUser = async ({
 	authSub,
 	db,
 	schema
@@ -31,7 +31,7 @@ export const getUser = async ({
 	}
 };
 
-export const createUser = async ({
+export const createDBUser = async ({
 	auth_sub,
 	given_name,
 	family_name,

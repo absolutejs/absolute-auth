@@ -1,4 +1,4 @@
-import { styleReset } from './styles';
+import { styleReset } from '../utils/styles';
 
 type HeadProps = {
 	title?: string;

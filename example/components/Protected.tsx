@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useAuthStatus } from '../hooks/useAuthStatus';
-import { Head } from '../utils/Head';
+
 import {
 	htmlDefault,
 	bodyDefault,
@@ -9,6 +9,7 @@ import {
 } from '../utils/styles';
 
 import { Navbar } from './Navbar';
+import { Head } from './Head';
 
 export const Protected = () => {
 	const { userIdentity, setUserIdentity } = useAuthStatus();
@@ -31,7 +32,10 @@ export const Protected = () => {
 						<p>{userIdentity && userIdentity.family_name}</p>
 						<p>{userIdentity && userIdentity.email}</p>
 						<img
-							src={userIdentity?.picture ?? ''}
+							src={
+								userIdentity?.picture ??
+								'https://via.placeholder.com/150'
+							}
 							alt="Profile Picture"
 							style={{ borderRadius: '50%', width: '100px' }}
 						/>

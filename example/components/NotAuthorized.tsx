@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { useAuthStatus } from '../hooks/useAuthStatus';
-import { Head } from '../utils/Head';
 import {
 	htmlDefault,
 	bodyDefault,
@@ -8,6 +7,7 @@ import {
 	contentStyle
 } from '../utils/styles';
 import { Navbar } from './Navbar';
+import { Head } from './Head';
 
 export const NotAuthorized = () => {
 	const { userIdentity, setUserIdentity } = useAuthStatus();

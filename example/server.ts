@@ -8,7 +8,7 @@ import { Example } from './components/Example';
 import { handlePageRequest } from './utils/pageUtils';
 import { rm, copyFile } from 'node:fs/promises';
 import { staticPlugin } from '@elysiajs/static';
-import { createUser, getUser } from './utils/userUtils';
+import { createDBUser, getDBUser } from './utils/userUtils';
 import { Protected } from './components/Protected';
 import { NotAuthorized } from './components/NotAuthorized';
 
@@ -28,9 +28,9 @@ const buildTimeStamp = Date.now();
 await rm('./example/build', { recursive: true, force: true });
 const { logs, success } = await Bun.build({
 	entrypoints: [
-		'./example/utils/ExampleIndex.tsx',
-		'./example/utils/NotAuthorizedIndex.tsx',
-		'./example/utils/ProtectedIndex.tsx'
+		'./example/indexes/ExampleIndex.tsx',
+		'./example/indexes/NotAuthorizedIndex.tsx',
+		'./example/indexes/ProtectedIndex.tsx'
 	],
 	outdir: './example/build',
 	naming: `[name].${buildTimeStamp}.[ext]`,
@@ -102,7 +102,7 @@ new Elysia()
 				}
 
 				const authSub = `${provider}|${sub}`;
-				return await createUser({
+				return await createDBUser({
 					auth_sub: authSub,
 					given_name: decodedIdToken.given_name ?? '',
 					family_name: decodedIdToken.family_name ?? '',
@@ -121,7 +121,7 @@ new Elysia()
 				}
 
 				const authSub = `${provider}|${sub}`;
-				return await getUser({ authSub, db, schema });
+				return await getDBUser({ authSub, db, schema });
 			}
 		})
 	)

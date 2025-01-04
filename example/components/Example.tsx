@@ -6,9 +6,10 @@ import {
 	buttonStyle,
 	contentStyle
 } from '../utils/styles';
-import { Head } from '../utils/Head';
+
 import { useAuthStatus } from '../hooks/useAuthStatus';
 import { useState } from 'react';
+import { Head } from './Head';
 
 export const Example = () => {
 	const { userIdentity, setUserIdentity } = useAuthStatus();

@@ -1,10 +1,10 @@
-import { ComponentType, createElement } from 'react';
-import { renderToReadableStream } from 'react-dom/server.browser';
+import { createElement } from 'react';
+import type { ComponentType } from 'react';
+import { renderToReadableStream } from 'react-dom/server';
 
 export const handlePageRequest = async (
 	pageComponent: ComponentType,
-	index: string,
-	requireAuth = false
+	index: string
 ) => {
 	const page = createElement(pageComponent);
 	const stream = await renderToReadableStream(page, {
