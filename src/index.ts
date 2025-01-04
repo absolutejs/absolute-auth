@@ -84,7 +84,6 @@ export const absoluteAuth = <UserType>({
 		{} as ClientProviders
 	);
 
-	// TODO: Remove the any call by adding UserType correctly
 	return new Elysia()
 		.error('OAUTH2_REQUEST_ERROR', OAuth2RequestError)
 		.error('ARCTIC_FETCH_ERROR', ArcticFetchError)
