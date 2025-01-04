@@ -6,7 +6,7 @@ type HeadProps = {
 };
 
 export const Head = ({
-	title = 'EventGames.io',
+	title = 'AbsoluteJS',
 	icon = '/favicon.ico'
 }: HeadProps) => {
 	return (

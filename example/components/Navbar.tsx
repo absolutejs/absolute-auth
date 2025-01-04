@@ -2,7 +2,7 @@ import type { Dispatch, SetStateAction } from 'react';
 import { buttonStyle } from '../utils/styles';
 import { Modal } from './Modal';
 import { AuthOptions } from './AuthOptions';
-import type { User } from '../dbSchema';
+import type { User } from '../db/schema';
 
 type NavbarProps = {
 	userIdentity: User | null;

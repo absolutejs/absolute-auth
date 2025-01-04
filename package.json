@@ -13,7 +13,10 @@
 		"build": "bun build src/index.ts --outdir dist --minify --splitting && tsc --emitDeclarationOnly --isolatedDeclarations --project tsconfig.dts.json",
 		"test": "echo \"Error: no test specified\" && exit 1",
 		"format": "prettier --write \"./**/*.{js,jsx,ts,tsx,css,json}\"",
-		"dev": "bun run --watch example/server.ts"
+		"dev": "bun run --watch example/server.ts",
+		"db:generate": "drizzle-kit generate --schema ./example/db/schema.ts --dialect postgresql",
+		"db:migrate": "bun run ./example/db/migrate.ts",
+		"db:studio": "drizzle-kit studio"
 	},
 	"keywords": [
 		"authorization",
@@ -35,7 +38,8 @@
 		"@types/react-dom": "^18.3.1",
 		"drizzle-orm": "^0.36.1",
 		"react-dom": "^18.3.1",
-		"tsup": "^8.3.5"
+		"tsup": "^8.3.5",
+		"drizzle-kit": "^0.28.0"
 	},
 	"module": "dist/index.js"
 }

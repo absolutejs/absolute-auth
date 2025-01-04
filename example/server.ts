@@ -1,5 +1,5 @@
 import Elysia from 'elysia';
-import { schema, type User } from './dbSchema';
+import { schema, type User } from './db/schema';
 import { getLocalIPAddress } from './utils/networking';
 import { neon } from '@neondatabase/serverless';
 import { drizzle } from 'drizzle-orm/neon-http';
