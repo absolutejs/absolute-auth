@@ -1,5 +1,5 @@
 {
-	"version": "0.3.0",
+	"version": "0.3.2",
 	"name": "absolute-auth",
 	"description": "An authorization library for absolutejs",
 	"repository": {
@@ -44,5 +44,10 @@
 		"tsup": "8.3.5",
 		"typescript": "^5.7.2"
 	},
-	"module": "dist/index.js"
+	"module": "dist/index.js",
+	"files": [
+		"dist/",
+		"README.md",
+		"LICENSE"
+	]
 }
