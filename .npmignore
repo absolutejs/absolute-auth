@@ -1,4 +1,5 @@
 example/
+drizzle/
 tests/
 node_modules/
 *.log
