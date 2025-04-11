@@ -25,7 +25,7 @@ export declare const logout: ({ logoutRoute, onLogout }: LogoutProps) => Elysia<
             query: unknown;
             headers: unknown;
             response: {
-                200: import("undici-types").Response;
+                200: Response;
                 500: "Internal Server Error";
                 401: "No auth provider found";
             };

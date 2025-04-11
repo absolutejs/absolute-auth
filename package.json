@@ -1,6 +1,6 @@
 {
-	"version": "0.3.2",
-	"name": "absolute-auth",
+	"version": "0.0.2",
+	"name": "@absolutejs/auth",
 	"description": "An authorization library for absolutejs",
 	"repository": {
 		"type": "git",
@@ -10,7 +10,7 @@
 	"license": "CC BY-NC 4.0",
 	"author": "Alex Kahn",
 	"scripts": {
-		"build": "bun build src/index.ts --outdir dist --minify --splitting && tsc --emitDeclarationOnly --project tsconfig.dts.json",
+		"build": "rm -rf dist && bun build src/index.ts --outdir dist --minify --splitting --target=bun && tsc --emitDeclarationOnly --project tsconfig.json",
 		"test": "echo \"Error: no test specified\" && exit 1",
 		"format": "prettier --write \"./**/*.{js,jsx,ts,tsx,css,json}\"",
 		"dev": "bun run --watch example/server.ts",
@@ -27,22 +27,21 @@
 	],
 	"types": "dist/index.d.ts",
 	"dependencies": {
-		"arctic": "3.0.0",
-		"elysia": "1.2.9"
+		"arctic": "3.6.0",
+		"elysia": "1.2.25"
 	},
 	"devDependencies": {
 		"@elysiajs/static": "1.2.0",
-		"@neondatabase/serverless": "0.10.4",
-		"@types/bun": "1.1.14",
-		"@types/react": "19.0.2",
-		"@types/react-dom": "19.0.2",
-		"drizzle-kit": "0.28.0",
-		"drizzle-orm": "0.36.1",
-		"prettier": "3.4.2",
-		"react": "19.0.0",
-		"react-dom": "19.0.0",
-		"tsup": "8.3.5",
-		"typescript": "^5.7.2"
+		"@neondatabase/serverless": "1.0.0",
+		"@types/bun": "1.2.9",
+		"@types/react": "19.1.1",
+		"@types/react-dom": "19.1.2",
+		"drizzle-kit": "0.30.6",
+		"drizzle-orm": "0.41.0",
+		"prettier": "3.5.3",
+		"react": "19.1.0",
+		"react-dom": "19.1.0",
+		"typescript": "5.8.3"
 	},
 	"module": "dist/index.js",
 	"files": [

@@ -10,13 +10,13 @@ type CallbackProps<UserType> = {
 export declare const callback: <UserType>({ clientProviders, callbackRoute, onCallback, getUser, createUser }: CallbackProps<UserType>) => Elysia<"", {
     decorator: {};
     store: {
-        session: import("./types").SessionRecord<UserType_1>;
+        session: import("./types").SessionRecord<UserType>;
     };
     derive: {};
     resolve: {};
 }, {
     error: {};
-    typebox: import("elysia/dist/types").MergeTypeModule<import("@sinclair/typebox").TModule<{}, {}>, import("@sinclair/typebox").TModule<{}, {}>>;
+    typebox: import("@sinclair/typebox").TModule<{}, {}>;
 }, {
     schema: {};
     macro: {};

@@ -4,7 +4,7 @@ import type { AbsoluteAuthProps } from './types';
 export declare const absoluteAuth: <UserType>({ config, authorizeRoute, callbackRoute, logoutRoute, statusRoute, refreshRoute, revokeRoute, onAuthorize, onCallback, onStatus, onRefresh, onLogout, onRevoke, createUser, getUser }: AbsoluteAuthProps) => Elysia<"", {
     decorator: {};
     store: {
-        session: import("./types").SessionRecord<UserType_1>;
+        session: import("./types").SessionRecord<UserType>;
     };
     derive: {};
     resolve: {};
@@ -13,7 +13,7 @@ export declare const absoluteAuth: <UserType>({ config, authorizeRoute, callback
         OAUTH2_REQUEST_ERROR: OAuth2RequestError;
         ARCTIC_FETCH_ERROR: ArcticFetchError;
     };
-    typebox: import("elysia/dist/types").MergeTypeModule<import("elysia/dist/types").MergeTypeModule<import("elysia/dist/types").MergeTypeModule<import("elysia/dist/types").MergeTypeModule<import("elysia/dist/types").MergeTypeModule<import("elysia/dist/types").MergeTypeModule<import("elysia/dist/types").MergeTypeModule<import("@sinclair/typebox").TModule<{}, {}>, import("@sinclair/typebox").TModule<{}, {}>>, import("@sinclair/typebox").TModule<{}, {}>>, import("elysia/dist/types").MergeTypeModule<import("@sinclair/typebox").TModule<{}, {}>, import("@sinclair/typebox").TModule<{}, {}>>>, import("@sinclair/typebox").TModule<{}, {}>>, import("@sinclair/typebox").TModule<{}, {}>>, import("elysia/dist/types").MergeTypeModule<import("@sinclair/typebox").TModule<{}, {}>, import("@sinclair/typebox").TModule<{}, {}>>>, import("elysia/dist/types").MergeTypeModule<import("@sinclair/typebox").TModule<{}, {}>, import("@sinclair/typebox").TModule<{}, {}>>>;
+    typebox: import("@sinclair/typebox").TModule<{}, {}>;
 }, {
     schema: {};
     macro: {};
@@ -27,7 +27,7 @@ export declare const absoluteAuth: <UserType>({ config, authorizeRoute, callback
             query: unknown;
             headers: unknown;
             response: {
-                200: import("undici-types").Response;
+                200: Response;
                 500: "Internal Server Error";
                 401: "No auth provider found";
             };
@@ -57,7 +57,7 @@ export declare const absoluteAuth: <UserType>({ config, authorizeRoute, callback
             query: unknown;
             headers: unknown;
             response: {
-                200: import("undici-types").Response;
+                200: Response;
                 500: "Internal Server Error";
             };
         };
@@ -70,7 +70,7 @@ export declare const absoluteAuth: <UserType>({ config, authorizeRoute, callback
             query: unknown;
             headers: unknown;
             response: {
-                200: import("undici-types").Response;
+                200: Response;
                 500: "Internal Server Error";
                 401: "No auth provider found" | "No refresh token found" | "Provider is not refreshable";
             };
@@ -120,7 +120,7 @@ export declare const absoluteAuth: <UserType>({ config, authorizeRoute, callback
     };
 }, {
     derive: {
-        readonly protectRoute: (onAuth: () => Promise<Response>, onAuthFail?: (() => Promise<Response>) | undefined) => Promise<Response | import("elysia/dist/error").ElysiaCustomStatusResponse<401, "No session ID found", 401> | import("elysia/dist/error").ElysiaCustomStatusResponse<401, "No session found", 401>>;
+        readonly protectRoute: (onAuth: () => Promise<Response>, onAuthFail?: (() => Promise<Response>) | undefined) => Promise<Response | import("elysia/error").ElysiaCustomStatusResponse<401, "No session ID found", 401> | import("elysia/error").ElysiaCustomStatusResponse<401, "No session found", 401>>;
     };
     resolve: {};
     schema: import("elysia").MergeSchema<{

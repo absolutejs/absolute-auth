@@ -1,19 +1,18 @@
 import Elysia from 'elysia';
-import type { OAuthEventHandler } from './types';
-type StatusProps = {
-    statusRoute?: string;
-    onStatus?: OAuthEventHandler;
+import type { ClientProviders, OAuthEventHandler } from './types';
+type RefreshProps = {
+    clientProviders: ClientProviders;
+    refreshRoute?: string;
+    onRefresh?: OAuthEventHandler;
 };
-export declare const status: <UserType>({ statusRoute, onStatus }: StatusProps) => Elysia<"", {
+export declare const refresh: ({ clientProviders, refreshRoute, onRefresh }: RefreshProps) => Elysia<"", {
     decorator: {};
-    store: {
-        session: import("./types").SessionRecord<UserType_1>;
-    };
+    store: {};
     derive: {};
     resolve: {};
 }, {
+    typebox: import("@sinclair/typebox").TModule<{}>;
     error: {};
-    typebox: import("elysia/dist/types").MergeTypeModule<import("@sinclair/typebox").TModule<{}, {}>, import("@sinclair/typebox").TModule<{}, {}>>;
 }, {
     schema: {};
     macro: {};
@@ -21,14 +20,15 @@ export declare const status: <UserType>({ statusRoute, onStatus }: StatusProps) 
     parser: {};
 }, {
     [x: string]: {
-        get: {
+        post: {
             body: unknown;
             params: {};
             query: unknown;
             headers: unknown;
             response: {
-                200: import("undici-types").Response;
+                200: Response;
                 500: "Internal Server Error";
+                401: "No auth provider found" | "No refresh token found" | "Provider is not refreshable";
             };
         };
     };
