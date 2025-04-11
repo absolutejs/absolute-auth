@@ -1,5 +1,5 @@
 import { AmazonCognito, AniList, Apple, Atlassian, Auth0, Authentik, Bitbucket, Box, Coinbase, Discord, Dribbble, Dropbox, Facebook, Figma, Intuit, GitHub, GitLab, Google, Kakao, KeyCloak, Lichess, Line, Linear, LinkedIn, MicrosoftEntraId, MyAnimeList, Notion, Okta, Osu, Patreon, Reddit, Roblox, Salesforce, Shikimori, Slack, Spotify, Strava, Tiltify, Tumblr, Twitch, Twitter, VK, WorkOS, Yahoo, Yandex, Zoom, FortyTwo } from 'arctic';
-export type ProvidersMap = {
+export declare const providers: {
     AmazonCognito: typeof AmazonCognito;
     AniList: typeof AniList;
     Apple: typeof Apple;
@@ -48,9 +48,4 @@ export type ProvidersMap = {
     Yandex: typeof Yandex;
     Zoom: typeof Zoom;
 };
-export declare const providers: ProvidersMap;
 export declare const normalizedProviderKeys: Record<string, string>;
-export declare const userInfoURLs: Record<string, string>;
-export declare const issuerURLs: Record<string, string>;
-export declare const normalizedUserInfoURLKeys: Record<string, string>;
-export declare const normalizedIssuerURLKeys: Record<string, string>;

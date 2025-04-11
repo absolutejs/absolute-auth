@@ -1,13 +1,14 @@
-import Elysia from 'elysia';
-import type {
+import { decodeIdToken } from 'arctic';
+import { Elysia } from 'elysia';
+import { sessionStore } from './sessionStore';
+import { isNonEmptyString, isValidProviderKey, isValidUser } from './typeGuards';
+import {
 	ClientProviders,
 	CreateUser,
 	GetUser,
 	OAuthEventHandler
 } from './types';
-import { sessionStore } from './sessionStore';
-import { decodeIdToken } from 'arctic';
-import { isValidProviderKey, isValidUser } from './typeGuards';
+import { MILLISECONDS_IN_A_DAY } from './constants';
 
 type CallbackProps<UserType> = {
 	clientProviders: ClientProviders;
@@ -23,8 +24,8 @@ export const callback = <UserType>({
 	onCallback,
 	getUser,
 	createUser
-}: CallbackProps<UserType>) => {
-	return new Elysia()
+}: CallbackProps<UserType>) =>
+	new Elysia()
 		.use(sessionStore<UserType>())
 		.get(
 			`/${callbackRoute}`,
@@ -41,20 +42,23 @@ export const callback = <UserType>({
 				},
 				query: { code, state: callback_state }
 			}) => {
-				if (!code || !stored_state.value) {
-					return error(400, 'Invalid callback request');
+				if (
+					!isNonEmptyString(code) ||
+					stored_state.value === undefined
+				) {
+					return error('Bad Request', 'Invalid callback request');
 				}
 
 				if (callback_state !== stored_state.value) {
-					return error(400, 'Invalid state mismatch');
+					return error('Bad Request', 'Invalid state mismatch');
 				}
 
 				if (auth_provider.value === undefined) {
-					return error(401, 'No auth provider found');
+					return error('Unauthorized', 'No auth provider found');
 				}
 
 				if (!isValidProviderKey(auth_provider.value)) {
-					return error(400, 'Invalid provider');
+					return error('Unauthorized', 'Invalid provider');
 				}
 
 				const normalizedProvider = auth_provider.value.toLowerCase();
@@ -62,91 +66,83 @@ export const callback = <UserType>({
 					clientProviders[normalizedProvider];
 
 				try {
-					let tokens;
-
 					// Clear the stored state so the next request doesn't use it
 					stored_state.remove();
 
-					if (
+					const hasCodeVerifier =
 						providerInstance.validateAuthorizationCode
 							.toString()
-							.includes('codeVerifier')
-					) {
-						if (!code_verifier.value) {
-							return error(
-								400,
-								'Code verifier not found and is required'
-							);
-						}
+							.includes('codeVerifier');
+					const verifier = code_verifier.value;
+					if (hasCodeVerifier && verifier === undefined)
+						return error(
+							'Bad Request',
+							'Code verifier not found and is required'
+						);
 
-						tokens =
-							await providerInstance.validateAuthorizationCode(
+					const safeVerifier = verifier ?? '';
+					const tokens = await (hasCodeVerifier
+						? providerInstance.validateAuthorizationCode(
 								code,
-								code_verifier.value
-							);
+								safeVerifier
+							)
+						: // @ts-expect-error - This is a dynamic check
+							providerInstance.validateAuthorizationCode(code));
+					if (hasCodeVerifier) code_verifier.remove();
 
-						// Clear the code verifier after use
-						code_verifier.remove();
-					} else {
-						tokens =
-							// @ts-expect-error - This is a dynamic check
-							await providerInstance.validateAuthorizationCode(
-								code
-							);
-					}
-
-					// Add the user to the session
-					const decodedIdToken = decodeIdToken(tokens.idToken()) as {
-						[key: string]: string | undefined;
-					};
+					const decodedIdToken = Object.fromEntries(
+						Object.entries(decodeIdToken(tokens.idToken())).map(
+							([key, value]) => [
+								key,
+								typeof value === 'string' ? value : undefined
+							]
+						)
+					);
 
 					const authProvider = auth_provider.value;
 					let user = await getUser?.({
-						decodedIdToken,
-						authProvider
+						authProvider,
+						decodedIdToken
 					});
+					user =
+						user ??
+						(await createUser?.({ authProvider, decodedIdToken }));
 
-					if (user === null || user === undefined) {
-						user = await createUser?.({
-							decodedIdToken,
-							authProvider
-						});
-					}
+					if (!isValidUser<UserType>(user))
+						return error(
+							'Internal Server Error',
+							'Invalid user schema'
+						);
 
 					const sessionKey = crypto.randomUUID();
-
-					if (!isValidUser<UserType>(user)) {
-						return error(500, 'Invalid user schema');
-					}
-
 					session[sessionKey] = {
-						user,
-						expiresAt: Date.now() + 1000 * 60 * 60 * 24
+						expiresAt: Date.now() + MILLISECONDS_IN_A_DAY,
+						user
 					};
 
 					user_session_id.set({
-						value: sessionKey,
-						secure: true,
 						httpOnly: true,
-						sameSite: 'lax'
+						sameSite: 'lax',
+						secure: true,
+						value: sessionKey
 					});
 
 					onCallback?.();
 
-					// Bring the user back to where they were or the home page
 					const redirectUrl = redirect_url.value ?? '/';
 
 					return redirect(redirectUrl);
 				} catch (err) {
-					if (err instanceof Error) {
-						console.error(
-							'Failed to validate authorization code:',
-							err.message
+					if (err instanceof Error)
+						return error(
+							'Internal Server Error',
+							`${err.message} - ${err.stack ?? ''}`
 						);
-					}
 
-					return error(500);
+					return error(
+						'Internal Server Error',
+						`Failed to validate authorization code: Unknown error: ${err}`
+					);
 				}
 			}
 		);
-};

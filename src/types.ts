@@ -1,24 +1,24 @@
 import { providers } from './providers';
 
-export type Providers = keyof typeof providers;
-
-export type SessionData<UserType> = {
+type SessionData<UserType> = {
 	user: UserType;
 	expiresAt: number;
 };
 
-export type SessionRecord<UserType> = Record<
-	string,
-	SessionData<UserType> | undefined
->;
-
-export type Oauth2ConfigOptions = {
+type Oauth2ConfigOptions = {
 	[K in Providers]?: {
 		credentials: ConstructorParameters<(typeof providers)[K]>;
 		scopes?: string[];
 		searchParams?: [string, string][];
 	};
 };
+
+export type Providers = keyof typeof providers;
+
+export type SessionRecord<UserType> = Record<
+	string,
+	SessionData<UserType> | undefined
+>;
 
 export type OAuthEventHandler = () => void;
 
@@ -42,7 +42,7 @@ export type GetUser<UserType> = ({
 	authProvider: string;
 }) => Promise<UserType | null>;
 
-export type AbsoluteAuthProps = {
+export type AbsoluteAuthProps<UserType> = {
 	config: Oauth2ConfigOptions;
 	authorizeRoute?: string;
 	callbackRoute?: string;
@@ -56,8 +56,8 @@ export type AbsoluteAuthProps = {
 	onRefresh?: OAuthEventHandler;
 	onLogout?: OAuthEventHandler;
 	onRevoke?: OAuthEventHandler;
-	createUser?: CreateUser<any>;
-	getUser?: GetUser<any>;
+	createUser?: CreateUser<UserType>;
+	getUser?: GetUser<UserType>;
 };
 
 export type ClientProviders = Record<
@@ -66,6 +66,5 @@ export type ClientProviders = Record<
 		providerInstance: InstanceType<(typeof providers)[Providers]>;
 		scopes: string[];
 		searchParams: [string, string][];
-		userInfoURL?: string;
 	}
 >;

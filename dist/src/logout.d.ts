@@ -1,5 +1,5 @@
-import Elysia from 'elysia';
-import type { OAuthEventHandler } from './types';
+import { Elysia } from 'elysia';
+import { OAuthEventHandler } from './types';
 type LogoutProps = {
     logoutRoute?: string;
     onLogout?: OAuthEventHandler;
@@ -26,8 +26,8 @@ export declare const logout: ({ logoutRoute, onLogout }: LogoutProps) => Elysia<
             headers: unknown;
             response: {
                 200: Response;
-                500: "Internal Server Error";
                 401: "No auth provider found";
+                500: `Failed to logout: ${string}`;
             };
         };
     };

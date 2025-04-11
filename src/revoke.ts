@@ -1,6 +1,6 @@
-import Elysia from 'elysia';
-import type { ClientProviders, OAuthEventHandler } from './types';
-import { isValidProviderKey } from './typeGuards';
+import { Elysia } from 'elysia';
+import { isRevocableProvider } from './typeGuards';
+import { ClientProviders, OAuthEventHandler } from './types';
 
 type RevokeProps = {
 	clientProviders: ClientProviders;
@@ -12,28 +12,50 @@ export const revoke = ({
 	clientProviders,
 	revokeRoute = 'revoke',
 	onRevoke
-}: RevokeProps) => {
-	return new Elysia().post(
+}: RevokeProps) =>
+	new Elysia().post(
 		`/${revokeRoute}/access-token`,
 		async ({ error, cookie: { user_refresh_token, auth_provider } }) => {
 			if (user_refresh_token.value === undefined) {
-				return error(401, 'No refresh token found');
+				return error('Unauthorized', 'No refresh token found');
 			}
 
 			if (auth_provider.value === undefined) {
-				return error(401, 'No auth provider found');
-			}
-
-			if (!isValidProviderKey(auth_provider.value)) {
-				return error(400, 'Invalid provider');
+				return error('Unauthorized', 'No auth provider found');
 			}
 
 			const normalizedProvider = auth_provider.value.toLowerCase();
 			const { providerInstance } = clientProviders[normalizedProvider];
 
-			// TODO - Implement the revoke function
+			if (!isRevocableProvider(providerInstance)) {
+				return error(
+					'Not Implemented',
+					'Provider does not support revocation'
+				);
+			}
 
-			onRevoke?.();
+			try {
+				await providerInstance.revokeAccessToken(
+					user_refresh_token.value
+				);
+
+				onRevoke?.();
+
+				return new Response('Token revoked', {
+					status: 204
+				});
+			} catch (err) {
+				if (err instanceof Error) {
+					return error(
+						'Internal Server Error',
+						`Failed to revoke token: ${err.message}`
+					);
+				}
+
+				return error(
+					'Internal Server Error',
+					`Failed to revoke token: Unknown error: ${err}`
+				);
+			}
 		}
 	);
-};

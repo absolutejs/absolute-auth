@@ -1,5 +1,5 @@
-import Elysia from 'elysia';
-import type { ClientProviders, OAuthEventHandler } from './types';
+import { Elysia } from 'elysia';
+import { ClientProviders, OAuthEventHandler } from './types';
 type RefreshProps = {
     clientProviders: ClientProviders;
     refreshRoute?: string;
@@ -27,8 +27,9 @@ export declare const refresh: ({ clientProviders, refreshRoute, onRefresh }: Ref
             headers: unknown;
             response: {
                 200: Response;
-                500: "Internal Server Error";
-                401: "No auth provider found" | "No refresh token found" | "Provider is not refreshable";
+                401: "No auth provider found" | "No refresh token found";
+                501: "Provider is not refreshable";
+                500: `Failed to refresh token: ${string}` | `Faile to refresh token: Unknown error: ${string}`;
             };
         };
     };

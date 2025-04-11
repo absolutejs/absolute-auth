@@ -1,10 +1,11 @@
-import Elysia from 'elysia';
-import type { OAuthEventHandler } from './types';
+import { Elysia } from 'elysia';
+import { ClientProviders, OAuthEventHandler } from './types';
 type StatusProps = {
+    clientProviders: ClientProviders;
     statusRoute?: string;
     onStatus?: OAuthEventHandler;
 };
-export declare const status: <UserType>({ statusRoute, onStatus }: StatusProps) => Elysia<"", {
+export declare const status: <UserType>({ clientProviders, statusRoute, onStatus }: StatusProps) => Elysia<"", {
     decorator: {};
     store: {
         session: import("./types").SessionRecord<UserType>;
@@ -28,7 +29,8 @@ export declare const status: <UserType>({ statusRoute, onStatus }: StatusProps) 
             headers: unknown;
             response: {
                 200: Response;
-                500: "Internal Server Error";
+                501: "Provider is not refreshable";
+                500: `Error: ${string} - ${string}` | `Unknown Error: ${string}`;
             };
         };
     };

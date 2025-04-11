@@ -1,4 +1,4 @@
-import Elysia from 'elysia';
+import { Elysia } from 'elysia';
 export declare const protectRoute: <UserType>() => Elysia<"", {
     decorator: {};
     store: {
@@ -16,7 +16,7 @@ export declare const protectRoute: <UserType>() => Elysia<"", {
     parser: {};
 }, {}, {
     derive: {
-        readonly protectRoute: (onAuth: () => Promise<Response>, onAuthFail?: () => Promise<Response>) => Promise<Response | import("elysia/error").ElysiaCustomStatusResponse<401, "No session ID found", 401> | import("elysia/error").ElysiaCustomStatusResponse<401, "No session found", 401>>;
+        readonly protectRoute: (handleAuth: () => Promise<Response>, handleAuthFail?: () => Promise<Response>) => Promise<Response | import("elysia/error").ElysiaCustomStatusResponse<"Unauthorized", "No session ID found", 401> | import("elysia/error").ElysiaCustomStatusResponse<"Unauthorized", "No session found", 401>>;
     };
     resolve: {};
     schema: import("elysia").MergeSchema<{}, {}, "">;

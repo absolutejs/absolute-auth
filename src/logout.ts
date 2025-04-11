@@ -1,17 +1,17 @@
-import Elysia from 'elysia';
-import type { OAuthEventHandler } from './types';
+import { Elysia } from 'elysia';
+import { OAuthEventHandler } from './types';
 
 type LogoutProps = {
 	logoutRoute?: string;
 	onLogout?: OAuthEventHandler;
 };
 
-export const logout = ({ logoutRoute = 'logout', onLogout }: LogoutProps) => {
-	return new Elysia().post(
+export const logout = ({ logoutRoute = 'logout', onLogout }: LogoutProps) =>
+	new Elysia().post(
 		`/${logoutRoute}`,
 		async ({ error, cookie: { user_session_id, auth_provider } }) => {
 			if (auth_provider.value === undefined) {
-				return error(401, 'No auth provider found');
+				return error('Unauthorized', 'No auth provider found');
 			}
 
 			try {
@@ -25,11 +25,16 @@ export const logout = ({ logoutRoute = 'logout', onLogout }: LogoutProps) => {
 				});
 			} catch (err) {
 				if (err instanceof Error) {
-					console.error('Failed to refresh token:', err.message);
+					return error(
+						'Internal Server Error',
+						`Failed to logout: ${err.message}`
+					);
 				}
 
-				return error(500);
+				return error(
+					'Internal Server Error',
+					`Failed to logout: Unknown error: ${err}`
+				);
 			}
 		}
 	);
-};

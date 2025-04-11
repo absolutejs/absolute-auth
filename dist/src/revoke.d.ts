@@ -1,5 +1,5 @@
-import Elysia from 'elysia';
-import type { ClientProviders, OAuthEventHandler } from './types';
+import { Elysia } from 'elysia';
+import { ClientProviders, OAuthEventHandler } from './types';
 type RevokeProps = {
     clientProviders: ClientProviders;
     revokeRoute?: string;
@@ -27,9 +27,10 @@ export declare const revoke: ({ clientProviders, revokeRoute, onRevoke }: Revoke
                 query: unknown;
                 headers: unknown;
                 response: {
-                    200: undefined;
-                    400: "Invalid provider";
+                    200: Response;
                     401: "No auth provider found" | "No refresh token found";
+                    501: "Provider does not support revocation";
+                    500: `Failed to revoke token: ${string}`;
                 };
             };
         };

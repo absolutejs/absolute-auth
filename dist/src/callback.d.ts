@@ -1,5 +1,5 @@
-import Elysia from 'elysia';
-import type { ClientProviders, CreateUser, GetUser, OAuthEventHandler } from './types';
+import { Elysia } from 'elysia';
+import { ClientProviders, CreateUser, GetUser, OAuthEventHandler } from './types';
 type CallbackProps<UserType> = {
     clientProviders: ClientProviders;
     callbackRoute?: string;
@@ -31,9 +31,9 @@ export declare const callback: <UserType>({ clientProviders, callbackRoute, onCa
             headers: unknown;
             response: {
                 200: import("undici-types").Response;
-                400: "Invalid provider" | "Invalid callback request" | "Invalid state mismatch" | "Code verifier not found and is required";
-                500: "Internal Server Error" | "Invalid user schema";
-                401: "No auth provider found";
+                400: "Invalid callback request" | "Invalid state mismatch" | "Code verifier not found and is required";
+                401: "Invalid provider" | "No auth provider found";
+                500: "Invalid user schema" | `${string} - ${string}` | `Failed to validate authorization code: Unknown error: ${string}`;
             };
         };
     };

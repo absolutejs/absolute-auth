@@ -1,5 +1,5 @@
-import Elysia from 'elysia';
-import type { ClientProviders, OAuthEventHandler } from './types';
+import { Elysia } from 'elysia';
+import { ClientProviders, OAuthEventHandler } from './types';
 type AuthorizeProps = {
     clientProviders: ClientProviders;
     authorizeRoute?: string;
@@ -31,7 +31,7 @@ export declare const authorize: ({ clientProviders, authorizeRoute, onAuthorize 
                 response: {
                     200: import("undici-types").Response;
                     400: "Provider is required" | "Invalid provider";
-                    500: "Internal Server Error";
+                    500: `Failed to authorize: ${string}` | `Unknown error: ${string}`;
                     422: {
                         type: "validation";
                         on: string;

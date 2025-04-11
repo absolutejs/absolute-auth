@@ -1,20 +1,15 @@
-import Elysia from 'elysia';
-import {
-	normalizedProviderKeys,
-	normalizedUserInfoURLKeys,
-	providers,
-	userInfoURLs
-} from './providers';
 import { OAuth2RequestError, ArcticFetchError } from 'arctic';
-import type { AbsoluteAuthProps, ClientProviders } from './types';
-import { logout } from './logout';
-import { revoke } from './revoke';
-import { status } from './status';
-import { refresh } from './refresh';
+import { Elysia } from 'elysia';
 import { authorize } from './authorize';
 import { callback } from './callback';
+import { logout } from './logout';
 import { protectRoute } from './protectRoute';
-import { isValidUserInfoURLKey, isValidProviderKey } from './typeGuards';
+import { normalizedProviderKeys, providers } from './providers';
+import { refresh } from './refresh';
+import { revoke } from './revoke';
+import { status } from './status';
+import { isValidProviderKey } from './typeGuards';
+import { AbsoluteAuthProps, ClientProviders } from './types';
 
 export const absoluteAuth = <UserType>({
 	config,
@@ -32,75 +27,64 @@ export const absoluteAuth = <UserType>({
 	onRevoke,
 	createUser,
 	getUser
-}: AbsoluteAuthProps) => {
-	const clientProviders = Object.entries(config).reduce(
-		(acc, [provider, options = {}]) => {
-			const normalizedProvider = provider.toLowerCase();
+}: AbsoluteAuthProps<UserType>) => {
+	const clientProviders = Object.keys(config).reduce<ClientProviders>(
+		(acc, key) => {
+			if (!Object.prototype.hasOwnProperty.call(config, key)) return acc;
 
+			if (!isValidProviderKey(key)) {
+				console.error(`Provider ${key} is not supported`);
+
+				return acc;
+			}
+
+			const options = config[key];
+			if (!options) return acc;
+
+			const normalizedProvider = key.toLowerCase();
 			const originalProviderKey =
 				normalizedProviderKeys[normalizedProvider];
-			const userInfoURLKey =
-				normalizedUserInfoURLKeys[normalizedProvider];
 
-			if (
-				!originalProviderKey ||
-				!isValidProviderKey(originalProviderKey)
-			) {
-				console.error(`Provider ${provider} is not supported`);
+			if (!isValidProviderKey(originalProviderKey)) {
+				console.error(`Provider ${key} is not supported`);
+
 				return acc;
 			}
 
 			const Provider = providers[originalProviderKey];
+			const { credentials, scopes = [], searchParams = [] } = options;
 
-			let userInfoURL: string | undefined;
-
-			if (isValidUserInfoURLKey(userInfoURLKey)) {
-				userInfoURL = userInfoURLs[userInfoURLKey];
-			}
-
-			const {
-				credentials = [],
-				scopes = [],
-				searchParams = []
-			} = options as {
-				credentials: ConstructorParameters<typeof Provider>;
-				scopes?: string[];
-				searchParams?: [string, string][];
-			};
-
-			// @ts-expect-error - The constructor parameters are dynamic
-			// and idk the fix for this
+			// @ts-expect-error: dynamic constructor parameters
 			const providerInstance = new Provider(...credentials);
 
 			acc[normalizedProvider] = {
 				providerInstance,
 				scopes,
-				searchParams,
-				userInfoURL
+				searchParams
 			};
 
 			return acc;
 		},
-		{} as ClientProviders
+		{}
 	);
 
 	return new Elysia()
 		.error('OAUTH2_REQUEST_ERROR', OAuth2RequestError)
 		.error('ARCTIC_FETCH_ERROR', ArcticFetchError)
 		.use(logout({ logoutRoute, onLogout }))
-		.use(revoke({ clientProviders, revokeRoute, onRevoke }))
-		.use(status<UserType>({ statusRoute, onStatus }))
-		.use(refresh({ clientProviders, refreshRoute, onRefresh }))
-		.use(authorize({ clientProviders, authorizeRoute, onAuthorize }))
+		.use(revoke({ clientProviders, onRevoke, revokeRoute }))
+		.use(status<UserType>({ clientProviders, onStatus, statusRoute }))
+		.use(refresh({ clientProviders, onRefresh, refreshRoute }))
+		.use(authorize({ authorizeRoute, clientProviders, onAuthorize }))
 		.use(
 			callback<UserType>({
-				clientProviders,
 				callbackRoute,
-				onCallback,
+				clientProviders,
+				createUser,
 				getUser,
-				createUser
+				onCallback
 			})
 		)
-		.use(protectRoute<UserType>())
+		.use(protectRoute())
 		.as('plugin');
 };

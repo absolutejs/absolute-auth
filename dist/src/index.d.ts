@@ -1,10 +1,10 @@
-import Elysia from 'elysia';
 import { OAuth2RequestError, ArcticFetchError } from 'arctic';
-import type { AbsoluteAuthProps } from './types';
-export declare const absoluteAuth: <UserType>({ config, authorizeRoute, callbackRoute, logoutRoute, statusRoute, refreshRoute, revokeRoute, onAuthorize, onCallback, onStatus, onRefresh, onLogout, onRevoke, createUser, getUser }: AbsoluteAuthProps) => Elysia<"", {
+import { Elysia } from 'elysia';
+import { AbsoluteAuthProps } from './types';
+export declare const absoluteAuth: <UserType>({ config, authorizeRoute, callbackRoute, logoutRoute, statusRoute, refreshRoute, revokeRoute, onAuthorize, onCallback, onStatus, onRefresh, onLogout, onRevoke, createUser, getUser }: AbsoluteAuthProps<UserType>) => Elysia<"", {
     decorator: {};
     store: {
-        session: import("./types").SessionRecord<UserType>;
+        session: import("./types").SessionRecord<UserType> & import("./types").SessionRecord<unknown>;
     };
     derive: {};
     resolve: {};
@@ -28,8 +28,8 @@ export declare const absoluteAuth: <UserType>({ config, authorizeRoute, callback
             headers: unknown;
             response: {
                 200: Response;
-                500: "Internal Server Error";
                 401: "No auth provider found";
+                500: `Failed to logout: ${string}`;
             };
         };
     };
@@ -42,9 +42,10 @@ export declare const absoluteAuth: <UserType>({ config, authorizeRoute, callback
                 query: unknown;
                 headers: unknown;
                 response: {
-                    200: undefined;
-                    400: "Invalid provider";
+                    200: Response;
                     401: "No auth provider found" | "No refresh token found";
+                    501: "Provider does not support revocation";
+                    500: `Failed to revoke token: ${string}`;
                 };
             };
         };
@@ -58,7 +59,8 @@ export declare const absoluteAuth: <UserType>({ config, authorizeRoute, callback
             headers: unknown;
             response: {
                 200: Response;
-                500: "Internal Server Error";
+                501: "Provider is not refreshable";
+                500: `Error: ${string} - ${string}` | `Unknown Error: ${string}`;
             };
         };
     };
@@ -71,8 +73,9 @@ export declare const absoluteAuth: <UserType>({ config, authorizeRoute, callback
             headers: unknown;
             response: {
                 200: Response;
-                500: "Internal Server Error";
-                401: "No auth provider found" | "No refresh token found" | "Provider is not refreshable";
+                401: "No auth provider found" | "No refresh token found";
+                501: "Provider is not refreshable";
+                500: `Failed to refresh token: ${string}` | `Faile to refresh token: Unknown error: ${string}`;
             };
         };
     };
@@ -89,7 +92,7 @@ export declare const absoluteAuth: <UserType>({ config, authorizeRoute, callback
                 response: {
                     200: import("undici-types").Response;
                     400: "Provider is required" | "Invalid provider";
-                    500: "Internal Server Error";
+                    500: `Failed to authorize: ${string}` | `Unknown error: ${string}`;
                     422: {
                         type: "validation";
                         on: string;
@@ -112,15 +115,15 @@ export declare const absoluteAuth: <UserType>({ config, authorizeRoute, callback
             headers: unknown;
             response: {
                 200: import("undici-types").Response;
-                400: "Invalid provider" | "Invalid callback request" | "Invalid state mismatch" | "Code verifier not found and is required";
-                500: "Internal Server Error" | "Invalid user schema";
-                401: "No auth provider found";
+                400: "Invalid callback request" | "Invalid state mismatch" | "Code verifier not found and is required";
+                401: "Invalid provider" | "No auth provider found";
+                500: "Invalid user schema" | `${string} - ${string}` | `Failed to validate authorization code: Unknown error: ${string}`;
             };
         };
     };
 }, {
     derive: {
-        readonly protectRoute: (onAuth: () => Promise<Response>, onAuthFail?: (() => Promise<Response>) | undefined) => Promise<Response | import("elysia/error").ElysiaCustomStatusResponse<401, "No session ID found", 401> | import("elysia/error").ElysiaCustomStatusResponse<401, "No session found", 401>>;
+        readonly protectRoute: (handleAuth: () => Promise<Response>, handleAuthFail?: () => Promise<Response>) => Promise<Response | import("elysia/error").ElysiaCustomStatusResponse<"Unauthorized", "No session ID found", 401> | import("elysia/error").ElysiaCustomStatusResponse<"Unauthorized", "No session found", 401>>;
     };
     resolve: {};
     schema: import("elysia").MergeSchema<{

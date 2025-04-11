@@ -1,5 +1,5 @@
-import Elysia from 'elysia';
-import type { SessionRecord } from './types';
+import { Elysia } from 'elysia';
+import { SessionRecord } from './types';
 export declare const sessionStore: <UserType>() => Elysia<"", {
     decorator: {};
     store: {

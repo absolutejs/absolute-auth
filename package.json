@@ -1,5 +1,5 @@
 {
-	"version": "0.0.2",
+	"version": "0.1.0",
 	"name": "@absolutejs/auth",
 	"description": "An authorization library for absolutejs",
 	"repository": {
@@ -25,7 +25,7 @@
 		"elysia",
 		"oauth"
 	],
-	"types": "dist/index.d.ts",
+	"types": "dist/src/index.d.ts",
 	"dependencies": {
 		"arctic": "3.6.0",
 		"elysia": "1.2.25"
