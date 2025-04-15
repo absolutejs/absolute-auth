@@ -27,9 +27,11 @@
 	],
 	"types": "dist/src/index.d.ts",
 	"dependencies": {
-		"arctic": "3.6.0",
-		"elysia": "1.2.25"
+		"arctic": "3.6.0"
 	},
+	"peerDependencies": {
+		"elysia": ">= 1.2.0"
+    },
 	"devDependencies": {
 		"@elysiajs/static": "1.2.0",
 		"@neondatabase/serverless": "1.0.0",
@@ -41,6 +43,7 @@
 		"prettier": "3.5.3",
 		"react": "19.1.0",
 		"react-dom": "19.1.0",
+		"elysia": "1.2.25",
 		"typescript": "5.8.3"
 	},
 	"module": "dist/index.js",
