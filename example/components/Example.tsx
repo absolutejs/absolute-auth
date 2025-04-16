@@ -12,15 +12,15 @@ import { useState } from 'react';
 import { Head } from './Head';
 
 export const Example = () => {
-	const { userIdentity, setUserIdentity } = useAuthStatus();
+	const { user, handleLogOut } = useAuthStatus();
 	const [modalOpen, setModalOpen] = useState(false);
 	return (
 		<html lang="en" style={htmlDefault}>
 			<Head />
 			<body style={bodyDefault}>
 				<Navbar
-					userIdentity={userIdentity}
-					setUserIdentity={setUserIdentity}
+					user={user}
+					handleLogOut={handleLogOut}
 					modalOpen={modalOpen}
 					setModalOpen={setModalOpen}
 				/>
@@ -32,7 +32,7 @@ export const Example = () => {
 							You can access the protected page after logging in
 							to see the user data
 						</p>
-						{userIdentity ? (
+						{user ? (
 							<a
 								style={buttonStyle({
 									backgroundColor: '#007bff'

@@ -28,7 +28,7 @@ export type OnCallback<UserType> = ({ authProvider, decodedIdToken, session, use
     };
     session: SessionRecord<UserType>;
     user_session_id: Cookie<string | undefined>;
-}) => void;
+}) => void | Promise<void>;
 export type AbsoluteAuthProps<UserType> = {
     config: Oauth2ConfigOptions;
     authorizeRoute?: string;

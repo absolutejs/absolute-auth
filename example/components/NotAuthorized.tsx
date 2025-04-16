@@ -10,7 +10,7 @@ import { Navbar } from './Navbar';
 import { Head } from './Head';
 
 export const NotAuthorized = () => {
-	const { userIdentity, setUserIdentity } = useAuthStatus();
+	const { user, handleLogOut } = useAuthStatus();
 	const [modalOpen, setModalOpen] = useState(false);
 
 	return (
@@ -18,8 +18,8 @@ export const NotAuthorized = () => {
 			<Head />
 			<body style={bodyDefault}>
 				<Navbar
-					userIdentity={userIdentity}
-					setUserIdentity={setUserIdentity}
+					user={user}
+					handleLogOut={handleLogOut}
 					modalOpen={modalOpen}
 					setModalOpen={setModalOpen}
 				/>
