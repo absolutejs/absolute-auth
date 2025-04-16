@@ -139,3 +139,4 @@ export declare const absoluteAuth: <UserType>({ config, authorizeRoute, callback
     resolve: {};
     schema: {};
 }>;
+export * from './utils';
