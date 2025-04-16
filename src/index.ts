@@ -84,3 +84,5 @@ export const absoluteAuth = <UserType>({
 		.use(protectRoute())
 		.as('plugin');
 };
+
+export * from './utils';
