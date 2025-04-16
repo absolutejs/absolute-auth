@@ -1,11 +1,11 @@
 import { Elysia } from 'elysia';
 import { isRefreshableProvider } from './typeGuards';
-import { ClientProviders, OAuthEventHandler } from './types';
+import { ClientProviders } from './types';
 
 type RefreshProps = {
 	clientProviders: ClientProviders;
 	refreshRoute?: string;
-	onRefresh?: OAuthEventHandler;
+	onRefresh?: () => void;
 };
 
 export const refresh = ({

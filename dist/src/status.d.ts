@@ -1,9 +1,9 @@
 import { Elysia } from 'elysia';
-import { ClientProviders, OAuthEventHandler } from './types';
+import { ClientProviders } from './types';
 type StatusProps = {
     clientProviders: ClientProviders;
     statusRoute?: string;
-    onStatus?: OAuthEventHandler;
+    onStatus?: () => void;
 };
 export declare const status: <UserType>({ clientProviders, statusRoute, onStatus }: StatusProps) => Elysia<"", {
     decorator: {};

@@ -1,12 +1,12 @@
 import { Elysia } from 'elysia';
 import { sessionStore } from './sessionStore';
 import { isRefreshableProvider } from './typeGuards';
-import { ClientProviders, OAuthEventHandler } from './types';
+import { ClientProviders } from './types';
 
 type StatusProps = {
 	clientProviders: ClientProviders;
 	statusRoute?: string;
-	onStatus?: OAuthEventHandler;
+	onStatus?: () => void;
 };
 
 export const status = <UserType>({

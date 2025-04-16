@@ -1,9 +1,9 @@
 import { Elysia } from 'elysia';
-import { ClientProviders, OAuthEventHandler } from './types';
+import { ClientProviders } from './types';
 type AuthorizeProps = {
     clientProviders: ClientProviders;
     authorizeRoute?: string;
-    onAuthorize?: OAuthEventHandler;
+    onAuthorize?: () => void;
 };
 export declare const authorize: ({ clientProviders, authorizeRoute, onAuthorize }: AuthorizeProps) => Elysia<"", {
     decorator: {};

@@ -1,8 +1,7 @@
 import { Elysia } from 'elysia';
-import { OAuthEventHandler } from './types';
 type LogoutProps = {
     logoutRoute?: string;
-    onLogout?: OAuthEventHandler;
+    onLogout?: () => void;
 };
 export declare const logout: ({ logoutRoute, onLogout }: LogoutProps) => Elysia<"", {
     decorator: {};

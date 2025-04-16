@@ -1,9 +1,9 @@
 import { Elysia } from 'elysia';
-import { ClientProviders, OAuthEventHandler } from './types';
+import { ClientProviders } from './types';
 type RevokeProps = {
     clientProviders: ClientProviders;
     revokeRoute?: string;
-    onRevoke?: OAuthEventHandler;
+    onRevoke?: () => void;
 };
 export declare const revoke: ({ clientProviders, revokeRoute, onRevoke }: RevokeProps) => Elysia<"", {
     decorator: {};

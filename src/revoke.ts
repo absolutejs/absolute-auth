@@ -1,11 +1,11 @@
 import { Elysia } from 'elysia';
 import { isRevocableProvider } from './typeGuards';
-import { ClientProviders, OAuthEventHandler } from './types';
+import { ClientProviders } from './types';
 
 type RevokeProps = {
 	clientProviders: ClientProviders;
 	revokeRoute?: string;
-	onRevoke?: OAuthEventHandler;
+	onRevoke?: () => void;
 };
 
 export const revoke = ({

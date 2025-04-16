@@ -1,9 +1,9 @@
 import { Elysia } from 'elysia';
-import { ClientProviders, OAuthEventHandler } from './types';
+import { ClientProviders } from './types';
 type RefreshProps = {
     clientProviders: ClientProviders;
     refreshRoute?: string;
-    onRefresh?: OAuthEventHandler;
+    onRefresh?: () => void;
 };
 export declare const refresh: ({ clientProviders, refreshRoute, onRefresh }: RefreshProps) => Elysia<"", {
     decorator: {};

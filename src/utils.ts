@@ -48,5 +48,5 @@ export const instantiateUserSession = async <UserType>({
 };
 
 export const createAuthConfig = <UserType>(
-    props: AbsoluteAuthProps<UserType>
-  ) => props;
+	props: AbsoluteAuthProps<UserType>
+) => props;

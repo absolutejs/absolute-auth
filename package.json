@@ -16,7 +16,8 @@
 		"dev": "bun run --watch example/server.ts",
 		"db:generate": "drizzle-kit generate --schema ./example/db/schema.ts --dialect postgresql",
 		"db:migrate": "bun run ./example/db/migrate.ts",
-		"db:studio": "drizzle-kit studio"
+		"db:studio": "drizzle-kit studio",
+		"release": "bun run format && bun run build && bun publish"
 	},
 	"keywords": [
 		"authorization",

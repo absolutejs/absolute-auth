@@ -1,13 +1,13 @@
 import { generateState, generateCodeVerifier } from 'arctic';
 import { Elysia } from 'elysia';
 import { isValidProviderKey } from './typeGuards';
-import { ClientProviders, OAuthEventHandler } from './types';
+import { ClientProviders } from './types';
 import { COOKIE_DURATION } from './constants';
 
 type AuthorizeProps = {
 	clientProviders: ClientProviders;
 	authorizeRoute?: string;
-	onAuthorize?: OAuthEventHandler;
+	onAuthorize?: () => void;
 };
 
 export const authorize = ({

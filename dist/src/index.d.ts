@@ -1,7 +1,7 @@
 import { OAuth2RequestError, ArcticFetchError } from 'arctic';
 import { Elysia } from 'elysia';
 import { AbsoluteAuthProps } from './types';
-export declare const absoluteAuth: <UserType>({ config, authorizeRoute, callbackRoute, logoutRoute, statusRoute, refreshRoute, revokeRoute, onAuthorize, onCallback, onStatus, onRefresh, onLogout, onRevoke, createUser, getUser }: AbsoluteAuthProps<UserType>) => Elysia<"", {
+export declare const absoluteAuth: <UserType>({ config, authorizeRoute, callbackRoute, logoutRoute, statusRoute, refreshRoute, revokeRoute, onAuthorize, onCallback, onStatus, onRefresh, onLogout, onRevoke }: AbsoluteAuthProps<UserType>) => Elysia<"", {
     decorator: {};
     store: {
         session: import("./types").SessionRecord<UserType> & import("./types").SessionRecord<unknown>;
@@ -117,7 +117,7 @@ export declare const absoluteAuth: <UserType>({ config, authorizeRoute, callback
                 200: import("undici-types").Response;
                 400: "Invalid callback request" | "Invalid state mismatch" | "Code verifier not found and is required";
                 401: "Invalid provider" | "No auth provider found";
-                500: "Invalid user schema" | `${string} - ${string}` | `Failed to validate authorization code: Unknown error: ${string}`;
+                500: `${string} - ${string}` | `Failed to validate authorization code: Unknown error: ${string}`;
             };
         };
     };

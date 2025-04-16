@@ -1,3 +1,4 @@
+import { Cookie } from 'elysia';
 import { providers } from './providers';
 type SessionData<UserType> = {
     user: UserType;
@@ -12,19 +13,22 @@ type Oauth2ConfigOptions = {
 };
 export type Providers = keyof typeof providers;
 export type SessionRecord<UserType> = Record<string, SessionData<UserType> | undefined>;
-export type OAuthEventHandler = () => void;
-export type CreateUser<UserType> = ({ decodedIdToken, authProvider }: {
+export type UserFunctionProps = {
+    authProvider: string;
     decodedIdToken: {
         [key: string]: string | undefined;
     };
+};
+export type CreateUser<UserType> = ({ decodedIdToken, authProvider }: UserFunctionProps) => Promise<UserType>;
+export type GetUser<UserType> = ({ decodedIdToken, authProvider }: UserFunctionProps) => Promise<UserType | null>;
+export type OnCallback<UserType> = ({ authProvider, decodedIdToken, session, user_session_id }: {
     authProvider: string;
-}) => Promise<UserType>;
-export type GetUser<UserType> = ({ decodedIdToken, authProvider }: {
     decodedIdToken: {
         [key: string]: string | undefined;
     };
-    authProvider: string;
-}) => Promise<UserType | null>;
+    session: SessionRecord<UserType>;
+    user_session_id: Cookie<string | undefined>;
+}) => void;
 export type AbsoluteAuthProps<UserType> = {
     config: Oauth2ConfigOptions;
     authorizeRoute?: string;
@@ -33,14 +37,12 @@ export type AbsoluteAuthProps<UserType> = {
     revokeRoute?: string;
     logoutRoute?: string;
     statusRoute?: string;
-    onAuthorize?: OAuthEventHandler;
-    onCallback?: OAuthEventHandler;
-    onStatus?: OAuthEventHandler;
-    onRefresh?: OAuthEventHandler;
-    onLogout?: OAuthEventHandler;
-    onRevoke?: OAuthEventHandler;
-    createUser?: CreateUser<UserType>;
-    getUser?: GetUser<UserType>;
+    onAuthorize?: () => void;
+    onCallback?: OnCallback<UserType>;
+    onStatus?: () => void;
+    onRefresh?: () => void;
+    onLogout?: () => void;
+    onRevoke?: () => void;
 };
 export type ClientProviders = Record<string, {
     providerInstance: InstanceType<(typeof providers)[Providers]>;
