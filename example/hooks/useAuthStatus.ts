@@ -1,29 +1,45 @@
 import { useState, useEffect } from 'react';
-import type { User } from '../db/schema';
+import { User } from '../db/schema';
 
 export const useAuthStatus = () => {
-	const [userIdentity, setUserIdentity] = useState<User | null>(null);
+	const [user, setUser] = useState<User>();
 
 	const checkAuthStatus = async () => {
-		try {
-			const response = await fetch('/auth-status');
+		const response = await fetch('/auth-status');
 
-			if (response.ok) {
-				const data = await response.json();
+		if (!response.ok && response.statusText === 'Unauthorized') {
+			setUser(undefined);
+			return;
+		}
 
-				if (data.user) {
-					setUserIdentity({
-						email: data.user.email ?? 'email',
-						given_name: data.user.given_name ?? 'given_name',
-						family_name: data.user.family_name ?? 'family_name',
-						picture: data.user.picture ?? 'picture',
-						auth_sub: data.user.auth_sub ?? 'auth_sub',
-						created_at: data.user.created_at ?? 'created_at'
-					});
-				}
-			}
-		} catch (error) {
-			console.error('Error checking auth status:', error);
+		if (!response.ok) {
+			console.error('Failed to fetch user data');
+			return;
+		}
+
+		const data = await response.json();
+
+		if (!data.user) {
+			return;
+		}
+
+		setUser({
+			auth_sub: data.user.auth_sub ?? 'auth_sub',
+			created_at: data.user.created_at ?? 'created_at',
+			email: data.user.email ?? 'Email',
+			family_name: data.user.family_name ?? 'Last name',
+			given_name: data.user.given_name ?? 'First name',
+			picture: data.user.picture ?? 'picture'
+		});
+	};
+
+	const handleLogOut = async () => {
+		const response = await fetch('/logout', { method: 'POST' });
+		if (response.ok) {
+			setUser(undefined);
+			window.location.reload();
+		} else {
+			console.error('Logout failed');
 		}
 	};
 
@@ -32,7 +48,8 @@ export const useAuthStatus = () => {
 	}, []);
 
 	return {
-		userIdentity,
-		setUserIdentity
+		handleLogOut,
+		setUser,
+		user
 	};
 };

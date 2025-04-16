@@ -34,10 +34,12 @@ export const instantiateUserSession = async <UserType>({
 		throw new Error('Internal Server Error - Invalid user schema');
 
 	const sessionKey = crypto.randomUUID();
+
 	session[sessionKey] = {
 		expiresAt: Date.now() + MILLISECONDS_IN_A_DAY,
 		user
 	};
+	console.log('in func user_session_id before set', user_session_id.value);
 
 	user_session_id.set({
 		httpOnly: true,
@@ -45,6 +47,8 @@ export const instantiateUserSession = async <UserType>({
 		secure: true,
 		value: sessionKey
 	});
+
+	console.log('in func user_session_id after set', user_session_id.value);
 };
 
 export const createAuthConfig = <UserType>(

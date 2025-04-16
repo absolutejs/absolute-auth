@@ -12,7 +12,7 @@ import { Navbar } from './Navbar';
 import { Head } from './Head';
 
 export const Protected = () => {
-	const { userIdentity, setUserIdentity } = useAuthStatus();
+	const { user, handleLogOut } = useAuthStatus();
 	const [modalOpen, setModalOpen] = useState(false);
 
 	return (
@@ -20,20 +20,20 @@ export const Protected = () => {
 			<Head />
 			<body style={bodyDefault}>
 				<Navbar
-					userIdentity={userIdentity}
-					setUserIdentity={setUserIdentity}
+					user={user}
+					handleLogOut={handleLogOut}
 					modalOpen={modalOpen}
 					setModalOpen={setModalOpen}
 				/>
 				<main style={mainDefault}>
 					<div style={contentStyle}>
 						<h1>Protected Page</h1>
-						<p>{userIdentity && userIdentity.given_name}</p>
-						<p>{userIdentity && userIdentity.family_name}</p>
-						<p>{userIdentity && userIdentity.email}</p>
+						<p>{user && user.given_name}</p>
+						<p>{user && user.family_name}</p>
+						<p>{user && user.email}</p>
 						<img
 							src={
-								userIdentity?.picture ??
+								user?.picture ??
 								'https://via.placeholder.com/150'
 							}
 							alt="Profile Picture"

@@ -91,12 +91,22 @@ export const callback = <UserType>({
 
 					const authProvider = auth_provider.value;
 
-					onCallback?.({
+					console.log(
+						'in route user_session_id before',
+						user_session_id.value
+					);
+
+					await onCallback?.({
 						authProvider,
 						decodedIdToken,
 						session,
 						user_session_id
 					});
+
+					console.log(
+						'in route user_session_id after',
+						user_session_id.value
+					);
 
 					const redirectUrl = redirect_url.value ?? '/';
 

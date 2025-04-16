@@ -8,12 +8,7 @@ import { Example } from './components/Example';
 import { handlePageRequest } from './utils/pageUtils';
 import { rm, copyFile } from 'node:fs/promises';
 import { staticPlugin } from '@elysiajs/static';
-import {
-	createDBUser,
-	createUser,
-	getDBUser,
-	getUser
-} from './utils/userUtils';
+import { createUser, getUser } from './utils/userUtils';
 import { Protected } from './components/Protected';
 import { NotAuthorized } from './components/NotAuthorized';
 import { instantiateUserSession } from '../src/utils';

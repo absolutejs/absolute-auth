@@ -5,9 +5,9 @@ import { AuthOptions } from './AuthOptions';
 import type { User } from '../db/schema';
 
 type NavbarProps = {
-	userIdentity: User | null;
-	setUserIdentity: Dispatch<SetStateAction<User | null>>;
+	user: User | undefined;
 	modalOpen: boolean;
+	handleLogOut: () => Promise<void>;
 	setModalOpen: Dispatch<SetStateAction<boolean>>;
 };
 
@@ -18,21 +18,11 @@ const navLinks = [
 ];
 
 export const Navbar = ({
-	userIdentity,
-
-	setUserIdentity,
+	user,
+	handleLogOut,
 	modalOpen,
 	setModalOpen
 }: NavbarProps) => {
-	const handleLogOut = async () => {
-		const response = await fetch('/logout', { method: 'POST' });
-		if (response.ok) {
-			setUserIdentity(null);
-		} else {
-			console.error('Logout failed');
-		}
-	};
-
 	return (
 		<header
 			style={{
@@ -76,7 +66,7 @@ export const Navbar = ({
 						{label}
 					</a>
 				))}
-				{userIdentity ? (
+				{user ? (
 					<>
 						<button
 							style={buttonStyle({
@@ -95,7 +85,7 @@ export const Navbar = ({
 								marginLeft: '20px'
 							}}
 							src={
-								userIdentity?.picture ??
+								user?.picture ??
 								'https://via.placeholder.com/150'
 							}
 							alt="profile"

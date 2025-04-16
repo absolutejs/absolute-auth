@@ -57,7 +57,12 @@ export const status = <UserType>({
 					}
 
 					const userSession = session[user_session_id.value];
-
+					// console.log(
+					// 	'Session:',
+					// 	session,
+					// 	'User Session ID:',
+					// 	user_session_id.value
+					// );
 					// Return null because the user is not logged in, its not an error just a status
 					if (userSession === undefined) {
 						return new Response(
