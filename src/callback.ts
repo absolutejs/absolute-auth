@@ -1,29 +1,19 @@
 import { decodeIdToken } from 'arctic';
 import { Elysia } from 'elysia';
 import { sessionStore } from './sessionStore';
-import { isNonEmptyString, isValidProviderKey, isValidUser } from './typeGuards';
-import {
-	ClientProviders,
-	CreateUser,
-	GetUser,
-	OAuthEventHandler
-} from './types';
-import { MILLISECONDS_IN_A_DAY } from './constants';
+import { isNonEmptyString, isValidProviderKey } from './typeGuards';
+import { ClientProviders, OnCallback } from './types';
 
 type CallbackProps<UserType> = {
 	clientProviders: ClientProviders;
 	callbackRoute?: string;
-	onCallback?: OAuthEventHandler;
-	getUser?: GetUser<UserType>;
-	createUser?: CreateUser<UserType>;
+	onCallback?: OnCallback<UserType>;
 };
 
 export const callback = <UserType>({
 	clientProviders,
 	callbackRoute = 'authorize/callback',
-	onCallback,
-	getUser,
-	createUser
+	onCallback
 }: CallbackProps<UserType>) =>
 	new Elysia()
 		.use(sessionStore<UserType>())
@@ -100,34 +90,13 @@ export const callback = <UserType>({
 					);
 
 					const authProvider = auth_provider.value;
-					let user = await getUser?.({
+
+					onCallback?.({
 						authProvider,
-						decodedIdToken
+						decodedIdToken,
+						session,
+						user_session_id
 					});
-					user =
-						user ??
-						(await createUser?.({ authProvider, decodedIdToken }));
-
-					if (!isValidUser<UserType>(user))
-						return error(
-							'Internal Server Error',
-							'Invalid user schema'
-						);
-
-					const sessionKey = crypto.randomUUID();
-					session[sessionKey] = {
-						expiresAt: Date.now() + MILLISECONDS_IN_A_DAY,
-						user
-					};
-
-					user_session_id.set({
-						httpOnly: true,
-						sameSite: 'lax',
-						secure: true,
-						value: sessionKey
-					});
-
-					onCallback?.();
 
 					const redirectUrl = redirect_url.value ?? '/';
 

@@ -8,9 +8,15 @@ import { Example } from './components/Example';
 import { handlePageRequest } from './utils/pageUtils';
 import { rm, copyFile } from 'node:fs/promises';
 import { staticPlugin } from '@elysiajs/static';
-import { createDBUser, getDBUser } from './utils/userUtils';
+import {
+	createDBUser,
+	createUser,
+	getDBUser,
+	getUser
+} from './utils/userUtils';
 import { Protected } from './components/Protected';
 import { NotAuthorized } from './components/NotAuthorized';
+import { instantiateUserSession } from '../src/utils';
 
 let host = Bun.env.HOST || 'localhost';
 const port = Number(Bun.env.PORT) || 3000;
@@ -93,36 +99,24 @@ new Elysia()
 					scopes: ['read:user']
 				}
 			},
-			createUser: async ({ decodedIdToken, authProvider }) => {
-				const provider = authProvider.toUpperCase();
-				const sub = decodedIdToken.sub;
-
-				if (!sub) {
-					throw new Error('Sub claim is missing from ID token');
-				}
-
-				const authSub = `${provider}|${sub}`;
-				return await createDBUser({
-					auth_sub: authSub,
-					given_name: decodedIdToken.given_name ?? '',
-					family_name: decodedIdToken.family_name ?? '',
-					email: decodedIdToken.email ?? '',
-					picture: decodedIdToken.picture ?? '',
-					db,
-					schema
-				});
-			},
-			getUser: async ({ decodedIdToken, authProvider }) => {
-				const provider = authProvider.toUpperCase();
-				const sub = decodedIdToken.sub;
-
-				if (!sub) {
-					throw new Error('Sub claim is missing from ID token');
-				}
-
-				const authSub = `${provider}|${sub}`;
-				return await getDBUser({ authSub, db, schema });
-			}
+			onCallback: (onCallbackProps) =>
+				instantiateUserSession<User>({
+					getUser: ({ decodedIdToken, authProvider }) =>
+						getUser({
+							db,
+							schema,
+							authProvider,
+							decodedIdToken
+						}),
+					createUser: ({ decodedIdToken, authProvider }) =>
+						createUser({
+							db,
+							schema,
+							authProvider,
+							decodedIdToken
+						}),
+					...onCallbackProps
+				})
 		})
 	)
 	.get('/', () =>

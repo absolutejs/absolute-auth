@@ -1,5 +1,5 @@
 {
-	"version": "0.1.0",
+	"version": "0.2.0",
 	"name": "@absolutejs/auth",
 	"description": "An authorization library for absolutejs",
 	"repository": {
@@ -31,7 +31,7 @@
 	},
 	"peerDependencies": {
 		"elysia": ">= 1.2.0"
-    },
+	},
 	"devDependencies": {
 		"@elysiajs/static": "1.2.0",
 		"@neondatabase/serverless": "1.0.0",

@@ -24,9 +24,7 @@ export const absoluteAuth = <UserType>({
 	onStatus,
 	onRefresh,
 	onLogout,
-	onRevoke,
-	createUser,
-	getUser
+	onRevoke
 }: AbsoluteAuthProps<UserType>) => {
 	const clientProviders = Object.keys(config).reduce<ClientProviders>(
 		(acc, key) => {
@@ -80,8 +78,6 @@ export const absoluteAuth = <UserType>({
 			callback<UserType>({
 				callbackRoute,
 				clientProviders,
-				createUser,
-				getUser,
 				onCallback
 			})
 		)

@@ -1,5 +1,6 @@
 import { eq } from 'drizzle-orm';
 import type { DatabaseFunctionProps, NewUser } from '../db/schema';
+import { UserFunctionProps } from '../../src/types';
 
 export const getDBUser = async ({
 	authSub,
@@ -64,4 +65,46 @@ export const createDBUser = async ({
 			);
 		}
 	}
+};
+
+export const createUser = async ({
+	decodedIdToken,
+	authProvider,
+	db,
+	schema
+}: UserFunctionProps & DatabaseFunctionProps) => {
+	const provider = authProvider.toUpperCase();
+	const sub = decodedIdToken.sub;
+
+	if (!sub) {
+		throw new Error('Sub claim is missing from ID token');
+	}
+
+	const authSub = `${provider}|${sub}`;
+	return await createDBUser({
+		auth_sub: authSub,
+		given_name: decodedIdToken.given_name ?? '',
+		family_name: decodedIdToken.family_name ?? '',
+		email: decodedIdToken.email ?? '',
+		picture: decodedIdToken.picture ?? '',
+		db,
+		schema
+	});
+};
+
+export const getUser = async ({
+	decodedIdToken,
+	authProvider,
+	db,
+	schema
+}: UserFunctionProps & DatabaseFunctionProps) => {
+	const provider = authProvider.toUpperCase();
+	const sub = decodedIdToken.sub;
+
+	if (!sub) {
+		throw new Error('Sub claim is missing from ID token');
+	}
+
+	const authSub = `${provider}|${sub}`;
+	return await getDBUser({ authSub, db, schema });
 };

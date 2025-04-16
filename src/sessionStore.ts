@@ -8,5 +8,3 @@ export const sessionStore = <UserType>() => {
 		session: initialSession
 	});
 };
-
-// TODO: Im pretty sure theres a way to give the type to the session store without setting an initial state
