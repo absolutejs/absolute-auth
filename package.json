@@ -1,5 +1,5 @@
 {
-	"version": "0.2.4",
+	"version": "0.2.5",
 	"name": "@absolutejs/auth",
 	"description": "An authorization library for absolutejs",
 	"repository": {
@@ -27,7 +27,6 @@
 		"oauth"
 	],
 	"types": "dist/src/index.d.ts",
-	"dependencies": {},
 	"peerDependencies": {
 		"arctic": ">= 3.6.0",
 		"elysia": ">= 1.2.0"
@@ -47,10 +46,5 @@
 		"elysia": "1.2.25",
 		"typescript": "5.8.3"
 	},
-	"module": "dist/index.js",
-	"files": [
-		"dist/",
-		"README.md",
-		"LICENSE"
-	]
+	"module": "dist/index.js"
 }

@@ -94,8 +94,8 @@ new Elysia()
 					scopes: ['read:user']
 				}
 			},
-			onCallback: (onCallbackProps) =>
-				instantiateUserSession<User>({
+			onCallback: async(onCallbackProps) =>
+				await instantiateUserSession<User>({
 					getUser: ({ decodedIdToken, authProvider }) =>
 						getUser({
 							db,
