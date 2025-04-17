@@ -2,7 +2,6 @@ import { Cookie } from 'elysia';
 import { MILLISECONDS_IN_A_DAY } from './constants';
 import { AbsoluteAuthProps, CreateUser, GetUser, SessionRecord } from './types';
 import { isValidUser } from './typeGuards';
-import { User } from '../example/db/schema';
 
 type InsantiateUserSessionProps<UserType> = {
 	authProvider: string;
@@ -39,7 +38,6 @@ export const instantiateUserSession = async <UserType>({
 		expiresAt: Date.now() + MILLISECONDS_IN_A_DAY,
 		user
 	};
-	console.log('in func user_session_id before set', user_session_id.value);
 
 	user_session_id.set({
 		httpOnly: true,
@@ -47,8 +45,6 @@ export const instantiateUserSession = async <UserType>({
 		secure: true,
 		value: sessionKey
 	});
-
-	console.log('in func user_session_id after set', user_session_id.value);
 };
 
 export const createAuthConfig = <UserType>(

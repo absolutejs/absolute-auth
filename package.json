@@ -1,5 +1,5 @@
 {
-	"version": "0.2.2",
+	"version": "0.2.4",
 	"name": "@absolutejs/auth",
 	"description": "An authorization library for absolutejs",
 	"repository": {
@@ -10,7 +10,7 @@
 	"license": "CC BY-NC 4.0",
 	"author": "Alex Kahn",
 	"scripts": {
-		"build": "rm -rf dist && bun build src/index.ts --outdir dist --minify --splitting --target=bun && tsc --emitDeclarationOnly --project tsconfig.json",
+		"build": "rm -rf dist && bun build src/index.ts --outdir dist --minify --splitting --target=bun --external arctic --external elysia && tsc --emitDeclarationOnly --project tsconfig.json",
 		"test": "echo \"Error: no test specified\" && exit 1",
 		"format": "prettier --write \"./**/*.{js,jsx,ts,tsx,css,json}\"",
 		"dev": "bun run --watch example/server.ts",
@@ -27,13 +27,13 @@
 		"oauth"
 	],
 	"types": "dist/src/index.d.ts",
-	"dependencies": {
-		"arctic": "3.6.0"
-	},
+	"dependencies": {},
 	"peerDependencies": {
+		"arctic": ">= 3.6.0",
 		"elysia": ">= 1.2.0"
 	},
 	"devDependencies": {
+		"arctic": "3.6.0",
 		"@elysiajs/static": "1.2.0",
 		"@neondatabase/serverless": "1.0.0",
 		"@types/bun": "1.2.9",

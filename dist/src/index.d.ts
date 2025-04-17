@@ -92,7 +92,7 @@ export declare const absoluteAuth: <UserType>({ config, authorizeRoute, callback
                 response: {
                     200: import("undici-types").Response;
                     400: "Provider is required" | "Invalid provider";
-                    500: `Failed to authorize: ${string}` | `Unknown error: ${string}`;
+                    500: `${string} - ${string}` | `Unknown error: ${string}`;
                     422: {
                         type: "validation";
                         on: string;
@@ -115,9 +115,9 @@ export declare const absoluteAuth: <UserType>({ config, authorizeRoute, callback
             headers: unknown;
             response: {
                 200: import("undici-types").Response;
+                500: `${string} - ${string}` | `Failed to validate authorization code: Unknown error: ${string}`;
                 400: "Invalid callback request" | "Invalid state mismatch" | "Code verifier not found and is required";
                 401: "Invalid provider" | "No auth provider found";
-                500: `${string} - ${string}` | `Failed to validate authorization code: Unknown error: ${string}`;
             };
         };
     };

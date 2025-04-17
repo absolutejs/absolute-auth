@@ -29,9 +29,9 @@ export declare const callback: <UserType>({ clientProviders, callbackRoute, onCa
             headers: unknown;
             response: {
                 200: import("undici-types").Response;
+                500: `${string} - ${string}` | `Failed to validate authorization code: Unknown error: ${string}`;
                 400: "Invalid callback request" | "Invalid state mismatch" | "Code verifier not found and is required";
                 401: "Invalid provider" | "No auth provider found";
-                500: `${string} - ${string}` | `Failed to validate authorization code: Unknown error: ${string}`;
             };
         };
     };

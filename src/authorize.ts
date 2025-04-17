@@ -109,7 +109,7 @@ export const authorize = ({
 				if (err instanceof Error) {
 					return error(
 						'Internal Server Error',
-						`Failed to authorize: ${err.message}`
+						`${err.message} - ${err.stack ?? ''}`
 					);
 				}
 

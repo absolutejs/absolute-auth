@@ -31,7 +31,7 @@ export declare const authorize: ({ clientProviders, authorizeRoute, onAuthorize 
                 response: {
                     200: import("undici-types").Response;
                     400: "Provider is required" | "Invalid provider";
-                    500: `Failed to authorize: ${string}` | `Unknown error: ${string}`;
+                    500: `${string} - ${string}` | `Unknown error: ${string}`;
                     422: {
                         type: "validation";
                         on: string;
