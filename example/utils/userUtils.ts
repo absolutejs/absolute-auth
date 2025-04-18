@@ -68,13 +68,13 @@ export const createDBUser = async ({
 };
 
 export const createUser = async ({
-	decodedIdToken,
+	userProfile,
 	authProvider,
 	db,
 	schema
 }: UserFunctionProps & DatabaseFunctionProps) => {
 	const provider = authProvider.toUpperCase();
-	const sub = decodedIdToken.sub;
+	const sub = userProfile.sub;
 
 	if (!sub) {
 		throw new Error('Sub claim is missing from ID token');
@@ -83,23 +83,23 @@ export const createUser = async ({
 	const authSub = `${provider}|${sub}`;
 	return await createDBUser({
 		auth_sub: authSub,
-		given_name: decodedIdToken.given_name ?? '',
-		family_name: decodedIdToken.family_name ?? '',
-		email: decodedIdToken.email ?? '',
-		picture: decodedIdToken.picture ?? '',
+		given_name: userProfile.given_name ?? '',
+		family_name: userProfile.family_name ?? '',
+		email: userProfile.email ?? '',
+		picture: userProfile.picture ?? '',
 		db,
 		schema
 	});
 };
 
 export const getUser = async ({
-	decodedIdToken,
+	userProfile,
 	authProvider,
 	db,
 	schema
 }: UserFunctionProps & DatabaseFunctionProps) => {
 	const provider = authProvider.toUpperCase();
-	const sub = decodedIdToken.sub;
+	const sub = userProfile.sub;
 
 	if (!sub) {
 		throw new Error('Sub claim is missing from ID token');

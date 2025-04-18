@@ -18,7 +18,7 @@ export declare const createDBUser: ({ auth_sub, given_name, family_name, email, 
     auth_sub: string;
     picture: string | null;
 }>;
-export declare const createUser: ({ decodedIdToken, authProvider, db, schema }: UserFunctionProps & DatabaseFunctionProps) => Promise<{
+export declare const createUser: ({ userProfile, authProvider, db, schema }: UserFunctionProps & DatabaseFunctionProps) => Promise<{
     given_name: string | null;
     family_name: string | null;
     email: string | null;
@@ -26,7 +26,7 @@ export declare const createUser: ({ decodedIdToken, authProvider, db, schema }: 
     auth_sub: string;
     picture: string | null;
 }>;
-export declare const getUser: ({ decodedIdToken, authProvider, db, schema }: UserFunctionProps & DatabaseFunctionProps) => Promise<{
+export declare const getUser: ({ userProfile, authProvider, db, schema }: UserFunctionProps & DatabaseFunctionProps) => Promise<{
     given_name: string | null;
     family_name: string | null;
     email: string | null;

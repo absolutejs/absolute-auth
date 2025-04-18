@@ -15,15 +15,15 @@ export type Providers = keyof typeof providers;
 export type SessionRecord<UserType> = Record<string, SessionData<UserType> | undefined>;
 export type UserFunctionProps = {
     authProvider: string;
-    decodedIdToken: {
+    userProfile: {
         [key: string]: string | undefined;
     };
 };
-export type CreateUser<UserType> = ({ decodedIdToken, authProvider }: UserFunctionProps) => Promise<UserType>;
-export type GetUser<UserType> = ({ decodedIdToken, authProvider }: UserFunctionProps) => Promise<UserType | null>;
-export type OnCallback<UserType> = ({ authProvider, decodedIdToken, session, user_session_id }: {
+export type CreateUser<UserType> = ({ userProfile, authProvider }: UserFunctionProps) => Promise<UserType>;
+export type GetUser<UserType> = ({ userProfile, authProvider }: UserFunctionProps) => Promise<UserType | null>;
+export type OnCallback<UserType> = ({ authProvider, userProfile, session, user_session_id }: {
     authProvider: string;
-    decodedIdToken: {
+    userProfile: {
         [key: string]: string | undefined;
     };
     session: SessionRecord<UserType>;
@@ -49,4 +49,14 @@ export type ClientProviders = Record<string, {
     scopes: string[];
     searchParams: [string, string][];
 }>;
+export type InsantiateUserSessionProps<UserType> = {
+    authProvider: string;
+    userProfile: {
+        [key: string]: string | undefined;
+    };
+    session: SessionRecord<UserType>;
+    user_session_id: Cookie<string | undefined>;
+    createUser: () => UserType | Promise<UserType>;
+    getUser: () => UserType | Promise<UserType | null>;
+};
 export {};

@@ -54,6 +54,14 @@ if (
 	throw new Error('Google OAuth2 credentials are not set in .env file');
 }
 
+if (
+	!Bun.env.FACEBOOK_CLIENT_ID ||
+	!Bun.env.FACEBOOK_CLIENT_SECRET ||
+	!Bun.env.FACEBOOK_REDIRECT_URI
+) {
+	throw new Error('Facebook OAuth2 credentials are not set in .env file');
+}
+
 if (!Bun.env.DATABASE_URL) {
 	throw new Error('DATABASE_URL is not set in .env file');
 }
@@ -92,11 +100,18 @@ new Elysia()
 				GitHub: {
 					credentials: ['clientId', 'clientSecret', null],
 					scopes: ['read:user']
+				},
+				Facebook: {
+					credentials: [
+						Bun.env.FACEBOOK_CLIENT_ID,
+						Bun.env.FACEBOOK_CLIENT_SECRET,
+						Bun.env.FACEBOOK_REDIRECT_URI
+					]
 				}
 			},
 			onCallback: async ({
 				authProvider,
-				decodedIdToken,
+				userProfile,
 				user_session_id,
 				session
 			}) =>
@@ -106,17 +121,17 @@ new Elysia()
 							db,
 							schema,
 							authProvider,
-							decodedIdToken
+							userProfile
 						}),
 					createUser: () =>
 						createUser({
 							db,
 							schema,
 							authProvider,
-							decodedIdToken
+							userProfile
 						}),
 					authProvider,
-					decodedIdToken,
+					userProfile,
 					session,
 					user_session_id
 				})

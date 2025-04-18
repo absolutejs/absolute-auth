@@ -1,18 +1,6 @@
-import { Cookie } from 'elysia';
 import { MILLISECONDS_IN_A_DAY } from './constants';
-import { AbsoluteAuthProps, SessionRecord } from './types';
+import { AbsoluteAuthProps, InsantiateUserSessionProps } from './types';
 import { isValidUser } from './typeGuards';
-
-type InsantiateUserSessionProps<UserType> = {
-	authProvider: string;
-	decodedIdToken: {
-		[key: string]: string | undefined;
-	};
-	session: SessionRecord<UserType>;
-	user_session_id: Cookie<string | undefined>;
-	createUser: () => UserType | Promise<UserType>;
-	getUser: () => UserType | Promise<UserType | null>;
-};
 
 export const instantiateUserSession = async <UserType>({
 	user_session_id,

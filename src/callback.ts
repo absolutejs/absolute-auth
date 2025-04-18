@@ -3,6 +3,7 @@ import { Elysia } from 'elysia';
 import { sessionStore } from './sessionStore';
 import { isNonEmptyString, isValidProviderKey } from './typeGuards';
 import { ClientProviders, OnCallback } from './types';
+import { fetchUserProfile } from './profiles';
 
 type CallbackProps<UserType> = {
 	clientProviders: ClientProviders;
@@ -78,22 +79,36 @@ export const callback = <UserType>({
 							)
 						: // @ts-expect-error - This is a dynamic check
 							providerInstance.validateAuthorizationCode(code));
+
 					if (hasCodeVerifier) code_verifier.remove();
 
-					const decodedIdToken = Object.fromEntries(
-						Object.entries(decodeIdToken(tokens.idToken())).map(
-							([key, value]) => [
-								key,
-								typeof value === 'string' ? value : undefined
-							]
-						)
-					);
-
+					let userProfile;
 					const authProvider = auth_provider.value;
+
+					// TODO : Change if arctic ever updates
+					try {
+						const decodedIdToken = Object.fromEntries(
+							Object.entries(decodeIdToken(tokens.idToken())).map(
+								([key, value]) => [
+									key,
+									typeof value === 'string'
+										? value
+										: undefined
+								]
+							)
+						);
+						userProfile = decodedIdToken;
+					} catch (err) {
+						// TODO : This has type any see if it can be fixed
+						userProfile = await fetchUserProfile(
+							authProvider,
+							tokens.accessToken()
+						);
+					}
 
 					await onCallback?.({
 						authProvider,
-						decodedIdToken,
+						userProfile,
 						session,
 						user_session_id
 					});

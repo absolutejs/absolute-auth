@@ -23,29 +23,29 @@ export type SessionRecord<UserType> = Record<
 
 export type UserFunctionProps = {
 	authProvider: string;
-	decodedIdToken: {
+	userProfile: {
 		[key: string]: string | undefined;
 	};
 };
 
 export type CreateUser<UserType> = ({
-	decodedIdToken,
+	userProfile,
 	authProvider
 }: UserFunctionProps) => Promise<UserType>;
 
 export type GetUser<UserType> = ({
-	decodedIdToken,
+	userProfile,
 	authProvider
 }: UserFunctionProps) => Promise<UserType | null>;
 
 export type OnCallback<UserType> = ({
 	authProvider,
-	decodedIdToken,
+	userProfile,
 	session,
 	user_session_id
 }: {
 	authProvider: string;
-	decodedIdToken: {
+	userProfile: {
 		[key: string]: string | undefined;
 	};
 	session: SessionRecord<UserType>;
@@ -76,3 +76,14 @@ export type ClientProviders = Record<
 		searchParams: [string, string][];
 	}
 >;
+
+export type InsantiateUserSessionProps<UserType> = {
+	authProvider: string;
+	userProfile: {
+		[key: string]: string | undefined;
+	};
+	session: SessionRecord<UserType>;
+	user_session_id: Cookie<string | undefined>;
+	createUser: () => UserType | Promise<UserType>;
+	getUser: () => UserType | Promise<UserType | null>;
+};
