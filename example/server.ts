@@ -12,39 +12,15 @@ import { createUser, getUser } from './utils/userUtils';
 import { Protected } from './components/Protected';
 import { NotAuthorized } from './components/NotAuthorized';
 import { instantiateUserSession } from '../src/utils';
+import { build, networkingPlugin } from '@absolutejs/absolute';
 
-let host = Bun.env.HOST || 'localhost';
-const port = Number(Bun.env.PORT) || 3000;
-
-const args = process.argv;
-const hostFlag = args.includes('--host');
-
-let localIP: string | undefined;
-
-if (hostFlag) {
-	localIP = getLocalIPAddress();
-	host = '0.0.0.0';
-}
-const buildTimeStamp = Date.now();
-await rm('./example/build', { recursive: true, force: true });
-const { logs, success } = await Bun.build({
-	entrypoints: [
-		'./example/indexes/ExampleIndex.tsx',
-		'./example/indexes/NotAuthorizedIndex.tsx',
-		'./example/indexes/ProtectedIndex.tsx'
-	],
-	outdir: './example/build',
-	naming: `[name].${buildTimeStamp}.[ext]`,
-	minify: true,
-	splitting: true,
-	format: 'esm'
+const manifest = await build({
+	reactPagesDir: 'src/frontend/pages',
+	reactIndexDir: 'src/frontend/indexes',
+	assetsDir: 'src/backend/assets'
 });
-copyFile('./example/utils/favicon.ico', './example/build/favicon.ico');
 
-if (!success) {
-	console.error(logs);
-	throw new Error('Failed to build');
-}
+if(manifest === null) throw new Error('Failed to build the application manifest');
 
 if (
 	!Bun.env.GOOGLE_CLIENT_ID ||
@@ -138,44 +114,29 @@ new Elysia()
 		})
 	)
 	.get('/', () =>
-		handlePageRequest(Example, `/ExampleIndex.${buildTimeStamp}.js`)
+		handlePageRequest(Example, manifest['ExampleIndex'])
 	)
 	.get('/page1', () =>
-		handlePageRequest(Example, `/ExampleIndex.${buildTimeStamp}.js`)
+		handlePageRequest(Example, manifest[`ExampleIndex`])
 	)
 	.get('/page2', () =>
-		handlePageRequest(Example, `/ExampleIndex.${buildTimeStamp}.js`)
+		handlePageRequest(Example, manifest[`ExampleIndex`])
 	)
 	.get('/protected', ({ protectRoute }) =>
 		protectRoute(
 			() =>
 				handlePageRequest(
 					Protected,
-					`/ProtectedIndex.${buildTimeStamp}.js`
+					manifest['ProtectedIndex']
 				),
 			() =>
 				handlePageRequest(
 					NotAuthorized,
-					`/NotAuthorizedIndex.${buildTimeStamp}.js`
+					manifest['NotAuthorizedIndex']
 				)
 		)
 	)
-	.listen(
-		{
-			port: port,
-			hostname: host
-		},
-		() => {
-			if (hostFlag) {
-				console.log(`Server started on http://localhost:${port}`);
-				console.log(
-					`Server started on network: http://${localIP}:${port}`
-				);
-			} else {
-				console.log(`Server started on http://${host}:${port}`);
-			}
-		}
-	)
+	.use(networkingPlugin)
 	.on('error', (error: any) => {
 		console.error(`Server error: ${error.code}`);
 	});

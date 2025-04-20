@@ -32,18 +32,19 @@
 		"elysia": ">= 1.2.0"
 	},
 	"devDependencies": {
-		"arctic": "3.6.0",
+		"@absolutejs/absolute": "0.3.1",
 		"@elysiajs/static": "1.2.0",
 		"@neondatabase/serverless": "1.0.0",
 		"@types/bun": "1.2.9",
 		"@types/react": "19.1.1",
 		"@types/react-dom": "19.1.2",
+		"arctic": "3.6.0",
 		"drizzle-kit": "0.30.6",
 		"drizzle-orm": "0.41.0",
+		"elysia": "1.2.25",
 		"prettier": "3.5.3",
 		"react": "19.1.0",
 		"react-dom": "19.1.0",
-		"elysia": "1.2.25",
 		"typescript": "5.8.3"
 	},
 	"module": "dist/index.js"

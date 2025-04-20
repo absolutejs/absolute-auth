@@ -4,6 +4,7 @@
     "": {
       "name": "@absolutejs/auth",
       "devDependencies": {
+        "@absolutejs/absolute": "^0.3.1",
         "@elysiajs/static": "1.2.0",
         "@neondatabase/serverless": "1.0.0",
         "@types/bun": "1.2.9",
@@ -25,6 +26,8 @@
     },
   },
   "packages": {
+    "@absolutejs/absolute": ["@absolutejs/absolute@0.3.1", "", { "peerDependencies": { "elysia": ">= 1.2.0", "react": ">= 19.1.0", "react-dom": ">= 19.1.0" } }, "sha512-Jcd1d+gkZWqYsbBwULpjW3KMCOsB/5w4yfnD66DyfcZ1vmPUULw8DSftyk7vcgwIxsPVN2uSPkycspIjK8WhoA=="],
+
     "@drizzle-team/brocli": ["@drizzle-team/brocli@0.10.2", "", {}, "sha512-z33Il7l5dKjUgGULTqBsQBQwckHh5AbIuxhdsIxDDiZAzBOrZO6q9ogcWC65kU382AfynTfgNumVcNIjuIua6w=="],
 
     "@elysiajs/static": ["@elysiajs/static@1.2.0", "", { "dependencies": { "node-cache": "^5.1.2" }, "peerDependencies": { "elysia": ">= 1.2.0" } }, "sha512-oLpAi8c+maPpA0XhhK3BELaIjIG+nXg/K9p8cFfW4q5ayRD59a3MOMOOGgpiXZkHJzLPWcouhhyyLAYtaANW4g=="],
