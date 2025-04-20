@@ -4,13 +4,12 @@ import { neon } from '@neondatabase/serverless';
 import { drizzle } from 'drizzle-orm/neon-http';
 import { absoluteAuth } from '../src';
 import { Example } from './components/Example';
-import { handlePageRequest } from './utils/pageUtils';
 import { staticPlugin } from '@elysiajs/static';
 import { createUser, getUser } from './utils/userUtils';
 import { Protected } from './components/Protected';
 import { NotAuthorized } from './components/NotAuthorized';
 import { instantiateUserSession } from '../src/utils';
-import { build, networkingPlugin } from '@absolutejs/absolute';
+import { build, handleReactPageRequest, networkingPlugin } from '@absolutejs/absolute';
 
 const manifest = await build({
 	reactPagesDir: 'src/frontend/pages',
@@ -112,23 +111,23 @@ new Elysia()
 		})
 	)
 	.get('/', () =>
-		handlePageRequest(Example, manifest['ExampleIndex'])
+		handleReactPageRequest(Example, manifest['ExampleIndex'])
 	)
 	.get('/page1', () =>
-		handlePageRequest(Example, manifest[`ExampleIndex`])
+		handleReactPageRequest(Example, manifest[`ExampleIndex`])
 	)
 	.get('/page2', () =>
-		handlePageRequest(Example, manifest[`ExampleIndex`])
+		handleReactPageRequest(Example, manifest[`ExampleIndex`])
 	)
 	.get('/protected', ({ protectRoute }) =>
 		protectRoute(
 			() =>
-				handlePageRequest(
+				handleReactPageRequest(
 					Protected,
 					manifest['ProtectedIndex']
 				),
 			() =>
-				handlePageRequest(
+				handleReactPageRequest(
 					NotAuthorized,
 					manifest['NotAuthorizedIndex']
 				)
