@@ -1,12 +1,10 @@
 import Elysia from 'elysia';
 import { schema, type User } from './db/schema';
-import { getLocalIPAddress } from './utils/networking';
 import { neon } from '@neondatabase/serverless';
 import { drizzle } from 'drizzle-orm/neon-http';
 import { absoluteAuth } from '../src';
 import { Example } from './components/Example';
 import { handlePageRequest } from './utils/pageUtils';
-import { rm, copyFile } from 'node:fs/promises';
 import { staticPlugin } from '@elysiajs/static';
 import { createUser, getUser } from './utils/userUtils';
 import { Protected } from './components/Protected';
