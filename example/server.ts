@@ -10,9 +10,9 @@ import { drizzle } from 'drizzle-orm/neon-http';
 import { Elysia } from 'elysia';
 import { absoluteAuth } from '../src';
 import { instantiateUserSession } from '../src/utils';
-import { NotAuthorized } from './components/NotAuthorized';
 import { schema, type User } from './db/schema';
 import { Example } from './pages/Example';
+import { NotAuthorized } from './pages/NotAuthorized';
 import { Protected } from './pages/Protected';
 import { createUser, getUser } from './utils/userUtils';
 

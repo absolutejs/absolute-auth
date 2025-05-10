@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { Head } from '../components/Head';
+import { Navbar } from '../components/Navbar';
 import { useAuthStatus } from '../hooks/useAuthStatus';
 import {
 	htmlDefault,
@@ -6,8 +8,6 @@ import {
 	mainDefault,
 	contentStyle
 } from '../utils/styles';
-import { Head } from './Head';
-import { Navbar } from './Navbar';
 
 export const NotAuthorized = () => {
 	const { user, handleLogOut } = useAuthStatus();

@@ -115,7 +115,7 @@ export const Navbar = ({
 					</button>
 				</>
 			)}
-			{modalOpen !== undefined && (
+			{modalOpen === true && (
 				<Modal isOpen={modalOpen} onClose={() => setModalOpen?.(false)}>
 					<AuthOptions />
 				</Modal>
