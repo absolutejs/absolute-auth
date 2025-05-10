@@ -1,4 +1,4 @@
-import { Navbar } from './Navbar';
+import { Navbar } from '../components/Navbar';
 import {
 	htmlDefault,
 	bodyDefault,
@@ -9,7 +9,7 @@ import {
 
 import { useAuthStatus } from '../hooks/useAuthStatus';
 import { useState } from 'react';
-import { Head } from './Head';
+import { Head } from '../components/Head';
 
 export const Example = () => {
 	const { user, handleLogOut } = useAuthStatus();

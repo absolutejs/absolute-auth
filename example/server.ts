@@ -1,23 +1,28 @@
-import Elysia from 'elysia';
+import { Elysia } from 'elysia';
 import { schema, type User } from './db/schema';
 import { neon } from '@neondatabase/serverless';
 import { drizzle } from 'drizzle-orm/neon-http';
 import { absoluteAuth } from '../src';
-import { Example } from './components/Example';
+import { Example } from './pages/Example';
 import { staticPlugin } from '@elysiajs/static';
 import { createUser, getUser } from './utils/userUtils';
 import { Protected } from './components/Protected';
 import { NotAuthorized } from './components/NotAuthorized';
 import { instantiateUserSession } from '../src/utils';
-import { build, handleReactPageRequest, networkingPlugin } from '@absolutejs/absolute';
+import {
+	build,
+	handleReactPageRequest,
+	networkingPlugin
+} from '@absolutejs/absolute';
 
 const manifest = await build({
-	reactPagesDir: 'src/frontend/pages',
-	reactIndexDir: 'src/frontend/indexes',
-	assetsDir: 'src/backend/assets'
+	reactPagesDir: 'example/pages',
+	reactIndexDir: 'example/indexes',
+	assetsDir: 'example/assets'
 });
 
-if(manifest === null) throw new Error('Failed to build the application manifest');
+if (manifest === null)
+	throw new Error('Failed to build the application manifest');
 
 if (
 	!Bun.env.GOOGLE_CLIENT_ID ||
@@ -110,9 +115,7 @@ new Elysia()
 				})
 		})
 	)
-	.get('/', () =>
-		handleReactPageRequest(Example, manifest['ExampleIndex'])
-	)
+	.get('/', () => handleReactPageRequest(Example, manifest['ExampleIndex']))
 	.get('/page1', () =>
 		handleReactPageRequest(Example, manifest[`ExampleIndex`])
 	)
@@ -121,11 +124,7 @@ new Elysia()
 	)
 	.get('/protected', ({ protectRoute }) =>
 		protectRoute(
-			() =>
-				handleReactPageRequest(
-					Protected,
-					manifest['ProtectedIndex']
-				),
+			() => handleReactPageRequest(Protected, manifest['ProtectedIndex']),
 			() =>
 				handleReactPageRequest(
 					NotAuthorized,
