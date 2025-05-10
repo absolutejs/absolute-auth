@@ -6,7 +6,7 @@ import { absoluteAuth } from '../src';
 import { Example } from './pages/Example';
 import { staticPlugin } from '@elysiajs/static';
 import { createUser, getUser } from './utils/userUtils';
-import { Protected } from './components/Protected';
+import { Protected } from './pages/Protected';
 import { NotAuthorized } from './components/NotAuthorized';
 import { instantiateUserSession } from '../src/utils';
 import {
@@ -18,7 +18,8 @@ import {
 const manifest = await build({
 	reactPagesDir: 'example/pages',
 	reactIndexDir: 'example/indexes',
-	assetsDir: 'example/assets'
+	assetsDir: 'example/assets',
+	buildDir: 'example/build',
 });
 
 if (manifest === null)

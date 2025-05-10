@@ -8,8 +8,8 @@ import {
 	contentStyle
 } from '../utils/styles';
 
-import { Navbar } from './Navbar';
-import { Head } from './Head';
+import { Navbar } from '../components/Navbar';
+import { Head } from '../components/Head';
 
 export const Protected = () => {
 	const { user, handleLogOut } = useAuthStatus();
