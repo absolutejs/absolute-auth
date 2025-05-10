@@ -1,70 +1,73 @@
-import { ReactNode, useEffect, MouseEvent } from 'react';
+import { ReactNode, useEffect, useRef, MouseEvent } from 'react';
 
 type ModalProps = {
 	isOpen: boolean;
-	onClose: () => void;
+	onClose?: () => void;
+	onOpen?: (dialogRef: HTMLDialogElement | null) => void;
 	children: ReactNode;
 };
 
-export const Modal = ({ isOpen, onClose, children }: ModalProps) => {
+export const Modal = ({ isOpen, onClose, onOpen, children }: ModalProps) => {
+	const dialogRef = useRef<HTMLDialogElement>(null);
+
 	useEffect(() => {
+		const dialog = dialogRef.current;
+		if (!dialog) return;
+
 		if (isOpen) {
+			dialog.showModal();
+			onOpen?.(dialog);
 			document.body.style.overflow = 'hidden';
-		} else {
+		} else if (dialog.open) {
+			dialog.close();
+			onClose?.();
 			document.body.style.overflow = '';
 		}
-
-		const handleKeyDown = (event: KeyboardEvent) => {
-			if (event.key === 'Escape') {
-				onClose();
-			}
-		};
-
-		document.addEventListener('keydown', handleKeyDown);
-
-		return () => {
-			document.body.style.overflow = '';
-			document.removeEventListener('keydown', handleKeyDown);
-		};
-	}, [isOpen, onClose]);
-
-	const handleBackgroundClick = (event: MouseEvent<HTMLDivElement>) => {
-		if (event.target === event.currentTarget) {
-			onClose();
-		}
-	};
-
-	if (!isOpen) return null;
+	}, [isOpen, onClose, onOpen]);
 
 	return (
-		<div
-			onClick={handleBackgroundClick}
+		<dialog
+			ref={dialogRef}
+			onCancel={(event) => {
+				event.preventDefault();
+				onClose?.();
+			}}
+			onClick={(event: MouseEvent<HTMLDialogElement>) => {
+				if (event.target === dialogRef.current) onClose?.();
+			}}
 			style={{
 				alignItems: 'center',
-				backgroundColor: 'rgba(0, 0, 0, 0.5)',
+				border: 'none',
+				borderRadius: '8px',
 				display: 'flex',
-				height: '100%',
+				inset: 0,
 				justifyContent: 'center',
-				left: 0,
-				position: 'fixed',
-				top: 0,
-				width: '100%',
-				zIndex: 10000
+				margin: 'auto',
+				padding: '0px',
+				position: 'fixed'
 			}}
 		>
+			<style>{`
+				dialog::backdrop {
+					background: rgba(0,0,0,0.5);
+					backdrop-filter: blur(4px);
+				}
+			`}</style>
+
 			<div
+				onClick={(event) => event.stopPropagation()}
 				style={{
 					backgroundColor: '#fff',
-					borderRadius: '8px',
 					minWidth: '300px',
 					padding: '20px',
 					position: 'relative'
 				}}
 			>
 				<button
-					onClick={onClose}
+					onClick={() => dialogRef.current?.close()}
+					aria-label="Close modal"
 					style={{
-						backgroundColor: 'transparent',
+						background: 'transparent',
 						border: 'none',
 						cursor: 'pointer',
 						fontSize: '16px',
@@ -77,6 +80,6 @@ export const Modal = ({ isOpen, onClose, children }: ModalProps) => {
 				</button>
 				{children}
 			</div>
-		</div>
+		</dialog>
 	);
 };

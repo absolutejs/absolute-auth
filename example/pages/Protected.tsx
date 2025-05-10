@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { Head } from '../components/Head';
 import { Navbar } from '../components/Navbar';
 import { useAuthStatus } from '../hooks/useAuthStatus';
@@ -12,24 +11,18 @@ import {
 
 export const Protected = () => {
 	const { user, handleLogOut } = useAuthStatus();
-	const [modalOpen, setModalOpen] = useState(false);
 
 	return (
 		<html lang="en" style={htmlDefault}>
 			<Head />
 			<body style={bodyDefault}>
-				<Navbar
-					user={user}
-					handleLogOut={handleLogOut}
-					modalOpen={modalOpen}
-					setModalOpen={setModalOpen}
-				/>
+				<Navbar user={user} handleLogOut={handleLogOut} />
 				<main style={mainDefault}>
 					<div style={contentStyle}>
 						<h1>Protected Page</h1>
-						<p>{user ? user.given_name : null}</p>
-						<p>{user ? user.family_name : null}</p>
-						<p>{user ? user.email : null}</p>
+						<p>{user !== undefined && user.given_name}</p>
+						<p>{user !== undefined && user.family_name}</p>
+						<p>{user !== undefined && user.email}</p>
 						<img
 							src={
 								user?.picture ??

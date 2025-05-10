@@ -1,3 +1,4 @@
+import { env } from 'process';
 import {
 	build,
 	handleReactPageRequest,
@@ -26,26 +27,26 @@ if (manifest === null)
 	throw new Error('Failed to build the application manifest');
 
 if (
-	!Bun.env.GOOGLE_CLIENT_ID ||
-	!Bun.env.GOOGLE_CLIENT_SECRET ||
-	!Bun.env.GOOGLE_REDIRECT_URI
+	!env.GOOGLE_CLIENT_ID ||
+	!env.GOOGLE_CLIENT_SECRET ||
+	!env.GOOGLE_REDIRECT_URI
 ) {
 	throw new Error('Google OAuth2 credentials are not set in .env file');
 }
 
 if (
-	!Bun.env.FACEBOOK_CLIENT_ID ||
-	!Bun.env.FACEBOOK_CLIENT_SECRET ||
-	!Bun.env.FACEBOOK_REDIRECT_URI
+	!env.FACEBOOK_CLIENT_ID ||
+	!env.FACEBOOK_CLIENT_SECRET ||
+	!env.FACEBOOK_REDIRECT_URI
 ) {
 	throw new Error('Facebook OAuth2 credentials are not set in .env file');
 }
 
-if (!Bun.env.DATABASE_URL) {
+if (!env.DATABASE_URL) {
 	throw new Error('DATABASE_URL is not set in .env file');
 }
 
-const sql = neon(Bun.env.DATABASE_URL);
+const sql = neon(env.DATABASE_URL);
 const db = drizzle(sql, {
 	schema
 });
@@ -62,9 +63,9 @@ new Elysia()
 			config: {
 				Facebook: {
 					credentials: [
-						Bun.env.FACEBOOK_CLIENT_ID,
-						Bun.env.FACEBOOK_CLIENT_SECRET,
-						Bun.env.FACEBOOK_REDIRECT_URI
+						env.FACEBOOK_CLIENT_ID,
+						env.FACEBOOK_CLIENT_SECRET,
+						env.FACEBOOK_REDIRECT_URI
 					]
 				},
 				GitHub: {
@@ -73,9 +74,9 @@ new Elysia()
 				},
 				Google: {
 					credentials: [
-						Bun.env.GOOGLE_CLIENT_ID,
-						Bun.env.GOOGLE_CLIENT_SECRET,
-						Bun.env.GOOGLE_REDIRECT_URI
+						env.GOOGLE_CLIENT_ID,
+						env.GOOGLE_CLIENT_SECRET,
+						env.GOOGLE_REDIRECT_URI
 					],
 					scopes: [
 						'openid',
@@ -88,13 +89,13 @@ new Elysia()
 					]
 				}
 			},
-			onCallback: async ({
+			onCallback: ({
 				authProvider,
 				userProfile,
 				user_session_id,
 				session
 			}) =>
-				await instantiateUserSession<User>({
+				instantiateUserSession<User>({
 					authProvider,
 					session,
 					user_session_id,
@@ -134,6 +135,6 @@ new Elysia()
 		)
 	)
 	.use(networkingPlugin)
-	.on('error', (error: any) => {
+	.on('error', (error) => {
 		console.error(`Server error: ${error.code}`);
 	});

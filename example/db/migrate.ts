@@ -1,12 +1,13 @@
+import { env } from 'process';
 import { neon } from '@neondatabase/serverless';
 import { drizzle } from 'drizzle-orm/neon-http';
 import { migrate } from 'drizzle-orm/neon-http/migrator';
 
-if (!Bun.env.DATABASE_URL) {
+if (!env.DATABASE_URL) {
 	throw new Error('DATABASE_URL is not set in .env file');
 }
 
-const sql = neon(Bun.env.DATABASE_URL);
+const sql = neon(env.DATABASE_URL);
 const db = drizzle(sql);
 
 const dbMigrate = async () => {

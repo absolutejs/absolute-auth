@@ -67,7 +67,7 @@ export const createDBUser = async ({
 	}
 };
 
-export const createUser = async ({
+export const createUser = ({
 	userProfile,
 	authProvider,
 	db,
@@ -82,7 +82,7 @@ export const createUser = async ({
 
 	const authSub = `${provider}|${sub}`;
 
-	return await createDBUser({
+	return createDBUser({
 		auth_sub: authSub,
 		db,
 		email: userProfile.email ?? '',
@@ -93,7 +93,7 @@ export const createUser = async ({
 	});
 };
 
-export const getUser = async ({
+export const getUser = ({
 	userProfile,
 	authProvider,
 	db,
@@ -108,5 +108,5 @@ export const getUser = async ({
 
 	const authSub = `${provider}|${sub}`;
 
-	return await getDBUser({ authSub, db, schema });
+	return getDBUser({ authSub, db, schema });
 };

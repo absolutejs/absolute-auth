@@ -6,12 +6,17 @@ import { Modal } from './Modal';
 
 type NavbarProps = {
 	user: User | undefined;
-	modalOpen: boolean;
+	modalOpen?: boolean;
 	handleLogOut: () => Promise<void>;
-	setModalOpen: Dispatch<SetStateAction<boolean>>;
+	setModalOpen?: Dispatch<SetStateAction<boolean>>;
 };
 
-const navLinks = [
+type NavLink = {
+	href: string;
+	label: string;
+};
+
+const navLinks: NavLink[] = [
 	{ href: '/page1', label: 'Page 1' },
 	{ href: '/page2', label: 'Page 2' },
 	{ href: '/protected', label: 'Protected' }
@@ -94,7 +99,7 @@ export const Navbar = ({
 							backgroundColor: '#f3f3f3',
 							color: '#333'
 						})}
-						onClick={() => setModalOpen(true)}
+						onClick={() => setModalOpen?.(true)}
 					>
 						Log In
 					</button>
@@ -104,17 +109,17 @@ export const Navbar = ({
 							backgroundColor: '#f3f3f3',
 							color: '#333'
 						})}
-						onClick={() => setModalOpen(true)}
+						onClick={() => setModalOpen?.(true)}
 					>
 						Sign Up
 					</button>
 				</>
 			)}
-			{modalOpen ? (
-				<Modal isOpen={modalOpen} onClose={() => setModalOpen(false)}>
+			{modalOpen !== undefined && (
+				<Modal isOpen={modalOpen} onClose={() => setModalOpen?.(false)}>
 					<AuthOptions />
 				</Modal>
-			) : null}
+			)}
 		</nav>
 	</header>
 );

@@ -49,7 +49,7 @@ import {
 } from 'arctic';
 
 // TODO: When arctic adds better way to get the providers give a type to the object
-// eslint-disable-next-line custom/explicit-object-types
+// eslint-disable-next-line absolute/explicit-object-types
 export const providers = {
 	AmazonCognito,
 	AniList,
