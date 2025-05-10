@@ -44,3 +44,9 @@ package-lock.json
 **/build/src/
 /build
 /drizzle
+
+# index files
+**/indexes/*
+
+# dist folder
+/dist
