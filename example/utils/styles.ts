@@ -10,18 +10,18 @@ export const styleReset = `
 `;
 
 export const bodyDefault: CSSProperties = {
-	fontFamily: 'Poppins, sans-serif',
 	backgroundColor: '#f5f5f5',
 	color: '#333',
-	height: '100%',
-	margin: 0,
 	display: 'flex',
-	flexDirection: 'column'
+	flexDirection: 'column',
+	fontFamily: 'Poppins, sans-serif',
+	height: '100%',
+	margin: 0
 };
 
 export const mainDefault: CSSProperties = {
-	flex: 1,
 	display: 'flex',
+	flex: 1,
 	flexDirection: 'column'
 };
 
@@ -39,48 +39,48 @@ export const buttonStyle = ({
 	color = 'white',
 	width
 }: ButtonStyleProps): CSSProperties => ({
-	display: 'flex',
 	alignItems: 'center',
-	textDecoration: 'none',
-	justifyContent: 'center',
-	padding: '0.625rem 1rem',
-	margin: '0.3125rem',
+	backgroundColor,
 	border: 'none',
 	borderRadius: '0.3125rem',
 	color,
-	width,
-	backgroundColor,
 	cursor: 'pointer',
+	display: 'flex',
 	fontSize: '1rem',
 	fontWeight: 'bold',
-	textWrap: 'nowrap'
+	justifyContent: 'center',
+	margin: '0.3125rem',
+	padding: '0.625rem 1rem',
+	textDecoration: 'none',
+	textWrap: 'nowrap',
+	width
 });
 
 export const authContainerStyle: CSSProperties = {
+	alignItems: 'center',
+	borderRadius: '0.625rem',
 	display: 'flex',
 	flexDirection: 'column',
-	alignItems: 'center',
 	justifyContent: 'center',
-	width: '100%',
-	maxWidth: '21.875rem',
 	margin: 'auto',
+	maxWidth: '21.875rem',
 	padding: '1.25rem',
-	borderRadius: '0.625rem'
+	width: '100%'
 };
 
 export const textButtonStyle: CSSProperties = {
 	color: ' #222   ',
+	cursor: 'pointer',
 	fontSize: '1.25rem',
-	textAlign: 'center',
-	width: '100%',
 	marginTop: '1.25rem',
-	cursor: 'pointer'
+	textAlign: 'center',
+	width: '100%'
 };
 
 export const contentStyle: CSSProperties = {
+	alignItems: 'center',
 	display: 'flex',
 	flexDirection: 'column',
-	alignItems: 'center',
-	justifyContent: 'center',
-	height: '100%'
+	height: '100%',
+	justifyContent: 'center'
 };

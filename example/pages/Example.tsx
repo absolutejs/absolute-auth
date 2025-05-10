@@ -1,4 +1,7 @@
+import { useState } from 'react';
+import { Head } from '../components/Head';
 import { Navbar } from '../components/Navbar';
+import { useAuthStatus } from '../hooks/useAuthStatus';
 import {
 	htmlDefault,
 	bodyDefault,
@@ -7,13 +10,10 @@ import {
 	contentStyle
 } from '../utils/styles';
 
-import { useAuthStatus } from '../hooks/useAuthStatus';
-import { useState } from 'react';
-import { Head } from '../components/Head';
-
 export const Example = () => {
 	const { user, handleLogOut } = useAuthStatus();
 	const [modalOpen, setModalOpen] = useState(false);
+
 	return (
 		<html lang="en" style={htmlDefault}>
 			<Head />

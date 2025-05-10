@@ -1,6 +1,6 @@
 import { MILLISECONDS_IN_A_DAY } from './constants';
-import { AbsoluteAuthProps, InsantiateUserSessionProps } from './types';
 import { isValidUser } from './typeGuards';
+import { AbsoluteAuthProps, InsantiateUserSessionProps } from './types';
 
 export const instantiateUserSession = async <UserType>({
 	user_session_id,

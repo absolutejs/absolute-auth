@@ -9,11 +9,13 @@ export const useAuthStatus = () => {
 
 		if (!response.ok && response.statusText === 'Unauthorized') {
 			setUser(undefined);
+
 			return;
 		}
 
 		if (!response.ok) {
 			console.error('Failed to fetch user data');
+
 			return;
 		}
 

@@ -21,6 +21,7 @@ export const Modal = ({ isOpen, onClose, children }: ModalProps) => {
 		};
 
 		document.addEventListener('keydown', handleKeyDown);
+
 		return () => {
 			document.body.style.overflow = '';
 			document.removeEventListener('keydown', handleKeyDown);
@@ -39,37 +40,37 @@ export const Modal = ({ isOpen, onClose, children }: ModalProps) => {
 		<div
 			onClick={handleBackgroundClick}
 			style={{
-				position: 'fixed',
-				top: 0,
-				left: 0,
-				width: '100%',
-				height: '100%',
+				alignItems: 'center',
 				backgroundColor: 'rgba(0, 0, 0, 0.5)',
 				display: 'flex',
+				height: '100%',
 				justifyContent: 'center',
-				alignItems: 'center',
+				left: 0,
+				position: 'fixed',
+				top: 0,
+				width: '100%',
 				zIndex: 10000
 			}}
 		>
 			<div
 				style={{
 					backgroundColor: '#fff',
-					padding: '20px',
 					borderRadius: '8px',
 					minWidth: '300px',
+					padding: '20px',
 					position: 'relative'
 				}}
 			>
 				<button
 					onClick={onClose}
 					style={{
-						position: 'absolute',
-						top: '10px',
-						right: '10px',
 						backgroundColor: 'transparent',
 						border: 'none',
+						cursor: 'pointer',
 						fontSize: '16px',
-						cursor: 'pointer'
+						position: 'absolute',
+						right: '10px',
+						top: '10px'
 					}}
 				>
 					&times;

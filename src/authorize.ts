@@ -1,8 +1,8 @@
 import { generateState, generateCodeVerifier } from 'arctic';
 import { Elysia } from 'elysia';
+import { COOKIE_DURATION } from './constants';
 import { isValidProviderKey } from './typeGuards';
 import { ClientProviders } from './types';
-import { COOKIE_DURATION } from './constants';
 
 type AuthorizeProps = {
 	clientProviders: ClientProviders;

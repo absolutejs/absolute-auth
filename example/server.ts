@@ -1,25 +1,25 @@
-import { Elysia } from 'elysia';
-import { schema, type User } from './db/schema';
-import { neon } from '@neondatabase/serverless';
-import { drizzle } from 'drizzle-orm/neon-http';
-import { absoluteAuth } from '../src';
-import { Example } from './pages/Example';
-import { staticPlugin } from '@elysiajs/static';
-import { createUser, getUser } from './utils/userUtils';
-import { Protected } from './pages/Protected';
-import { NotAuthorized } from './components/NotAuthorized';
-import { instantiateUserSession } from '../src/utils';
 import {
 	build,
 	handleReactPageRequest,
 	networkingPlugin
 } from '@absolutejs/absolute';
+import { staticPlugin } from '@elysiajs/static';
+import { neon } from '@neondatabase/serverless';
+import { drizzle } from 'drizzle-orm/neon-http';
+import { Elysia } from 'elysia';
+import { absoluteAuth } from '../src';
+import { instantiateUserSession } from '../src/utils';
+import { NotAuthorized } from './components/NotAuthorized';
+import { schema, type User } from './db/schema';
+import { Example } from './pages/Example';
+import { Protected } from './pages/Protected';
+import { createUser, getUser } from './utils/userUtils';
 
 const manifest = await build({
-	reactPagesDir: 'example/pages',
-	reactIndexDir: 'example/indexes',
 	assetsDir: 'example/assets',
 	buildDir: 'example/build',
+	reactIndexDir: 'example/indexes',
+	reactPagesDir: 'example/pages'
 });
 
 if (manifest === null)
@@ -60,6 +60,17 @@ new Elysia()
 	.use(
 		absoluteAuth<User>({
 			config: {
+				Facebook: {
+					credentials: [
+						Bun.env.FACEBOOK_CLIENT_ID,
+						Bun.env.FACEBOOK_CLIENT_SECRET,
+						Bun.env.FACEBOOK_REDIRECT_URI
+					]
+				},
+				GitHub: {
+					credentials: ['clientId', 'clientSecret', null],
+					scopes: ['read:user']
+				},
 				Google: {
 					credentials: [
 						Bun.env.GOOGLE_CLIENT_ID,
@@ -75,17 +86,6 @@ new Elysia()
 						['access_type', 'offline'],
 						['prompt', 'consent']
 					]
-				},
-				GitHub: {
-					credentials: ['clientId', 'clientSecret', null],
-					scopes: ['read:user']
-				},
-				Facebook: {
-					credentials: [
-						Bun.env.FACEBOOK_CLIENT_ID,
-						Bun.env.FACEBOOK_CLIENT_SECRET,
-						Bun.env.FACEBOOK_REDIRECT_URI
-					]
 				}
 			},
 			onCallback: async ({
@@ -95,24 +95,24 @@ new Elysia()
 				session
 			}) =>
 				await instantiateUserSession<User>({
-					getUser: () =>
-						getUser({
-							db,
-							schema,
-							authProvider,
-							userProfile
-						}),
+					authProvider,
+					session,
+					user_session_id,
+					userProfile,
 					createUser: () =>
 						createUser({
+							authProvider,
 							db,
 							schema,
-							authProvider,
 							userProfile
 						}),
-					authProvider,
-					userProfile,
-					session,
-					user_session_id
+					getUser: () =>
+						getUser({
+							authProvider,
+							db,
+							schema,
+							userProfile
+						})
 				})
 		})
 	)

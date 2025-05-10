@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { Head } from '../components/Head';
+import { Navbar } from '../components/Navbar';
 import { useAuthStatus } from '../hooks/useAuthStatus';
 
 import {
@@ -7,9 +9,6 @@ import {
 	mainDefault,
 	contentStyle
 } from '../utils/styles';
-
-import { Navbar } from '../components/Navbar';
-import { Head } from '../components/Head';
 
 export const Protected = () => {
 	const { user, handleLogOut } = useAuthStatus();
@@ -28,9 +27,9 @@ export const Protected = () => {
 				<main style={mainDefault}>
 					<div style={contentStyle}>
 						<h1>Protected Page</h1>
-						<p>{user && user.given_name}</p>
-						<p>{user && user.family_name}</p>
-						<p>{user && user.email}</p>
+						<p>{user ? user.given_name : null}</p>
+						<p>{user ? user.family_name : null}</p>
+						<p>{user ? user.email : null}</p>
 						<img
 							src={
 								user?.picture ??

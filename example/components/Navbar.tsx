@@ -1,8 +1,8 @@
 import type { Dispatch, SetStateAction } from 'react';
-import { buttonStyle } from '../utils/styles';
-import { Modal } from './Modal';
-import { AuthOptions } from './AuthOptions';
 import type { User } from '../db/schema';
+import { buttonStyle } from '../utils/styles';
+import { AuthOptions } from './AuthOptions';
+import { Modal } from './Modal';
 
 type NavbarProps = {
 	user: User | undefined;
@@ -22,107 +22,99 @@ export const Navbar = ({
 	handleLogOut,
 	modalOpen,
 	setModalOpen
-}: NavbarProps) => {
-	return (
-		<header
+}: NavbarProps) => (
+	<header
+		style={{
+			alignItems: 'center',
+			backgroundColor: '#0C1015',
+			color: '#fff',
+			display: 'flex',
+			justifyContent: 'space-between',
+			padding: '10px 20px',
+			position: 'relative'
+		}}
+	>
+		<a
 			style={{
-				position: 'relative',
-				backgroundColor: '#0C1015',
-				padding: '10px 20px',
 				color: '#fff',
-				display: 'flex',
-				alignItems: 'center',
-				justifyContent: 'space-between'
+				fontSize: '1.5rem',
+				fontWeight: 'bold',
+				textDecoration: 'none'
 			}}
+			href="/"
 		>
-			<a
-				style={{
-					fontSize: '1.5rem',
-					fontWeight: 'bold',
-					textDecoration: 'none',
-					color: '#fff'
-				}}
-				href="/"
-			>
-				Absolute Auth
-			</a>
+			Absolute Auth
+		</a>
 
-			<nav style={{ display: 'flex', alignItems: 'center' }}>
-				{navLinks.map(({ href, label }, index) => (
-					<a
-						key={index}
-						href={href}
+		<nav style={{ alignItems: 'center', display: 'flex' }}>
+			{navLinks.map(({ href, label }, index) => (
+				<a
+					key={index}
+					href={href}
+					style={{
+						borderRadius: '5px',
+						color: '#fff',
+						fontSize: '1rem',
+						fontWeight: 'bold',
+						marginRight: '20px',
+						padding: '5px 10px',
+						textDecoration: 'none',
+						textWrap: 'nowrap'
+					}}
+				>
+					{label}
+				</a>
+			))}
+			{user ? (
+				<>
+					<button
+						style={buttonStyle({
+							backgroundColor: '#f3f3f3',
+							color: '#333'
+						})}
+						onClick={handleLogOut}
+					>
+						Log Out
+					</button>
+					<img
 						style={{
-							textDecoration: 'none',
-							fontSize: '1rem',
-							textWrap: 'nowrap',
-							fontWeight: 'bold',
-							marginRight: '20px',
-							padding: '5px 10px',
-							borderRadius: '5px',
-							color: '#fff'
+							borderRadius: '50%',
+							height: '40px',
+							marginLeft: '20px',
+							width: '40px'
 						}}
+						src={user?.picture ?? 'https://via.placeholder.com/150'}
+						alt="profile"
+					/>
+				</>
+			) : (
+				<>
+					<button
+						style={buttonStyle({
+							backgroundColor: '#f3f3f3',
+							color: '#333'
+						})}
+						onClick={() => setModalOpen(true)}
 					>
-						{label}
-					</a>
-				))}
-				{user ? (
-					<>
-						<button
-							style={buttonStyle({
-								backgroundColor: '#f3f3f3',
-								color: '#333'
-							})}
-							onClick={handleLogOut}
-						>
-							Log Out
-						</button>
-						<img
-							style={{
-								width: '40px',
-								height: '40px',
-								borderRadius: '50%',
-								marginLeft: '20px'
-							}}
-							src={
-								user?.picture ??
-								'https://via.placeholder.com/150'
-							}
-							alt="profile"
-						/>
-					</>
-				) : (
-					<>
-						<button
-							style={buttonStyle({
-								backgroundColor: '#f3f3f3',
-								color: '#333'
-							})}
-							onClick={() => setModalOpen(true)}
-						>
-							Log In
-						</button>
+						Log In
+					</button>
 
-						<button
-							style={buttonStyle({
-								backgroundColor: '#f3f3f3',
-								color: '#333'
-							})}
-							onClick={() => setModalOpen(true)}
-						>
-							Sign Up
-						</button>
-					</>
-				)}
-				{modalOpen && (
-					<Modal
-						isOpen={modalOpen}
-						onClose={() => setModalOpen(false)}
+					<button
+						style={buttonStyle({
+							backgroundColor: '#f3f3f3',
+							color: '#333'
+						})}
+						onClick={() => setModalOpen(true)}
 					>
-						<AuthOptions />
-					</Modal>
-				)}
-			</nav>
-		</header>
-	);
-};
+						Sign Up
+					</button>
+				</>
+			)}
+			{modalOpen ? (
+				<Modal isOpen={modalOpen} onClose={() => setModalOpen(false)}>
+					<AuthOptions />
+				</Modal>
+			) : null}
+		</nav>
+	</header>
+);

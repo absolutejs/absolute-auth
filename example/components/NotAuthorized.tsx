@@ -6,8 +6,8 @@ import {
 	mainDefault,
 	contentStyle
 } from '../utils/styles';
-import { Navbar } from './Navbar';
 import { Head } from './Head';
+import { Navbar } from './Navbar';
 
 export const NotAuthorized = () => {
 	const { user, handleLogOut } = useAuthStatus();

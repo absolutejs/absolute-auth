@@ -1,9 +1,9 @@
 import { decodeIdToken } from 'arctic';
 import { Elysia } from 'elysia';
+import { fetchUserProfile } from './profiles';
 import { sessionStore } from './sessionStore';
 import { isNonEmptyString, isValidProviderKey } from './typeGuards';
 import { ClientProviders, OnCallback } from './types';
-import { fetchUserProfile } from './profiles';
 
 type CallbackProps<UserType> = {
 	clientProviders: ClientProviders;
@@ -108,9 +108,9 @@ export const callback = <UserType>({
 
 					await onCallback?.({
 						authProvider,
-						userProfile,
 						session,
-						user_session_id
+						user_session_id,
+						userProfile
 					});
 
 					const redirectUrl = redirect_url.value ?? '/';
