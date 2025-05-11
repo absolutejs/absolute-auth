@@ -1,7 +1,7 @@
 import { Elysia } from 'elysia';
 import { sessionStore } from './sessionStore';
-import { isRefreshableProvider } from './typeGuards';
 import { ClientProviders } from './types';
+import { isRefreshableProvider } from 'citra';
 
 type StatusProps = {
 	clientProviders: ClientProviders;

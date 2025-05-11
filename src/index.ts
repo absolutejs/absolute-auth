@@ -32,8 +32,8 @@ export const absoluteAuth = <UserType>({
 				providerName,
 				providerConfig.credentials
 			  ),
-			  scopes:       providerConfig.scopes       ?? [],
-			  searchParams: providerConfig.searchParams ?? []
+			  scopes:       providerConfig.scopes,
+			  searchParams: providerConfig.searchParams
 			};
 		  }
 		  return acc;

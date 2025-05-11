@@ -1,9 +1,9 @@
 import { decodeIdToken } from 'arctic';
 import { Elysia } from 'elysia';
-import { fetchUserProfile } from './profiles';
 import { sessionStore } from './sessionStore';
-import { isNonEmptyString, isValidProviderKey } from './typeGuards';
+import { isNonEmptyString} from './typeGuards';
 import { ClientProviders, OnCallback } from './types';
+import { isValidProviderOption } from 'citra';
 
 type CallbackProps<UserType> = {
 	clientProviders: ClientProviders;
@@ -48,7 +48,7 @@ export const callback = <UserType>({
 					return error('Unauthorized', 'No auth provider found');
 				}
 
-				if (!isValidProviderKey(auth_provider.value)) {
+				if (!isValidProviderOption(auth_provider.value)) {
 					return error('Unauthorized', 'Invalid provider');
 				}
 
@@ -73,10 +73,10 @@ export const callback = <UserType>({
 
 					const safeVerifier = verifier ?? '';
 					const tokens = await (hasCodeVerifier
-						? providerInstance.validateAuthorizationCode(
+						? providerInstance.validateAuthorizationCode({
 								code,
-								safeVerifier
-							)
+								codeVerifier: safeVerifier
+				})
 						: // @ts-expect-error - This is a dynamic check
 							providerInstance.validateAuthorizationCode(code));
 
@@ -100,10 +100,10 @@ export const callback = <UserType>({
 						userProfile = decodedIdToken;
 					} catch (err) {
 						// TODO : This has type any see if it can be fixed
-						userProfile = await fetchUserProfile(
+						userProfile = await providerInstance.fetchUserProfile({
 							authProvider,
 							tokens.accessToken()
-						);
+						});
 					}
 
 					await onCallback?.({

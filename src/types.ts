@@ -70,8 +70,8 @@ export type ClientProviders = Record<
 	string,
 	{
 		providerInstance: OAuth2Client<ProviderOption>;
-		scopes: string[];
-		searchParams: [string, string][];
+		scopes?: string[];
+		searchParams?: [string, string][];
 	}
 >;
 

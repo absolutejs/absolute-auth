@@ -1,6 +1,6 @@
 import { Elysia } from 'elysia';
-import { isRefreshableProvider } from './typeGuards';
 import { ClientProviders } from './types';
+import { isRefreshableProvider } from 'citra';
 
 type RefreshProps = {
 	clientProviders: ClientProviders;

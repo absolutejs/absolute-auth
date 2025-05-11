@@ -1,8 +1,8 @@
 import { generateState, generateCodeVerifier } from 'arctic';
 import { Elysia } from 'elysia';
 import { COOKIE_DURATION } from './constants';
-import { isValidProviderKey } from './typeGuards';
 import { ClientProviders } from './types';
+import { isValidProviderOption } from 'citra';
 
 type AuthorizeProps = {
 	clientProviders: ClientProviders;
@@ -27,7 +27,7 @@ export const authorize = ({
 			if (provider === undefined)
 				return error('Bad Request', 'Provider is required');
 
-			if (!isValidProviderKey(provider)) {
+			if (!isValidProviderOption(provider)) {
 				return error('Bad Request', 'Invalid provider');
 			}
 
@@ -67,7 +67,7 @@ export const authorize = ({
 					value: currentState
 				});
 
-				const usesCodeVerifier = providerInstance.createAuthorizationURL
+				const usesCodeVerifier = providerInstance.createAuthorizationUrl
 					.toString()
 					.includes('codeVerifier');
 				const verifier = usesCodeVerifier
@@ -86,7 +86,7 @@ export const authorize = ({
 				);
 
 				const authorizationURL = usesCodeVerifier
-					? providerInstance.createAuthorizationURL(
+					? providerInstance.createAuthorizationUrl(
 							currentState,
 							// @ts-expect-error - This is a dynamic check
 							verifier,
