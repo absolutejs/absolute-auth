@@ -1,5 +1,5 @@
 import { Cookie } from 'elysia';
-import { providers } from './providers';
+import { CredentialsFor, OAuth2Client, ProviderOption } from 'citra';
 
 type SessionData<UserType> = {
 	user: UserType;
@@ -7,14 +7,12 @@ type SessionData<UserType> = {
 };
 
 type Oauth2ConfigOptions = {
-	[K in Providers]?: {
-		credentials: ConstructorParameters<(typeof providers)[K]>;
+	[Provider in ProviderOption]?: {
+		credentials: CredentialsFor<Provider>;
 		scopes?: string[];
 		searchParams?: [string, string][];
 	};
 };
-
-export type Providers = keyof typeof providers;
 
 export type SessionRecord<UserType> = Record<
 	string,
@@ -71,7 +69,7 @@ export type AbsoluteAuthProps<UserType> = {
 export type ClientProviders = Record<
 	string,
 	{
-		providerInstance: InstanceType<(typeof providers)[Providers]>;
+		providerInstance: OAuth2Client<ProviderOption>;
 		scopes: string[];
 		searchParams: [string, string][];
 	}

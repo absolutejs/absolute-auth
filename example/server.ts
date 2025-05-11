@@ -62,22 +62,26 @@ new Elysia()
 		absoluteAuth<User>({
 			config: {
 				Facebook: {
-					credentials: [
-						env.FACEBOOK_CLIENT_ID,
-						env.FACEBOOK_CLIENT_SECRET,
-						env.FACEBOOK_REDIRECT_URI
-					]
+					credentials: {
+						clientId: env.FACEBOOK_CLIENT_ID,
+						clientSecret: env.FACEBOOK_CLIENT_SECRET,
+						redirectUri: env.FACEBOOK_REDIRECT_URI
+					}
 				},
 				GitHub: {
-					credentials: ['clientId', 'clientSecret', null],
+					credentials: {
+						clientId:'clientId', 
+						clientSecret:'clientSecret',
+						redirectUri: 'redirectUri'
+					},
 					scopes: ['read:user']
 				},
 				Google: {
-					credentials: [
-						env.GOOGLE_CLIENT_ID,
-						env.GOOGLE_CLIENT_SECRET,
-						env.GOOGLE_REDIRECT_URI
-					],
+					credentials: {
+						clientId: env.GOOGLE_CLIENT_ID,
+						clientSecret: env.GOOGLE_CLIENT_SECRET,
+						redirectUri: env.GOOGLE_REDIRECT_URI
+					},
 					scopes: [
 						'openid',
 						'https://www.googleapis.com/auth/userinfo.profile',
