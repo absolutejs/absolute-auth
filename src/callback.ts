@@ -1,7 +1,7 @@
 import { decodeIdToken } from 'arctic';
 import { Elysia } from 'elysia';
 import { sessionStore } from './sessionStore';
-import { isNonEmptyString} from './typeGuards';
+import { isNonEmptyString } from './typeGuards';
 import { ClientProviders, OnCallback } from './types';
 import { isValidProviderOption } from 'citra';
 
@@ -76,7 +76,7 @@ export const callback = <UserType>({
 						? providerInstance.validateAuthorizationCode({
 								code,
 								codeVerifier: safeVerifier
-				})
+							})
 						: // @ts-expect-error - This is a dynamic check
 							providerInstance.validateAuthorizationCode(code));
 
@@ -102,7 +102,7 @@ export const callback = <UserType>({
 						// TODO : This has type any see if it can be fixed
 						userProfile = await providerInstance.fetchUserProfile({
 							authProvider,
-							tokens.accessToken()
+							accessToken: tokens.accessToken()
 						});
 					}
 

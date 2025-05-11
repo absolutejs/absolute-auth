@@ -70,8 +70,8 @@ new Elysia()
 				},
 				GitHub: {
 					credentials: {
-						clientId:'clientId', 
-						clientSecret:'clientSecret',
+						clientId: 'clientId',
+						clientSecret: 'clientSecret',
 						redirectUri: 'redirectUri'
 					},
 					scopes: ['read:user']

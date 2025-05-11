@@ -7,7 +7,7 @@ import { refresh } from './refresh';
 import { revoke } from './revoke';
 import { status } from './status';
 import { AbsoluteAuthProps, ClientProviders } from './types';
-import { isValidProviderOption,createOAuth2Client } from 'citra';
+import { isValidProviderOption, createOAuth2Client } from 'citra';
 
 export const absoluteAuth = <UserType>({
 	config,
@@ -26,21 +26,21 @@ export const absoluteAuth = <UserType>({
 }: AbsoluteAuthProps<UserType>) => {
 	const clientProviders = Object.entries(config).reduce<ClientProviders>(
 		(acc, [providerName, providerConfig]) => {
-		  if (isValidProviderOption(providerName)) {
-			acc[providerName] = {
-			  providerInstance: createOAuth2Client(
-				providerName,
-				providerConfig.credentials
-			  ),
-			  scopes:       providerConfig.scopes,
-			  searchParams: providerConfig.searchParams
-			};
-		  }
-		  return acc;
+			if (isValidProviderOption(providerName)) {
+				acc[providerName] = {
+					providerInstance: createOAuth2Client(
+						providerName,
+						providerConfig.credentials
+					),
+					scopes: providerConfig.scopes,
+					searchParams: providerConfig.searchParams
+				};
+			}
+			return acc;
 		},
 		{}
-	  );
-	  
+	);
+
 	return new Elysia()
 		.use(logout({ logoutRoute, onLogout }))
 		.use(revoke({ clientProviders, onRevoke, revokeRoute }))
