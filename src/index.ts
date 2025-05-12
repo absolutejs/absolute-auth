@@ -2,6 +2,7 @@ import { isValidProviderOption, createOAuth2Client } from 'citra';
 import { Elysia } from 'elysia';
 import { authorize } from './authorize';
 import { callback } from './callback';
+import { profile } from './profile';
 import { protectRoute } from './protectRoute';
 import { refresh } from './refresh';
 import { revoke } from './revoke';
@@ -13,11 +14,13 @@ export const absoluteAuth = <UserType>({
 	config,
 	authorizeRoute,
 	callbackRoute,
+	profileRoute,
 	signoutRoute,
 	statusRoute,
 	refreshRoute,
 	revokeRoute,
 	onAuthorize,
+	onProfile,
 	onCallback,
 	onStatus,
 	onRefresh,
@@ -53,6 +56,13 @@ export const absoluteAuth = <UserType>({
 				callbackRoute,
 				clientProviders,
 				onCallback
+			})
+		)
+		.use(
+			profile({
+				clientProviders,
+				onProfile,
+				profileRoute
 			})
 		)
 		.use(protectRoute())

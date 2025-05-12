@@ -7,23 +7,23 @@ import {
 import { Elysia } from 'elysia';
 import { sessionStore } from './sessionStore';
 import { isNonEmptyString } from './typeGuards';
-import { ClientProviders, OnCallback } from './types';
+import { ClientProviders, OnCallback, RouteString } from './types';
 
 type CallbackProps<UserType> = {
 	clientProviders: ClientProviders;
-	callbackRoute?: string;
+	callbackRoute?: RouteString;
 	onCallback?: OnCallback<UserType>;
 };
 
 export const callback = <UserType>({
 	clientProviders,
-	callbackRoute = 'oauth2/callback',
+	callbackRoute = '/oauth2/callback',
 	onCallback
 }: CallbackProps<UserType>) =>
 	new Elysia()
 		.use(sessionStore<UserType>())
 		.get(
-			`/${callbackRoute}`,
+			callbackRoute,
 			async ({
 				error,
 				redirect,
@@ -37,6 +37,14 @@ export const callback = <UserType>({
 				},
 				query: { code, state: callback_state }
 			}) => {
+				if (
+					stored_state === undefined ||
+					code_verifier === undefined ||
+					auth_provider === undefined ||
+					user_session_id === undefined
+				)
+					return error('Bad Request', 'Cookies are missing');
+
 				if (
 					!isNonEmptyString(code) ||
 					stored_state.value === undefined
@@ -56,8 +64,11 @@ export const callback = <UserType>({
 					return error('Unauthorized', 'Invalid provider');
 				}
 
-				const { providerInstance } =
-					clientProviders[auth_provider.value];
+				const providerConfig = clientProviders[auth_provider.value];
+				if (!providerConfig) {
+					return error('Unauthorized', 'Invalid provider');
+				}
+				const { providerInstance } = providerConfig;
 
 				try {
 					// Clear the stored state so the next request doesn't use it
@@ -91,11 +102,12 @@ export const callback = <UserType>({
 					await onCallback?.({
 						authProvider,
 						session,
+						tokens,
 						user_session_id,
 						userProfile
 					});
 
-					const redirectUrl = redirect_url.value ?? '/';
+					const redirectUrl = redirect_url?.value ?? '/';
 
 					return redirect(redirectUrl);
 				} catch (err) {

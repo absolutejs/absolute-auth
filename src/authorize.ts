@@ -6,11 +6,11 @@ import {
 } from 'citra';
 import { Elysia } from 'elysia';
 import { COOKIE_DURATION } from './constants';
-import { ClientProviders } from './types';
+import { AuthorizeRoute, ClientProviders } from './types';
 
 type AuthorizeProps = {
 	clientProviders: ClientProviders;
-	authorizeRoute?: `${string}/:provider${'' | `/${string}`}`;
+	authorizeRoute?: AuthorizeRoute;
 	onAuthorize?: () => void;
 };
 
@@ -28,6 +28,14 @@ export const authorize = ({
 			params: { provider },
 			headers
 		}) => {
+			if (
+				auth_provider === undefined ||
+				redirect_url === undefined ||
+				state === undefined ||
+				code_verifier === undefined
+			)
+				return error('Bad Request', 'Cookies are missing');
+
 			if (provider === undefined)
 				return error('Bad Request', 'Provider is required');
 
@@ -35,11 +43,15 @@ export const authorize = ({
 				return error('Bad Request', 'Invalid provider');
 			}
 
-			try {
-				const normalizedProvider = provider.toLowerCase();
-				const { providerInstance, scope, searchParams } =
-					clientProviders[normalizedProvider];
+			const providerConfig = clientProviders[provider];
+			if (!providerConfig) {
+				return error('Unauthorized', 'Invalid provider');
+			}
+			const { providerInstance, scope, searchParams } = providerConfig;
 
+			const normalizedProvider = provider.toLowerCase();
+
+			try {
 				const redirectUrl = headers['referer'] ?? '/';
 				redirect_url.set({
 					httpOnly: true,
@@ -101,7 +113,7 @@ export const authorize = ({
 				if (err instanceof Error) {
 					return error(
 						'Internal Server Error',
-						`${err.message} – ${err.stack ?? ''}`
+						`${err.message} - ${err.stack ?? ''}`
 					);
 				}
 

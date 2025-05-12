@@ -1,17 +1,21 @@
 import { Elysia } from 'elysia';
+import { RouteString } from './types';
 
 type SignOutProps = {
-	signoutRoute?: string;
+	signoutRoute?: RouteString;
 	onSignOut?: () => void;
 };
 
 export const signout = ({
-	signoutRoute = 'signout',
+	signoutRoute = '/oauth2/signout',
 	onSignOut
 }: SignOutProps) =>
 	new Elysia().post(
-		`/${signoutRoute}`,
+		signoutRoute,
 		async ({ error, cookie: { user_session_id, auth_provider } }) => {
+			if (auth_provider === undefined || user_session_id === undefined)
+				return error('Bad Request', 'Cookies are missing');
+
 			if (auth_provider.value === undefined) {
 				return error('Unauthorized', 'No auth provider found');
 			}

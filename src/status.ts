@@ -1,28 +1,34 @@
 import { isRefreshableOAuth2Client } from 'citra';
 import { Elysia } from 'elysia';
 import { sessionStore } from './sessionStore';
-import { ClientProviders } from './types';
+import { ClientProviders, RouteString } from './types';
 
 type StatusProps = {
 	clientProviders: ClientProviders;
-	statusRoute?: string;
+	statusRoute?: RouteString;
 	onStatus?: () => void;
 };
 
 export const status = <UserType>({
 	clientProviders,
-	statusRoute = 'auth-status',
+	statusRoute = '/oauth2/status',
 	onStatus
 }: StatusProps) =>
 	new Elysia()
 		.use(sessionStore<UserType>())
 		.get(
-			`/${statusRoute}`,
+			statusRoute,
 			async ({
 				error,
 				cookie: { user_session_id, auth_provider },
 				store: { session }
 			}) => {
+				if (
+					auth_provider === undefined ||
+					user_session_id === undefined
+				)
+					return error('Bad Request', 'Cookies are missing');
+
 				try {
 					if (user_session_id.value === undefined) {
 						return new Response(
@@ -42,10 +48,11 @@ export const status = <UserType>({
 						);
 					}
 
-					const normalizedProvider =
-						auth_provider.value.toLowerCase();
-					const { providerInstance } =
-						clientProviders[normalizedProvider];
+					const providerConfig = clientProviders[auth_provider.value];
+					if (!providerConfig) {
+						return error('Unauthorized', 'Invalid provider');
+					}
+					const { providerInstance } = providerConfig;
 
 					// Returns an error if the provider is not refreshable but
 					// consider another approach to be more inclusive of providers

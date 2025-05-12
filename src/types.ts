@@ -8,6 +8,8 @@ import { Cookie } from 'elysia';
 
 type SessionData<UserType> = {
 	user: UserType;
+	accessToken: string;
+	refreshToken?: string;
 	expiresAt: number;
 };
 
@@ -41,11 +43,13 @@ export type GetUser<UserType> = ({
 
 export type OnCallback<UserType> = ({
 	authProvider,
+	tokens,
 	userProfile,
 	session,
 	user_session_id
 }: {
 	authProvider: string;
+	tokens: OAuth2TokenResponse;
 	userProfile: Record<string, unknown>;
 	session: SessionRecord<UserType>;
 	user_session_id: Cookie<string | undefined>;
@@ -57,20 +61,31 @@ export type OnRefresh = ({
 	tokens: OAuth2TokenResponse;
 }) => void | Promise<void>;
 
+export type OnProfile = ({
+	userProfile
+}: {
+	userProfile: Record<string, unknown>;
+}) => void | Promise<void>;
+
+export type RouteString = `/${string}`;
+export type AuthorizeRoute = `${string}/:provider${'' | `/${string}`}`;
+
 export type AbsoluteAuthProps<UserType> = {
 	config: Oauth2ConfigOptions;
-	authorizeRoute?: `${string}/:provider${'' | `/${string}`}`;
-	callbackRoute?: string;
-	refreshRoute?: string;
-	revokeRoute?: string;
-	signoutRoute?: string;
-	statusRoute?: string;
+	authorizeRoute?: AuthorizeRoute;
+	profileRoute?: RouteString;
+	callbackRoute?: RouteString;
+	refreshRoute?: RouteString;
+	revokeRoute?: RouteString;
+	signoutRoute?: RouteString;
+	statusRoute?: RouteString;
 	onAuthorize?: () => void;
 	onCallback?: OnCallback<UserType>;
 	onStatus?: () => void;
 	onRefresh?: OnRefresh;
 	onSignOut?: () => void;
 	onRevoke?: () => void;
+	onProfile?: OnProfile;
 };
 
 export type ClientProviders = Record<
@@ -85,6 +100,7 @@ export type ClientProviders = Record<
 export type InsantiateUserSessionProps<UserType> = {
 	authProvider: string;
 	userProfile: Record<string, unknown>;
+	tokens: OAuth2TokenResponse;
 	session: SessionRecord<UserType>;
 	user_session_id: Cookie<string | undefined>;
 	createUser: () => UserType | Promise<UserType>;

@@ -1,66 +1,97 @@
 import { isRefreshableOAuth2Client, isValidProviderOption } from 'citra';
 import { Elysia } from 'elysia';
-import { ClientProviders, OnRefresh } from './types';
+import { sessionStore } from './sessionStore';
+import { ClientProviders, OnRefresh, RouteString } from './types';
 
 type RefreshProps = {
 	clientProviders: ClientProviders;
-	refreshRoute?: string;
+	refreshRoute?: RouteString;
 	onRefresh?: OnRefresh;
 };
 
-export const refresh = ({
+export const refresh = <UserType>({
 	clientProviders,
-	refreshRoute = 'refresh',
+	refreshRoute = '/oauth2/tokens',
 	onRefresh
 }: RefreshProps) =>
-	new Elysia().post(
-		`/${refreshRoute}`,
-		async ({ error, cookie: { user_refresh_token, auth_provider } }) => {
-			if (user_refresh_token.value === undefined) {
-				return error('Unauthorized', 'No refresh token found');
-			}
-
-			if (auth_provider.value === undefined) {
-				return error('Unauthorized', 'No auth provider found');
-			}
-
-			if (!isValidProviderOption(auth_provider.value)) {
-				return error('Bad Request', 'Invalid provider');
-			}
-
-			const { providerInstance } = clientProviders[auth_provider.value];
-
-			if (
-				!isRefreshableOAuth2Client(
-					auth_provider.value,
-					providerInstance
+	new Elysia()
+		.use(sessionStore<UserType>())
+		.post(
+			refreshRoute,
+			async ({
+				error,
+				store: { session },
+				cookie: { user_session_id, auth_provider }
+			}) => {
+				if (
+					auth_provider === undefined ||
+					user_session_id === undefined
 				)
-			) {
-				return error('Not Implemented', 'Provider is not refreshable');
-			}
+					return error('Bad Request', 'Cookies are missing');
 
-			try {
-				const tokens = await providerInstance.refreshAccessToken(
-					user_refresh_token.value
-				);
+				if (auth_provider.value === undefined) {
+					return error('Unauthorized', 'No auth provider found');
+				}
 
-				onRefresh?.({ tokens });
+				if (!isValidProviderOption(auth_provider.value)) {
+					return error('Bad Request', 'Invalid provider');
+				}
 
-				return new Response('Token refreshed', {
-					status: 204
-				});
-			} catch (err) {
-				if (err instanceof Error) {
+				if (user_session_id.value === undefined) {
+					return error('Unauthorized', 'No user session found');
+				}
+
+				const providerConfig = clientProviders[auth_provider.value];
+				if (!providerConfig) {
+					return error('Unauthorized', 'Invalid provider');
+				}
+				const { providerInstance } = providerConfig;
+
+				const userSession = session[user_session_id.value];
+
+				if (userSession === undefined) {
+					return error('Unauthorized', 'No user session found');
+				}
+
+				const { refreshToken } = userSession;
+
+				if (
+					!isRefreshableOAuth2Client(
+						auth_provider.value,
+						providerInstance
+					)
+				) {
 					return error(
-						'Internal Server Error',
-						`Failed to refresh token: ${err.message}`
+						'Not Implemented',
+						'Provider is not refreshable'
 					);
 				}
 
-				return error(
-					'Internal Server Error',
-					`Faile to refresh token: Unknown error: ${err}`
-				);
+				if (refreshToken === undefined) {
+					return error('Bad Request', 'No refresh token found');
+				}
+
+				try {
+					const tokens =
+						await providerInstance.refreshAccessToken(refreshToken);
+
+					onRefresh?.({ tokens });
+
+					return new Response('Token refreshed', {
+						status: 204
+					});
+				} catch (err) {
+					if (err instanceof Error) {
+						return error(
+							'Internal Server Error',
+							`Failed to refresh token: ${err.message}`
+						);
+					}
+
+					return error(
+						'Internal Server Error',
+						`Faile to refresh token: Unknown error: ${err}`
+					);
+				}
 			}
-		}
-	);
+		);

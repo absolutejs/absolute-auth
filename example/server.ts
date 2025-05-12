@@ -12,7 +12,7 @@ import { absoluteAuth } from '../src';
 import { instantiateUserSession } from '../src/utils';
 import { schema, type User } from './db/schema';
 import { createUser, getUser } from './handlers/userHandlers';
-import { Example } from './pages/Example';
+import { Example } from './pages/Home';
 import { NotAuthorized } from './pages/NotAuthorized';
 import { Protected } from './pages/Protected';
 
@@ -25,6 +25,18 @@ const manifest = await build({
 
 if (manifest === null)
 	throw new Error('Failed to build the application manifest');
+
+const homeIndex = manifest['HomeIndex'];
+const protectedIndex = manifest['ProtectedIndex'];
+const notAuthorizedIndex = manifest['NotAuthorizedIndex'];
+
+if (
+	homeIndex === undefined ||
+	protectedIndex === undefined ||
+	notAuthorizedIndex === undefined
+) {
+	throw new Error('Missing index file in manifest');
+}
 
 if (
 	!env.GOOGLE_CLIENT_ID ||
@@ -101,49 +113,49 @@ new Elysia()
 					]
 				}
 			},
-			onCallback: ({
+			onCallback: async ({
 				authProvider,
 				userProfile,
+				tokens,
 				user_session_id,
 				session
 			}) =>
 				instantiateUserSession<User>({
 					authProvider,
 					session,
+					tokens,
 					user_session_id,
 					userProfile,
-					createUser: () =>
-						createUser({
+					createUser: async () => {
+						const user = await createUser({
 							authProvider,
 							db,
 							schema,
 							userProfile
-						}),
-					getUser: () =>
-						getUser({
+						});
+						if (!user) throw new Error('Failed to create user');
+
+						return user;
+					},
+					getUser: async () => {
+						const user = await getUser({
 							authProvider,
 							db,
 							schema,
 							userProfile
-						})
+						});
+						if (!user) throw new Error('User not found');
+
+						return user;
+					}
 				})
 		})
 	)
-	.get('/', () => handleReactPageRequest(Example, manifest['ExampleIndex']))
-	.get('/page1', () =>
-		handleReactPageRequest(Example, manifest[`ExampleIndex`])
-	)
-	.get('/page2', () =>
-		handleReactPageRequest(Example, manifest[`ExampleIndex`])
-	)
+	.get('/', () => handleReactPageRequest(Example, homeIndex))
 	.get('/protected', ({ protectRoute }) =>
 		protectRoute(
-			() => handleReactPageRequest(Protected, manifest['ProtectedIndex']),
-			() =>
-				handleReactPageRequest(
-					NotAuthorized,
-					manifest['NotAuthorizedIndex']
-				)
+			() => handleReactPageRequest(Protected, protectedIndex),
+			() => handleReactPageRequest(NotAuthorized, notAuthorizedIndex)
 		)
 	)
 	.use(networkingPlugin)

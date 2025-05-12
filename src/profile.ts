@@ -1,23 +1,23 @@
-import { isRevocableOAuth2Client, isValidProviderOption } from 'citra';
+import { isValidProviderOption } from 'citra';
 import { Elysia } from 'elysia';
 import { sessionStore } from './sessionStore';
-import { ClientProviders, RouteString } from './types';
+import { ClientProviders, OnProfile, RouteString } from './types';
 
-type RevokeProps = {
+type ProfileProps = {
 	clientProviders: ClientProviders;
-	revokeRoute?: RouteString;
-	onRevoke?: () => void;
+	profileRoute?: RouteString;
+	onProfile?: OnProfile;
 };
 
-export const revoke = <UserType>({
+export const profile = <UserType>({
 	clientProviders,
-	revokeRoute = '/oauth2/revocation',
-	onRevoke
-}: RevokeProps) =>
+	profileRoute = '/oauth2/profile',
+	onProfile
+}: ProfileProps) =>
 	new Elysia()
 		.use(sessionStore<UserType>())
-		.post(
-			revokeRoute,
+		.get(
+			profileRoute,
 			async ({
 				error,
 				store: { session },
@@ -34,7 +34,7 @@ export const revoke = <UserType>({
 				}
 
 				if (!isValidProviderOption(auth_provider.value)) {
-					return error('Bad Request', 'Invalid provider');
+					return error('Unauthorized', 'Invalid provider');
 				}
 
 				if (user_session_id.value === undefined) {
@@ -47,46 +47,33 @@ export const revoke = <UserType>({
 				}
 				const { providerInstance } = providerConfig;
 
-				if (
-					!isRevocableOAuth2Client(
-						auth_provider.value,
-						providerInstance
-					)
-				) {
-					return error(
-						'Not Implemented',
-						'Provider does not support revocation'
-					);
-				}
-
 				const userSession = session[user_session_id.value];
 
 				if (userSession === undefined) {
 					return error('Unauthorized', 'No user session found');
 				}
 
-				const { accessToken } = userSession; // TODO: Some providers use refresh tokens for revocation
+				const { accessToken } = userSession;
 
 				try {
-					await providerInstance.revokeToken(accessToken);
+					const userProfile =
+						await providerInstance.fetchUserProfile(accessToken);
 
-					onRevoke?.();
-
-					return new Response('Token revoked', {
-						status: 204
+					await onProfile?.({
+						userProfile
 					});
-				} catch (err) {
-					if (err instanceof Error) {
-						return error(
-							'Internal Server Error',
-							`Failed to revoke token: ${err.message}`
-						);
-					}
 
-					return error(
-						'Internal Server Error',
-						`Failed to revoke token: Unknown error: ${err}`
-					);
+					return new Response(JSON.stringify(userProfile));
+				} catch (err) {
+					return err instanceof Error
+						? error(
+								'Internal Server Error',
+								`${err.message} - ${err.stack ?? ''}`
+							)
+						: error(
+								'Internal Server Error',
+								`Failed to validate authorization code: Unknown error: ${err}`
+							);
 				}
 			}
 		);
