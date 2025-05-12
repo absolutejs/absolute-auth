@@ -74,27 +74,26 @@ export const createUser = ({
 	schema
 }: UserFunctionProps & DatabaseFunctionProps) => {
 	const provider = authProvider.toUpperCase();
-	const { sub, id } = userProfile;
+	const { sub, id, email, family_name, given_name, picture, avatar_url } =
+		userProfile;
 
 	if (!sub && !id) {
-		throw new Error('Sub and ID claim is missing from ID token');
+		throw new Error('No sub or ID claim found in ID token');
 	}
 	const authSub = `${provider}|${sub || id}`;
 
 	return createDBUser({
 		auth_sub: authSub,
 		db,
-		email: typeof userProfile.email === 'string' ? userProfile.email : '',
-		family_name:
-			typeof userProfile.family_name === 'string'
-				? userProfile.family_name
-				: '',
-		given_name:
-			typeof userProfile.given_name === 'string'
-				? userProfile.given_name
-				: '',
+		email: typeof email === 'string' ? email : '',
+		family_name: typeof family_name === 'string' ? family_name : '',
+		given_name: typeof given_name === 'string' ? given_name : '',
 		picture:
-			typeof userProfile.picture === 'string' ? userProfile.picture : '',
+			typeof picture === 'string'
+				? picture
+				: typeof avatar_url === 'string'
+				? avatar_url
+				: '',
 		schema
 	});
 };
@@ -109,8 +108,8 @@ export const getUser = ({
 	console.log(userProfile);
 	const { sub, id } = userProfile;
 
-	if(!sub && !id) {
-		throw new Error('Sub and ID claim is missing from ID token');
+	if (!sub && !id) {
+		throw new Error('No sub or ID claim found in ID token');
 	}
 
 	const authSub = `${provider}|${sub || id}`;

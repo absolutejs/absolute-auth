@@ -84,7 +84,11 @@ export const callback = <UserType>({
 							});
 					}
 
-					const userProfile = tokens.id_token ? decodeJWT(tokens.id_token) : await providerInstance.fetchUserProfile(tokens.access_token)
+					const userProfile = tokens.id_token
+						? decodeJWT(tokens.id_token)
+						: await providerInstance.fetchUserProfile(
+								tokens.access_token
+							);
 
 					await onCallback?.({
 						authProvider,
