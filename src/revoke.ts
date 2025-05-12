@@ -1,6 +1,10 @@
 import { Elysia } from 'elysia';
 import { ClientProviders } from './types';
-import { isRevocableOAuth2Client, isRevocableProviderOption } from 'citra';
+import {
+	isRevocableOAuth2Client,
+	isRevocableProviderOption,
+	isValidProviderOption
+} from 'citra';
 
 type RevokeProps = {
 	clientProviders: ClientProviders;
@@ -24,10 +28,15 @@ export const revoke = ({
 				return error('Unauthorized', 'No auth provider found');
 			}
 
-			const normalizedProvider = auth_provider.value.toLowerCase();
-			const { providerInstance } = clientProviders[normalizedProvider];
+			if (!isValidProviderOption(auth_provider.value)) {
+				return error('Bad Request', 'Invalid provider');
+			}
 
-			if (!isRevocableOAuth2Client('Google', providerInstance)) {
+			const { providerInstance } = clientProviders[auth_provider.value];
+
+			if (
+				!isRevocableOAuth2Client(auth_provider.value, providerInstance)
+			) {
 				return error(
 					'Not Implemented',
 					'Provider does not support revocation'
@@ -35,7 +44,7 @@ export const revoke = ({
 			}
 
 			try {
-				await providerInstance.revokeAccessToken(
+				await providerInstance.revokeToken(
 					user_refresh_token.value
 				);
 

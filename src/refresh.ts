@@ -1,6 +1,10 @@
 import { Elysia } from 'elysia';
 import { ClientProviders } from './types';
-import { isRefreshableProviderOption } from 'citra';
+import {
+	isRefreshableOAuth2Client,
+	isRefreshableProviderOption,
+	isValidProviderOption
+} from 'citra';
 
 type RefreshProps = {
 	clientProviders: ClientProviders;
@@ -24,20 +28,23 @@ export const refresh = ({
 				return error('Unauthorized', 'No auth provider found');
 			}
 
-			const normalizedProvider = auth_provider.value.toLowerCase();
-			const { providerInstance } = clientProviders[normalizedProvider];
+			if (!isValidProviderOption(auth_provider.value)) {
+				return error('Bad Request', 'Invalid provider');
+			}
 
-			if (!isRefreshableProviderOption(auth_provider.value)) {
+			const { providerInstance } = clientProviders[auth_provider.value];
+
+			if (
+				!isRefreshableOAuth2Client(
+					auth_provider.value,
+					providerInstance
+				)
+			) {
 				return error('Not Implemented', 'Provider is not refreshable');
 			}
 
 			try {
-				//consider passing tokens to onRefresh
-				// const tokens = await providerInstance.refreshAccessToken(
-				// 	user_refresh_token.value
-				// );
-
-				await providerInstance.refreshAccessToken(
+				const tokens = await providerInstance.refreshAccessToken(
 					user_refresh_token.value
 				);
 
