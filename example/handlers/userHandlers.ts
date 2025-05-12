@@ -82,18 +82,20 @@ export const createUser = ({
 	}
 	const authSub = `${provider}|${sub || id}`;
 
+	let pictureUrl = '';
+	if (typeof picture === 'string') {
+		pictureUrl = picture;
+	} else if (typeof avatar_url === 'string') {
+		pictureUrl = avatar_url;
+	}
+
 	return createDBUser({
 		auth_sub: authSub,
 		db,
 		email: typeof email === 'string' ? email : '',
 		family_name: typeof family_name === 'string' ? family_name : '',
 		given_name: typeof given_name === 'string' ? given_name : '',
-		picture:
-			typeof picture === 'string'
-				? picture
-				: typeof avatar_url === 'string'
-					? avatar_url
-					: '',
+		picture: pictureUrl,
 		schema
 	});
 };

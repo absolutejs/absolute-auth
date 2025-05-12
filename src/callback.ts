@@ -64,25 +64,23 @@ export const callback = <UserType>({
 					stored_state.remove();
 
 					const authProvider = auth_provider.value;
-					let tokens: OAuth2TokenResponse;
-					if (isPKCEProviderOption(authProvider)) {
-						const verifier = code_verifier.value;
-						if (verifier === undefined)
-							return error(
-								'Bad Request',
-								'Code verifier not found and is required'
-							);
-						tokens =
-							await providerInstance.validateAuthorizationCode({
-								code,
-								codeVerifier: verifier
-							});
-					} else {
-						tokens =
-							await providerInstance.validateAuthorizationCode({
-								code
-							});
+					const requiresPKCE = isPKCEProviderOption(authProvider);
+					const verifier = requiresPKCE
+						? code_verifier.value
+						: undefined;
+					if (requiresPKCE && verifier === undefined) {
+						return error(
+							'Bad Request',
+							'Code verifier not found and is required'
+						);
 					}
+
+					const tokens: OAuth2TokenResponse =
+						await providerInstance.validateAuthorizationCode(
+							requiresPKCE
+								? { code, codeVerifier: verifier! }
+								: { code }
+						);
 
 					const userProfile = tokens.id_token
 						? decodeJWT(tokens.id_token)
@@ -101,16 +99,15 @@ export const callback = <UserType>({
 
 					return redirect(redirectUrl);
 				} catch (err) {
-					if (err instanceof Error)
-						return error(
-							'Internal Server Error',
-							`${err.message} - ${err.stack ?? ''}`
-						);
-
-					return error(
-						'Internal Server Error',
-						`Failed to validate authorization code: Unknown error: ${err}`
-					);
+					return err instanceof Error
+						? error(
+								'Internal Server Error',
+								`${err.message} - ${err.stack ?? ''}`
+							)
+						: error(
+								'Internal Server Error',
+								`Failed to validate authorization code: Unknown error: ${err}`
+							);
 				}
 			}
 		);

@@ -41,7 +41,6 @@ export const authorize = ({
 					clientProviders[normalizedProvider];
 
 				const redirectUrl = headers['referer'] ?? '/';
-
 				redirect_url.set({
 					httpOnly: true,
 					maxAge: COOKIE_DURATION,
@@ -50,7 +49,6 @@ export const authorize = ({
 					secure: true,
 					value: redirectUrl
 				});
-
 				auth_provider.set({
 					httpOnly: true,
 					maxAge: COOKIE_DURATION,
@@ -61,7 +59,6 @@ export const authorize = ({
 				});
 
 				const currentState = generateState();
-
 				state.set({
 					httpOnly: true,
 					maxAge: COOKIE_DURATION,
@@ -71,38 +68,32 @@ export const authorize = ({
 					value: currentState
 				});
 
-				let authorizationURL;
+				const codeVerifier = isPKCEProviderOption(provider)
+					? generateCodeVerifier()
+					: undefined;
 
-				if (isPKCEProviderOption(provider)) {
-					const codeVerifier = generateCodeVerifier();
-
+				void (
+					codeVerifier &&
 					code_verifier.set({
 						httpOnly: true,
 						maxAge: COOKIE_DURATION,
 						path: '/',
 						sameSite: 'lax',
 						secure: true,
-						value: codeVerifier ?? ''
-					});
+						value: codeVerifier
+					})
+				);
 
-					authorizationURL =
-						await providerInstance.createAuthorizationUrl({
-							codeVerifier,
-							scope,
-							state: currentState
-						});
-				} else {
-					authorizationURL =
-						await providerInstance.createAuthorizationUrl({
-							scope,
-							state: currentState
-						});
-				}
+				const authorizationURL =
+					await providerInstance.createAuthorizationUrl(
+						codeVerifier
+							? { codeVerifier, scope, state: currentState }
+							: { scope, state: currentState }
+					);
 
-				searchParams?.forEach(([key, value]) => {
-					authorizationURL.searchParams.set(key, value);
-				});
-
+				searchParams?.forEach(([key, value]) =>
+					authorizationURL.searchParams.set(key, value)
+				);
 				onAuthorize?.();
 
 				return redirect(authorizationURL.toString());
@@ -110,7 +101,7 @@ export const authorize = ({
 				if (err instanceof Error) {
 					return error(
 						'Internal Server Error',
-						`${err.message} - ${err.stack ?? ''}`
+						`${err.message} – ${err.stack ?? ''}`
 					);
 				}
 
