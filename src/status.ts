@@ -1,4 +1,4 @@
-import { isRefreshableOAuth2Client, isRefreshableProviderOption } from 'citra';
+import { isRefreshableOAuth2Client } from 'citra';
 import { Elysia } from 'elysia';
 import { sessionStore } from './sessionStore';
 import { ClientProviders } from './types';

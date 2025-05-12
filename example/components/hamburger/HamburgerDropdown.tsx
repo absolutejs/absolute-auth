@@ -32,7 +32,7 @@ export const HamburgerDropdown = ({
 	}));
 
 	// TODO: Update the rule to handle icons or other components someone doesnt control
-	// eslint-disable-next-line custom/localize-react-props
+	// eslint-disable-next-line absolute/localize-react-props
 	const toggleDropdown = () => {
 		if (ref === null) return;
 

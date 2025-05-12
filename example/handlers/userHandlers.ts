@@ -105,7 +105,6 @@ export const getUser = ({
 	schema
 }: UserFunctionProps & DatabaseFunctionProps) => {
 	const provider = authProvider.toUpperCase();
-	console.log(userProfile);
 	const { sub, id } = userProfile;
 
 	if (!sub && !id) {

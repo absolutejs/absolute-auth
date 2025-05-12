@@ -49,7 +49,7 @@ export const DropdownContainer = ({
 
 	return (
 		// TODO : Fix this lint error i think its safe to remove but dont have time to check right now
-		// eslint-disable-next-line custom/no-unnecessary-div
+		// eslint-disable-next-line absolute/no-unnecessary-div
 		<div style={{ position: 'relative' }}>
 			<animated.div
 				ref={dropdownRef}

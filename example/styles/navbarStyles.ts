@@ -115,7 +115,8 @@ export const getNavbarDropdownListStyle = (dropdownSpring: {
 	whiteSpace: 'nowrap',
 	width: 'auto'
 });
-export const profileButtonStyle = {
+
+export const profileButtonStyle: CSSProperties = {
 	alignItems: 'center',
 	border: 'none',
 	borderRadius: '5px',

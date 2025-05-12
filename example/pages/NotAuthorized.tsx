@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { Navbar } from '../components/navbar/Navbar';
 import { Head } from '../components/page/Head';
 import { useAuthStatus } from '../hooks/useAuthStatus';
