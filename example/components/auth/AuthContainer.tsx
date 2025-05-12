@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import {
 	containerStyle,
-	egLogoStyle,
 	headingStyle,
 	loginTextStyle,
-	loginLinkTextStyle
+	loginLinkTextStyle,
+	oauthButtonStyle
 } from '../../styles/authModalStyles';
 import { Divider } from '../utils/Divider';
 import { OAuthButtons } from './OAuthButtons';
@@ -17,12 +17,16 @@ export const AuthContainer = () => {
 
 	return (
 		<div style={containerStyle}>
-			<a href="/">
-				<img
-					src="/assets/svg/eg-logo-no-text.svg"
-					alt="Absolute Auth Logo"
-					style={egLogoStyle}
-				/>
+			<a
+				href="/"
+				style={{
+					color: 'black',
+					fontSize: '1.5rem',
+					fontWeight: 'bold',
+					textDecoration: 'none'
+				}}
+			>
+				Absolute Auth
 			</a>
 			<h1 style={headingStyle}>
 				{mode === 'login'
@@ -30,9 +34,18 @@ export const AuthContainer = () => {
 					: 'Create an account'}
 			</h1>
 
+			<OAuthButtons mode={mode} />
+
 			<Divider text="or" />
 
-			<OAuthButtons mode={mode} />
+			<button
+				style={oauthButtonStyle}
+				onClick={() => {
+					alert('Sign in with other provider');
+				}}
+			>
+				Sign in with other provider
+			</button>
 
 			<p style={loginTextStyle}>
 				{mode === 'login' ? 'Need an account? ' : 'Have an account? '}

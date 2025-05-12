@@ -8,7 +8,7 @@ import {
 	contentStyle
 } from '../styles/styles';
 
-export const Example = () => {
+export const Home = () => {
 	const { user, handleSignOut } = useAuthStatus();
 
 	return (

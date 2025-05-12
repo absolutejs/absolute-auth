@@ -21,7 +21,7 @@ export const egLogoStyle: CSSProperties = {
 	height: '100px',
 	margin: '0 auto'
 };
-export const googleButtonContentStyle: CSSProperties = {
+export const oauthButtonContentStyle: CSSProperties = {
 	alignItems: 'center',
 	display: 'flex',
 	justifyContent: 'center',
@@ -29,7 +29,7 @@ export const googleButtonContentStyle: CSSProperties = {
 	paddingRight: '12px',
 	width: '100%'
 };
-export const googleButtonStyle: CSSProperties = {
+export const oauthButtonStyle: CSSProperties = {
 	alignItems: 'center',
 	backgroundColor: '#FFFFFF',
 	border: '1px solid #747775',
@@ -44,12 +44,12 @@ export const googleButtonStyle: CSSProperties = {
 	textDecoration: 'none',
 	width: '100%'
 };
-export const googleButtonTextStyle: CSSProperties = {
+export const oauthButtonTextStyle: CSSProperties = {
 	overflow: 'hidden',
 	textAlign: 'center',
 	textOverflow: 'ellipsis'
 };
-export const googleIconStyle: CSSProperties = {
+export const oauthIconStyle: CSSProperties = {
 	height: '20px',
 	marginRight: '10px',
 	width: '20px'

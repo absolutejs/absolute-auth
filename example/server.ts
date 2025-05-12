@@ -12,7 +12,7 @@ import { absoluteAuth } from '../src';
 import { instantiateUserSession } from '../src/utils';
 import { schema, type User } from './db/schema';
 import { createUser, getUser } from './handlers/userHandlers';
-import { Example } from './pages/Home';
+import { Home } from './pages/Home';
 import { NotAuthorized } from './pages/NotAuthorized';
 import { Protected } from './pages/Protected';
 
@@ -151,7 +151,7 @@ new Elysia()
 				})
 		})
 	)
-	.get('/', () => handleReactPageRequest(Example, homeIndex))
+	.get('/', () => handleReactPageRequest(Home, homeIndex))
 	.get('/protected', ({ protectRoute }) =>
 		protectRoute(
 			() => handleReactPageRequest(Protected, protectedIndex),
