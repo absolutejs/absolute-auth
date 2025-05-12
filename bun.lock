@@ -11,7 +11,7 @@
         "@types/bun": "1.2.9",
         "@types/react": "19.1.1",
         "@types/react-dom": "19.1.2",
-        "citra": "0.12.0",
+        "citra": "0.13.0",
         "drizzle-kit": "0.30.6",
         "drizzle-orm": "0.41.0",
         "elysia": "1.2.25",
@@ -296,7 +296,7 @@
 
     "chalk": ["chalk@4.1.2", "", { "dependencies": { "ansi-styles": "^4.1.0", "supports-color": "^7.1.0" } }, "sha512-oKnbhFyRIXpUuez8iBMmyEa4nbj4IOQyuhc/wy9kY7/WVPcwIO9VA668Pu8RkO7+0G76SLROeyw9CpQ061i4mA=="],
 
-    "citra": ["citra@0.12.0", "", {}, "sha512-V0Ju3tYFtsGB5MgeWN7IWcxg1cuSB6IjWr6KCSObwDBkJkcN9rgfARpIsxrClwAki4zUReChJUXCTTHvPUo3Vg=="],
+    "citra": ["citra@0.13.0", "", {}, "sha512-mQCtkD8f6+dpe+voYMLwaB1mPyD7lzWbZPW4DQzBLdKO6wxSs0ZOFAm3nJggIQjrW+RPFGQOVOXTxOM0DgEX4A=="],
 
     "clone": ["clone@2.1.2", "", {}, "sha512-3Pe/CF1Nn94hyhIYpjtiLhdCoEoz0DqQ+988E9gmeEdQZlojxnOb74wctFyuwWQHzqyf9X7C7MG8juUpqBJT8w=="],
 

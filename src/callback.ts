@@ -17,7 +17,7 @@ type CallbackProps<UserType> = {
 
 export const callback = <UserType>({
 	clientProviders,
-	callbackRoute = 'authorize/callback',
+	callbackRoute = 'oauth2/callback',
 	onCallback
 }: CallbackProps<UserType>) =>
 	new Elysia()
@@ -84,15 +84,13 @@ export const callback = <UserType>({
 							});
 					}
 
-					console.log(authProvider, tokens);
+					const userProfile = tokens.id_token ? decodeJWT(tokens.id_token) : await providerInstance.fetchUserProfile(tokens.access_token)
 
 					await onCallback?.({
 						authProvider,
 						session,
 						user_session_id,
-						userProfile: decodeJWT(
-							tokens.id_token ? tokens.id_token : ''
-						)
+						userProfile
 					});
 
 					const redirectUrl = redirect_url.value ?? '/';

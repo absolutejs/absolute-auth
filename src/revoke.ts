@@ -44,9 +44,7 @@ export const revoke = ({
 			}
 
 			try {
-				await providerInstance.revokeToken(
-					user_refresh_token.value
-				);
+				await providerInstance.revokeToken(user_refresh_token.value);
 
 				onRevoke?.();
 

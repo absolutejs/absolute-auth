@@ -42,6 +42,14 @@ if (
 	throw new Error('Facebook OAuth2 credentials are not set in .env file');
 }
 
+if (
+	!env.GITHUB_CLIENT_ID ||
+	!env.GITHUB_CLIENT_SECRET ||
+	!env.GITHUB_REDIRECT_URI
+) {
+	throw new Error('GitHub OAuth2 credentials are not set in .env file');
+}
+
 if (!env.DATABASE_URL) {
 	throw new Error('DATABASE_URL is not set in .env file');
 }
@@ -70,9 +78,9 @@ new Elysia()
 				},
 				GitHub: {
 					credentials: {
-						clientId: 'clientId',
-						clientSecret: 'clientSecret',
-						redirectUri: 'redirectUri'
+						clientId: env.GITHUB_CLIENT_ID,
+						clientSecret: env.GITHUB_CLIENT_SECRET,
+						redirectUri: env.GITHUB_REDIRECT_URI
 					},
 					scope: ['read:user']
 				},
@@ -140,5 +148,8 @@ new Elysia()
 	)
 	.use(networkingPlugin)
 	.on('error', (error) => {
-		console.error(`Server error: ${error.code}`);
+		const { request } = error;
+		console.error(
+			`Server error on ${request.method} ${request.url}: ${error.message}`
+		);
 	});

@@ -74,13 +74,12 @@ export const createUser = ({
 	schema
 }: UserFunctionProps & DatabaseFunctionProps) => {
 	const provider = authProvider.toUpperCase();
-	const { sub } = userProfile;
+	const { sub, id } = userProfile;
 
-	if (!sub) {
-		throw new Error('Sub claim is missing from ID token');
+	if (!sub && !id) {
+		throw new Error('Sub and ID claim is missing from ID token');
 	}
-
-	const authSub = `${provider}|${sub}`;
+	const authSub = `${provider}|${sub || id}`;
 
 	return createDBUser({
 		auth_sub: authSub,
@@ -108,13 +107,13 @@ export const getUser = ({
 }: UserFunctionProps & DatabaseFunctionProps) => {
 	const provider = authProvider.toUpperCase();
 	console.log(userProfile);
-	const { sub } = userProfile;
+	const { sub, id } = userProfile;
 
-	if (!sub) {
-		throw new Error('Sub claim is missing from ID token');
+	if(!sub && !id) {
+		throw new Error('Sub and ID claim is missing from ID token');
 	}
 
-	const authSub = `${provider}|${sub}`;
+	const authSub = `${provider}|${sub || id}`;
 
 	return getDBUser({ authSub, db, schema });
 };
