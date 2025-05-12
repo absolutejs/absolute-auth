@@ -21,12 +21,13 @@ export const HamburgerHeader = ({ onClose }: HamburgerHeaderProps) => (
 			width: '100%'
 		}}
 	>
-		<a href="/" style={{ alignItems: 'center', display: 'flex' }}>
-			<img
-				src="/assets/svg/eg-logo-no-text.svg"
-				alt="EventGames.io Logo"
-				style={{ height: 'auto', width: '4rem' }}
-			/>
+		<a href="/" style={{
+			color: '#fff',
+			fontSize: '1.5rem',
+			fontWeight: 'bold',
+			textDecoration: 'none'
+		}}>
+			Absolute Auth
 		</a>
 		<FaTimes
 			style={{

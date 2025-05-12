@@ -5,7 +5,7 @@ export const useAuthStatus = () => {
 	const [user, setUser] = useState<User>();
 
 	const checkAuthStatus = async () => {
-		const response = await fetch('/auth-status');
+		const response = await fetch('/oauth2/status');
 
 		if (!response.ok && response.statusText === 'Unauthorized') {
 			setUser(undefined);

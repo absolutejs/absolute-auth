@@ -7,7 +7,7 @@ type HeadProps = {
 
 export const Head = ({
 	title = 'AbsoluteJS',
-	icon = '/favicon.ico'
+	icon = '/assets/favicon.ico'
 }: HeadProps) => (
 	<head>
 		<meta charSet="utf-8" />
