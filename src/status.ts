@@ -1,7 +1,7 @@
+import { isRefreshableOAuth2Client, isRefreshableProviderOption } from 'citra';
 import { Elysia } from 'elysia';
 import { sessionStore } from './sessionStore';
 import { ClientProviders } from './types';
-import { isRefreshableOAuth2Client, isRefreshableProviderOption } from 'citra';
 
 type StatusProps = {
 	clientProviders: ClientProviders;

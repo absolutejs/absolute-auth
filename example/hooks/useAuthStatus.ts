@@ -35,13 +35,13 @@ export const useAuthStatus = () => {
 		});
 	};
 
-	const handleLogOut = async () => {
-		const response = await fetch('/logout', { method: 'POST' });
+	const handleSignOut = async () => {
+		const response = await fetch('/signout', { method: 'POST' });
 		if (response.ok) {
 			setUser(undefined);
 			window.location.reload();
 		} else {
-			console.error('Logout failed');
+			console.error('SignOut failed');
 		}
 	};
 
@@ -50,7 +50,7 @@ export const useAuthStatus = () => {
 	}, []);
 
 	return {
-		handleLogOut,
+		handleSignOut,
 		setUser,
 		user
 	};

@@ -92,8 +92,8 @@ export const createUser = ({
 			typeof picture === 'string'
 				? picture
 				: typeof avatar_url === 'string'
-				? avatar_url
-				: '',
+					? avatar_url
+					: '',
 		schema
 	});
 };

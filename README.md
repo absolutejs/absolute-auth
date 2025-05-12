@@ -47,13 +47,13 @@ Start the example server:
 ### Configuration Options
 
 - **Providers**: Configure multiple authentication providers such as Google, GitHub, and more.
-- **Routes**: Customize the routes for authorization, callback, logout, status, refresh, and revoke.
-- **Event Handlers**: Define custom event handlers for authorization, callback, status, refresh, logout, and revoke events.
+- **Routes**: Customize the routes for authorization, callback, signout, status, refresh, and revoke.
+- **Event Handlers**: Define custom event handlers for authorization, callback, status, refresh, signout, and revoke events.
 - **User Management**: Implement custom functions for creating and retrieving users.
 
 ### Example Components and Utilities in the `example` Directory
 
-- `components/Example.tsx`: A React component that demonstrates the usage of the authentication system, including login, logout, and protected routes.
+- `components/Example.tsx`: A React component that demonstrates the usage of the authentication system, including login, signout, and protected routes.
 - `components/Navbar.tsx`: A React component that provides a navigation bar with authentication-related links and actions.
 - `server.ts`: The main server file that sets up the example server, handles routes, and integrates the authentication system.
 

@@ -1,12 +1,12 @@
-import { Elysia } from 'elysia';
-import { COOKIE_DURATION } from './constants';
-import { ClientProviders } from './types';
 import {
 	generateCodeVerifier,
 	generateState,
 	isPKCEProviderOption,
 	isValidProviderOption
 } from 'citra';
+import { Elysia } from 'elysia';
+import { COOKIE_DURATION } from './constants';
+import { ClientProviders } from './types';
 
 type AuthorizeProps = {
 	clientProviders: ClientProviders;
@@ -87,15 +87,15 @@ export const authorize = ({
 
 					authorizationURL =
 						await providerInstance.createAuthorizationUrl({
-							state: currentState,
 							codeVerifier,
-							scope
+							scope,
+							state: currentState
 						});
 				} else {
 					authorizationURL =
 						await providerInstance.createAuthorizationUrl({
-							state: currentState,
-							scope
+							scope,
+							state: currentState
 						});
 				}
 

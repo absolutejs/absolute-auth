@@ -1,5 +1,10 @@
+import {
+	CredentialsFor,
+	OAuth2Client,
+	OAuth2TokenResponse,
+	ProviderOption
+} from 'citra';
 import { Cookie } from 'elysia';
-import { CredentialsFor, OAuth2Client, ProviderOption } from 'citra';
 
 type SessionData<UserType> = {
 	user: UserType;
@@ -46,19 +51,25 @@ export type OnCallback<UserType> = ({
 	user_session_id: Cookie<string | undefined>;
 }) => void | Promise<void>;
 
+export type OnRefresh = ({
+	tokens
+}: {
+	tokens: OAuth2TokenResponse;
+}) => void | Promise<void>;
+
 export type AbsoluteAuthProps<UserType> = {
 	config: Oauth2ConfigOptions;
 	authorizeRoute?: `${string}/:provider${'' | `/${string}`}`;
 	callbackRoute?: string;
 	refreshRoute?: string;
 	revokeRoute?: string;
-	logoutRoute?: string;
+	signoutRoute?: string;
 	statusRoute?: string;
 	onAuthorize?: () => void;
 	onCallback?: OnCallback<UserType>;
 	onStatus?: () => void;
-	onRefresh?: () => void;
-	onLogout?: () => void;
+	onRefresh?: OnRefresh;
+	onSignOut?: () => void;
 	onRevoke?: () => void;
 };
 

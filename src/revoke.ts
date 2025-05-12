@@ -1,10 +1,6 @@
+import { isRevocableOAuth2Client, isValidProviderOption } from 'citra';
 import { Elysia } from 'elysia';
 import { ClientProviders } from './types';
-import {
-	isRevocableOAuth2Client,
-	isRevocableProviderOption,
-	isValidProviderOption
-} from 'citra';
 
 type RevokeProps = {
 	clientProviders: ClientProviders;

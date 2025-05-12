@@ -9,6 +9,9 @@ export const styleReset = `
     }
 `;
 
+export const primaryColor = '#4A90E2';
+export const secondaryColor = '#50E3C2';
+
 export const bodyDefault: CSSProperties = {
 	backgroundColor: '#f5f5f5',
 	color: '#333',

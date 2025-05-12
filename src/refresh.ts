@@ -1,15 +1,11 @@
+import { isRefreshableOAuth2Client, isValidProviderOption } from 'citra';
 import { Elysia } from 'elysia';
-import { ClientProviders } from './types';
-import {
-	isRefreshableOAuth2Client,
-	isRefreshableProviderOption,
-	isValidProviderOption
-} from 'citra';
+import { ClientProviders, OnRefresh } from './types';
 
 type RefreshProps = {
 	clientProviders: ClientProviders;
 	refreshRoute?: string;
-	onRefresh?: () => void;
+	onRefresh?: OnRefresh;
 };
 
 export const refresh = ({
@@ -48,7 +44,7 @@ export const refresh = ({
 					user_refresh_token.value
 				);
 
-				onRefresh?.();
+				onRefresh?.({ tokens });
 
 				return new Response('Token refreshed', {
 					status: 204

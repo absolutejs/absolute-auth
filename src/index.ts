@@ -1,19 +1,19 @@
+import { isValidProviderOption, createOAuth2Client } from 'citra';
 import { Elysia } from 'elysia';
 import { authorize } from './authorize';
 import { callback } from './callback';
-import { logout } from './logout';
 import { protectRoute } from './protectRoute';
 import { refresh } from './refresh';
 import { revoke } from './revoke';
+import { signout } from './signout';
 import { status } from './status';
 import { AbsoluteAuthProps, ClientProviders } from './types';
-import { isValidProviderOption, createOAuth2Client } from 'citra';
 
 export const absoluteAuth = <UserType>({
 	config,
 	authorizeRoute,
 	callbackRoute,
-	logoutRoute,
+	signoutRoute,
 	statusRoute,
 	refreshRoute,
 	revokeRoute,
@@ -21,7 +21,7 @@ export const absoluteAuth = <UserType>({
 	onCallback,
 	onStatus,
 	onRefresh,
-	onLogout,
+	onSignOut,
 	onRevoke
 }: AbsoluteAuthProps<UserType>) => {
 	const clientProviders = Object.entries(config).reduce<ClientProviders>(
@@ -36,13 +36,14 @@ export const absoluteAuth = <UserType>({
 					searchParams: providerConfig.searchParams
 				};
 			}
+
 			return acc;
 		},
 		{}
 	);
 
 	return new Elysia()
-		.use(logout({ logoutRoute, onLogout }))
+		.use(signout({ onSignOut, signoutRoute }))
 		.use(revoke({ clientProviders, onRevoke, revokeRoute }))
 		.use(status<UserType>({ clientProviders, onStatus, statusRoute }))
 		.use(refresh({ clientProviders, onRefresh, refreshRoute }))

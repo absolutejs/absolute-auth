@@ -1,13 +1,13 @@
-import { Elysia } from 'elysia';
-import { sessionStore } from './sessionStore';
-import { isNonEmptyString } from './typeGuards';
-import { ClientProviders, OnCallback } from './types';
 import {
 	decodeJWT,
 	isPKCEProviderOption,
 	isValidProviderOption,
 	OAuth2TokenResponse
 } from 'citra';
+import { Elysia } from 'elysia';
+import { sessionStore } from './sessionStore';
+import { isNonEmptyString } from './typeGuards';
+import { ClientProviders, OnCallback } from './types';
 
 type CallbackProps<UserType> = {
 	clientProviders: ClientProviders;
