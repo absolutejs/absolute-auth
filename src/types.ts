@@ -9,7 +9,7 @@ type SessionData<UserType> = {
 type Oauth2ConfigOptions = {
 	[Provider in ProviderOption]?: {
 		credentials: CredentialsFor<Provider>;
-		scopes?: string[];
+		scope?: string[];
 		searchParams?: [string, string][];
 	};
 };
@@ -21,9 +21,7 @@ export type SessionRecord<UserType> = Record<
 
 export type UserFunctionProps = {
 	authProvider: string;
-	userProfile: {
-		[key: string]: string | undefined;
-	};
+	userProfile: Record<string, unknown>;
 };
 
 export type CreateUser<UserType> = ({
@@ -43,16 +41,14 @@ export type OnCallback<UserType> = ({
 	user_session_id
 }: {
 	authProvider: string;
-	userProfile: {
-		[key: string]: string | undefined;
-	};
+	userProfile: Record<string, unknown>;
 	session: SessionRecord<UserType>;
 	user_session_id: Cookie<string | undefined>;
 }) => void | Promise<void>;
 
 export type AbsoluteAuthProps<UserType> = {
 	config: Oauth2ConfigOptions;
-	authorizeRoute?: string;
+	authorizeRoute?: `${string}/:provider${'' | `/${string}`}`;
 	callbackRoute?: string;
 	refreshRoute?: string;
 	revokeRoute?: string;
@@ -70,16 +66,14 @@ export type ClientProviders = Record<
 	string,
 	{
 		providerInstance: OAuth2Client<ProviderOption>;
-		scopes?: string[];
+		scope?: string[];
 		searchParams?: [string, string][];
 	}
 >;
 
 export type InsantiateUserSessionProps<UserType> = {
 	authProvider: string;
-	userProfile: {
-		[key: string]: string | undefined;
-	};
+	userProfile: Record<string, unknown>;
 	session: SessionRecord<UserType>;
 	user_session_id: Cookie<string | undefined>;
 	createUser: () => UserType | Promise<UserType>;

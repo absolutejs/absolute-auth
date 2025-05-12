@@ -30,7 +30,6 @@
 	],
 	"types": "dist/src/index.d.ts",
 	"peerDependencies": {
-		"arctic": ">= 3.6.0",
 		"elysia": ">= 1.2.0"
 	},
 	"devDependencies": {
@@ -41,7 +40,7 @@
 		"@types/bun": "1.2.9",
 		"@types/react": "19.1.1",
 		"@types/react-dom": "19.1.2",
-		"citra": "0.4.0",
+		"citra": "0.12.0",
 		"drizzle-kit": "0.30.6",
 		"drizzle-orm": "0.41.0",
 		"elysia": "1.2.25",

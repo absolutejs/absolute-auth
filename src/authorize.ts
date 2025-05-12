@@ -1,23 +1,27 @@
-import { generateState, generateCodeVerifier } from 'arctic';
 import { Elysia } from 'elysia';
 import { COOKIE_DURATION } from './constants';
 import { ClientProviders } from './types';
-import { isValidProviderOption } from 'citra';
+import {
+	generateCodeVerifier,
+	generateState,
+	isPKCEProviderOption,
+	isValidProviderOption
+} from 'citra';
 
 type AuthorizeProps = {
 	clientProviders: ClientProviders;
-	authorizeRoute?: string;
+	authorizeRoute?: `${string}/:provider${'' | `/${string}`}`;
 	onAuthorize?: () => void;
 };
 
 export const authorize = ({
 	clientProviders,
-	authorizeRoute = 'authorize',
+	authorizeRoute = '/oauth2/:provider/authorization',
 	onAuthorize
 }: AuthorizeProps) =>
 	new Elysia().get(
-		`/${authorizeRoute}/:provider`,
-		({
+		authorizeRoute,
+		async ({
 			error,
 			redirect,
 			cookie: { state, code_verifier, auth_provider, redirect_url },
@@ -33,7 +37,7 @@ export const authorize = ({
 
 			try {
 				const normalizedProvider = provider.toLowerCase();
-				const { providerInstance, scopes, searchParams } =
+				const { providerInstance, scope, searchParams } =
 					clientProviders[normalizedProvider];
 
 				const redirectUrl = headers['referer'] ?? '/';
@@ -53,7 +57,7 @@ export const authorize = ({
 					path: '/',
 					sameSite: 'lax',
 					secure: true,
-					value: provider
+					value: normalizedProvider
 				});
 
 				const currentState = generateState();
@@ -67,38 +71,35 @@ export const authorize = ({
 					value: currentState
 				});
 
-				const usesCodeVerifier = providerInstance.createAuthorizationUrl
-					.toString()
-					.includes('codeVerifier');
-				const verifier = usesCodeVerifier
-					? generateCodeVerifier()
-					: undefined;
-				void (
-					usesCodeVerifier &&
+				let authorizationURL;
+
+				if (isPKCEProviderOption(provider)) {
+					const codeVerifier = generateCodeVerifier();
+
 					code_verifier.set({
 						httpOnly: true,
 						maxAge: COOKIE_DURATION,
 						path: '/',
 						sameSite: 'lax',
 						secure: true,
-						value: verifier ?? ''
-					})
-				);
+						value: codeVerifier ?? ''
+					});
 
-				const authorizationURL = usesCodeVerifier
-					? providerInstance.createAuthorizationUrl(
-							currentState,
-							// @ts-expect-error - This is a dynamic check
-							verifier,
-							scopes
-						)
-					: // @ts-expect-error - This is a dynamic check
-						providerInstance.createAuthorizationURL(
-							currentState,
-							scopes
-						);
+					authorizationURL =
+						await providerInstance.createAuthorizationUrl({
+							state: currentState,
+							codeVerifier,
+							scope
+						});
+				} else {
+					authorizationURL =
+						await providerInstance.createAuthorizationUrl({
+							state: currentState,
+							scope
+						});
+				}
 
-				searchParams.forEach(([key, value]) => {
+				searchParams?.forEach(([key, value]) => {
 					authorizationURL.searchParams.set(key, value);
 				});
 

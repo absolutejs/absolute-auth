@@ -27,12 +27,12 @@ export const absoluteAuth = <UserType>({
 	const clientProviders = Object.entries(config).reduce<ClientProviders>(
 		(acc, [providerName, providerConfig]) => {
 			if (isValidProviderOption(providerName)) {
-				acc[providerName] = {
+				acc[providerName.toLocaleLowerCase()] = {
 					providerInstance: createOAuth2Client(
 						providerName,
 						providerConfig.credentials
 					),
-					scopes: providerConfig.scopes,
+					scope: providerConfig.scope,
 					searchParams: providerConfig.searchParams
 				};
 			}

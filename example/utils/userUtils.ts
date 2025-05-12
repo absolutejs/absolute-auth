@@ -85,10 +85,17 @@ export const createUser = ({
 	return createDBUser({
 		auth_sub: authSub,
 		db,
-		email: userProfile.email ?? '',
-		family_name: userProfile.family_name ?? '',
-		given_name: userProfile.given_name ?? '',
-		picture: userProfile.picture ?? '',
+		email: typeof userProfile.email === 'string' ? userProfile.email : '',
+		family_name:
+			typeof userProfile.family_name === 'string'
+				? userProfile.family_name
+				: '',
+		given_name:
+			typeof userProfile.given_name === 'string'
+				? userProfile.given_name
+				: '',
+		picture:
+			typeof userProfile.picture === 'string' ? userProfile.picture : '',
 		schema
 	});
 };
@@ -100,6 +107,7 @@ export const getUser = ({
 	schema
 }: UserFunctionProps & DatabaseFunctionProps) => {
 	const provider = authProvider.toUpperCase();
+	console.log(userProfile);
 	const { sub } = userProfile;
 
 	if (!sub) {

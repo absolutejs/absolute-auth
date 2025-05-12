@@ -9,7 +9,7 @@ export const AuthOptions = () => {
 	const [showSignin, setShowSignin] = useState(true);
 
 	const handleOAuthClick = async (provider: string) => {
-		window.location.href = `/authorize/${provider}`;
+		window.location.href = `/oauth2/${provider}/authorization`;
 	};
 
 	return (

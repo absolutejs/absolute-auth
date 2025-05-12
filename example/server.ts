@@ -74,7 +74,7 @@ new Elysia()
 						clientSecret: 'clientSecret',
 						redirectUri: 'redirectUri'
 					},
-					scopes: ['read:user']
+					scope: ['read:user']
 				},
 				Google: {
 					credentials: {
@@ -82,7 +82,7 @@ new Elysia()
 						clientSecret: env.GOOGLE_CLIENT_SECRET,
 						redirectUri: env.GOOGLE_REDIRECT_URI
 					},
-					scopes: [
+					scope: [
 						'openid',
 						'https://www.googleapis.com/auth/userinfo.profile',
 						'https://www.googleapis.com/auth/userinfo.email'

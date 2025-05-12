@@ -1,7 +1,7 @@
 import { Elysia } from 'elysia';
 import { sessionStore } from './sessionStore';
 import { ClientProviders } from './types';
-import { isRefreshableProvider } from 'citra';
+import { isRefreshableOAuth2Client, isRefreshableProviderOption } from 'citra';
 
 type StatusProps = {
 	clientProviders: ClientProviders;
@@ -49,7 +49,9 @@ export const status = <UserType>({
 
 					// Returns an error if the provider is not refreshable but
 					// consider another approach to be more inclusive of providers
-					if (!isRefreshableProvider(providerInstance)) {
+					if (
+						!isRefreshableOAuth2Client('Google', providerInstance)
+					) {
 						return error(
 							'Not Implemented',
 							'Provider is not refreshable'

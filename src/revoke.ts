@@ -1,6 +1,6 @@
 import { Elysia } from 'elysia';
-import { isRevocableProvider } from './typeGuards';
 import { ClientProviders } from './types';
+import { isRevocableOAuth2Client, isRevocableProviderOption } from 'citra';
 
 type RevokeProps = {
 	clientProviders: ClientProviders;
@@ -27,7 +27,7 @@ export const revoke = ({
 			const normalizedProvider = auth_provider.value.toLowerCase();
 			const { providerInstance } = clientProviders[normalizedProvider];
 
-			if (!isRevocableProvider(providerInstance)) {
+			if (!isRevocableOAuth2Client('Google', providerInstance)) {
 				return error(
 					'Not Implemented',
 					'Provider does not support revocation'

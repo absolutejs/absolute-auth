@@ -1,6 +1,6 @@
 import { Elysia } from 'elysia';
 import { ClientProviders } from './types';
-import { isRefreshableProvider } from 'citra';
+import { isRefreshableProviderOption } from 'citra';
 
 type RefreshProps = {
 	clientProviders: ClientProviders;
@@ -27,7 +27,7 @@ export const refresh = ({
 			const normalizedProvider = auth_provider.value.toLowerCase();
 			const { providerInstance } = clientProviders[normalizedProvider];
 
-			if (!isRefreshableProvider(providerInstance)) {
+			if (!isRefreshableProviderOption(auth_provider.value)) {
 				return error('Not Implemented', 'Provider is not refreshable');
 			}
 
