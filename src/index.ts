@@ -25,7 +25,7 @@ export const absoluteAuth = <UserType>({
 	onStatus,
 	onRefresh,
 	onSignOut,
-	onRevoke
+	onRevocation
 }: AbsoluteAuthProps<UserType>) => {
 	const clientProviders = Object.entries(config).reduce<ClientProviders>(
 		(acc, [providerName, providerConfig]) => {
@@ -47,7 +47,7 @@ export const absoluteAuth = <UserType>({
 
 	return new Elysia()
 		.use(signout({ onSignOut, signoutRoute }))
-		.use(revoke({ clientProviders, onRevoke, revokeRoute }))
+		.use(revoke({ clientProviders, onRevocation, revokeRoute }))
 		.use(status<UserType>({ clientProviders, onStatus, statusRoute }))
 		.use(refresh({ clientProviders, onRefresh, refreshRoute }))
 		.use(authorize({ authorizeRoute, clientProviders, onAuthorize }))

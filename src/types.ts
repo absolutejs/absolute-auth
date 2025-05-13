@@ -67,6 +67,12 @@ export type OnProfile = ({
 	userProfile: Record<string, unknown>;
 }) => void | Promise<void>;
 
+export type OnRevocation = ({
+	tokenToRevoke
+}: {
+	tokenToRevoke: string;
+}) => void | Promise<void>;
+
 export type RouteString = `/${string}`;
 export type AuthorizeRoute = `${string}/:provider${'' | `/${string}`}`;
 
@@ -84,7 +90,7 @@ export type AbsoluteAuthProps<UserType> = {
 	onStatus?: () => void;
 	onRefresh?: OnRefresh;
 	onSignOut?: () => void;
-	onRevoke?: () => void;
+	onRevocation?: OnRevocation;
 	onProfile?: OnProfile;
 };
 

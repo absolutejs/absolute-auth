@@ -119,7 +119,7 @@ new Elysia()
 				tokenResponse,
 				user_session_id,
 				session
-			}) => { 
+			}) => {
 				console.log('\nonCallback token response:', {
 					...tokenResponse
 				});
@@ -152,11 +152,21 @@ new Elysia()
 
 						return user;
 					}
-				})
+				});
 			},
-			onRefresh: ({tokenResponse}) => {
-				console.log('\nonRefresh token response:', {
+			onProfile: ({ userProfile }) => {
+				console.log('\nonProfile successfully fetched user profile:', {
+					...userProfile
+				});
+			},
+			onRefresh: ({ tokenResponse }) => {
+				console.log('\nonRefresh successfully refreshed tokens:', {
 					...tokenResponse
+				});
+			},
+			onRevocation: ({ tokenToRevoke }) => {
+				console.log('\nonRevocation successfully revoked token:', {
+					tokenToRevoke
 				});
 			}
 		})

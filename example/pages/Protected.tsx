@@ -18,7 +18,10 @@ export const Protected = () => {
 				<main style={mainDefault}>
 					<UserInfo user={user} />
 					<ToastProvider>
-						<ProviderButtons user={user} />
+						<ProviderButtons
+							user={user}
+							handleSignOut={handleSignOut}
+						/>
 					</ToastProvider>
 				</main>
 			</body>

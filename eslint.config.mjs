@@ -219,7 +219,7 @@ export default [
 		}
 	},
 	{
-		files: ['example/db/migrate.ts'],
+		files: ['example/db/migrate.ts','example/server.ts'],
 		rules: {
 			'no-console': 'off'
 		}

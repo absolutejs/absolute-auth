@@ -1,18 +1,18 @@
 import { isRevocableOAuth2Client, isValidProviderOption } from 'citra';
 import { Elysia } from 'elysia';
 import { sessionStore } from './sessionStore';
-import { ClientProviders, RouteString } from './types';
+import { ClientProviders, OnRevocation, RouteString } from './types';
 
 type RevokeProps = {
 	clientProviders: ClientProviders;
 	revokeRoute?: RouteString;
-	onRevoke?: () => void;
+	onRevocation?: OnRevocation;
 };
 
 export const revoke = <UserType>({
 	clientProviders,
 	revokeRoute = '/oauth2/revocation',
-	onRevoke
+	onRevocation
 }: RevokeProps) =>
 	new Elysia()
 		.use(sessionStore<UserType>())
@@ -70,7 +70,7 @@ export const revoke = <UserType>({
 				try {
 					await providerInstance.revokeToken(accessToken);
 
-					onRevoke?.();
+					onRevocation?.({ tokenToRevoke: accessToken });
 
 					return new Response('Token revoked', {
 						status: 204
