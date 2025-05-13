@@ -15,12 +15,12 @@ type OAuthButtonProps = {
 
 export const OAuthButton = ({ mode, provider }: OAuthButtonProps) => {
 	const defaultData: ProviderInfo = {
-		iconUrl: '/assets/svg/todo-put-file.svg',
+		logoUrl: '/assets/svg/todo-put-file.svg',
 		name: 'other provider',
 		primaryColor: 'lightgray'
 	};
 
-	const { iconUrl, name, primaryColor } =
+	const { logoUrl, name, primaryColor } =
 		provider && providerData[provider]
 			? providerData[provider]
 			: defaultData;
@@ -33,7 +33,7 @@ export const OAuthButton = ({ mode, provider }: OAuthButtonProps) => {
 			<div style={oauthButtonContentStyle}>
 				{provider ? (
 					<img
-						src={iconUrl}
+						src={logoUrl}
 						alt={`${name} logo`}
 						style={oauthIconStyle}
 					/>
