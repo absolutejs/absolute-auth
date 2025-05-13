@@ -15,14 +15,14 @@ export const providerData: ProviderData = {
 		primaryColor: '#000000'
 	},
 	amazoncognito: {
-		iconUrl: '/assets/svg/amazon-cognito.svg',
+		iconUrl: '/assets/svg/amazoncognito.svg',
 		name: 'Amazon Cognito',
-		primaryColor: '#FF9900'
+		primaryColor: '#DD344C'
 	},
 	anilist: {
 		iconUrl: '/assets/svg/anilist.svg',
 		name: 'AniList',
-		primaryColor: '#FF4F00'
+		primaryColor: '#02A9FF'
 	},
 	apple: {
 		iconUrl: '/assets/svg/apple.svg',
@@ -37,22 +37,22 @@ export const providerData: ProviderData = {
 	auth0: {
 		iconUrl: '/assets/svg/auth0.svg',
 		name: 'Auth0',
-		primaryColor: '#E94E77'
+		primaryColor: '#EB5424'
 	},
 	authentik: {
 		iconUrl: '/assets/svg/authentik.svg',
 		name: 'Authentik',
-		primaryColor: '#FF4F00'
+		primaryColor: '#FD4B2D'
 	},
 	autodesk: {
 		iconUrl: '/assets/svg/autodesk.svg',
 		name: 'Autodesk',
-		primaryColor: '#FF4F00'
+		primaryColor: '#000000'
 	},
 	battlenet: {
 		iconUrl: '/assets/svg/battlenet.svg',
 		name: 'Battle.net',
-		primaryColor: '#00A3E0'
+		primaryColor: '#4381C3'
 	},
 	bitbucket: {
 		iconUrl: '/assets/svg/bitbucket.svg',
@@ -62,37 +62,37 @@ export const providerData: ProviderData = {
 	box: {
 		iconUrl: '/assets/svg/box.svg',
 		name: 'Box',
-		primaryColor: '#0061FF'
+		primaryColor: '#0061D5'
 	},
 	bungie: {
 		iconUrl: '/assets/svg/bungie.svg',
 		name: 'Bungie',
-		primaryColor: '#FF4F00'
+		primaryColor: '#0075BB'
 	},
 	coinbase: {
 		iconUrl: '/assets/svg/coinbase.svg',
 		name: 'Coinbase',
-		primaryColor: '#0052CC'
+		primaryColor: '#0052FF'
 	},
 	discord: {
 		iconUrl: '/assets/svg/discord.svg',
 		name: 'Discord',
-		primaryColor: '#7289DA'
+		primaryColor: '#5865F2'
 	},
 	donationalerts: {
 		iconUrl: '/assets/svg/donationalerts.svg',
 		name: 'Donation Alerts',
-		primaryColor: '#FF4F00'
+		primaryColor: '#F57D07'
 	},
 	dribbble: {
 		iconUrl: '/assets/svg/dribbble.svg',
 		name: 'Dribbble',
-		primaryColor: '#EA4C39'
+		primaryColor: '#EA4C89'
 	},
 	dropbox: {
 		iconUrl: '/assets/svg/dropbox.svg',
 		name: 'Dropbox',
-		primaryColor: '#007EE5'
+		primaryColor: '#0061FF'
 	},
 	epicgames: {
 		iconUrl: '/assets/svg/epicgames.svg',
@@ -102,12 +102,12 @@ export const providerData: ProviderData = {
 	etsy: {
 		iconUrl: '/assets/svg/etsy.svg',
 		name: 'Etsy',
-		primaryColor: '#E03C31'
+		primaryColor: '#F16521'
 	},
 	facebook: {
 		iconUrl: '/assets/svg/facebook.svg',
 		name: 'Facebook',
-		primaryColor: '#1877F2'
+		primaryColor: '#0866FF'
 	},
 	figma: {
 		iconUrl: '/assets/svg/figma.svg',
@@ -117,7 +117,7 @@ export const providerData: ProviderData = {
 	gitea: {
 		iconUrl: '/assets/svg/gitea.svg',
 		name: 'Gitea',
-		primaryColor: '#00A84D'
+		primaryColor: '#609926'
 	},
 	github: {
 		iconUrl: '/assets/svg/GitHub_Invertocat_Dark.svg',
@@ -137,27 +137,27 @@ export const providerData: ProviderData = {
 	intuit: {
 		iconUrl: '/assets/svg/intuit.svg',
 		name: 'Intuit',
-		primaryColor: '#FF4F00'
+		primaryColor: '#236CFF'
 	},
 	kakao: {
 		iconUrl: '/assets/svg/kakao.svg',
 		name: 'Kakao',
-		primaryColor: '#FF4F00'
+		primaryColor: '#FFCD00'
 	},
 	keycloak: {
 		iconUrl: '/assets/svg/keycloak.svg',
 		name: 'Keycloak',
-		primaryColor: '#000000'
+		primaryColor: '#4D4D4D'
 	},
 	kick: {
 		iconUrl: '/assets/svg/kick.svg',
 		name: 'Kick',
-		primaryColor: '#FF4F00'
+		primaryColor: '#53FC19'
 	},
 	lichess: {
 		iconUrl: '/assets/svg/lichess.svg',
 		name: 'Lichess',
-		primaryColor: '#FF4F00'
+		primaryColor: '#000000'
 	},
 	line: {
 		iconUrl: '/assets/svg/line.svg',
@@ -167,7 +167,7 @@ export const providerData: ProviderData = {
 	linear: {
 		iconUrl: '/assets/svg/linear.svg',
 		name: 'Linear',
-		primaryColor: '#FF4F00'
+		primaryColor: '#5E6AD2'
 	},
 	linkedin: {
 		iconUrl: '/assets/svg/linkedin.svg',
@@ -177,27 +177,27 @@ export const providerData: ProviderData = {
 	mastodon: {
 		iconUrl: '/assets/svg/mastodon.svg',
 		name: 'Mastodon',
-		primaryColor: '#000000'
+		primaryColor: '#6364FF'
 	},
 	mercadolibre: {
 		iconUrl: '/assets/svg/mercadolibre.svg',
 		name: 'Mercado Libre',
-		primaryColor: '#FF4F00'
+		primaryColor:'#FFD100'
 	},
 	mercadopago: {
 		iconUrl: '/assets/svg/mercadopago.svg',
 		name: 'Mercado Pago',
-		primaryColor: '#FF4F00'
+		primaryColor: '#00B1EA'
 	},
 	microsoftentraid: {
 		iconUrl: '/assets/svg/microsoft.svg',
 		name: 'Microsoft Entra ID',
-		primaryColor: '#FF4F00'
+		primaryColor: '#000000'
 	},
 	myanimelist: {
 		iconUrl: '/assets/svg/myanimelist.svg',
 		name: 'MyAnimeList',
-		primaryColor: '#FF4F00'
+		primaryColor: '#2E51A2'
 	},
 	naver: {
 		iconUrl: '/assets/svg/naver.svg',
@@ -212,32 +212,32 @@ export const providerData: ProviderData = {
 	okta: {
 		iconUrl: '/assets/svg/okta.svg',
 		name: 'Okta',
-		primaryColor: '#00B2E2'
+		primaryColor: '#007DC1'
 	},
 	osu: {
 		iconUrl: '/assets/svg/osu.svg',
 		name: 'osu!',
-		primaryColor: '#FF4F00'
+		primaryColor: '#FF66AA'
 	},
 	patreon: {
 		iconUrl: '/assets/svg/patreon.svg',
 		name: 'Patreon',
-		primaryColor: '#FF4F00'
+		primaryColor: '#000000'
 	},
 	polar: {
 		iconUrl: '/assets/svg/polar.svg',
 		name: 'Polar',
-		primaryColor: '#FF4F00'
+		primaryColor: '#000000'
 	},
 	polaraccesslink: {
 		iconUrl: '/assets/svg/polar-access-link.svg',
 		name: 'Polar Access Link',
-		primaryColor: '#FF4F00'
+		primaryColor: '#DF0827'
 	},
 	polarteampro: {
 		iconUrl: '/assets/svg/polar-team-pro.svg',
 		name: 'Polar Team Pro',
-		primaryColor: '#FF4F00'
+		primaryColor: '#DF0827'
 	},
 	reddit: {
 		iconUrl: '/assets/svg/reddit.svg',
@@ -247,7 +247,7 @@ export const providerData: ProviderData = {
 	roblox: {
 		iconUrl: '/assets/svg/roblox.svg',
 		name: 'Roblox',
-		primaryColor: '#FF4F00'
+		primaryColor: '#000000'
 	},
 	salesforce: {
 		iconUrl: '/assets/svg/salesforce.svg',
@@ -257,7 +257,7 @@ export const providerData: ProviderData = {
 	shikimori: {
 		iconUrl: '/assets/svg/shikimori.svg',
 		name: 'Shikimori',
-		primaryColor: '#FF4F00'
+		primaryColor: '#343434'
 	},
 	slack: {
 		iconUrl: '/assets/svg/slack.svg',
@@ -267,22 +267,22 @@ export const providerData: ProviderData = {
 	spotify: {
 		iconUrl: '/assets/svg/spotify.svg',
 		name: 'Spotify',
-		primaryColor: '#1DB954'
+		primaryColor: '#1ED760'
 	},
 	startgg: {
 		iconUrl: '/assets/svg/startgg.svg',
 		name: 'Start.gg',
-		primaryColor: '#FF4F00'
+		primaryColor: '#2E75BA'
 	},
 	strava: {
 		iconUrl: '/assets/svg/strava.svg',
 		name: 'Strava',
-		primaryColor: '#FF4F00'
+		primaryColor: '#FC4C02'
 	},
 	synology: {
 		iconUrl: '/assets/svg/synology.svg',
 		name: 'Synology',
-		primaryColor: '#FF4F00'
+		primaryColor: '#B5B5B6'
 	},
 	tiktok: {
 		iconUrl: '/assets/svg/tiktok.svg',
@@ -292,7 +292,7 @@ export const providerData: ProviderData = {
 	tiltify: {
 		iconUrl: '/assets/svg/tiltify.svg',
 		name: 'Tiltify',
-		primaryColor: '#FF4F00'
+		primaryColor: '#FF6D00'
 	},
 	tumblr: {
 		iconUrl: '/assets/svg/tumblr.svg',
@@ -306,32 +306,32 @@ export const providerData: ProviderData = {
 	},
 	twitter: {
 		iconUrl: '/assets/svg/twitter.svg',
-		name: 'Twitter',
-		primaryColor: '#1DA1F2'
+		name: 'Twitter / X',
+		primaryColor: '#000000'
 	},
 	vk: {
 		iconUrl: '/assets/svg/vk.svg',
 		name: 'VK',
-		primaryColor: '#4680C2'
+		primaryColor: '#0077FF'
 	},
 	workos: {
 		iconUrl: '/assets/svg/workos.svg',
 		name: 'WorkOS',
-		primaryColor: '#FF4F00'
+		primaryColor: '#6363F1'
 	},
 	yahoo: {
 		iconUrl: '/assets/svg/yahoo.svg',
 		name: 'Yahoo',
-		primaryColor: '#720E9E'
+		primaryColor: '#5F01D1'
 	},
 	yandex: {
 		iconUrl: '/assets/svg/yandex.svg',
 		name: 'Yandex',
-		primaryColor: '#FF4F00'
+		primaryColor: '#5282FF'
 	},
 	zoom: {
 		iconUrl: '/assets/svg/zoom.svg',
 		name: 'Zoom',
-		primaryColor: '#2D8CFF'
+		primaryColor: '#0B5CFF'
 	}
 };
