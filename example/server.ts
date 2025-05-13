@@ -41,30 +41,6 @@ if (
 	throw new Error('Missing index file in manifest');
 }
 
-if (
-	!env.GOOGLE_CLIENT_ID ||
-	!env.GOOGLE_CLIENT_SECRET ||
-	!env.GOOGLE_REDIRECT_URI
-) {
-	throw new Error('Google OAuth2 credentials are not set in .env file');
-}
-
-if (
-	!env.FACEBOOK_CLIENT_ID ||
-	!env.FACEBOOK_CLIENT_SECRET ||
-	!env.FACEBOOK_REDIRECT_URI
-) {
-	throw new Error('Facebook OAuth2 credentials are not set in .env file');
-}
-
-if (
-	!env.GITHUB_CLIENT_ID ||
-	!env.GITHUB_CLIENT_SECRET ||
-	!env.GITHUB_REDIRECT_URI
-) {
-	throw new Error('GitHub OAuth2 credentials are not set in .env file');
-}
-
 if (!env.DATABASE_URL) {
 	throw new Error('DATABASE_URL is not set in .env file');
 }
