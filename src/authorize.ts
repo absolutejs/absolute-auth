@@ -39,63 +39,61 @@ export const authorize = ({
 			if (provider === undefined)
 				return error('Bad Request', 'Provider is required');
 
-			if (!isValidProviderOption(provider)) {
+			if (!isValidProviderOption(provider))
 				return error('Bad Request', 'Invalid provider');
-			}
 
 			const providerConfig = clientProviders[provider];
-			if (!providerConfig) {
+			if (!providerConfig)
 				return error('Unauthorized', 'Invalid provider');
-			}
-			const { providerInstance, scope, searchParams } = providerConfig;
 
+			const { providerInstance, scope, searchParams } = providerConfig;
 			const normalizedProvider = provider.toLowerCase();
+			const referer = headers['referer'] ?? '/';
+
+			redirect_url.set({
+				httpOnly: true,
+				maxAge: COOKIE_DURATION,
+				path: '/',
+				sameSite: 'lax',
+				secure: true,
+				value: referer
+			});
+
+			auth_provider.set({
+				httpOnly: true,
+				maxAge: COOKIE_DURATION,
+				path: '/',
+				sameSite: 'lax',
+				secure: true,
+				value: normalizedProvider
+			});
+
+			const currentState = generateState();
+			state.set({
+				httpOnly: true,
+				maxAge: COOKIE_DURATION,
+				path: '/',
+				sameSite: 'lax',
+				secure: true,
+				value: currentState
+			});
+
+			const codeVerifier = isPKCEProviderOption(provider)
+				? generateCodeVerifier()
+				: undefined;
+
+			if (codeVerifier) {
+				code_verifier.set({
+					httpOnly: true,
+					maxAge: COOKIE_DURATION,
+					path: '/',
+					sameSite: 'lax',
+					secure: true,
+					value: codeVerifier
+				});
+			}
 
 			try {
-				const redirectUrl = headers['referer'] ?? '/';
-				redirect_url.set({
-					httpOnly: true,
-					maxAge: COOKIE_DURATION,
-					path: '/',
-					sameSite: 'lax',
-					secure: true,
-					value: redirectUrl
-				});
-				auth_provider.set({
-					httpOnly: true,
-					maxAge: COOKIE_DURATION,
-					path: '/',
-					sameSite: 'lax',
-					secure: true,
-					value: normalizedProvider
-				});
-
-				const currentState = generateState();
-				state.set({
-					httpOnly: true,
-					maxAge: COOKIE_DURATION,
-					path: '/',
-					sameSite: 'lax',
-					secure: true,
-					value: currentState
-				});
-
-				const codeVerifier = isPKCEProviderOption(provider)
-					? generateCodeVerifier()
-					: undefined;
-
-				void (
-					codeVerifier &&
-					code_verifier.set({
-						httpOnly: true,
-						maxAge: COOKIE_DURATION,
-						path: '/',
-						sameSite: 'lax',
-						secure: true,
-						value: codeVerifier
-					})
-				);
-
 				const authorizationURL =
 					await providerInstance.createAuthorizationUrl(
 						codeVerifier
@@ -106,6 +104,7 @@ export const authorize = ({
 				searchParams?.forEach(([key, value]) =>
 					authorizationURL.searchParams.set(key, value)
 				);
+
 				onAuthorize?.({
 					authorizationUrl: authorizationURL,
 					authProvider: normalizedProvider

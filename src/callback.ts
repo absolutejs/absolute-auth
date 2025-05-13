@@ -42,8 +42,9 @@ export const callback = <UserType>({
 					code_verifier === undefined ||
 					auth_provider === undefined ||
 					user_session_id === undefined
-				)
+				) {
 					return error('Bad Request', 'Cookies are missing');
+				}
 
 				if (
 					!isNonEmptyString(code) ||
@@ -70,26 +71,24 @@ export const callback = <UserType>({
 				}
 				const { providerInstance } = providerConfig;
 
+				// Clear the stored state so the next request doesn't use it
+				stored_state.remove();
+
+				const authProvider = auth_provider.value;
+				const requiresPKCE = isPKCEProviderOption(authProvider);
+				const verifier = requiresPKCE ? code_verifier.value : undefined;
+				if (requiresPKCE && verifier === undefined) {
+					return error(
+						'Bad Request',
+						'Code verifier not found and is required'
+					);
+				}
+
 				try {
-					// Clear the stored state so the next request doesn't use it
-					stored_state.remove();
-
-					const authProvider = auth_provider.value;
-					const requiresPKCE = isPKCEProviderOption(authProvider);
-					const verifier = requiresPKCE
-						? code_verifier.value
-						: undefined;
-					if (requiresPKCE && verifier === undefined) {
-						return error(
-							'Bad Request',
-							'Code verifier not found and is required'
-						);
-					}
-
 					const tokenResponse: OAuth2TokenResponse =
 						await providerInstance.validateAuthorizationCode(
 							requiresPKCE
-								? { code, codeVerifier: verifier! }
+								? { code, codeVerifier: verifier }
 								: { code }
 						);
 

@@ -26,17 +26,17 @@ export const useAuthStatus = () => {
 		}
 
 		setUser({
-			auth_sub: data.user.auth_sub ?? 'auth_sub',
-			created_at: data.user.created_at ?? 'created_at',
-			email: data.user.email ?? 'Email',
-			family_name: data.user.family_name ?? 'Last name',
-			given_name: data.user.given_name ?? 'First name',
-			picture: data.user.picture ?? 'picture'
+			auth_sub: data.user.auth_sub,
+			created_at: data.user.created_at,
+			email: data.user.email,
+			family_name: data.user.family_name,
+			given_name: data.user.given_name,
+			picture: data.user.picture
 		});
 	};
 
 	const handleSignOut = async () => {
-		const response = await fetch('/oauth2/signout', { method: 'POST' });
+		const response = await fetch('/oauth2/signout', { method: 'DELETE' });
 		if (response.ok) {
 			setUser(undefined);
 			window.location.reload();

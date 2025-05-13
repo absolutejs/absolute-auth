@@ -137,7 +137,7 @@ new Elysia()
 					: authProvider;
 
 				console.log(
-					`\nSuccesfully authorized with ${providerName} and got token response:`,
+					`\nSuccesfully authorized OAuth2 with ${providerName} and got token response:`,
 					{
 						...tokenResponse
 					}
@@ -173,18 +173,53 @@ new Elysia()
 					}
 				});
 			},
-			onProfile: ({ userProfile }) => {
-				console.log('\nSuccessfully fetched user profile:', {
+			onProfile: ({ authProvider, userProfile }) => {
+				const providerName = isValidProviderOption(authProvider)
+					? providerData[authProvider].name
+					: authProvider;
+
+				console.log(`\nSuccessfully fetched ${providerName} profile:`, {
 					...userProfile
 				});
 			},
-			onRefresh: ({ tokenResponse }) => {
-				console.log('\nSuccessfully refreshed tokens:', {
-					...tokenResponse
-				});
+			onRefresh: ({ authProvider, tokenResponse }) => {
+				const providerName = isValidProviderOption(authProvider)
+					? providerData[authProvider].name
+					: authProvider;
+
+				console.log(
+					`\nSuccessfully refreshed ${providerName} OAuth2 and recieved token response:`,
+					{
+						...tokenResponse
+					}
+				);
 			},
-			onRevocation: ({ tokenToRevoke }) => {
-				console.log('\nSuccessfully revoked token:', tokenToRevoke);
+			onRevocation: ({ authProvider, tokenToRevoke }) => {
+				const providerName = isValidProviderOption(authProvider)
+					? providerData[authProvider].name
+					: authProvider;
+
+				console.log(
+					`\nSuccessfully revoked ${providerName} token:`,
+					tokenToRevoke
+				);
+			},
+			onSignOut: ({ authProvider, user }) => {
+				const providerName = isValidProviderOption(authProvider)
+					? providerData[authProvider].name
+					: authProvider;
+
+				console.log(
+					`\nSuccessfully signed out ${providerName} user:`,
+					user
+				);
+			},
+			onStatus: ({ user }) => {
+				if (user === null) {
+					console.log('\nSuccessfully checked user is not logged in');
+				} else {
+					console.log(`\nSuccessfully checked user status:`, user);
+				}
 			}
 		})
 	)

@@ -13,7 +13,7 @@ export const ProviderButtons = ({
 	handleSignOut
 }: ProviderButtonsProps) => {
 	const { addToast } = useToast();
-	const provider = user?.auth_sub?.split('|')[0];
+	const provider = user?.auth_sub?.split('|')[0]?.toLocaleLowerCase();
 
 	const handleRefresh = async () => {
 		const response = await fetch('/oauth2/tokens', {
@@ -86,17 +86,6 @@ export const ProviderButtons = ({
 				marginTop: '1rem'
 			}}
 		>
-			{isRefreshableProviderOption(provider ?? '') === true && (
-				<button
-					style={buttonStyle({
-						backgroundColor: 'blue',
-						color: 'white'
-					})}
-					onClick={handleRefresh}
-				>
-					Refresh
-				</button>
-			)}
 			{provider !== undefined && (
 				<button
 					style={buttonStyle({
@@ -108,6 +97,18 @@ export const ProviderButtons = ({
 					Profile
 				</button>
 			)}
+			{provider !== undefined &&
+				isRefreshableProviderOption(provider) === true && (
+					<button
+						style={buttonStyle({
+							backgroundColor: 'blue',
+							color: 'white'
+						})}
+						onClick={handleRefresh}
+					>
+						Refresh
+					</button>
+				)}
 			{isRevocableProviderOption(provider ?? '') === true && (
 				<button
 					style={buttonStyle({

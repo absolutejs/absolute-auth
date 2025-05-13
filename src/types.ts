@@ -87,13 +87,20 @@ export type OnRevocation = ({
 	authProvider: string;
 }) => void | Promise<void>;
 
-export type OnStatus = <UserType>({
+export type OnStatus<UserType> = ({
+	user
+}: {
+	user: UserType | null;
+}) => void | Promise<void>;
+
+export type OnSignOut<UserType> = ({
 	authProvider,
 	user
 }: {
 	authProvider: string;
 	user: UserType | null;
 }) => void | Promise<void>;
+
 export type RouteString = `/${string}`;
 export type AuthorizeRoute = `${string}/:provider${'' | `/${string}`}`;
 
@@ -108,9 +115,9 @@ export type AbsoluteAuthProps<UserType> = {
 	statusRoute?: RouteString;
 	onAuthorize?: OnAuthorize;
 	onCallback?: OnCallback<UserType>;
-	onStatus?: () => void;
+	onStatus?: OnStatus<UserType>;
 	onRefresh?: OnRefresh;
-	onSignOut?: () => void;
+	onSignOut?: OnSignOut<UserType>;
 	onRevocation?: OnRevocation;
 	onProfile?: OnProfile;
 };
