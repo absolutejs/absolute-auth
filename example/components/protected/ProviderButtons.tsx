@@ -1,19 +1,19 @@
-import { isRefreshableProviderOption } from "citra"
-import { buttonStyle } from "../../styles/styles"
-import { useToast } from "../utils/ToastProvider";
-import { User } from "../../db/schema";
+import { isRefreshableProviderOption } from 'citra';
+import { User } from '../../db/schema';
+import { buttonStyle } from '../../styles/styles';
+import { useToast } from '../utils/ToastProvider';
 
 type ProviderButtonsProps = {
-    user:User | undefined
-}
+	user: User | undefined;
+};
 
-export const ProviderButtons = ({user}:ProviderButtonsProps) => {
+export const ProviderButtons = ({ user }: ProviderButtonsProps) => {
 	const { addToast } = useToast();
-    const provider = user?.auth_sub?.split('|')[0];
-    
-    const handleRefresh = async () => {
+	const provider = user?.auth_sub?.split('|')[0];
+
+	const handleRefresh = async () => {
 		const response = await fetch('/oauth2/tokens', {
-			method: 'POST',
+			method: 'POST'
 		});
 
 		if (!response.ok) {
@@ -30,22 +30,21 @@ export const ProviderButtons = ({user}:ProviderButtonsProps) => {
 			message: 'Refreshed profile successfully!',
 			style: { background: '#d4edda', color: '#155724' }
 		});
+	};
 
-	}
-
-    return (
-        <nav>
-                            {isRefreshableProviderOption(provider ?? '') === true && (
-                                <button
-                                    style={buttonStyle({
-                                        backgroundColor: 'blue',
-                                        color: 'white',
-                                    })}
-                                    onClick={handleRefresh}
-                                >
-                                    Refresh
-                                </button>
-                            )}
-                            </nav>
-    )
-}
+	return (
+		<nav>
+			{isRefreshableProviderOption(provider ?? '') === true && (
+				<button
+					style={buttonStyle({
+						backgroundColor: 'blue',
+						color: 'white'
+					})}
+					onClick={handleRefresh}
+				>
+					Refresh
+				</button>
+			)}
+		</nav>
+	);
+};

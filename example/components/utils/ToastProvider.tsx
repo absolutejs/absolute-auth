@@ -6,8 +6,8 @@ import {
 	ReactNode
 } from 'react';
 import { createPortal } from 'react-dom';
-import { Toast } from './Toast';
 import { TOAST_DURATION } from '../../utils/constants';
+import { Toast } from './Toast';
 
 type Toast = {
 	id: number;

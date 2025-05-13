@@ -1,11 +1,11 @@
 import { Navbar } from '../components/navbar/Navbar';
 import { Head } from '../components/page/Head';
+import { ProviderButtons } from '../components/protected/ProviderButtons';
 import { UserInfo } from '../components/protected/UserInfo';
+import { ToastProvider } from '../components/utils/ToastProvider';
 import { useAuthStatus } from '../hooks/useAuthStatus';
 
-import { htmlDefault, bodyDefault, mainDefault, buttonStyle } from '../styles/styles';
-import { ToastProvider, useToast } from '../components/utils/ToastProvider';
-import { ProviderButtons } from '../components/protected/ProviderButtons';
+import { htmlDefault, bodyDefault, mainDefault } from '../styles/styles';
 
 export const Protected = () => {
 	const { user, handleSignOut } = useAuthStatus();
