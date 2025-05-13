@@ -1,17 +1,17 @@
 import {
 	generateCodeVerifier,
 	generateState,
+	isNormalizedProviderOption,
 	isPKCEProviderOption,
-	isValidProviderOption
 } from 'citra';
 import { Elysia } from 'elysia';
 import { COOKIE_DURATION } from './constants';
-import { AuthorizeRoute, ClientProviders } from './types';
+import { AuthorizeRoute, ClientProviders, OnAuthorize } from './types';
 
 type AuthorizeProps = {
 	clientProviders: ClientProviders;
 	authorizeRoute?: AuthorizeRoute;
-	onAuthorize?: () => void;
+	onAuthorize?: OnAuthorize
 };
 
 export const authorize = ({
@@ -39,7 +39,7 @@ export const authorize = ({
 			if (provider === undefined)
 				return error('Bad Request', 'Provider is required');
 
-			if (!isValidProviderOption(provider)) {
+			if (!isNormalizedProviderOption(provider)) {
 				return error('Bad Request', 'Invalid provider');
 			}
 
@@ -106,7 +106,10 @@ export const authorize = ({
 				searchParams?.forEach(([key, value]) =>
 					authorizationURL.searchParams.set(key, value)
 				);
-				onAuthorize?.();
+				onAuthorize?.({
+					authProvider: normalizedProvider,
+					authorizationUrl: authorizationURL
+				});
 
 				return redirect(authorizationURL.toString());
 			} catch (err) {

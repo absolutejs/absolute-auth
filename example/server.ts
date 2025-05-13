@@ -15,6 +15,8 @@ import { createUser, getUser } from './handlers/userHandlers';
 import { Home } from './pages/Home';
 import { NotAuthorized } from './pages/NotAuthorized';
 import { Protected } from './pages/Protected';
+import { isNormalizedProviderOption } from 'citra';
+import { providerData } from './utils/providerData';
 
 const manifest = await build({
 	assetsDir: 'example/assets',
@@ -113,6 +115,16 @@ new Elysia()
 					]
 				}
 			},
+			onAuthorize: ({
+				authProvider,
+				authorizationUrl
+			}) => {
+				const providerName = isNormalizedProviderOption(authProvider) ? providerData[authProvider].name : authProvider
+
+				console.log(`\nRedirecting to ${providerName} authorization URL:`, 
+					authorizationUrl.toString()
+				);
+			},
 			onCallback: async ({
 				authProvider,
 				userProfile,
@@ -120,12 +132,11 @@ new Elysia()
 				user_session_id,
 				session
 			}) => {
-				console.log(
-					`\nSuccesfully authorized with ${authProvider} and got token response:`,
-					{
-						...tokenResponse
-					}
-				);
+				const providerName = isNormalizedProviderOption(authProvider) ? providerData[authProvider].name : authProvider
+
+				console.log(`\nSuccesfully authorized with ${providerName} and got token response:`, {
+					...tokenResponse
+				});
 
 				return instantiateUserSession<User>({
 					authProvider,
@@ -168,7 +179,10 @@ new Elysia()
 				});
 			},
 			onRevocation: ({ tokenToRevoke }) => {
-				console.log('\nSuccessfully revoked token:', tokenToRevoke);
+				console.log(
+					'\nSuccessfully revoked token:',
+					tokenToRevoke
+				);
 			}
 		})
 	)

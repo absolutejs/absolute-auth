@@ -1,4 +1,4 @@
-import { isValidProviderOption, createOAuth2Client } from 'citra';
+import { isNormalizedProviderOption, createOAuth2Client } from 'citra';
 import { Elysia } from 'elysia';
 import { authorize } from './authorize';
 import { callback } from './callback';
@@ -29,7 +29,7 @@ export const absoluteAuth = <UserType>({
 }: AbsoluteAuthProps<UserType>) => {
 	const clientProviders = Object.entries(config).reduce<ClientProviders>(
 		(acc, [providerName, providerConfig]) => {
-			if (isValidProviderOption(providerName)) {
+			if (isNormalizedProviderOption(providerName)) {
 				acc[providerName.toLocaleLowerCase()] = {
 					providerInstance: createOAuth2Client(
 						providerName,

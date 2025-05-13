@@ -55,22 +55,36 @@ export type OnCallback<UserType> = ({
 	user_session_id: Cookie<string | undefined>;
 }) => void | Promise<void>;
 
+export type OnAuthorize = ({
+	authProvider,
+	authorizationUrl
+} : {
+	authProvider: string;
+	authorizationUrl: URL
+}) => void | Promise<void>;
+ 
 export type OnRefresh = ({
-	tokenResponse
+	tokenResponse,
+	authProvider
 }: {
 	tokenResponse: OAuth2TokenResponse;
+	authProvider: string;
 }) => void | Promise<void>;
 
 export type OnProfile = ({
-	userProfile
+	userProfile,
+	authProvider
 }: {
 	userProfile: Record<string, unknown>;
+	authProvider: string;
 }) => void | Promise<void>;
 
 export type OnRevocation = ({
-	tokenToRevoke
+	tokenToRevoke,
+	authProvider
 }: {
 	tokenToRevoke: string;
+	authProvider: string;
 }) => void | Promise<void>;
 
 export type RouteString = `/${string}`;
@@ -85,7 +99,7 @@ export type AbsoluteAuthProps<UserType> = {
 	revokeRoute?: RouteString;
 	signoutRoute?: RouteString;
 	statusRoute?: RouteString;
-	onAuthorize?: () => void;
+	onAuthorize?: OnAuthorize;
 	onCallback?: OnCallback<UserType>;
 	onStatus?: () => void;
 	onRefresh?: OnRefresh;

@@ -1,4 +1,4 @@
-import { isRevocableOAuth2Client, isValidProviderOption } from 'citra';
+import { isRevocableOAuth2Client, isNormalizedProviderOption } from 'citra';
 import { Elysia } from 'elysia';
 import { sessionStore } from './sessionStore';
 import { ClientProviders, OnRevocation, RouteString } from './types';
@@ -33,7 +33,7 @@ export const revoke = <UserType>({
 					return error('Unauthorized', 'No auth provider found');
 				}
 
-				if (!isValidProviderOption(auth_provider.value)) {
+				if (!isNormalizedProviderOption(auth_provider.value)) {
 					return error('Bad Request', 'Invalid provider');
 				}
 
