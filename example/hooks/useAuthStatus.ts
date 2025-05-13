@@ -39,7 +39,6 @@ export const useAuthStatus = () => {
 		const response = await fetch('/oauth2/signout', { method: 'DELETE' });
 		if (response.ok) {
 			setUser(undefined);
-			window.location.reload();
 		} else {
 			console.error('SignOut failed');
 		}

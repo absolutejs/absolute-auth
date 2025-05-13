@@ -156,7 +156,8 @@ new Elysia()
 							schema,
 							userProfile
 						});
-						if (!user) throw new Error('Failed to create user');
+						if (user === undefined)
+							throw new Error('Failed to create user');
 
 						return user;
 					},
@@ -167,7 +168,6 @@ new Elysia()
 							schema,
 							userProfile
 						});
-						if (!user) throw new Error('User not found');
 
 						return user;
 					}

@@ -113,7 +113,9 @@ export const getUser = ({
 		throw new Error('No sub or ID claim found in ID token');
 	}
 
-	const authSub = `${provider}|${sub || id}`;
+	const authSub = `${provider}|${sub ?? id}`;
+
+	console.log(authSub);
 
 	return getDBUser({ authSub, db, schema });
 };

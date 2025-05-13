@@ -138,5 +138,9 @@ export type InsantiateUserSessionProps<UserType> = {
 	session: SessionRecord<UserType>;
 	user_session_id: Cookie<string | undefined>;
 	createUser: () => UserType | Promise<UserType>;
-	getUser: () => UserType | Promise<UserType | null>;
+	getUser: () =>
+		| UserType
+		| null
+		| undefined
+		| Promise<UserType | null | undefined>;
 };

@@ -55,6 +55,7 @@ export const ProviderButtons = ({
 			style: { background: '#d4edda', color: '#155724' }
 		});
 		await handleSignOut();
+		window.location.reload();
 	};
 
 	const handleProfile = async () => {
