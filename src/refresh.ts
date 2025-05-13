@@ -43,7 +43,7 @@ export const refresh = <UserType>({
 
 				const providerConfig = clientProviders[auth_provider.value];
 				if (!providerConfig) {
-					return error('Unauthorized', 'Invalid provider');
+					return error('Unauthorized', 'Client provider not found');
 				}
 				const { providerInstance } = providerConfig;
 
