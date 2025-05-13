@@ -8,8 +8,11 @@ import {
 } from '../../styles/authModalStyles';
 import { Divider } from '../utils/Divider';
 import { OAuthButtons } from './OAuthButtons';
+import { ProviderDropdown } from '../utils/ProviderDropdown';
+import { ProviderOption, providerOptions } from 'citra';
 
 export const AuthContainer = () => {
+	const [currentProvider, setCurrentProvider] = useState<ProviderOption>();
 	const [mode, setMode] = useState<'login' | 'signup'>('login');
 	const switchMode = () => {
 		setMode((prev) => (prev === 'login' ? 'signup' : 'login'));
@@ -38,13 +41,19 @@ export const AuthContainer = () => {
 
 			<Divider text="or" />
 
+			<ProviderDropdown
+				setCurrentProvider={setCurrentProvider}
+				providerOptions={providerOptions}
+			/>
+
 			<button
 				style={oauthButtonStyle}
 				onClick={() => {
-					alert('Sign in with other provider');
+					alert('Sign in with ' + currentProvider);
 				}}
 			>
-				Sign in with other provider
+				{mode === 'login' ? 'Sign in' : 'Sign up'} with{' '}
+				{currentProvider ?? 'other provider'}
 			</button>
 
 			<p style={loginTextStyle}>

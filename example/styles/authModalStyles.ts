@@ -1,4 +1,5 @@
 import { CSSProperties } from 'react';
+import { primaryColor } from './styles';
 
 export const confirmInputStyle: CSSProperties = {
 	border: '1px solid #ccc',
@@ -80,7 +81,11 @@ export const loginContainerStyle: CSSProperties = {
 	marginTop: '20px'
 };
 export const loginLinkTextStyle: CSSProperties = {
-	color: '#C7158C',
+	color: primaryColor,
+	backgroundColor: 'transparent',
+	fontSize: '14px',
+	fontWeight: 'bold',
+	border: 'none',
 	cursor: 'pointer',
 	textAlign: 'center'
 };
@@ -110,20 +115,7 @@ export const separatorTextStyle: CSSProperties = {
 	fontSize: '14px',
 	padding: '0 10px'
 };
-export const signupButtonStyle: CSSProperties = {
-	alignItems: 'center',
-	backgroundColor: '#C7158C',
-	border: 'none',
-	borderRadius: '4px',
-	color: '#fff',
-	cursor: 'pointer',
-	display: 'flex',
-	fontSize: '14px',
-	fontWeight: 'bold',
-	justifyContent: 'center',
-	padding: '10px',
-	width: '100%'
-};
+
 export const separatorLineStyle = ({
 	color = '#DDDDDD',
 	height = '1px'
