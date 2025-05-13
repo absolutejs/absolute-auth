@@ -1,14 +1,20 @@
+import { isNormalizedProviderOption, ProviderOption } from 'citra';
 import { Dispatch, SetStateAction } from 'react';
+import { providerData } from '../../utils/providerData';
 
-type ProviderDropdownProps<T extends string> = {
-	providerOptions: T[];
-	setCurrentProvider: Dispatch<SetStateAction<T | undefined>>;
+type ProviderDropdownProps = {
+	setCurrentProvider: Dispatch<
+		SetStateAction<Lowercase<ProviderOption> | undefined>
+	>;
 };
 
-export const ProviderDropdown = <T extends string>({
-	providerOptions,
+const normalizedProviderOptions = Object.keys(providerData).filter((provider) =>
+	isNormalizedProviderOption(provider)
+);
+
+export const ProviderDropdown = ({
 	setCurrentProvider
-}: ProviderDropdownProps<T>) => (
+}: ProviderDropdownProps) => (
 	<select
 		defaultValue={-1}
 		onChange={(event) => {
@@ -17,24 +23,24 @@ export const ProviderDropdown = <T extends string>({
 			if (index < 0) {
 				setCurrentProvider(undefined);
 			} else {
-				setCurrentProvider(providerOptions[index]);
+				setCurrentProvider(normalizedProviderOptions[index]);
 			}
 		}}
 		style={{
 			border: '1px solid #747775',
 			borderRadius: '4px',
-			fontSize: '14px',
-			padding: '10px',
-			width: '100%',
 			display: 'flex',
+			fontSize: '14px',
+			justifyContent: 'center',
 			marginBottom: '10px',
-			justifyContent: 'center'
+			padding: '10px',
+			width: '100%'
 		}}
 	>
 		<option value={-1}>Select provider</option>
-		{providerOptions.map((provider, index) => (
+		{normalizedProviderOptions.map((provider, index) => (
 			<option key={provider} value={index}>
-				{provider}
+				{providerData[provider].name}
 			</option>
 		))}
 	</select>

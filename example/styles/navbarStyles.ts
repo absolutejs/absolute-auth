@@ -1,7 +1,7 @@
 import { SpringValue } from '@react-spring/web';
 import { CSSProperties } from 'react';
 import { AnimatedCSSProperties } from '../utils/Types';
-import { primaryColor, secondaryColor } from './styles';
+import { primaryColor } from './styles';
 
 export const buttonStyle: CSSProperties = {
 	backgroundColor: primaryColor,

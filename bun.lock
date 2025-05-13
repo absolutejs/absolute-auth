@@ -3,6 +3,9 @@
   "workspaces": {
     "": {
       "name": "@absolutejs/auth",
+      "dependencies": {
+        "citra": "0.16.0",
+      },
       "devDependencies": {
         "@absolutejs/absolute": "0.4.0",
         "@elysiajs/static": "1.2.0",
@@ -12,7 +15,6 @@
         "@types/bun": "1.2.9",
         "@types/react": "19.1.1",
         "@types/react-dom": "19.1.2",
-        "citra": "0.15.1",
         "drizzle-kit": "0.30.6",
         "drizzle-orm": "0.41.0",
         "elysia": "1.2.25",
@@ -310,7 +312,7 @@
 
     "chalk": ["chalk@4.1.2", "", { "dependencies": { "ansi-styles": "^4.1.0", "supports-color": "^7.1.0" } }, "sha512-oKnbhFyRIXpUuez8iBMmyEa4nbj4IOQyuhc/wy9kY7/WVPcwIO9VA668Pu8RkO7+0G76SLROeyw9CpQ061i4mA=="],
 
-    "citra": ["citra@0.15.1", "", {}, "sha512-onwr5UCYoqzt/Dqpm0rzmPnRxqGpLmpdRpNMBrw9SJ7FnxjVRjyd+0gUtybhwi9szvw0gcQAmY8KsUDmdfFSQQ=="],
+    "citra": ["citra@0.16.0", "", {}, "sha512-zrF1llhmuOypzb+89PX8jwGbGRaoH1lDBAwSHsWaFMOI6viN+HYpN/faQo5+4fuv/qao1qatdu0ucmMwMEcpUA=="],
 
     "clone": ["clone@2.1.2", "", {}, "sha512-3Pe/CF1Nn94hyhIYpjtiLhdCoEoz0DqQ+988E9gmeEdQZlojxnOb74wctFyuwWQHzqyf9X7C7MG8juUpqBJT8w=="],
 

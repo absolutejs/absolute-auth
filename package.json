@@ -33,7 +33,7 @@
 		"elysia": ">= 1.2.0"
 	},
 	"dependencies": {
-		"citra": "0.15.1"
+		"citra": "0.16.0"
 	},
 	"devDependencies": {
 		"@absolutejs/absolute": "0.4.0",

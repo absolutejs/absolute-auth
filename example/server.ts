@@ -120,9 +120,12 @@ new Elysia()
 				user_session_id,
 				session
 			}) => {
-				console.log('\nonCallback token response:', {
-					...tokenResponse
-				});
+				console.log(
+					`\nSuccesfully authorized with ${authProvider} and got token response:`,
+					{
+						...tokenResponse
+					}
+				);
 
 				return instantiateUserSession<User>({
 					authProvider,
@@ -155,20 +158,17 @@ new Elysia()
 				});
 			},
 			onProfile: ({ userProfile }) => {
-				console.log('\nonProfile successfully fetched user profile:', {
+				console.log('\nSuccessfully fetched user profile:', {
 					...userProfile
 				});
 			},
 			onRefresh: ({ tokenResponse }) => {
-				console.log('\nonRefresh successfully refreshed tokens:', {
+				console.log('\nSuccessfully refreshed tokens:', {
 					...tokenResponse
 				});
 			},
 			onRevocation: ({ tokenToRevoke }) => {
-				console.log(
-					'\nonRevocation successfully revoked token:',
-					tokenToRevoke
-				);
+				console.log('\nSuccessfully revoked token:', tokenToRevoke);
 			}
 		})
 	)

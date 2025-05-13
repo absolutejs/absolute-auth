@@ -81,12 +81,12 @@ export const loginContainerStyle: CSSProperties = {
 	marginTop: '20px'
 };
 export const loginLinkTextStyle: CSSProperties = {
-	color: primaryColor,
 	backgroundColor: 'transparent',
+	border: 'none',
+	color: primaryColor,
+	cursor: 'pointer',
 	fontSize: '14px',
 	fontWeight: 'bold',
-	border: 'none',
-	cursor: 'pointer',
 	textAlign: 'center'
 };
 export const loginTextStyle: CSSProperties = {
