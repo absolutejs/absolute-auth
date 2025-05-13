@@ -6,18 +6,14 @@ import {
 } from '@absolutejs/absolute';
 import { staticPlugin } from '@elysiajs/static';
 import { neon } from '@neondatabase/serverless';
-import { isValidProviderOption } from 'citra';
 import { drizzle } from 'drizzle-orm/neon-http';
 import { Elysia } from 'elysia';
 import { absoluteAuth } from '../src';
-import { instantiateUserSession } from '../src/utils';
 import { schema, type User } from './db/schema';
-import { createUser, getUser } from './handlers/userHandlers';
 import { Home } from './pages/Home';
 import { NotAuthorized } from './pages/NotAuthorized';
 import { Protected } from './pages/Protected';
-import { providerData } from './utils/providerData';
-import { providersConfiguration } from './utils/providersConfiguration';
+import { absoluteAuthConfig } from './utils/absoluteAuthConfig';
 
 const manifest = await build({
 	assetsDir: 'example/assets',
@@ -57,117 +53,7 @@ new Elysia()
 			prefix: ''
 		})
 	)
-	.use(
-		absoluteAuth<User>({
-			providersConfiguration: providersConfiguration,
-			onAuthorize: ({ authProvider, authorizationUrl }) => {
-				const providerName = isValidProviderOption(authProvider)
-					? providerData[authProvider].name
-					: authProvider;
-
-				console.log(
-					`\nRedirecting to ${providerName} authorization URL:`,
-					authorizationUrl.toString()
-				);
-			},
-			onCallback: async ({
-				authProvider,
-				userProfile,
-				tokenResponse,
-				user_session_id,
-				session
-			}) => {
-				const providerName = isValidProviderOption(authProvider)
-					? providerData[authProvider].name
-					: authProvider;
-
-				console.log(
-					`\nSuccesfully authorized OAuth2 with ${providerName} and got token response:`,
-					{
-						...tokenResponse
-					}
-				);
-
-				return instantiateUserSession<User>({
-					authProvider,
-					session,
-					tokenResponse,
-					user_session_id,
-					userProfile,
-					createUser: async () => {
-						const user = await createUser({
-							authProvider,
-							db,
-							schema,
-							userProfile
-						});
-						if (user === undefined)
-							throw new Error('Failed to create user');
-
-						return user;
-					},
-					getUser: async () => {
-						const user = await getUser({
-							authProvider,
-							db,
-							schema,
-							userProfile
-						});
-
-						return user;
-					}
-				});
-			},
-			onProfile: ({ authProvider, userProfile }) => {
-				const providerName = isValidProviderOption(authProvider)
-					? providerData[authProvider].name
-					: authProvider;
-
-				console.log(`\nSuccessfully fetched ${providerName} profile:`, {
-					...userProfile
-				});
-			},
-			onRefresh: ({ authProvider, tokenResponse }) => {
-				const providerName = isValidProviderOption(authProvider)
-					? providerData[authProvider].name
-					: authProvider;
-
-				console.log(
-					`\nSuccessfully refreshed ${providerName} OAuth2 and recieved token response:`,
-					{
-						...tokenResponse
-					}
-				);
-			},
-			onRevocation: ({ authProvider, tokenToRevoke }) => {
-				const providerName = isValidProviderOption(authProvider)
-					? providerData[authProvider].name
-					: authProvider;
-
-				console.log(
-					`\nSuccessfully revoked ${providerName} token:`,
-					tokenToRevoke
-				);
-			},
-			onSignOut: ({ authProvider, user }) => {
-				const providerName = isValidProviderOption(authProvider)
-					? providerData[authProvider].name
-					: authProvider;
-
-				console.log(
-					`\nSuccessfully signed out ${providerName} user:`,
-					user
-				);
-			},
-			onStatus: ({ user }) => {
-				if (user === null) {
-					console.log('\nSuccessfully checked user is not logged in');
-				} else {
-					console.log(`\nSuccessfully checked user status:`, user);
-				}
-			}
-		})
-	)
+	.use(absoluteAuth<User>(absoluteAuthConfig(db)))
 	.get('/', () => handleReactPageRequest(Home, homeIndex))
 	.get('/protected', ({ protectRoute }) =>
 		protectRoute(
@@ -182,3 +68,5 @@ new Elysia()
 			`Server error on ${request.method} ${request.url}: ${error.message}`
 		);
 	});
+
+// TODO : avoid using localhost as per RFC 8252 8.3 https://datatracker.ietf.org/doc/html/rfc8252#section-8.3
