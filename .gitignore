@@ -50,3 +50,6 @@ package-lock.json
 
 # dist folder
 /dist
+
+# Chrome DevTools
+/.well-known/appspecific/com.chrome.devtools.json

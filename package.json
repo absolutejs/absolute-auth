@@ -41,7 +41,7 @@
 		"@types/bun": "1.2.9",
 		"@types/react": "19.1.1",
 		"@types/react-dom": "19.1.2",
-		"citra": "0.14.0",
+		"citra": "0.15.1",
 		"drizzle-kit": "0.30.6",
 		"drizzle-orm": "0.41.0",
 		"elysia": "1.2.25",
@@ -57,7 +57,7 @@
 		"prettier": "3.5.3",
 		"react": "19.1.0",
 		"react-dom": "19.1.0",
-		"react-icons": "^5.5.0",
+		"react-icons": "5.5.0",
 		"typescript": "5.8.3",
 		"typescript-eslint": "8.32.0"
 	},
