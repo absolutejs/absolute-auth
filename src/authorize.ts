@@ -44,7 +44,7 @@ export const authorize = ({
 
 			const providerConfig = clientProviders[provider];
 			if (!providerConfig)
-				return error('Unauthorized', 'Invalid provider');
+				return error('Unauthorized', 'Client provider not found');
 
 			const { providerInstance, scope, searchParams } = providerConfig;
 			const normalizedProvider = provider.toLowerCase();
