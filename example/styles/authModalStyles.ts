@@ -53,9 +53,9 @@ export const oauthButtonTextStyle: CSSProperties = {
 	textOverflow: 'ellipsis'
 };
 export const oauthIconStyle: CSSProperties = {
-	height: '20px',
+	height: '24px',
 	marginRight: '10px',
-	width: '20px'
+	width: '24px'
 };
 export const headingStyle: CSSProperties = {
 	fontSize: '1.5rem',
