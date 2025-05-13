@@ -225,17 +225,17 @@ export const providerData: ProviderData = {
 		primaryColor: '#000000'
 	},
 	polar: {
-		logoUrl: '/assets/png/Polar_logo_black_web.png',
+		logoUrl: '/assets/svg/polar-logo.svg',
 		name: 'Polar',
 		primaryColor: '#000000'
 	},
 	polaraccesslink: {
-		logoUrl: '/assets/svg/polar-access-link.svg',
+		logoUrl: '/assets/png/Polar_logo_black_web.png',
 		name: 'Polar Access Link',
 		primaryColor: '#DF0827'
 	},
 	polarteampro: {
-		logoUrl: '/assets/svg/polar-team-pro.svg',
+		logoUrl: '/assets/png/Polar_logo_black_web.png',
 		name: 'Polar Team Pro',
 		primaryColor: '#DF0827'
 	},
@@ -292,10 +292,10 @@ export const providerData: ProviderData = {
 	tiltify: {
 		logoUrl: '/assets/svg/rgb-tiltify22_mark_blue.svg',
 		name: 'Tiltify',
-		primaryColor: '#FF6D00'
+		primaryColor: '#143DF4'
 	},
 	tumblr: {
-		logoUrl: '/assets/svg/tumblr.svg',
+		logoUrl: '/assets/svg/tumblr.svg', // TODO: add logo
 		name: 'Tumblr',
 		primaryColor: '#36465D'
 	},

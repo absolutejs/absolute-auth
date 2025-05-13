@@ -3,16 +3,6 @@ import { CSSProperties } from 'react';
 import { AnimatedCSSProperties } from '../utils/types';
 import { primaryColor } from './styles';
 
-export const buttonStyle: CSSProperties = {
-	backgroundColor: primaryColor,
-	border: 'none',
-	borderRadius: '0.5rem',
-	color: '#fff',
-	cursor: 'pointer',
-	fontSize: '1.3rem',
-	margin: '0 10px',
-	padding: '10px'
-};
 export const dropdownStyle: CSSProperties = {
 	alignItems: 'center',
 	cursor: 'pointer',

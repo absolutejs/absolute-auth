@@ -25,10 +25,17 @@ export const OAuthButton = ({ mode, provider }: OAuthButtonProps) => {
 			? providerData[provider]
 			: defaultData;
 
+	const isProviderSelected = provider !== undefined;
+
 	return (
 		<a
 			href={provider ? `/oauth2/${provider}/authorization` : undefined}
-			style={oauthButtonStyle(provider !== undefined)}
+			style={oauthButtonStyle({
+				isProviderSelected,
+				providerPrimaryColor: isProviderSelected
+					? primaryColor
+					: '#999999'
+			})}
 		>
 			<div style={oauthButtonContentStyle}>
 				{provider ? (
