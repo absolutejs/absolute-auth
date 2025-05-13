@@ -5,7 +5,7 @@ import { AbsoluteAuthProps, InsantiateUserSessionProps } from './types';
 export const instantiateUserSession = async <UserType>({
 	user_session_id,
 	session,
-	tokens,
+	tokenResponse,
 	getUser,
 	createUser
 }: InsantiateUserSessionProps<UserType>) => {
@@ -19,9 +19,9 @@ export const instantiateUserSession = async <UserType>({
 	const sessionKey = crypto.randomUUID();
 
 	session[sessionKey] = {
-		accessToken: tokens.access_token,
+		accessToken: tokenResponse.access_token,
 		expiresAt: Date.now() + MILLISECONDS_IN_A_DAY,
-		refreshToken: tokens.refresh_token,
+		refreshToken: tokenResponse.refresh_token,
 		user
 	};
 

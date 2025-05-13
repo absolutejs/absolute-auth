@@ -43,22 +43,22 @@ export type GetUser<UserType> = ({
 
 export type OnCallback<UserType> = ({
 	authProvider,
-	tokens,
+	tokenResponse,
 	userProfile,
 	session,
 	user_session_id
 }: {
 	authProvider: string;
-	tokens: OAuth2TokenResponse;
+	tokenResponse: OAuth2TokenResponse;
 	userProfile: Record<string, unknown>;
 	session: SessionRecord<UserType>;
 	user_session_id: Cookie<string | undefined>;
 }) => void | Promise<void>;
 
 export type OnRefresh = ({
-	tokens
+	tokenResponse
 }: {
-	tokens: OAuth2TokenResponse;
+	tokenResponse: OAuth2TokenResponse;
 }) => void | Promise<void>;
 
 export type OnProfile = ({
@@ -100,7 +100,7 @@ export type ClientProviders = Record<
 export type InsantiateUserSessionProps<UserType> = {
 	authProvider: string;
 	userProfile: Record<string, unknown>;
-	tokens: OAuth2TokenResponse;
+	tokenResponse: OAuth2TokenResponse;
 	session: SessionRecord<UserType>;
 	user_session_id: Cookie<string | undefined>;
 	createUser: () => UserType | Promise<UserType>;

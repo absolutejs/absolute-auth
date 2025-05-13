@@ -116,14 +116,18 @@ new Elysia()
 			onCallback: async ({
 				authProvider,
 				userProfile,
-				tokens,
+				tokenResponse,
 				user_session_id,
 				session
-			}) =>
-				instantiateUserSession<User>({
+			}) => { 
+				console.log('\nonCallback token response:', {
+					...tokenResponse
+				});
+
+				return instantiateUserSession<User>({
 					authProvider,
 					session,
-					tokens,
+					tokenResponse,
 					user_session_id,
 					userProfile,
 					createUser: async () => {
@@ -149,6 +153,12 @@ new Elysia()
 						return user;
 					}
 				})
+			},
+			onRefresh: ({tokenResponse}) => {
+				console.log('\nonRefresh token response:', {
+					...tokenResponse
+				});
+			}
 		})
 	)
 	.get('/', () => handleReactPageRequest(Home, homeIndex))

@@ -86,23 +86,23 @@ export const callback = <UserType>({
 						);
 					}
 
-					const tokens: OAuth2TokenResponse =
+					const tokenResponse: OAuth2TokenResponse =
 						await providerInstance.validateAuthorizationCode(
 							requiresPKCE
 								? { code, codeVerifier: verifier! }
 								: { code }
 						);
 
-					const userProfile = tokens.id_token
-						? decodeJWT(tokens.id_token)
+					const userProfile = tokenResponse.id_token
+						? decodeJWT(tokenResponse.id_token)
 						: await providerInstance.fetchUserProfile(
-								tokens.access_token
+								tokenResponse.access_token
 							);
 
 					await onCallback?.({
 						authProvider,
 						session,
-						tokens,
+						tokenResponse,
 						user_session_id,
 						userProfile
 					});

@@ -65,7 +65,7 @@ export const revoke = <UserType>({
 					return error('Unauthorized', 'No user session found');
 				}
 
-				const { accessToken } = userSession; // TODO: Some providers use refresh tokens for revocation
+				const { accessToken } = userSession; // TODO: Some providers use refresh tokenResponse for revocation
 
 				try {
 					await providerInstance.revokeToken(accessToken);

@@ -72,10 +72,10 @@ export const refresh = <UserType>({
 				}
 
 				try {
-					const tokens =
+					const tokenResponse =
 						await providerInstance.refreshAccessToken(refreshToken);
 
-					onRefresh?.({ tokens });
+					onRefresh?.({ tokenResponse });
 
 					return new Response('Token refreshed', {
 						status: 204
