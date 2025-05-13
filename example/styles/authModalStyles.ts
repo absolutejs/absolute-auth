@@ -30,13 +30,15 @@ export const oauthButtonContentStyle: CSSProperties = {
 	paddingRight: '12px',
 	width: '100%'
 };
-export const oauthButtonStyle: CSSProperties = {
+export const oauthButtonStyle = (
+	isProviderSelected: boolean
+): CSSProperties => ({
 	alignItems: 'center',
 	backgroundColor: '#FFFFFF',
 	border: '1px solid #747775',
 	borderRadius: '4px',
 	color: '#1f1f1f',
-	cursor: 'pointer',
+	cursor: isProviderSelected ? 'pointer' : 'not-allowed',
 	display: 'flex',
 	fontSize: '14px',
 	justifyContent: 'center',
@@ -44,7 +46,7 @@ export const oauthButtonStyle: CSSProperties = {
 	padding: '10px',
 	textDecoration: 'none',
 	width: '100%'
-};
+});
 export const oauthButtonTextStyle: CSSProperties = {
 	overflow: 'hidden',
 	textAlign: 'center',

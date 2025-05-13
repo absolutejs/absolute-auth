@@ -6,10 +6,11 @@ import {
 	oauthButtonTextStyle
 } from '../../styles/authModalStyles';
 import { providerData, ProviderInfo } from '../../utils/providerData';
+import { FiUser } from 'react-icons/fi';
 
 type OAuthButtonProps = {
 	mode: 'login' | 'signup';
-	provider?: Lowercase<ProviderOption>;
+	provider: Lowercase<ProviderOption> | undefined;
 };
 
 export const OAuthButton = ({ mode, provider }: OAuthButtonProps) => {
@@ -27,14 +28,18 @@ export const OAuthButton = ({ mode, provider }: OAuthButtonProps) => {
 	return (
 		<a
 			href={provider ? `/oauth2/${provider}/authorization` : undefined}
-			style={oauthButtonStyle}
+			style={oauthButtonStyle(provider !== undefined)}
 		>
 			<div style={oauthButtonContentStyle}>
-				<img
-					src={iconUrl}
-					alt={`${name} Icon`}
-					style={oauthIconStyle}
-				/>
+				{provider ? (
+					<img
+						src={iconUrl}
+						alt={`${name} logo`}
+						style={oauthIconStyle}
+					/>
+				) : (
+					<FiUser style={oauthIconStyle} />
+				)}
 				<span style={oauthButtonTextStyle}>
 					{mode === 'login'
 						? `Sign in with ${name}`
