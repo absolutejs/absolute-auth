@@ -1,8 +1,8 @@
 import { animated, SpringRef, SpringValue } from '@react-spring/web';
 import { useState } from 'react';
 import { User } from '../../db/schema';
-import { isNavbarDropdown } from '../../utils/types';
 import { navbarData } from '../../utils/navbarData';
+import { isNavbarDropdown } from '../../utils/types';
 import { AuthContainer } from '../auth/AuthContainer';
 import { NavbarLink } from '../navbar/NavbarLink';
 import { Modal } from '../utils/Modal';

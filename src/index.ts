@@ -11,7 +11,7 @@ import { status } from './status';
 import { AbsoluteAuthProps, ClientProviders } from './types';
 
 export const absoluteAuth = <UserType>({
-	credentials,
+	providersConfiguration,
 	authorizeRoute,
 	callbackRoute,
 	profileRoute,
@@ -27,23 +27,22 @@ export const absoluteAuth = <UserType>({
 	onSignOut,
 	onRevocation
 }: AbsoluteAuthProps<UserType>) => {
-	const clientProviders = Object.entries(credentials).reduce<ClientProviders>(
-		(acc, [providerName, providerConfig]) => {
-			if (isValidProviderOption(providerName)) {
-				acc[providerName] = {
-					providerInstance: createOAuth2Client(
-						providerName,
-						providerConfig.credentials
-					),
-					scope: providerConfig.scope,
-					searchParams: providerConfig.searchParams
-				};
-			}
+	const clientProviders = Object.entries(
+		providersConfiguration
+	).reduce<ClientProviders>((acc, [providerName, providerConfig]) => {
+		if (isValidProviderOption(providerName)) {
+			acc[providerName] = {
+				providerInstance: createOAuth2Client(
+					providerName,
+					providerConfig.credentials
+				),
+				scope: providerConfig.scope,
+				searchParams: providerConfig.searchParams
+			};
+		}
 
-			return acc;
-		},
-		{}
-	);
+		return acc;
+	}, {});
 
 	return new Elysia()
 		.use(signout({ onSignOut, signoutRoute }))

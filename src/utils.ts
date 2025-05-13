@@ -1,6 +1,10 @@
 import { MILLISECONDS_IN_A_DAY } from './constants';
 import { isValidUser } from './typeGuards';
-import { AbsoluteAuthProps, InsantiateUserSessionProps, OAuth2ConfigOptions } from './types';
+import {
+	AbsoluteAuthProps,
+	InsantiateUserSessionProps,
+	OAuth2ConfigurationOptions
+} from './types';
 
 export const instantiateUserSession = async <UserType>({
 	user_session_id,
@@ -33,10 +37,10 @@ export const instantiateUserSession = async <UserType>({
 	});
 };
 
-export const createAuthConfig = <UserType>(
+export const createAuthConfiguration = <UserType>(
 	configuration: AbsoluteAuthProps<UserType>
 ) => configuration;
 
-export const createAuthCredentials = (
-	credentials: OAuth2ConfigOptions
-) => credentials
+export const createProvidersConfiguration = (
+	providersConfiguration: OAuth2ConfigurationOptions
+) => providersConfiguration;

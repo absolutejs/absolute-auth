@@ -1,0 +1,484 @@
+import { env } from 'process';
+import { createProvidersConfiguration } from '../../src/utils';
+
+export const getEnvVar = (key: string): string => {
+	const environmentVariable = env[key];
+	if (
+		typeof environmentVariable !== 'string' ||
+		environmentVariable.length === 0
+	) {
+		throw new Error(`Missing environment variable ${key}`);
+	}
+
+	return environmentVariable;
+};
+
+export const providersConfiguration = createProvidersConfiguration({
+	'42': {
+		credentials: {
+			clientId: getEnvVar('FORTY_TWO_CLIENT_ID'),
+			clientSecret: getEnvVar('FORTY_TWO_CLIENT_SECRET'),
+			redirectUri: getEnvVar('FORTY_TWO_REDIRECT_URI')
+		}
+	},
+	amazoncognito: {
+		credentials: {
+			clientId: getEnvVar('AMAZON_COGNITO_CLIENT_ID'),
+			clientSecret: getEnvVar('AMAZON_COGNITO_CLIENT_SECRET'),
+			domain: getEnvVar('AMAZON_COGNITO_DOMAIN'),
+			redirectUri: getEnvVar('AMAZON_COGNITO_REDIRECT_URI')
+		}
+	},
+	anilist: {
+		credentials: {
+			clientId: getEnvVar('ANILIST_CLIENT_ID'),
+			clientSecret: getEnvVar('ANILIST_CLIENT_SECRET'),
+			redirectUri: getEnvVar('ANILIST_REDIRECT_URI')
+		}
+	},
+	apple: {
+		credentials: {
+			clientId: getEnvVar('APPLE_CLIENT_ID'),
+			keyId: getEnvVar('APPLE_KEY_ID'),
+			pkcs8PrivateKey: Buffer.from(getEnvVar('APPLE_PKCS8_PRIVATE_KEY')),
+			redirectUri: getEnvVar('APPLE_REDIRECT_URI'),
+			teamId: getEnvVar('APPLE_TEAM_ID')
+		}
+	},
+	atlassian: {
+		credentials: {
+			clientId: getEnvVar('ATLASSIAN_CLIENT_ID'),
+			clientSecret: getEnvVar('ATLASSIAN_CLIENT_SECRET'),
+			redirectUri: getEnvVar('ATLASSIAN_REDIRECT_URI')
+		}
+	},
+	auth0: {
+		credentials: {
+			clientId: getEnvVar('AUTH0_CLIENT_ID'),
+			clientSecret: getEnvVar('AUTH0_CLIENT_SECRET'),
+			domain: getEnvVar('AUTH0_DOMAIN'),
+			redirectUri: getEnvVar('AUTH0_REDIRECT_URI')
+		}
+	},
+	authentik: {
+		credentials: {
+			baseURL: getEnvVar('AUTHENTIK_BASE_URL'),
+			clientId: getEnvVar('AUTHENTIK_CLIENT_ID'),
+			clientSecret: getEnvVar('AUTHENTIK_CLIENT_SECRET'),
+			redirectUri: getEnvVar('AUTHENTIK_REDIRECT_URI')
+		}
+	},
+	autodesk: {
+		credentials: {
+			clientId: getEnvVar('AUTODESK_CLIENT_ID'),
+			clientSecret: getEnvVar('AUTODESK_CLIENT_SECRET'),
+			redirectUri: getEnvVar('AUTODESK_REDIRECT_URI')
+		}
+	},
+	battlenet: {
+		credentials: {
+			clientId: getEnvVar('BATTLENET_CLIENT_ID'),
+			clientSecret: getEnvVar('BATTLENET_CLIENT_SECRET'),
+			redirectUri: getEnvVar('BATTLENET_REDIRECT_URI')
+		}
+	},
+	bitbucket: {
+		credentials: {
+			clientId: getEnvVar('BITBUCKET_CLIENT_ID'),
+			clientSecret: getEnvVar('BITBUCKET_CLIENT_SECRET'),
+			redirectUri: getEnvVar('BITBUCKET_REDIRECT_URI')
+		}
+	},
+	box: {
+		credentials: {
+			clientId: getEnvVar('BOX_CLIENT_ID'),
+			clientSecret: getEnvVar('BOX_CLIENT_SECRET'),
+			redirectUri: getEnvVar('BOX_REDIRECT_URI')
+		}
+	},
+	bungie: {
+		credentials: {
+			clientId: getEnvVar('BUNGIE_CLIENT_ID'),
+			clientSecret: getEnvVar('BUNGIE_CLIENT_SECRET'),
+			redirectUri: getEnvVar('BUNGIE_REDIRECT_URI')
+		}
+	},
+	coinbase: {
+		credentials: {
+			clientId: getEnvVar('COINBASE_CLIENT_ID'),
+			clientSecret: getEnvVar('COINBASE_CLIENT_SECRET'),
+			redirectUri: getEnvVar('COINBASE_REDIRECT_URI')
+		}
+	},
+	discord: {
+		credentials: {
+			clientId: getEnvVar('DISCORD_CLIENT_ID'),
+			clientSecret: getEnvVar('DISCORD_CLIENT_SECRET'),
+			redirectUri: getEnvVar('DISCORD_REDIRECT_URI')
+		}
+	},
+	donationalerts: {
+		credentials: {
+			clientId: getEnvVar('DONATION_ALERTS_CLIENT_ID'),
+			clientSecret: getEnvVar('DONATION_ALERTS_CLIENT_SECRET'),
+			redirectUri: getEnvVar('DONATION_ALERTS_REDIRECT_URI')
+		}
+	},
+	dribbble: {
+		credentials: {
+			clientId: getEnvVar('DRIBBBLE_CLIENT_ID'),
+			clientSecret: getEnvVar('DRIBBBLE_CLIENT_SECRET'),
+			redirectUri: getEnvVar('DRIBBBLE_REDIRECT_URI')
+		}
+	},
+	dropbox: {
+		credentials: {
+			clientId: getEnvVar('DROPBOX_APP_KEY'),
+			clientSecret: getEnvVar('DROPBOX_APP_SECRET'),
+			redirectUri: getEnvVar('DROPBOX_REDIRECT_URI')
+		}
+	},
+	epicgames: {
+		credentials: {
+			clientId: getEnvVar('EPIC_GAMES_CLIENT_ID'),
+			clientSecret: getEnvVar('EPIC_GAMES_CLIENT_SECRET'),
+			redirectUri: getEnvVar('EPIC_GAMES_REDIRECT_URI')
+		}
+	},
+	etsy: {
+		credentials: {
+			clientId: getEnvVar('ETSY_KEYSTRING'),
+			clientSecret: getEnvVar('ETSY_SHARED_SECRET'),
+			redirectUri: getEnvVar('ETSY_REDIRECT_URI')
+		}
+	},
+	facebook: {
+		credentials: {
+			clientId: getEnvVar('FACEBOOK_CLIENT_ID'),
+			clientSecret: getEnvVar('FACEBOOK_CLIENT_SECRET'),
+			redirectUri: getEnvVar('FACEBOOK_REDIRECT_URI')
+		}
+	},
+	figma: {
+		credentials: {
+			clientId: getEnvVar('FIGMA_CLIENT_ID'),
+			clientSecret: getEnvVar('FIGMA_CLIENT_SECRET'),
+			redirectUri: getEnvVar('FIGMA_REDIRECT_URI')
+		}
+	},
+	gitea: {
+		credentials: {
+			baseURL: getEnvVar('GITEA_BASE_URL'),
+			clientId: getEnvVar('GITEA_CLIENT_ID'),
+			clientSecret: getEnvVar('GITEA_CLIENT_SECRET'),
+			redirectUri: getEnvVar('GITEA_REDIRECT_URI')
+		}
+	},
+	github: {
+		credentials: {
+			clientId: getEnvVar('GITHUB_CLIENT_ID'),
+			clientSecret: getEnvVar('GITHUB_CLIENT_SECRET'),
+			redirectUri: getEnvVar('GITHUB_REDIRECT_URI')
+		}
+	},
+	gitlab: {
+		credentials: {
+			baseURL: getEnvVar('GITLAB_BASE_URL'),
+			clientId: getEnvVar('GITLAB_CLIENT_ID'),
+			clientSecret: getEnvVar('GITLAB_CLIENT_SECRET'),
+			redirectUri: getEnvVar('GITLAB_REDIRECT_URI')
+		}
+	},
+	google: {
+		credentials: {
+			clientId: getEnvVar('GOOGLE_CLIENT_ID'),
+			clientSecret: getEnvVar('GOOGLE_CLIENT_SECRET'),
+			redirectUri: getEnvVar('GOOGLE_REDIRECT_URI')
+		}
+	},
+	intuit: {
+		credentials: {
+			clientId: getEnvVar('INTUIT_CLIENT_ID'),
+			clientSecret: getEnvVar('INTUIT_CLIENT_SECRET'),
+			environment:
+				env.NODE_ENV === 'production' ? 'production' : 'sandbox',
+			redirectUri: getEnvVar('INTUIT_REDIRECT_URI')
+		}
+	},
+	kakao: {
+		credentials: {
+			clientId: getEnvVar('KAKAO_CLIENT_ID'),
+			clientSecret: getEnvVar('KAKAO_CLIENT_SECRET'),
+			redirectUri: getEnvVar('KAKAO_REDIRECT_URI')
+		}
+	},
+	keycloak: {
+		credentials: {
+			clientId: getEnvVar('KEYCLOAK_CLIENT_ID'),
+			clientSecret: getEnvVar('KEYCLOAK_CLIENT_SECRET'),
+			realmURL: getEnvVar('KEYCLOAK_REALM_URL'),
+			redirectUri: getEnvVar('KEYCLOAK_REDIRECT_URI')
+		}
+	},
+	kick: {
+		credentials: {
+			clientId: getEnvVar('KICK_CLIENT_ID'),
+			clientSecret: getEnvVar('KICK_CLIENT_SECRET'),
+			redirectUri: getEnvVar('KICK_REDIRECT_URI')
+		}
+	},
+	lichess: {
+		credentials: {
+			clientId: getEnvVar('LICHESS_CLIENT_ID'),
+			redirectUri: getEnvVar('LICHESS_REDIRECT_URI')
+		}
+	},
+	line: {
+		credentials: {
+			clientId: getEnvVar('LINE_CHANNEL_ID'),
+			clientSecret: getEnvVar('LINE_CHANNEL_SECRET'),
+			redirectUri: getEnvVar('LINE_REDIRECT_URI')
+		}
+	},
+	linear: {
+		credentials: {
+			clientId: getEnvVar('LINEAR_CLIENT_ID'),
+			clientSecret: getEnvVar('LINEAR_CLIENT_SECRET'),
+			redirectUri: getEnvVar('LINEAR_REDIRECT_URI')
+		}
+	},
+	linkedin: {
+		credentials: {
+			clientId: getEnvVar('LINKEDIN_CLIENT_ID'),
+			clientSecret: getEnvVar('LINKEDIN_CLIENT_SECRET'),
+			redirectUri: getEnvVar('LINKEDIN_REDIRECT_URI')
+		}
+	},
+	mastodon: {
+		credentials: {
+			baseURL: getEnvVar('MASTODON_BASE_URL'),
+			clientId: getEnvVar('MASTODON_CLIENT_ID'),
+			clientSecret: getEnvVar('MASTODON_CLIENT_SECRET'),
+			redirectUri: getEnvVar('MASTODON_REDIRECT_URI')
+		}
+	},
+	mercadolibre: {
+		credentials: {
+			clientId: getEnvVar('MERCADO_LIBRE_CLIENT_ID'),
+			clientSecret: getEnvVar('MERCADO_LIBRE_CLIENT_SECRET'),
+			redirectUri: getEnvVar('MERCADO_LIBRE_REDIRECT_URI')
+		}
+	},
+	mercadopago: {
+		credentials: {
+			clientId: getEnvVar('MERCADO_PAGO_CLIENT_ID'),
+			clientSecret: getEnvVar('MERCADO_PAGO_CLIENT_SECRET'),
+			redirectUri: getEnvVar('MERCADO_PAGO_REDIRECT_URI')
+		}
+	},
+	microsoftentraid: {
+		credentials: {
+			clientId: getEnvVar('MICROSOFT_ENTRA_ID_CLIENT_ID'),
+			clientSecret: getEnvVar('MICROSOFT_ENTRA_ID_CLIENT_SECRET'),
+			redirectUri: getEnvVar('MICROSOFT_ENTRA_ID_REDIRECT_URI'),
+			tenantId: getEnvVar('MICROSOFT_ENTRA_ID_TENANT_ID')
+		}
+	},
+	myanimelist: {
+		credentials: {
+			clientId: getEnvVar('MY_ANIME_LIST_CLIENT_ID'),
+			clientSecret: getEnvVar('MY_ANIME_LIST_CLIENT_SECRET'),
+			redirectUri: getEnvVar('MY_ANIME_LIST_REDIRECT_URI')
+		}
+	},
+	naver: {
+		credentials: {
+			clientId: getEnvVar('NAVER_CLIENT_ID'),
+			clientSecret: getEnvVar('NAVER_CLIENT_SECRET'),
+			redirectUri: getEnvVar('NAVER_REDIRECT_URI')
+		}
+	},
+	notion: {
+		credentials: {
+			clientId: getEnvVar('NOTION_CLIENT_ID'),
+			clientSecret: getEnvVar('NOTION_CLIENT_SECRET'),
+			redirectUri: getEnvVar('NOTION_REDIRECT_URI')
+		}
+	},
+	okta: {
+		credentials: {
+			clientId: getEnvVar('OKTA_CLIENT_ID'),
+			clientSecret: getEnvVar('OKTA_CLIENT_SECRET'),
+			domain: getEnvVar('OKTA_DOMAIN'),
+			redirectUri: getEnvVar('OKTA_REDIRECT_URI')
+		}
+	},
+	osu: {
+		credentials: {
+			clientId: getEnvVar('OSU_CLIENT_ID'),
+			clientSecret: getEnvVar('OSU_CLIENT_SECRET'),
+			redirectUri: getEnvVar('OSU_REDIRECT_URI')
+		}
+	},
+	patreon: {
+		credentials: {
+			clientId: getEnvVar('PATREON_CLIENT_ID'),
+			clientSecret: getEnvVar('PATREON_CLIENT_SECRET'),
+			redirectUri: getEnvVar('PATREON_REDIRECT_URI')
+		}
+	},
+	polar: {
+		credentials: {
+			clientId: getEnvVar('POLAR_CLIENT_ID'),
+			clientSecret: getEnvVar('POLAR_CLIENT_SECRET'),
+			redirectUri: getEnvVar('POLAR_REDIRECT_URI')
+		}
+	},
+	polaraccesslink: {
+		credentials: {
+			clientId: getEnvVar('POLAR_ACCESSLINK_CLIENT_ID'),
+			clientSecret: getEnvVar('POLAR_ACCESSLINK_CLIENT_SECRET'),
+			redirectUri: getEnvVar('POLAR_ACCESSLINK_REDIRECT_URI')
+		}
+	},
+	polarteampro: {
+		credentials: {
+			clientId: getEnvVar('POLAR_TEAM_PRO_CLIENT_ID'),
+			clientSecret: getEnvVar('POLAR_TEAM_PRO_CLIENT_SECRET'),
+			redirectUri: getEnvVar('POLAR_TEAM_PRO_REDIRECT_URI')
+		}
+	},
+	reddit: {
+		credentials: {
+			clientId: getEnvVar('REDDIT_CLIENT_ID'),
+			clientSecret: getEnvVar('REDDIT_CLIENT_SECRET'),
+			redirectUri: getEnvVar('REDDIT_REDIRECT_URI')
+		}
+	},
+	roblox: {
+		credentials: {
+			clientId: getEnvVar('ROBLOX_CLIENT_ID'),
+			clientSecret: getEnvVar('ROBLOX_CLIENT_SECRET'),
+			redirectUri: getEnvVar('ROBLOX_REDIRECT_URI')
+		}
+	},
+	salesforce: {
+		credentials: {
+			clientId: getEnvVar('SALESFORCE_CONSUMER_KEY'),
+			clientSecret: getEnvVar('SALESFORCE_CONSUMER_SECRET'),
+			redirectUri: getEnvVar('SALESFORCE_REDIRECT_URI')
+		}
+	},
+	shikimori: {
+		credentials: {
+			clientId: getEnvVar('SHIKIMORI_CLIENT_ID'),
+			clientSecret: getEnvVar('SHIKIMORI_CLIENT_SECRET'),
+			redirectUri: getEnvVar('SHIKIMORI_REDIRECT_URI')
+		}
+	},
+	slack: {
+		credentials: {
+			clientId: getEnvVar('SLACK_CLIENT_ID'),
+			clientSecret: getEnvVar('SLACK_CLIENT_SECRET'),
+			redirectUri: getEnvVar('SLACK_REDIRECT_URI')
+		}
+	},
+	spotify: {
+		credentials: {
+			clientId: getEnvVar('SPOTIFY_CLIENT_ID'),
+			clientSecret: getEnvVar('SPOTIFY_CLIENT_SECRET'),
+			redirectUri: getEnvVar('SPOTIFY_REDIRECT_URI')
+		}
+	},
+	startgg: {
+		credentials: {
+			clientId: getEnvVar('STARTGG_CLIENT_ID'),
+			clientSecret: getEnvVar('STARTGG_CLIENT_SECRET'),
+			redirectUri: getEnvVar('STARTGG_REDIRECT_URI')
+		}
+	},
+	strava: {
+		credentials: {
+			clientId: getEnvVar('STRAVA_CLIENT_ID'),
+			clientSecret: getEnvVar('STRAVA_CLIENT_SECRET'),
+			redirectUri: getEnvVar('STRAVA_REDIRECT_URI')
+		}
+	},
+	synology: {
+		credentials: {
+			clientId: getEnvVar('SYNOLOGY_CLIENT_ID'),
+			clientSecret: getEnvVar('SYNOLOGY_CLIENT_SECRET'),
+			redirectUri: getEnvVar('SYNOLOGY_REDIRECT_URI')
+		}
+	},
+	tiktok: {
+		credentials: {
+			clientId: getEnvVar('TIK_TOK_CLIENT_KEY'),
+			clientSecret: getEnvVar('TIK_TOK_CLIENT_SECRET'),
+			redirectUri: getEnvVar('TIK_TOK_REDIRECT_URI')
+		}
+	},
+	tiltify: {
+		credentials: {
+			clientId: getEnvVar('TILTIFY_CLIENT_ID'),
+			clientSecret: getEnvVar('TILTIFY_CLIENT_SECRET'),
+			redirectUri: getEnvVar('TILTIFY_REDIRECT_URI')
+		}
+	},
+	tumblr: {
+		credentials: {
+			clientId: getEnvVar('TUMBLR_CONSUMER_KEY'),
+			clientSecret: getEnvVar('TUMBLR_CONSUMER_SECRET'),
+			redirectUri: getEnvVar('TUMBLR_REDIRECT_URI')
+		}
+	},
+	twitch: {
+		credentials: {
+			clientId: getEnvVar('TWITCH_CLIENT_ID'),
+			clientSecret: getEnvVar('TWITCH_CLIENT_SECRET'),
+			redirectUri: getEnvVar('TWITCH_REDIRECT_URI')
+		}
+	},
+	twitter: {
+		credentials: {
+			clientId: getEnvVar('TWITTER_CLIENT_ID'),
+			clientSecret: getEnvVar('TWITTER_CLIENT_SECRET'),
+			redirectUri: getEnvVar('TWITTER_REDIRECT_URI')
+		}
+	},
+	vk: {
+		credentials: {
+			clientId: getEnvVar('VK_CLIENT_ID'),
+			clientSecret: getEnvVar('VK_CLIENT_SECRET'),
+			redirectUri: getEnvVar('VK_REDIRECT_URI')
+		}
+	},
+	workos: {
+		credentials: {
+			clientId: getEnvVar('WORK_OS_CLIENT_ID'),
+			clientSecret: getEnvVar('WORK_OS_CLIENT_SECRET'),
+			redirectUri: getEnvVar('WORK_OS_REDIRECT_URI')
+		}
+	},
+	yahoo: {
+		credentials: {
+			clientId: getEnvVar('YAHOO_CLIENT_ID'),
+			clientSecret: getEnvVar('YAHOO_CLIENT_SECRET'),
+			redirectUri: getEnvVar('YAHOO_REDIRECT_URI')
+		}
+	},
+	yandex: {
+		credentials: {
+			clientId: getEnvVar('YANDEX_CLIENT_ID'),
+			clientSecret: getEnvVar('YANDEX_CLIENT_SECRET'),
+			redirectUri: getEnvVar('YANDEX_REDIRECT_URI')
+		}
+	},
+	zoom: {
+		credentials: {
+			clientId: getEnvVar('ZOOM_CLIENT_ID'),
+			clientSecret: getEnvVar('ZOOM_CLIENT_SECRET'),
+			redirectUri: getEnvVar('ZOOM_REDIRECT_URI')
+		}
+	}
+});

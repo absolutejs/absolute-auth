@@ -17,6 +17,7 @@ import { Home } from './pages/Home';
 import { NotAuthorized } from './pages/NotAuthorized';
 import { Protected } from './pages/Protected';
 import { providerData } from './utils/providerData';
+import { providersConfiguration } from './utils/providersConfiguration';
 
 const manifest = await build({
 	assetsDir: 'example/assets',
@@ -82,39 +83,7 @@ new Elysia()
 	)
 	.use(
 		absoluteAuth<User>({
-			credentials: {
-				facebook: {
-					credentials: {
-						clientId: env.FACEBOOK_CLIENT_ID,
-						clientSecret: env.FACEBOOK_CLIENT_SECRET,
-						redirectUri: env.FACEBOOK_REDIRECT_URI
-					}
-				},
-				github: {
-					credentials: {
-						clientId: env.GITHUB_CLIENT_ID,
-						clientSecret: env.GITHUB_CLIENT_SECRET,
-						redirectUri: env.GITHUB_REDIRECT_URI
-					},
-					scope: ['read:user']
-				},
-				google: {
-					credentials: {
-						clientId: env.GOOGLE_CLIENT_ID,
-						clientSecret: env.GOOGLE_CLIENT_SECRET,
-						redirectUri: env.GOOGLE_REDIRECT_URI
-					},
-					scope: [
-						'openid',
-						'https://www.googleapis.com/auth/userinfo.profile',
-						'https://www.googleapis.com/auth/userinfo.email'
-					],
-					searchParams: [
-						['access_type', 'offline'],
-						['prompt', 'consent']
-					]
-				}
-			},
+			providersConfiguration: providersConfiguration,
 			onAuthorize: ({ authProvider, authorizationUrl }) => {
 				const providerName = isValidProviderOption(authProvider)
 					? providerData[authProvider].name

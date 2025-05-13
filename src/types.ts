@@ -13,7 +13,7 @@ type SessionData<UserType> = {
 	expiresAt: number;
 };
 
-export type OAuth2ConfigOptions = {
+export type OAuth2ConfigurationOptions = {
 	[Provider in ProviderOption]?: {
 		credentials: CredentialsFor<Provider>;
 		scope?: string[];
@@ -105,7 +105,7 @@ export type RouteString = `/${string}`;
 export type AuthorizeRoute = `${string}/:provider${'' | `/${string}`}`;
 
 export type AbsoluteAuthProps<UserType> = {
-	credentials: OAuth2ConfigOptions;
+	providersConfiguration: OAuth2ConfigurationOptions;
 	authorizeRoute?: AuthorizeRoute;
 	profileRoute?: RouteString;
 	callbackRoute?: RouteString;
