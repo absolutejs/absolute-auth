@@ -11,7 +11,7 @@ import { status } from './status';
 import { AbsoluteAuthProps, ClientProviders } from './types';
 
 export const absoluteAuth = <UserType>({
-	config,
+	credentials,
 	authorizeRoute,
 	callbackRoute,
 	profileRoute,
@@ -27,7 +27,7 @@ export const absoluteAuth = <UserType>({
 	onSignOut,
 	onRevocation
 }: AbsoluteAuthProps<UserType>) => {
-	const clientProviders = Object.entries(config).reduce<ClientProviders>(
+	const clientProviders = Object.entries(credentials).reduce<ClientProviders>(
 		(acc, [providerName, providerConfig]) => {
 			if (isValidProviderOption(providerName)) {
 				acc[providerName] = {

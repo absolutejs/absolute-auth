@@ -82,7 +82,7 @@ new Elysia()
 	)
 	.use(
 		absoluteAuth<User>({
-			config: {
+			credentials: {
 				facebook: {
 					credentials: {
 						clientId: env.FACEBOOK_CLIENT_ID,
