@@ -1,4 +1,4 @@
-import { createOAuth2Client, isValidProviderOption } from 'citra';
+import { isValidProviderOption, createOAuth2Client } from 'citra';
 import { Elysia } from 'elysia';
 import { authorize } from './authorize';
 import { callback } from './callback';
@@ -68,4 +68,32 @@ export const absoluteAuth = <UserType>({
 		.as('plugin');
 };
 
+export * from './types';
 export * from './utils';
+export type {
+	OAuth2TokenResponse,
+	OAuth2Client,
+	ProviderOption,
+	PKCEProvider,
+	OIDCProvider,
+	RefreshableProvider,
+	RevocableProvider,
+	ScopeRequiredProvider,
+	CredentialsFor
+} from 'citra';
+
+export {
+	providerOptions,
+	refreshableProviderOptions,
+	revocableProviderOptions,
+	oidcProviderOptions,
+	pkceProviderOptions,
+	scopeRequiredProviderOptions,
+	isValidProviderOption,
+	isRefreshableOAuth2Client,
+	isRefreshableProviderOption,
+	isOIDCProviderOption,
+	isPKCEProviderOption,
+	isRevocableProviderOption,
+	isRevocableOAuth2Client
+} from 'citra';
