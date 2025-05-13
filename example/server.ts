@@ -165,9 +165,10 @@ new Elysia()
 				});
 			},
 			onRevocation: ({ tokenToRevoke }) => {
-				console.log('\nonRevocation successfully revoked token:', {
+				console.log(
+					'\nonRevocation successfully revoked token:',
 					tokenToRevoke
-				});
+				);
 			}
 		})
 	)

@@ -1,5 +1,5 @@
 {
-	"version": "0.4.0",
+	"version": "0.5.1",
 	"name": "@absolutejs/auth",
 	"description": "An authorization library for absolutejs",
 	"repository": {
@@ -32,6 +32,9 @@
 	"peerDependencies": {
 		"elysia": ">= 1.2.0"
 	},
+	"dependencies": {
+		"citra": "0.15.1"
+	},
 	"devDependencies": {
 		"@absolutejs/absolute": "0.4.0",
 		"@elysiajs/static": "1.2.0",
@@ -41,7 +44,6 @@
 		"@types/bun": "1.2.9",
 		"@types/react": "19.1.1",
 		"@types/react-dom": "19.1.2",
-		"citra": "0.15.1",
 		"drizzle-kit": "0.30.6",
 		"drizzle-orm": "0.41.0",
 		"elysia": "1.2.25",

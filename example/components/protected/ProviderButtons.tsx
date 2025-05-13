@@ -71,7 +71,6 @@ export const ProviderButtons = ({
 
 			return;
 		}
-		const data = await response.json();
 		addToast({
 			message: 'Profile fetched successfully!',
 			style: { background: '#d4edda', color: '#155724' }
