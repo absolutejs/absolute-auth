@@ -1,4 +1,4 @@
-import { isNavbarDropdown, NavbarElement } from '../../utils/Types';
+import { isNavbarDropdown, NavbarElement } from '../../utils/types';
 import { NavbarDropdown } from './NavbarDropdown';
 import { NavbarLink } from './NavbarLink';
 

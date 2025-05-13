@@ -6,7 +6,7 @@ import {
 	dropdownStyle,
 	getNavbarDropdownListStyle
 } from '../../styles/navbarStyles';
-import { NavbarLink as NavbarLinkType } from '../../utils/Types';
+import { NavbarLink as NavbarLinkType } from '../../utils/types';
 import { NavbarLink } from './NavbarLink';
 
 type NavbarDropdownProps = {

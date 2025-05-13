@@ -1,4 +1,4 @@
-import { NavbarElement } from './Types';
+import { NavbarElement } from './types';
 
 export const navbarData: NavbarElement[] = [
 	{

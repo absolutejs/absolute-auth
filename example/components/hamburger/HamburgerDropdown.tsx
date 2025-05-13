@@ -3,7 +3,7 @@ import { ReactNode } from 'react';
 import { useContainerQuery } from '../../hooks/useContainerQuery';
 import { labelStyle } from '../../styles/authModalStyles';
 import { secondaryColor } from '../../styles/styles';
-import { NavbarElement } from '../../utils/Types';
+import { NavbarElement } from '../../utils/types';
 import { NavbarLink } from '../navbar/NavbarLink';
 import { AnimatedFaChevronDown } from '../utils/AnimatedComponents';
 
