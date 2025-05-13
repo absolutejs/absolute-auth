@@ -1,12 +1,11 @@
-import { isRefreshableOAuth2Client } from 'citra';
 import { Elysia } from 'elysia';
 import { sessionStore } from './sessionStore';
-import { ClientProviders, RouteString } from './types';
+import { ClientProviders, OnStatus, RouteString } from './types';
 
 type StatusProps = {
 	clientProviders: ClientProviders;
 	statusRoute?: RouteString;
-	onStatus?: () => void;
+	onStatus?: OnStatus;
 };
 
 export const status = <UserType>({
@@ -30,38 +29,18 @@ export const status = <UserType>({
 					return error('Bad Request', 'Cookies are missing');
 
 				try {
-					if (user_session_id.value === undefined) {
+					// Return null because the user is not logged in, its not an error just a status
+					if (auth_provider.value === undefined || user_session_id.value === undefined) {
+						onStatus?.({
+							authProvider: 'undefined',
+							user: null
+						});
+
 						return new Response(
 							JSON.stringify({ isLoggedIn: false, user: null }),
 							{
 								headers: { 'Content-Type': 'application/json' }
 							}
-						);
-					}
-
-					if (auth_provider.value === undefined) {
-						return new Response(
-							JSON.stringify({ isLoggedIn: false, user: null }),
-							{
-								headers: { 'Content-Type': 'application/json' }
-							}
-						);
-					}
-
-					const providerConfig = clientProviders[auth_provider.value];
-					if (!providerConfig) {
-						return error('Unauthorized', 'Invalid provider');
-					}
-					const { providerInstance } = providerConfig;
-
-					// Returns an error if the provider is not refreshable but
-					// consider another approach to be more inclusive of providers
-					if (
-						!isRefreshableOAuth2Client('Google', providerInstance)
-					) {
-						return error(
-							'Not Implemented',
-							'Provider is not refreshable'
 						);
 					}
 
@@ -69,6 +48,11 @@ export const status = <UserType>({
 
 					// Return null because the user is not logged in, its not an error just a status
 					if (userSession === undefined) {
+						onStatus?.({
+							authProvider: auth_provider.value,
+							user: null
+						});
+
 						return new Response(
 							JSON.stringify({ isLoggedIn: false, user: null }),
 							{
@@ -79,7 +63,10 @@ export const status = <UserType>({
 
 					const { user } = userSession;
 
-					onStatus?.();
+					onStatus?.({
+						authProvider: auth_provider.value,
+						user
+					});
 
 					return new Response(
 						JSON.stringify({ isLoggedIn: true, user }),

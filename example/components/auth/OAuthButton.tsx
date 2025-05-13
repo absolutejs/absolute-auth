@@ -1,4 +1,5 @@
 import { ProviderOption } from 'citra';
+import { FiUser } from 'react-icons/fi';
 import {
 	oauthButtonStyle,
 	oauthButtonContentStyle,
@@ -6,7 +7,6 @@ import {
 	oauthButtonTextStyle
 } from '../../styles/authModalStyles';
 import { providerData, ProviderInfo } from '../../utils/providerData';
-import { FiUser } from 'react-icons/fi';
 
 type OAuthButtonProps = {
 	mode: 'login' | 'signup';

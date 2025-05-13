@@ -1,7 +1,7 @@
 import {
 	decodeJWT,
 	isPKCEProviderOption,
-	isNormalizedProviderOption,
+	isValidProviderOption,
 	OAuth2TokenResponse
 } from 'citra';
 import { Elysia } from 'elysia';
@@ -60,7 +60,7 @@ export const callback = <UserType>({
 					return error('Unauthorized', 'No auth provider found');
 				}
 
-				if (!isNormalizedProviderOption(auth_provider.value)) {
+				if (!isValidProviderOption(auth_provider.value)) {
 					return error('Unauthorized', 'Invalid provider');
 				}
 

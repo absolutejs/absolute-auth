@@ -58,11 +58,11 @@ export type OnCallback<UserType> = ({
 export type OnAuthorize = ({
 	authProvider,
 	authorizationUrl
-} : {
+}: {
 	authProvider: string;
-	authorizationUrl: URL
+	authorizationUrl: URL;
 }) => void | Promise<void>;
- 
+
 export type OnRefresh = ({
 	tokenResponse,
 	authProvider
@@ -87,6 +87,13 @@ export type OnRevocation = ({
 	authProvider: string;
 }) => void | Promise<void>;
 
+export type OnStatus = <UserType>({
+	authProvider,
+	user
+}: {
+	authProvider: string;
+	user: UserType | null;
+}) => void | Promise<void>;
 export type RouteString = `/${string}`;
 export type AuthorizeRoute = `${string}/:provider${'' | `/${string}`}`;
 

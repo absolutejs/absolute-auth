@@ -6,6 +6,7 @@ import {
 } from '@absolutejs/absolute';
 import { staticPlugin } from '@elysiajs/static';
 import { neon } from '@neondatabase/serverless';
+import { isValidProviderOption } from 'citra';
 import { drizzle } from 'drizzle-orm/neon-http';
 import { Elysia } from 'elysia';
 import { absoluteAuth } from '../src';
@@ -15,7 +16,6 @@ import { createUser, getUser } from './handlers/userHandlers';
 import { Home } from './pages/Home';
 import { NotAuthorized } from './pages/NotAuthorized';
 import { Protected } from './pages/Protected';
-import { isNormalizedProviderOption } from 'citra';
 import { providerData } from './utils/providerData';
 
 const manifest = await build({
@@ -83,14 +83,14 @@ new Elysia()
 	.use(
 		absoluteAuth<User>({
 			config: {
-				Facebook: {
+				facebook: {
 					credentials: {
 						clientId: env.FACEBOOK_CLIENT_ID,
 						clientSecret: env.FACEBOOK_CLIENT_SECRET,
 						redirectUri: env.FACEBOOK_REDIRECT_URI
 					}
 				},
-				GitHub: {
+				github: {
 					credentials: {
 						clientId: env.GITHUB_CLIENT_ID,
 						clientSecret: env.GITHUB_CLIENT_SECRET,
@@ -98,7 +98,7 @@ new Elysia()
 					},
 					scope: ['read:user']
 				},
-				Google: {
+				google: {
 					credentials: {
 						clientId: env.GOOGLE_CLIENT_ID,
 						clientSecret: env.GOOGLE_CLIENT_SECRET,
@@ -115,13 +115,13 @@ new Elysia()
 					]
 				}
 			},
-			onAuthorize: ({
-				authProvider,
-				authorizationUrl
-			}) => {
-				const providerName = isNormalizedProviderOption(authProvider) ? providerData[authProvider].name : authProvider
+			onAuthorize: ({ authProvider, authorizationUrl }) => {
+				const providerName = isValidProviderOption(authProvider)
+					? providerData[authProvider].name
+					: authProvider;
 
-				console.log(`\nRedirecting to ${providerName} authorization URL:`, 
+				console.log(
+					`\nRedirecting to ${providerName} authorization URL:`,
 					authorizationUrl.toString()
 				);
 			},
@@ -132,11 +132,16 @@ new Elysia()
 				user_session_id,
 				session
 			}) => {
-				const providerName = isNormalizedProviderOption(authProvider) ? providerData[authProvider].name : authProvider
+				const providerName = isValidProviderOption(authProvider)
+					? providerData[authProvider].name
+					: authProvider;
 
-				console.log(`\nSuccesfully authorized with ${providerName} and got token response:`, {
-					...tokenResponse
-				});
+				console.log(
+					`\nSuccesfully authorized with ${providerName} and got token response:`,
+					{
+						...tokenResponse
+					}
+				);
 
 				return instantiateUserSession<User>({
 					authProvider,
@@ -179,10 +184,7 @@ new Elysia()
 				});
 			},
 			onRevocation: ({ tokenToRevoke }) => {
-				console.log(
-					'\nSuccessfully revoked token:',
-					tokenToRevoke
-				);
+				console.log('\nSuccessfully revoked token:', tokenToRevoke);
 			}
 		})
 	)

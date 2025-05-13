@@ -1,4 +1,4 @@
-import { isRefreshableOAuth2Client, isNormalizedProviderOption } from 'citra';
+import { isRefreshableOAuth2Client, isValidProviderOption } from 'citra';
 import { Elysia } from 'elysia';
 import { sessionStore } from './sessionStore';
 import { ClientProviders, OnRefresh, RouteString } from './types';
@@ -33,7 +33,7 @@ export const refresh = <UserType>({
 					return error('Unauthorized', 'No auth provider found');
 				}
 
-				if (!isNormalizedProviderOption(auth_provider.value)) {
+				if (!isValidProviderOption(auth_provider.value)) {
 					return error('Bad Request', 'Invalid provider');
 				}
 
@@ -75,7 +75,10 @@ export const refresh = <UserType>({
 					const tokenResponse =
 						await providerInstance.refreshAccessToken(refreshToken);
 
-					onRefresh?.({ authProvider:auth_provider.value,tokenResponse });
+					onRefresh?.({
+						authProvider: auth_provider.value,
+						tokenResponse
+					});
 
 					return new Response('Token refreshed', {
 						status: 204

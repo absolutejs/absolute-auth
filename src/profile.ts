@@ -1,4 +1,4 @@
-import { isNormalizedProviderOption } from 'citra';
+import { isValidProviderOption } from 'citra';
 import { Elysia } from 'elysia';
 import { sessionStore } from './sessionStore';
 import { ClientProviders, OnProfile, RouteString } from './types';
@@ -33,7 +33,7 @@ export const profile = <UserType>({
 					return error('Unauthorized', 'No auth provider found');
 				}
 
-				if (!isNormalizedProviderOption(auth_provider.value)) {
+				if (!isValidProviderOption(auth_provider.value)) {
 					return error('Unauthorized', 'Invalid provider');
 				}
 
@@ -60,6 +60,7 @@ export const profile = <UserType>({
 						await providerInstance.fetchUserProfile(accessToken);
 
 					await onProfile?.({
+						authProvider: auth_provider.value,
 						userProfile
 					});
 
