@@ -30,7 +30,10 @@ export const status = <UserType>({
 
 				try {
 					// Return null because the user is not logged in, its not an error just a status
-					if (auth_provider.value === undefined || user_session_id.value === undefined) {
+					if (
+						auth_provider.value === undefined ||
+						user_session_id.value === undefined
+					) {
 						onStatus?.({
 							authProvider: 'undefined',
 							user: null
