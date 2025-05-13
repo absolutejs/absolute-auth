@@ -59,27 +59,6 @@ export const buttonStyle = ({
 	width
 });
 
-export const authContainerStyle: CSSProperties = {
-	alignItems: 'center',
-	borderRadius: '0.625rem',
-	display: 'flex',
-	flexDirection: 'column',
-	justifyContent: 'center',
-	margin: 'auto',
-	maxWidth: '21.875rem',
-	padding: '1.25rem',
-	width: '100%'
-};
-
-export const textButtonStyle: CSSProperties = {
-	color: ' #222   ',
-	cursor: 'pointer',
-	fontSize: '1.25rem',
-	marginTop: '1.25rem',
-	textAlign: 'center',
-	width: '100%'
-};
-
 export const contentStyle: CSSProperties = {
 	alignItems: 'center',
 	display: 'flex',

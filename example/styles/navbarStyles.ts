@@ -40,22 +40,7 @@ export const hamburgerButtonStyle: CSSProperties = {
 	padding: '0',
 	width: '2.5rem'
 };
-export const imgStyle: CSSProperties = {
-	height: '15rem',
-	width: 'auto'
-};
-export const labelStyle: CSSProperties = {
-	alignItems: 'center',
-	color: '#000',
-	display: 'flex',
-	fontSize: '1.5rem',
-	fontWeight: '500',
-	textDecoration: 'none'
-};
-export const logoStyle: CSSProperties = {
-	alignItems: 'center',
-	display: 'flex'
-};
+
 export const navbarContainerStyle: CSSProperties = {
 	alignItems: 'center',
 	background: '#fff',
@@ -77,14 +62,7 @@ export const navbarDrowdownLinkStyle: CSSProperties = {
 	display: 'flex',
 	fontSize: '1.5rem'
 };
-export const optionIconStyle: CSSProperties = {
-	alignItems: 'center',
-	color: secondaryColor,
-	height: '2.3rem',
-	justifyContent: 'center',
-	marginRight: '15px',
-	width: 'auto'
-};
+
 export const optionStyle: CSSProperties = {
 	alignItems: 'center',
 	cursor: 'pointer',
