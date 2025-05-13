@@ -55,8 +55,8 @@ export const NavbarUserButtons = ({
 				ref={userButtonRef}
 				onClick={user ? () => handleSignOut() : handleLoginClick}
 				style={buttonStyle({
-					backgroundColor: '#fff',
-					color: '#000'
+					backgroundColor: '#000',
+					color: '#fff'
 				})}
 			>
 				{user ? 'Sign Out' : 'Login'}
