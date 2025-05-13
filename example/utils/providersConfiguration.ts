@@ -1,3 +1,4 @@
+import { Buffer } from 'buffer';
 import { env } from 'process';
 import { createProvidersConfiguration } from '../../src/utils';
 

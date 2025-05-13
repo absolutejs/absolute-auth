@@ -115,7 +115,5 @@ export const getUser = ({
 
 	const authSub = `${provider}|${sub ?? id}`;
 
-	console.log(authSub);
-
 	return getDBUser({ authSub, db, schema });
 };

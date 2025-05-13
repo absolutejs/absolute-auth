@@ -182,7 +182,7 @@ export const providerData: ProviderData = {
 	mercadolibre: {
 		logoUrl: '/assets/svg/mercadolibre.svg',
 		name: 'Mercado Libre',
-		primaryColor:'#FFD100'
+		primaryColor: '#FFD100'
 	},
 	mercadopago: {
 		logoUrl: '/assets/svg/mercadopago.svg',
