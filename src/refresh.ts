@@ -90,7 +90,7 @@ export const refresh = <UserType>({
 
 					return error(
 						'Internal Server Error',
-						`Faile to refresh token: Unknown error: ${err}`
+						`Failed to refresh token: Unknown error: ${err}`
 					);
 				}
 			}

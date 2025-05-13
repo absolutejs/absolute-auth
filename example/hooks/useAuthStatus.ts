@@ -36,7 +36,7 @@ export const useAuthStatus = () => {
 	};
 
 	const handleSignOut = async () => {
-		const response = await fetch('/signout', { method: 'POST' });
+		const response = await fetch('/oauth2/signout', { method: 'POST' });
 		if (response.ok) {
 			setUser(undefined);
 			window.location.reload();

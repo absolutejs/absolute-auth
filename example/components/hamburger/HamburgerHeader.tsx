@@ -21,12 +21,15 @@ export const HamburgerHeader = ({ onClose }: HamburgerHeaderProps) => (
 			width: '100%'
 		}}
 	>
-		<a href="/" style={{
-			color: '#fff',
-			fontSize: '1.5rem',
-			fontWeight: 'bold',
-			textDecoration: 'none'
-		}}>
+		<a
+			href="/"
+			style={{
+				color: '#fff',
+				fontSize: '1.5rem',
+				fontWeight: 'bold',
+				textDecoration: 'none'
+			}}
+		>
 			Absolute Auth
 		</a>
 		<FaTimes
