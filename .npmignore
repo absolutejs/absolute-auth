@@ -49,5 +49,3 @@ src/**
 
 !dist/src/
 !dist/src/**
-
-/.well-known/appspecific/com.chrome.devtools.json
