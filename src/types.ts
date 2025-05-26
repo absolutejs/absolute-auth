@@ -46,13 +46,15 @@ export type OnCallback<UserType> = ({
 	tokenResponse,
 	providerInstance,
 	session,
-	user_session_id
+	user_session_id,
+	originUrl
 }: {
 	providerInstance: OAuth2Client<ProviderOption>;
 	authProvider: string;
 	tokenResponse: OAuth2TokenResponse;
 	session: SessionRecord<UserType>;
 	user_session_id: Cookie<string | undefined>;
+	originUrl: string;
 }) => void | Promise<void>;
 
 export type OnAuthorize = ({

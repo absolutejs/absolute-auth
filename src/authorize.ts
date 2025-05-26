@@ -24,13 +24,13 @@ export const authorize = ({
 		async ({
 			error,
 			redirect,
-			cookie: { state, code_verifier, auth_provider, redirect_url },
+			cookie: { state, code_verifier, auth_provider, origin_url },
 			params: { provider },
 			headers
 		}) => {
 			if (
 				auth_provider === undefined ||
-				redirect_url === undefined ||
+				origin_url === undefined ||
 				state === undefined ||
 				code_verifier === undefined
 			)
@@ -50,7 +50,7 @@ export const authorize = ({
 			const normalizedProvider = provider.toLowerCase();
 			const referer = headers['referer'] ?? '/';
 
-			redirect_url.set({
+			origin_url.set({
 				httpOnly: true,
 				maxAge: COOKIE_DURATION,
 				path: '/',

@@ -26,7 +26,7 @@ export const callback = <UserType>({
 				cookie: {
 					state: stored_state,
 					code_verifier,
-					redirect_url,
+					origin_url,
 					user_session_id,
 					auth_provider
 				},
@@ -79,6 +79,8 @@ export const callback = <UserType>({
 					);
 				}
 
+				const originUrl = origin_url?.value ?? '/';
+
 				try {
 					const tokenResponse =
 						await providerInstance.validateAuthorizationCode(
@@ -89,15 +91,14 @@ export const callback = <UserType>({
 
 					await onCallback?.({
 						authProvider,
+						originUrl,
 						providerInstance,
 						session,
 						tokenResponse,
 						user_session_id
 					});
 
-					const redirectUrl = redirect_url?.value ?? '/';
-
-					return redirect(redirectUrl);
+					return redirect(originUrl);
 				} catch (err) {
 					return err instanceof Error
 						? error(
