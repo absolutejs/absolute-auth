@@ -1,20 +1,25 @@
+import {
+	CredentialsFor,
+	OAuth2Client,
+	OAuth2TokenResponse,
+	ProviderOption
+} from 'citra';
 import { Cookie } from 'elysia';
-import { providers } from './providers';
 
 type SessionData<UserType> = {
 	user: UserType;
+	accessToken: string;
+	refreshToken?: string;
 	expiresAt: number;
 };
 
-type Oauth2ConfigOptions = {
-	[K in Providers]?: {
-		credentials: ConstructorParameters<(typeof providers)[K]>;
-		scopes?: string[];
+export type OAuth2ConfigurationOptions = {
+	[Provider in ProviderOption]?: {
+		credentials: CredentialsFor<Provider>;
+		scope?: string[];
 		searchParams?: [string, string][];
 	};
 };
-
-export type Providers = keyof typeof providers;
 
 export type SessionRecord<UserType> = Record<
 	string,
@@ -23,9 +28,7 @@ export type SessionRecord<UserType> = Record<
 
 export type UserFunctionProps = {
 	authProvider: string;
-	userProfile: {
-		[key: string]: string | undefined;
-	};
+	userProfile: Record<string, unknown>;
 };
 
 export type CreateUser<UserType> = ({
@@ -40,50 +43,104 @@ export type GetUser<UserType> = ({
 
 export type OnCallback<UserType> = ({
 	authProvider,
-	userProfile,
+	tokenResponse,
+	providerInstance,
 	session,
 	user_session_id
 }: {
+	providerInstance: OAuth2Client<ProviderOption>;
 	authProvider: string;
-	userProfile: {
-		[key: string]: string | undefined;
-	};
+	tokenResponse: OAuth2TokenResponse;
 	session: SessionRecord<UserType>;
 	user_session_id: Cookie<string | undefined>;
 }) => void | Promise<void>;
 
+export type OnAuthorize = ({
+	authProvider,
+	authorizationUrl
+}: {
+	authProvider: string;
+	authorizationUrl: URL;
+}) => void | Promise<void>;
+
+export type OnRefresh = ({
+	tokenResponse,
+	authProvider
+}: {
+	tokenResponse: OAuth2TokenResponse;
+	authProvider: string;
+}) => void | Promise<void>;
+
+export type OnProfile = ({
+	userProfile,
+	authProvider
+}: {
+	userProfile: Record<string, unknown>;
+	authProvider: string;
+}) => void | Promise<void>;
+
+export type OnRevocation = ({
+	tokenToRevoke,
+	authProvider
+}: {
+	tokenToRevoke: string;
+	authProvider: string;
+}) => void | Promise<void>;
+
+export type OnStatus<UserType> = ({
+	user
+}: {
+	user: UserType | null;
+}) => void | Promise<void>;
+
+export type OnSignOut<UserType> = ({
+	authProvider,
+	user
+}: {
+	authProvider: string;
+	user: UserType | null;
+}) => void | Promise<void>;
+
+export type RouteString = `/${string}`;
+export type AuthorizeRoute = `${string}/:provider${'' | `/${string}`}`;
+
 export type AbsoluteAuthProps<UserType> = {
-	config: Oauth2ConfigOptions;
-	authorizeRoute?: string;
-	callbackRoute?: string;
-	refreshRoute?: string;
-	revokeRoute?: string;
-	logoutRoute?: string;
-	statusRoute?: string;
-	onAuthorize?: () => void;
+	providersConfiguration: OAuth2ConfigurationOptions;
+	authorizeRoute?: AuthorizeRoute;
+	profileRoute?: RouteString;
+	callbackRoute?: RouteString;
+	refreshRoute?: RouteString;
+	revokeRoute?: RouteString;
+	signoutRoute?: RouteString;
+	statusRoute?: RouteString;
+	onAuthorize?: OnAuthorize;
 	onCallback?: OnCallback<UserType>;
-	onStatus?: () => void;
-	onRefresh?: () => void;
-	onLogout?: () => void;
-	onRevoke?: () => void;
+	onStatus?: OnStatus<UserType>;
+	onRefresh?: OnRefresh;
+	onSignOut?: OnSignOut<UserType>;
+	onRevocation?: OnRevocation;
+	onProfile?: OnProfile;
 };
 
 export type ClientProviders = Record<
 	string,
 	{
-		providerInstance: InstanceType<(typeof providers)[Providers]>;
-		scopes: string[];
-		searchParams: [string, string][];
+		providerInstance: OAuth2Client<ProviderOption>;
+		scope?: string[];
+		searchParams?: [string, string][];
 	}
 >;
 
 export type InsantiateUserSessionProps<UserType> = {
 	authProvider: string;
-	userProfile: {
-		[key: string]: string | undefined;
-	};
+	tokenResponse: OAuth2TokenResponse;
 	session: SessionRecord<UserType>;
+	providerInstance: OAuth2Client<ProviderOption>;
 	user_session_id: Cookie<string | undefined>;
-	createUser: () => UserType | Promise<UserType>;
-	getUser: () => UserType | Promise<UserType | null>;
+	createUser: (
+		userProfile: Record<string, unknown>
+	) => UserType | Promise<UserType>;
+	getUser: (
+		userProfile: Record<string, unknown>
+	) => UserType | null | undefined | Promise<UserType | null | undefined>;
 };

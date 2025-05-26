@@ -1,37 +1,28 @@
-import { Head } from '../components/Head';
-import { Navbar } from '../components/Navbar';
+import { Navbar } from '../components/navbar/Navbar';
+import { Head } from '../components/page/Head';
+import { ProviderButtons } from '../components/protected/ProviderButtons';
+import { UserInfo } from '../components/protected/UserInfo';
+import { ToastProvider } from '../components/utils/ToastProvider';
 import { useAuthStatus } from '../hooks/useAuthStatus';
 
-import {
-	htmlDefault,
-	bodyDefault,
-	mainDefault,
-	contentStyle
-} from '../utils/styles';
+import { htmlDefault, bodyDefault, mainDefault } from '../styles/styles';
 
 export const Protected = () => {
-	const { user, handleLogOut } = useAuthStatus();
+	const { user, handleSignOut } = useAuthStatus();
 
 	return (
 		<html lang="en" style={htmlDefault}>
 			<Head />
 			<body style={bodyDefault}>
-				<Navbar user={user} handleLogOut={handleLogOut} />
+				<Navbar user={user} handleSignOut={handleSignOut} />
 				<main style={mainDefault}>
-					<div style={contentStyle}>
-						<h1>Protected Page</h1>
-						<p>{user !== undefined && user.given_name}</p>
-						<p>{user !== undefined && user.family_name}</p>
-						<p>{user !== undefined && user.email}</p>
-						<img
-							src={
-								user?.picture ??
-								'https://via.placeholder.com/150'
-							}
-							alt="Profile Picture"
-							style={{ borderRadius: '50%', width: '100px' }}
+					<UserInfo user={user} />
+					<ToastProvider>
+						<ProviderButtons
+							user={user}
+							handleSignOut={handleSignOut}
 						/>
-					</div>
+					</ToastProvider>
 				</main>
 			</body>
 		</html>

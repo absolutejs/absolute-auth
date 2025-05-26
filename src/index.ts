@@ -1,77 +1,61 @@
-import { OAuth2RequestError, ArcticFetchError } from 'arctic';
+import { isValidProviderOption, createOAuth2Client } from 'citra';
 import { Elysia } from 'elysia';
 import { authorize } from './authorize';
 import { callback } from './callback';
-import { logout } from './logout';
+import { profile } from './profile';
 import { protectRoute } from './protectRoute';
-import { normalizedProviderKeys, providers } from './providers';
 import { refresh } from './refresh';
 import { revoke } from './revoke';
+import { signout } from './signout';
 import { status } from './status';
-import { isValidProviderKey } from './typeGuards';
 import { AbsoluteAuthProps, ClientProviders } from './types';
 
-export const absoluteAuth = <UserType>({
-	config,
+export const absoluteAuth = async <UserType>({
+	providersConfiguration,
 	authorizeRoute,
 	callbackRoute,
-	logoutRoute,
+	profileRoute,
+	signoutRoute,
 	statusRoute,
 	refreshRoute,
 	revokeRoute,
 	onAuthorize,
+	onProfile,
 	onCallback,
 	onStatus,
 	onRefresh,
-	onLogout,
-	onRevoke
+	onSignOut,
+	onRevocation
 }: AbsoluteAuthProps<UserType>) => {
-	const clientProviders = Object.keys(config).reduce<ClientProviders>(
-		(acc, key) => {
-			if (!Object.prototype.hasOwnProperty.call(config, key)) return acc;
+	const entryPromises: Array<Promise<[string, ClientProviders[string]]>> = [];
 
-			if (!isValidProviderKey(key)) {
-				console.error(`Provider ${key} is not supported`);
+	for (const [providerName, providerConfig] of Object.entries(
+		providersConfiguration
+	)) {
+		if (!isValidProviderOption(providerName)) continue;
 
-				return acc;
-			}
+		entryPromises.push(
+			createOAuth2Client(providerName, providerConfig.credentials).then(
+				(providerInstance) => [
+					providerName,
+					{
+						providerInstance,
+						scope: providerConfig.scope,
+						searchParams: providerConfig.searchParams
+					}
+				]
+			)
+		);
+	}
 
-			const options = config[key];
-			if (!options) return acc;
-
-			const normalizedProvider = key.toLowerCase();
-			const originalProviderKey =
-				normalizedProviderKeys[normalizedProvider];
-
-			if (!isValidProviderKey(originalProviderKey)) {
-				console.error(`Provider ${key} is not supported`);
-
-				return acc;
-			}
-
-			const Provider = providers[originalProviderKey];
-			const { credentials, scopes = [], searchParams = [] } = options;
-
-			// @ts-expect-error: dynamic constructor parameters
-			const providerInstance = new Provider(...credentials);
-
-			acc[normalizedProvider] = {
-				providerInstance,
-				scopes,
-				searchParams
-			};
-
-			return acc;
-		},
-		{}
+	const clientProviders: ClientProviders = Object.fromEntries(
+		await Promise.all(entryPromises)
 	);
 
 	return new Elysia()
-		.error('OAUTH2_REQUEST_ERROR', OAuth2RequestError)
-		.error('ARCTIC_FETCH_ERROR', ArcticFetchError)
-		.use(logout({ logoutRoute, onLogout }))
-		.use(revoke({ clientProviders, onRevoke, revokeRoute }))
-		.use(status<UserType>({ clientProviders, onStatus, statusRoute }))
+		.use(signout({ onSignOut, signoutRoute }))
+		.use(revoke({ clientProviders, onRevocation, revokeRoute }))
+		.use(status<UserType>({ onStatus, statusRoute }))
 		.use(refresh({ clientProviders, onRefresh, refreshRoute }))
 		.use(authorize({ authorizeRoute, clientProviders, onAuthorize }))
 		.use(
@@ -81,8 +65,43 @@ export const absoluteAuth = <UserType>({
 				onCallback
 			})
 		)
+		.use(
+			profile({
+				clientProviders,
+				onProfile,
+				profileRoute
+			})
+		)
 		.use(protectRoute())
 		.as('plugin');
 };
 
+export * from './types';
 export * from './utils';
+export type {
+	OAuth2TokenResponse,
+	OAuth2Client,
+	ProviderOption,
+	PKCEProvider,
+	OIDCProvider,
+	RefreshableProvider,
+	RevocableProvider,
+	ScopeRequiredProvider,
+	CredentialsFor
+} from 'citra';
+
+export {
+	providerOptions,
+	refreshableProviderOptions,
+	revocableProviderOptions,
+	oidcProviderOptions,
+	pkceProviderOptions,
+	scopeRequiredProviderOptions,
+	isValidProviderOption,
+	isRefreshableOAuth2Client,
+	isRefreshableProviderOption,
+	isOIDCProviderOption,
+	isPKCEProviderOption,
+	isRevocableProviderOption,
+	isRevocableOAuth2Client
+} from 'citra';

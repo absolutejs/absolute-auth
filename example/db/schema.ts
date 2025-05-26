@@ -14,12 +14,12 @@ export const schema = {
 	users
 };
 
-export type schemaType = typeof schema;
+export type SchemaType = typeof schema;
 
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
 
 export type DatabaseFunctionProps = {
-	db: NeonHttpDatabase<schemaType>;
-	schema: schemaType;
+	db: NeonHttpDatabase<SchemaType>;
+	schema: SchemaType;
 };

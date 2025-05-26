@@ -10,6 +10,9 @@ export const protectRoute = <UserType>() =>
 					handleAuth: () => Promise<Response>,
 					handleAuthFail?: () => Promise<Response>
 				) => {
+					if (user_session_id === undefined)
+						return error('Bad Request', 'Cookies are missing');
+
 					if (user_session_id.value === undefined) {
 						return (
 							handleAuthFail?.() ??

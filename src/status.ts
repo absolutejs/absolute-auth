@@ -1,83 +1,65 @@
 import { Elysia } from 'elysia';
 import { sessionStore } from './sessionStore';
-import { isRefreshableProvider } from './typeGuards';
-import { ClientProviders } from './types';
+import { OnStatus, RouteString } from './types';
 
-type StatusProps = {
-	clientProviders: ClientProviders;
-	statusRoute?: string;
-	onStatus?: () => void;
+type StatusProps<UserType> = {
+	statusRoute?: RouteString;
+	onStatus?: OnStatus<UserType>;
 };
 
 export const status = <UserType>({
-	clientProviders,
-	statusRoute = 'auth-status',
+	statusRoute = '/oauth2/status',
 	onStatus
-}: StatusProps) =>
+}: StatusProps<UserType>) =>
 	new Elysia()
 		.use(sessionStore<UserType>())
 		.get(
-			`/${statusRoute}`,
+			statusRoute,
 			async ({
 				error,
-				cookie: { user_session_id, auth_provider },
+				cookie: { user_session_id },
 				store: { session }
 			}) => {
-				try {
-					if (user_session_id.value === undefined) {
-						return new Response(
-							JSON.stringify({ isLoggedIn: false, user: null }),
-							{
-								headers: { 'Content-Type': 'application/json' }
-							}
-						);
-					}
+				if (user_session_id === undefined) {
+					return error('Bad Request', 'Cookies are missing');
+				}
 
-					if (auth_provider.value === undefined) {
-						return new Response(
-							JSON.stringify({ isLoggedIn: false, user: null }),
-							{
-								headers: { 'Content-Type': 'application/json' }
-							}
-						);
-					}
-
-					const normalizedProvider =
-						auth_provider.value.toLowerCase();
-					const { providerInstance } =
-						clientProviders[normalizedProvider];
-
-					// Returns an error if the provider is not refreshable but
-					// consider another approach to be more inclusive of providers
-					if (!isRefreshableProvider(providerInstance)) {
-						return error(
-							'Not Implemented',
-							'Provider is not refreshable'
-						);
-					}
-
-					const userSession = session[user_session_id.value];
-
-					// Return null because the user is not logged in, its not an error just a status
-					if (userSession === undefined) {
-						return new Response(
-							JSON.stringify({ isLoggedIn: false, user: null }),
-							{
-								headers: { 'Content-Type': 'application/json' }
-							}
-						);
-					}
-
-					const { user } = userSession;
-
-					onStatus?.();
+				// Return null because the user is not logged in, its not an error just a status
+				if (user_session_id.value === undefined) {
+					onStatus?.({
+						user: null
+					});
 
 					return new Response(
-						JSON.stringify({ isLoggedIn: true, user }),
+						JSON.stringify({ isLoggedIn: false, user: null }),
 						{
 							headers: { 'Content-Type': 'application/json' }
 						}
 					);
+				}
+
+				const userSession = session[user_session_id.value];
+
+				// Return null because the user is not logged in, its not an error just a status
+				if (userSession === undefined) {
+					onStatus?.({
+						user: null
+					});
+
+					return new Response(
+						JSON.stringify({ isLoggedIn: false, user: null }),
+						{
+							headers: { 'Content-Type': 'application/json' }
+						}
+					);
+				}
+
+				const { user } = userSession;
+
+				try {
+					onStatus?.({
+						user
+					});
 				} catch (err) {
 					if (err instanceof Error) {
 						return error(
@@ -91,5 +73,12 @@ export const status = <UserType>({
 						`Unknown Error: ${err}`
 					);
 				}
+
+				return new Response(
+					JSON.stringify({ isLoggedIn: true, user }),
+					{
+						headers: { 'Content-Type': 'application/json' }
+					}
+				);
 			}
 		);

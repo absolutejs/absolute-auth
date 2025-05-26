@@ -1,25 +1,24 @@
-import { decodeIdToken } from 'arctic';
+import { isPKCEProviderOption, isValidProviderOption } from 'citra';
 import { Elysia } from 'elysia';
-import { fetchUserProfile } from './profiles';
 import { sessionStore } from './sessionStore';
-import { isNonEmptyString, isValidProviderKey } from './typeGuards';
-import { ClientProviders, OnCallback } from './types';
+import { isNonEmptyString } from './typeGuards';
+import { ClientProviders, OnCallback, RouteString } from './types';
 
 type CallbackProps<UserType> = {
 	clientProviders: ClientProviders;
-	callbackRoute?: string;
+	callbackRoute?: RouteString;
 	onCallback?: OnCallback<UserType>;
 };
 
 export const callback = <UserType>({
 	clientProviders,
-	callbackRoute = 'authorize/callback',
+	callbackRoute = '/oauth2/callback',
 	onCallback
 }: CallbackProps<UserType>) =>
 	new Elysia()
 		.use(sessionStore<UserType>())
 		.get(
-			`/${callbackRoute}`,
+			callbackRoute,
 			async ({
 				error,
 				redirect,
@@ -33,6 +32,15 @@ export const callback = <UserType>({
 				},
 				query: { code, state: callback_state }
 			}) => {
+				if (
+					stored_state === undefined ||
+					code_verifier === undefined ||
+					auth_provider === undefined ||
+					user_session_id === undefined
+				) {
+					return error('Bad Request', 'Cookies are missing');
+				}
+
 				if (
 					!isNonEmptyString(code) ||
 					stored_state.value === undefined
@@ -48,85 +56,58 @@ export const callback = <UserType>({
 					return error('Unauthorized', 'No auth provider found');
 				}
 
-				if (!isValidProviderKey(auth_provider.value)) {
+				if (!isValidProviderOption(auth_provider.value)) {
 					return error('Unauthorized', 'Invalid provider');
 				}
 
-				const normalizedProvider = auth_provider.value.toLowerCase();
-				const { providerInstance } =
-					clientProviders[normalizedProvider];
+				const providerConfig = clientProviders[auth_provider.value];
+				if (!providerConfig) {
+					return error('Unauthorized', 'Client provider not found');
+				}
+				const { providerInstance } = providerConfig;
+
+				// Clear the stored state so the next request doesn't use it
+				stored_state.remove();
+
+				const authProvider = auth_provider.value;
+				const requiresPKCE = isPKCEProviderOption(authProvider);
+				const verifier = requiresPKCE ? code_verifier.value : undefined;
+				if (requiresPKCE && verifier === undefined) {
+					return error(
+						'Bad Request',
+						'Code verifier not found and is required'
+					);
+				}
 
 				try {
-					// Clear the stored state so the next request doesn't use it
-					stored_state.remove();
-
-					const hasCodeVerifier =
-						providerInstance.validateAuthorizationCode
-							.toString()
-							.includes('codeVerifier');
-					const verifier = code_verifier.value;
-					if (hasCodeVerifier && verifier === undefined)
-						return error(
-							'Bad Request',
-							'Code verifier not found and is required'
+					const tokenResponse =
+						await providerInstance.validateAuthorizationCode(
+							requiresPKCE
+								? { code, codeVerifier: verifier }
+								: { code }
 						);
-
-					const safeVerifier = verifier ?? '';
-					const tokens = await (hasCodeVerifier
-						? providerInstance.validateAuthorizationCode(
-								code,
-								safeVerifier
-							)
-						: // @ts-expect-error - This is a dynamic check
-							providerInstance.validateAuthorizationCode(code));
-
-					if (hasCodeVerifier) code_verifier.remove();
-
-					let userProfile;
-					const authProvider = auth_provider.value;
-
-					// TODO : Change if arctic ever updates
-					try {
-						const decodedIdToken = Object.fromEntries(
-							Object.entries(decodeIdToken(tokens.idToken())).map(
-								([key, value]) => [
-									key,
-									typeof value === 'string'
-										? value
-										: undefined
-								]
-							)
-						);
-						userProfile = decodedIdToken;
-					} catch (err) {
-						// TODO : This has type any see if it can be fixed
-						userProfile = await fetchUserProfile(
-							authProvider,
-							tokens.accessToken()
-						);
-					}
 
 					await onCallback?.({
 						authProvider,
+						providerInstance,
 						session,
-						user_session_id,
-						userProfile
+						tokenResponse,
+						user_session_id
 					});
 
-					const redirectUrl = redirect_url.value ?? '/';
+					const redirectUrl = redirect_url?.value ?? '/';
 
 					return redirect(redirectUrl);
 				} catch (err) {
-					if (err instanceof Error)
-						return error(
-							'Internal Server Error',
-							`${err.message} - ${err.stack ?? ''}`
-						);
-
-					return error(
-						'Internal Server Error',
-						`Failed to validate authorization code: Unknown error: ${err}`
-					);
+					return err instanceof Error
+						? error(
+								'Internal Server Error',
+								`${err.message} - ${err.stack ?? ''}`
+							)
+						: error(
+								'Internal Server Error',
+								`Failed to validate authorization code: Unknown error: ${err}`
+							);
 				}
 			}
 		);
