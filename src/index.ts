@@ -97,6 +97,7 @@ export {
 	oidcProviderOptions,
 	pkceProviderOptions,
 	scopeRequiredProviderOptions,
+	decodeJWT,
 	isValidProviderOption,
 	isRefreshableOAuth2Client,
 	isRefreshableProviderOption,
