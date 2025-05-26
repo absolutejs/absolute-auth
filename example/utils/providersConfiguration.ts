@@ -459,6 +459,14 @@ export const providersConfiguration = createProvidersConfiguration({
 			redirectUri: getEnvVar('OAUTH2_CALLBACK_URI')
 		}
 	},
+	withings: {
+		credentials: {
+			clientId: getEnvVar('WITHINGS_CLIENT_ID'),
+			clientSecret: getEnvVar('WITHINGS_CLIENT_SECRET'),
+			redirectUri: getEnvVar('OAUTH2_CALLBACK_URI')
+		},
+		scope: ['user.info']
+	},
 	workos: {
 		credentials: {
 			clientId: getEnvVar('WORK_OS_CLIENT_ID'),

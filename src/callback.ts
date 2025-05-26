@@ -85,25 +85,19 @@ export const callback = <UserType>({
 				}
 
 				try {
-					const tokenResponse: OAuth2TokenResponse =
+					const tokenResponse =
 						await providerInstance.validateAuthorizationCode(
 							requiresPKCE
 								? { code, codeVerifier: verifier }
 								: { code }
 						);
 
-					const userProfile = tokenResponse.id_token
-						? decodeJWT(tokenResponse.id_token)
-						: await providerInstance.fetchUserProfile(
-								tokenResponse.access_token
-							);
-
 					await onCallback?.({
 						authProvider,
+						providerInstance,
 						session,
 						tokenResponse,
-						user_session_id,
-						userProfile
+						user_session_id
 					});
 
 					const redirectUrl = redirect_url?.value ?? '/';

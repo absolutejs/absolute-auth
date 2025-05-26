@@ -74,13 +74,21 @@ export const createUser = ({
 	schema
 }: UserFunctionProps & DatabaseFunctionProps) => {
 	const provider = authProvider.toUpperCase();
-	const { sub, id, email, family_name, given_name, picture, avatar_url } =
-		userProfile;
+	const {
+		sub,
+		id,
+		userid,
+		email,
+		family_name,
+		given_name,
+		picture,
+		avatar_url
+	} = userProfile;
 
-	if (!sub && !id) {
+	if (!sub && !id && !userid) {
 		throw new Error('No sub or ID claim found in ID token');
 	}
-	const authSub = `${provider}|${sub || id}`;
+	const authSub = `${provider}|${sub ?? id ?? userid}`;
 
 	let pictureUrl = '';
 	if (typeof picture === 'string') {
@@ -107,13 +115,13 @@ export const getUser = ({
 	schema
 }: UserFunctionProps & DatabaseFunctionProps) => {
 	const provider = authProvider.toUpperCase();
-	const { sub, id } = userProfile;
+	const { sub, id, userid } = userProfile;
 
-	if (!sub && !id) {
+	if (!sub && !id && !userid) {
 		throw new Error('No sub or ID claim found in ID token');
 	}
 
-	const authSub = `${provider}|${sub ?? id}`;
+	const authSub = `${provider}|${sub ?? id ?? userid}`;
 
 	return getDBUser({ authSub, db, schema });
 };

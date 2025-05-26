@@ -48,26 +48,22 @@ export const DropdownContainer = ({
 	}, [ignoredElements, springApi, onClose]);
 
 	return (
-		// TODO : Fix this lint error i think its safe to remove but dont have time to check right now
-		// eslint-disable-next-line absolute/no-unnecessary-div
-		<div style={{ position: 'relative' }}>
-			<animated.div
-				ref={dropdownRef}
-				style={{
-					backgroundColor: '#fff',
-					borderRadius: '12px',
-					boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
-					marginTop: '2.25rem',
-					opacity: spring.opacity,
-					position: 'absolute',
-					right: 0,
-					scale: spring.scale,
-					top: '100%',
-					zIndex: 999
-				}}
-			>
-				{children}
-			</animated.div>
-		</div>
+		<animated.div
+			ref={dropdownRef}
+			style={{
+				backgroundColor: '#fff',
+				borderRadius: '12px',
+				boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
+				marginTop: '2.25rem',
+				// opacity: spring.opacity,
+				position: 'absolute',
+				right: 0,
+				// scale: spring.scale,
+				top: '100%',
+				zIndex: 999
+			}}
+		>
+			{children}
+		</animated.div>
 	);
 };

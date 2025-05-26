@@ -24,7 +24,7 @@ export const absoluteAuthConfig = (db: NeonHttpDatabase<SchemaType>) =>
 		},
 		onCallback: async ({
 			authProvider,
-			userProfile,
+			providerInstance,
 			tokenResponse,
 			user_session_id,
 			session
@@ -42,11 +42,11 @@ export const absoluteAuthConfig = (db: NeonHttpDatabase<SchemaType>) =>
 
 			return instantiateUserSession<User>({
 				authProvider,
+				providerInstance,
 				session,
 				tokenResponse,
 				user_session_id,
-				userProfile,
-				createUser: async () => {
+				createUser: async (userProfile) => {
 					const user = await createUser({
 						authProvider,
 						db,
@@ -58,7 +58,7 @@ export const absoluteAuthConfig = (db: NeonHttpDatabase<SchemaType>) =>
 
 					return user;
 				},
-				getUser: async () => {
+				getUser: async (userProfile) => {
 					const user = await getUser({
 						authProvider,
 						db,

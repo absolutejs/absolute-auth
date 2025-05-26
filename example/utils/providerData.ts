@@ -314,6 +314,11 @@ export const providerData: ProviderData = {
 		name: 'VK',
 		primaryColor: '#0077FF'
 	},
+	withings: {
+		logoUrl: '/assets/svg/withings-logo.svg',
+		name: 'Withings',
+		primaryColor: '#00A0DC'
+	},
 	workos: {
 		logoUrl: '/assets/svg/workos-logo-color.svg',
 		name: 'WorkOS',
