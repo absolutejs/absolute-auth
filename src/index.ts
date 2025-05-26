@@ -36,7 +36,7 @@ export const absoluteAuth = async <UserType>({
 
 		entryPromises.push(
 			createOAuth2Client(providerName, providerConfig.credentials).then(
-				(providerInstance): [string, ClientProviders[string]] => [
+				(providerInstance) => [
 					providerName,
 					{
 						providerInstance,
@@ -55,7 +55,7 @@ export const absoluteAuth = async <UserType>({
 	return new Elysia()
 		.use(signout({ onSignOut, signoutRoute }))
 		.use(revoke({ clientProviders, onRevocation, revokeRoute }))
-		.use(status<UserType>({ clientProviders, onStatus, statusRoute }))
+		.use(status<UserType>({ onStatus, statusRoute }))
 		.use(refresh({ clientProviders, onRefresh, refreshRoute }))
 		.use(authorize({ authorizeRoute, clientProviders, onAuthorize }))
 		.use(

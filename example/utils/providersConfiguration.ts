@@ -2,7 +2,7 @@ import { Buffer } from 'buffer';
 import { env } from 'process';
 import { createProvidersConfiguration } from '../../src/utils';
 
-const getEnvVar = (key: string): string => {
+const getEnvVar = (key: string) => {
 	const environmentVariable = env[key];
 	if (
 		typeof environmentVariable !== 'string' ||

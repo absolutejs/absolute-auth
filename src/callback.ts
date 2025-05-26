@@ -1,9 +1,4 @@
-import {
-	decodeJWT,
-	isPKCEProviderOption,
-	isValidProviderOption,
-	OAuth2TokenResponse
-} from 'citra';
+import { isPKCEProviderOption, isValidProviderOption } from 'citra';
 import { Elysia } from 'elysia';
 import { sessionStore } from './sessionStore';
 import { isNonEmptyString } from './typeGuards';

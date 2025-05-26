@@ -1,15 +1,13 @@
 import { Elysia } from 'elysia';
 import { sessionStore } from './sessionStore';
-import { ClientProviders, OnStatus, RouteString } from './types';
+import { OnStatus, RouteString } from './types';
 
 type StatusProps<UserType> = {
-	clientProviders: ClientProviders;
 	statusRoute?: RouteString;
 	onStatus?: OnStatus<UserType>;
 };
 
 export const status = <UserType>({
-	clientProviders,
 	statusRoute = '/oauth2/status',
 	onStatus
 }: StatusProps<UserType>) =>
