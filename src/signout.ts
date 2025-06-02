@@ -52,12 +52,16 @@ export const signout = <UserType>({
 
 					return new Response(null, { status: 204 });
 				} catch (err) {
-					const msg =
-						err instanceof Error
-							? `Failed to sign out: ${err.message}`
-							: `Failed to sign out: ${err}`;
-
-					return error('Internal Server Error', msg);
+					if (err instanceof Error) {
+						return error(
+							'Internal Server Error',
+							`Error: ${err.message} - ${err.stack ?? ''}`
+						);
+					}
+					return error(
+						'Internal Server Error',
+						`Unknown Error: ${err}`
+					);
 				}
 			}
 		);
