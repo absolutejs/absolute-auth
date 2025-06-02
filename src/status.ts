@@ -24,42 +24,14 @@ export const status = <UserType>({
 					return error('Bad Request', 'Cookies are missing');
 				}
 
-				// Return null because the user is not logged in, its not an error just a status
-				if (user_session_id.value === undefined) {
-					onStatus?.({
-						user: null
-					});
-
-					return new Response(
-						JSON.stringify({ isLoggedIn: false, user: null }),
-						{
-							headers: { 'Content-Type': 'application/json' }
-						}
-					);
-				}
-
-				const userSession = session[user_session_id.value];
-
-				// Return null because the user is not logged in, its not an error just a status
-				if (userSession === undefined) {
-					onStatus?.({
-						user: null
-					});
-
-					return new Response(
-						JSON.stringify({ isLoggedIn: false, user: null }),
-						{
-							headers: { 'Content-Type': 'application/json' }
-						}
-					);
-				}
-
-				const { user } = userSession;
+				const sessionId = user_session_id.value;
+				const user =
+					sessionId !== undefined && session[sessionId]
+						? session[sessionId].user
+						: null;
 
 				try {
-					onStatus?.({
-						user
-					});
+					await onStatus?.({ user });
 				} catch (err) {
 					if (err instanceof Error) {
 						return error(
@@ -67,7 +39,6 @@ export const status = <UserType>({
 							`Error: ${err.message} - ${err.stack ?? ''}`
 						);
 					}
-
 					return error(
 						'Internal Server Error',
 						`Unknown Error: ${err}`
@@ -75,10 +46,8 @@ export const status = <UserType>({
 				}
 
 				return new Response(
-					JSON.stringify({ isLoggedIn: true, user }),
-					{
-						headers: { 'Content-Type': 'application/json' }
-					}
+					JSON.stringify({ isLoggedIn: user !== null, user }),
+					{ headers: { 'Content-Type': 'application/json' } }
 				);
 			}
 		);
