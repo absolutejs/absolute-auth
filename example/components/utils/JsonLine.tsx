@@ -27,7 +27,7 @@ export const JsonLine = ({ line, needsNewline }: JsonLineProps) => {
 	return (
 		<span>
 			{elements}
-			{needsNewline && '\n'}
+			{needsNewline === true && '\n'}
 		</span>
 	);
 };

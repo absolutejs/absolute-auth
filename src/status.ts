@@ -39,6 +39,7 @@ export const status = <UserType>({
 							`Error: ${err.message} - ${err.stack ?? ''}`
 						);
 					}
+
 					return error(
 						'Internal Server Error',
 						`Unknown Error: ${err}`

@@ -58,6 +58,7 @@ export const signout = <UserType>({
 							`Error: ${err.message} - ${err.stack ?? ''}`
 						);
 					}
+
 					return error(
 						'Internal Server Error',
 						`Unknown Error: ${err}`

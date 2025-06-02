@@ -127,7 +127,7 @@ export default [
 			'no-loop-func': 'error',
 			'no-magic-numbers': [
 				'warn',
-				{ detectObjects: false, enforceConst: true, ignore: [0, 1] }
+				{ detectObjects: false, enforceConst: true, ignore: [0, 1, -1, 2] }
 			],
 			'no-misleading-character-class': 'error',
 			'no-nested-ternary': 'error',
@@ -234,6 +234,12 @@ export default [
 		files: ['eslint.config.mjs'],
 		rules: {
 			'import/no-default-export': 'off'
+		}
+	},
+	{
+		files: ['example/server.ts'],
+		rules: {
+			'@typescript-eslint/no-unused-vars': 'off'
 		}
 	},
 	{

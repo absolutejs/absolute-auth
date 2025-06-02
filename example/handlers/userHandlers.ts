@@ -1,7 +1,7 @@
 import { eq } from 'drizzle-orm';
 import { NeonHttpDatabase } from 'drizzle-orm/neon-http';
-import { NewUser, schema, SchemaType } from '../db/schema';
 import { UserFunctionProps } from '../../src';
+import { NewUser, schema, SchemaType } from '../db/schema';
 
 export const getDBUser = async ({
 	authSub,

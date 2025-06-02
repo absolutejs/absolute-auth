@@ -65,12 +65,28 @@ export type OnAuthorizeSuccess = ({
 	authorizationUrl: URL;
 }) => void | Promise<void>;
 
+export type OnAuthorizeError = ({
+	error,
+	authProvider
+}: {
+	authProvider: string;
+	error: unknown;
+}) => void | Promise<void>;
+
 export type OnRefreshSuccess = ({
 	tokenResponse,
 	authProvider
 }: {
 	tokenResponse: OAuth2TokenResponse;
 	authProvider: string;
+}) => void | Promise<void>;
+
+export type OnRefreshError = ({
+	error,
+	authProvider
+}: {
+	authProvider: string;
+	error: unknown;
 }) => void | Promise<void>;
 
 export type OnProfileSuccess = ({
@@ -81,12 +97,28 @@ export type OnProfileSuccess = ({
 	authProvider: string;
 }) => void | Promise<void>;
 
+export type OnProfileError = ({
+	error,
+	authProvider
+}: {
+	authProvider: string;
+	error: unknown;
+}) => void | Promise<void>;
+
 export type OnRevocationSuccess = ({
 	tokenToRevoke,
 	authProvider
 }: {
 	tokenToRevoke: string;
 	authProvider: string;
+}) => void | Promise<void>;
+
+export type OnRevocationError = ({
+	error,
+	authProvider
+}: {
+	authProvider: string;
+	error: unknown;
 }) => void | Promise<void>;
 
 export type OnStatus<UserType> = ({
@@ -116,12 +148,17 @@ export type AbsoluteAuthProps<UserType> = {
 	signoutRoute?: RouteString;
 	statusRoute?: RouteString;
 	onAuthorizeSuccess?: OnAuthorizeSuccess;
+	onAuthorizeError?: OnAuthorizeError;
 	onCallbackSuccess?: OnCallbackSuccess<UserType>;
+	onCallbackError?: (error: unknown) => void | Promise<void>;
 	onStatus?: OnStatus<UserType>;
 	onRefreshSuccess?: OnRefreshSuccess;
+	onRefreshError?: OnRefreshError;
 	onSignOut?: OnSignOut<UserType>;
 	onRevocationSuccess?: OnRevocationSuccess;
+	onRevocationError?: OnRevocationError;
 	onProfileSuccess?: OnProfileSuccess;
+	onProfileError?: OnProfileError;
 };
 
 export type ClientProviders = Record<
