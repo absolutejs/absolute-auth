@@ -53,7 +53,7 @@ const server = new Elysia()
 			prefix: ''
 		})
 	)
-	.use(absoluteAuth<User>(absoluteAuthConfig(db)))
+	.use(await absoluteAuth<User>(absoluteAuthConfig(db)))
 	.get('/', () => handleReactPageRequest(Home, homeIndex))
 	.get('/protected', ({ protectRoute }) =>
 		protectRoute(
