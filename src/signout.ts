@@ -40,6 +40,7 @@ export const signout = <UserType>({
 					return error('Unauthorized', 'User session not found');
 				}
 
+				session[user_session_id.value] = undefined;
 				user_session_id.remove();
 				auth_provider.remove();
 

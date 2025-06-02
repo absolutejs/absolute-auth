@@ -101,14 +101,14 @@ export const absoluteAuthConfig = (db: NeonHttpDatabase<SchemaType>) =>
 				tokenToRevoke
 			);
 		},
-		onSignOut: ({ authProvider, user }) => {
+		onSignOut: ({ authProvider, userSession }) => {
 			const providerName = isValidProviderOption(authProvider)
 				? providerData[authProvider].name
 				: authProvider;
 
 			console.log(
 				`\nSuccessfully signed out ${providerName} user:`,
-				user
+				userSession.user
 			);
 		},
 		onStatus: ({ user }) => {
