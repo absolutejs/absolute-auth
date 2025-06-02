@@ -97,10 +97,10 @@ export type OnStatus<UserType> = ({
 
 export type OnSignOut<UserType> = ({
 	authProvider,
-	user
+	userSession
 }: {
 	authProvider: string;
-	user: UserType | null;
+	userSession: SessionData<UserType>;
 }) => void | Promise<void>;
 
 export type RouteString = `/${string}`;

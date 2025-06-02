@@ -36,17 +36,17 @@ export const signout = <UserType>({
 
 				const userSession = session[user_session_id.value];
 
+				if (userSession === undefined) {
+					return error('Unauthorized', 'User session not found');
+				}
+
 				user_session_id.remove();
 				auth_provider.remove();
-
-				if (userSession === undefined) {
-					return new Response(null, { status: 204 });
-				}
 
 				try {
 					onSignOut?.({
 						authProvider: auth_provider.value,
-						user: userSession.user
+						userSession
 					});
 
 					return new Response(null, { status: 204 });
