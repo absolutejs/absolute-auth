@@ -33,4 +33,4 @@ export const protectRoute = <UserType>() =>
 				}
 			})
 		)
-		.as('plugin');
+		.as('global');

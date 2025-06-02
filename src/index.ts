@@ -72,8 +72,7 @@ export const absoluteAuth = async <UserType>({
 				profileRoute
 			})
 		)
-		.use(protectRoute())
-		.as('plugin');
+		.use(protectRoute());
 };
 
 export * from './types';

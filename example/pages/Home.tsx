@@ -1,5 +1,6 @@
 import { Navbar } from '../components/navbar/Navbar';
 import { Head } from '../components/page/Head';
+import { server } from '../eden/treaty';
 import { useAuthStatus } from '../hooks/useAuthStatus';
 import {
 	htmlDefault,

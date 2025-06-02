@@ -46,7 +46,7 @@ const db = drizzle(sql, {
 	schema
 });
 
-new Elysia()
+const server = new Elysia()
 	.use(
 		staticPlugin({
 			assets: './example/build',
@@ -68,5 +68,7 @@ new Elysia()
 			`Server error on ${request.method} ${request.url}: ${error.message}`
 		);
 	});
+
+export type Server = typeof server;
 
 // TODO : avoid using localhost as per RFC 8252 8.3 https://datatracker.ietf.org/doc/html/rfc8252#section-8.3
