@@ -64,7 +64,11 @@ export const NavbarUserButtons = ({
 			{user !== undefined && (
 				<animated.a style={profileButtonStyle} href="/protected">
 					<ProfilePicture
-						userImage={user.picture}
+						userImage={
+							typeof user.metadata?.picture === 'string'
+								? user.metadata.picture
+								: undefined
+						}
 						backupImage={'/assets/svg/default-account-icon.svg'}
 						width="100%"
 						height="100%"

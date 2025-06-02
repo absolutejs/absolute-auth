@@ -1,13 +1,10 @@
 import { NeonHttpDatabase } from 'drizzle-orm/neon-http';
-import { pgTable, timestamp, varchar } from 'drizzle-orm/pg-core';
+import { jsonb, pgTable, timestamp, varchar } from 'drizzle-orm/pg-core';
 
 export const users = pgTable('users', {
 	auth_sub: varchar('auth_sub', { length: 255 }).primaryKey(),
 	created_at: timestamp('created_at').notNull().defaultNow(),
-	email: varchar('email', { length: 255 }),
-	family_name: varchar('family_name', { length: 255 }),
-	given_name: varchar('given_name', { length: 255 }),
-	picture: varchar('picture', { length: 255 })
+	metadata: jsonb('metadata').$type<Record<string, unknown>>().default({})
 });
 
 export const schema = {

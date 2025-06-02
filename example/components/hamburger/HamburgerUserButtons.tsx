@@ -32,14 +32,19 @@ export const HamburgerUserButtons = ({
 			>
 				<animated.a href="/portal">
 					<ProfilePicture
-						userImage={user.picture}
+						userImage={
+							typeof user.metadata?.picture === 'string'
+								? user.metadata.picture
+								: undefined
+						}
 						backupImage={'/assets/svg/default-account-icon.svg'}
 						width="100%"
 						height="100%"
 					/>
 				</animated.a>
 				<span style={{ color: primaryColor, fontSize: '1.3rem' }}>
-					{user.given_name} {user.family_name}
+					{'User'}
+					{/* TODO: Add the actual user info */}
 				</span>
 			</div>
 		)}

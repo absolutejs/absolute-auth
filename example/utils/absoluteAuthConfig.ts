@@ -4,7 +4,7 @@ import {
 	instantiateUserSession,
 	isValidProviderOption
 } from '../../src';
-import { SchemaType, User, schema } from '../db/schema';
+import { SchemaType, User } from '../db/schema';
 import { createUser, getUser } from '../handlers/userHandlers';
 import { providerData } from './providerData';
 import { providersConfiguration } from './providersConfiguration';
@@ -50,7 +50,6 @@ export const absoluteAuthConfig = (db: NeonHttpDatabase<SchemaType>) =>
 					const user = await createUser({
 						authProvider,
 						db,
-						schema,
 						userProfile
 					});
 					if (user === undefined)
@@ -62,7 +61,6 @@ export const absoluteAuthConfig = (db: NeonHttpDatabase<SchemaType>) =>
 					const user = await getUser({
 						authProvider,
 						db,
-						schema,
 						userProfile
 					});
 

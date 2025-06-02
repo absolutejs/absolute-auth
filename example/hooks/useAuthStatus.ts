@@ -28,10 +28,7 @@ export const useAuthStatus = () => {
 		setUser({
 			auth_sub: data.user.auth_sub,
 			created_at: data.user.created_at,
-			email: data.user.email,
-			family_name: data.user.family_name,
-			given_name: data.user.given_name,
-			picture: data.user.picture
+			metadata: data.user.metadata
 		});
 	};
 
