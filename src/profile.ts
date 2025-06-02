@@ -1,18 +1,18 @@
 import { isValidProviderOption } from 'citra';
 import { Elysia } from 'elysia';
 import { sessionStore } from './sessionStore';
-import { ClientProviders, OnProfile, RouteString } from './types';
+import { ClientProviders, OnProfileSuccess, RouteString } from './types';
 
 type ProfileProps = {
 	clientProviders: ClientProviders;
 	profileRoute?: RouteString;
-	onProfile?: OnProfile;
+	onProfileSuccess?: OnProfileSuccess;
 };
 
 export const profile = <UserType>({
 	clientProviders,
 	profileRoute = '/oauth2/profile',
-	onProfile
+	onProfileSuccess
 }: ProfileProps) =>
 	new Elysia()
 		.use(sessionStore<UserType>())
@@ -59,7 +59,7 @@ export const profile = <UserType>({
 					const userProfile =
 						await providerInstance.fetchUserProfile(accessToken);
 
-					await onProfile?.({
+					await onProfileSuccess?.({
 						authProvider: auth_provider.value,
 						userProfile
 					});

@@ -6,18 +6,18 @@ import {
 } from 'citra';
 import { Elysia } from 'elysia';
 import { COOKIE_DURATION } from './constants';
-import { AuthorizeRoute, ClientProviders, OnAuthorize } from './types';
+import { AuthorizeRoute, ClientProviders, OnAuthorizeSuccess } from './types';
 
 type AuthorizeProps = {
 	clientProviders: ClientProviders;
 	authorizeRoute?: AuthorizeRoute;
-	onAuthorize?: OnAuthorize;
+	onAuthorizeSuccess?: OnAuthorizeSuccess;
 };
 
 export const authorize = ({
 	clientProviders,
 	authorizeRoute = '/oauth2/:provider/authorization',
-	onAuthorize
+	onAuthorizeSuccess
 }: AuthorizeProps) =>
 	new Elysia().get(
 		authorizeRoute,
@@ -105,7 +105,7 @@ export const authorize = ({
 					authorizationURL.searchParams.set(key, value)
 				);
 
-				onAuthorize?.({
+				onAuthorizeSuccess?.({
 					authorizationUrl: authorizationURL,
 					authProvider: normalizedProvider
 				});

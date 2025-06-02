@@ -12,7 +12,7 @@ import { providersConfiguration } from './providersConfiguration';
 export const absoluteAuthConfig = (db: NeonHttpDatabase<SchemaType>) =>
 	createAuthConfiguration<User>({
 		providersConfiguration: providersConfiguration,
-		onAuthorize: ({ authProvider, authorizationUrl }) => {
+		onAuthorizeSuccess: ({ authProvider, authorizationUrl }) => {
 			const providerName = isValidProviderOption(authProvider)
 				? providerData[authProvider].name
 				: authProvider;
@@ -22,7 +22,7 @@ export const absoluteAuthConfig = (db: NeonHttpDatabase<SchemaType>) =>
 				authorizationUrl.toString()
 			);
 		},
-		onCallback: async ({
+		onCallbackSuccess: async ({
 			authProvider,
 			providerInstance,
 			tokenResponse,
@@ -70,7 +70,7 @@ export const absoluteAuthConfig = (db: NeonHttpDatabase<SchemaType>) =>
 				}
 			});
 		},
-		onProfile: ({ authProvider, userProfile }) => {
+		onProfileSuccess: ({ authProvider, userProfile }) => {
 			const providerName = isValidProviderOption(authProvider)
 				? providerData[authProvider].name
 				: authProvider;
@@ -79,7 +79,7 @@ export const absoluteAuthConfig = (db: NeonHttpDatabase<SchemaType>) =>
 				...userProfile
 			});
 		},
-		onRefresh: ({ authProvider, tokenResponse }) => {
+		onRefreshSuccess: ({ authProvider, tokenResponse }) => {
 			const providerName = isValidProviderOption(authProvider)
 				? providerData[authProvider].name
 				: authProvider;
@@ -91,7 +91,7 @@ export const absoluteAuthConfig = (db: NeonHttpDatabase<SchemaType>) =>
 				}
 			);
 		},
-		onRevocation: ({ authProvider, tokenToRevoke }) => {
+		onRevocationSuccess: ({ authProvider, tokenToRevoke }) => {
 			const providerName = isValidProviderOption(authProvider)
 				? providerData[authProvider].name
 				: authProvider;

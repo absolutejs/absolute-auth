@@ -2,18 +2,18 @@ import { isPKCEProviderOption, isValidProviderOption } from 'citra';
 import { Elysia } from 'elysia';
 import { sessionStore } from './sessionStore';
 import { isNonEmptyString } from './typeGuards';
-import { ClientProviders, OnCallback, RouteString } from './types';
+import { ClientProviders, OnCallbackSuccess, RouteString } from './types';
 
 type CallbackProps<UserType> = {
 	clientProviders: ClientProviders;
 	callbackRoute?: RouteString;
-	onCallback?: OnCallback<UserType>;
+	onCallbackSuccess?: OnCallbackSuccess<UserType>;
 };
 
 export const callback = <UserType>({
 	clientProviders,
 	callbackRoute = '/oauth2/callback',
-	onCallback
+	onCallbackSuccess
 }: CallbackProps<UserType>) =>
 	new Elysia()
 		.use(sessionStore<UserType>())
@@ -89,7 +89,7 @@ export const callback = <UserType>({
 								: { code }
 						);
 
-					await onCallback?.({
+					await onCallbackSuccess?.({
 						authProvider,
 						originUrl,
 						providerInstance,

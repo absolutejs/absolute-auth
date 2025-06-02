@@ -41,7 +41,7 @@ export type GetUser<UserType> = ({
 	authProvider
 }: UserFunctionProps) => Promise<UserType | null>;
 
-export type OnCallback<UserType> = ({
+export type OnCallbackSuccess<UserType> = ({
 	authProvider,
 	tokenResponse,
 	providerInstance,
@@ -57,7 +57,7 @@ export type OnCallback<UserType> = ({
 	originUrl: string;
 }) => void | Promise<void>;
 
-export type OnAuthorize = ({
+export type OnAuthorizeSuccess = ({
 	authProvider,
 	authorizationUrl
 }: {
@@ -65,7 +65,7 @@ export type OnAuthorize = ({
 	authorizationUrl: URL;
 }) => void | Promise<void>;
 
-export type OnRefresh = ({
+export type OnRefreshSuccess = ({
 	tokenResponse,
 	authProvider
 }: {
@@ -73,7 +73,7 @@ export type OnRefresh = ({
 	authProvider: string;
 }) => void | Promise<void>;
 
-export type OnProfile = ({
+export type OnProfileSuccess = ({
 	userProfile,
 	authProvider
 }: {
@@ -81,7 +81,7 @@ export type OnProfile = ({
 	authProvider: string;
 }) => void | Promise<void>;
 
-export type OnRevocation = ({
+export type OnRevocationSuccess = ({
 	tokenToRevoke,
 	authProvider
 }: {
@@ -115,13 +115,13 @@ export type AbsoluteAuthProps<UserType> = {
 	revokeRoute?: RouteString;
 	signoutRoute?: RouteString;
 	statusRoute?: RouteString;
-	onAuthorize?: OnAuthorize;
-	onCallback?: OnCallback<UserType>;
+	onAuthorizeSuccess?: OnAuthorizeSuccess;
+	onCallbackSuccess?: OnCallbackSuccess<UserType>;
 	onStatus?: OnStatus<UserType>;
-	onRefresh?: OnRefresh;
+	onRefreshSuccess?: OnRefreshSuccess;
 	onSignOut?: OnSignOut<UserType>;
-	onRevocation?: OnRevocation;
-	onProfile?: OnProfile;
+	onRevocationSuccess?: OnRevocationSuccess;
+	onProfileSuccess?: OnProfileSuccess;
 };
 
 export type ClientProviders = Record<

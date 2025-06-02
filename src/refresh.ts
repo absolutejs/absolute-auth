@@ -1,18 +1,18 @@
 import { isRefreshableOAuth2Client, isValidProviderOption } from 'citra';
 import { Elysia } from 'elysia';
 import { sessionStore } from './sessionStore';
-import { ClientProviders, OnRefresh, RouteString } from './types';
+import { ClientProviders, OnRefreshSuccess, RouteString } from './types';
 
 type RefreshProps = {
 	clientProviders: ClientProviders;
 	refreshRoute?: RouteString;
-	onRefresh?: OnRefresh;
+	onRefreshSuccess?: OnRefreshSuccess;
 };
 
 export const refresh = <UserType>({
 	clientProviders,
 	refreshRoute = '/oauth2/tokens',
-	onRefresh
+	onRefreshSuccess
 }: RefreshProps) =>
 	new Elysia()
 		.use(sessionStore<UserType>())
@@ -75,7 +75,7 @@ export const refresh = <UserType>({
 					const tokenResponse =
 						await providerInstance.refreshAccessToken(refreshToken);
 
-					onRefresh?.({
+					onRefreshSuccess?.({
 						authProvider: auth_provider.value,
 						tokenResponse
 					});
