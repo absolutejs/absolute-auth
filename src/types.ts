@@ -57,6 +57,16 @@ export type OnCallbackSuccess<UserType> = ({
 	originUrl: string;
 }) => void | Promise<void>;
 
+export type OnCallbackError = ({
+	error,
+	authProvider,
+	originUrl
+}: {
+	authProvider: string;
+	error: unknown;
+	originUrl: string;
+}) => void | Promise<void>;
+
 export type OnAuthorizeSuccess = ({
 	authProvider,
 	authorizationUrl
@@ -150,7 +160,7 @@ export type AbsoluteAuthProps<UserType> = {
 	onAuthorizeSuccess?: OnAuthorizeSuccess;
 	onAuthorizeError?: OnAuthorizeError;
 	onCallbackSuccess?: OnCallbackSuccess<UserType>;
-	onCallbackError?: (error: unknown) => void | Promise<void>;
+	onCallbackError?: OnCallbackError;
 	onStatus?: OnStatus<UserType>;
 	onRefreshSuccess?: OnRefreshSuccess;
 	onRefreshError?: OnRefreshError;
