@@ -190,9 +190,9 @@ export type InsantiateUserSessionProps<UserType> = {
 	providerInstance: OAuth2Client<ProviderOption>;
 	userSessionId: `${string}-${string}-${string}-${string}-${string}`;
 	createUser: (
-		userProfile: Record<string, unknown>
+		userIdentity: Record<string, unknown>
 	) => UserType | Promise<UserType>;
 	getUser: (
-		userProfile: Record<string, unknown>
+		userIdentity: Record<string, unknown>
 	) => UserType | null | undefined | Promise<UserType | null | undefined>;
 };

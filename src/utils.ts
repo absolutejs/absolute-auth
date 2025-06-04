@@ -16,21 +16,21 @@ export const instantiateUserSession = async <UserType>({
 	getUser,
 	createUser
 }: InsantiateUserSessionProps<UserType>) => {
-	let userProfile;
+	let userIdentity;
 
 	if (tokenResponse.id_token) {
-		userProfile = decodeJWT(tokenResponse.id_token);
+		userIdentity = decodeJWT(tokenResponse.id_token);
 	} else if (authProvider === 'withings') {
 		// @ts-expect-error TODO: Withings is its own case edit the validate response to accept this case
-		userProfile = tokenResponse.body;
+		userIdentity = tokenResponse.body;
 	} else {
-		userProfile = await providerInstance.fetchUserProfile(
+		userIdentity = await providerInstance.fetchUserProfile(
 			tokenResponse.access_token
 		);
 	}
 
-	let user = await getUser(userProfile);
-	user = user ?? (await createUser(userProfile));
+	let user = await getUser(userIdentity);
+	user = user ?? (await createUser(userIdentity));
 
 	// TODO : See if theres a better way to check valid user and not throw an error
 	if (!isValidUser<UserType>(user))
