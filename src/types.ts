@@ -1,8 +1,10 @@
 import {
 	CredentialsFor,
+	NonEmptyArray,
 	OAuth2Client,
 	OAuth2TokenResponse,
-	ProviderOption
+	ProviderOption,
+	ProvidersMap
 } from 'citra';
 
 type SessionData<UserType> = {
@@ -15,9 +17,10 @@ type SessionData<UserType> = {
 export type OAuth2ConfigurationOptions = {
 	[Provider in ProviderOption]?: {
 		credentials: CredentialsFor<Provider>;
-		scope?: string[];
 		searchParams?: [string, string][];
-	};
+	} & (ProvidersMap[Provider]['scopeRequired'] extends true
+		? { scope: NonEmptyArray<string> }
+		: { scope?: string[] });
 };
 
 export type SessionRecord<UserType> = Record<

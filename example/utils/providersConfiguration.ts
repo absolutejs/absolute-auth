@@ -51,7 +51,8 @@ export const providersConfiguration = createProvidersConfiguration({
 			clientId: getEnvVar('ATLASSIAN_CLIENT_ID'),
 			clientSecret: getEnvVar('ATLASSIAN_CLIENT_SECRET'),
 			redirectUri: getEnvVar('OAUTH2_CALLBACK_URI')
-		}
+		},
+		scope: ['read:me', 'offline_access']
 	},
 	auth0: {
 		credentials: {
@@ -116,7 +117,8 @@ export const providersConfiguration = createProvidersConfiguration({
 			clientId: getEnvVar('DISCORD_CLIENT_ID'),
 			clientSecret: getEnvVar('DISCORD_CLIENT_SECRET'),
 			redirectUri: getEnvVar('OAUTH2_CALLBACK_URI')
-		}
+		},
+		scope: ['openid']
 	},
 	donationalerts: {
 		credentials: {
@@ -165,7 +167,8 @@ export const providersConfiguration = createProvidersConfiguration({
 			clientId: getEnvVar('FIGMA_CLIENT_ID'),
 			clientSecret: getEnvVar('FIGMA_CLIENT_SECRET'),
 			redirectUri: getEnvVar('OAUTH2_CALLBACK_URI')
-		}
+		},
+		scope: ['file_read']
 	},
 	gitea: {
 		credentials: {
@@ -209,7 +212,8 @@ export const providersConfiguration = createProvidersConfiguration({
 			environment:
 				env.NODE_ENV === 'production' ? 'production' : 'sandbox',
 			redirectUri: getEnvVar('OAUTH2_CALLBACK_URI')
-		}
+		},
+		scope: ['openid']
 	},
 	kakao: {
 		credentials: {
@@ -244,7 +248,8 @@ export const providersConfiguration = createProvidersConfiguration({
 			clientId: getEnvVar('LINE_CHANNEL_ID'),
 			clientSecret: getEnvVar('LINE_CHANNEL_SECRET'),
 			redirectUri: getEnvVar('OAUTH2_CALLBACK_URI')
-		}
+		},
+		scope: ['openid', 'profile']
 	},
 	linear: {
 		credentials: {
@@ -258,7 +263,8 @@ export const providersConfiguration = createProvidersConfiguration({
 			clientId: getEnvVar('LINKEDIN_CLIENT_ID'),
 			clientSecret: getEnvVar('LINKEDIN_CLIENT_SECRET'),
 			redirectUri: getEnvVar('OAUTH2_CALLBACK_URI')
-		}
+		},
+		scope: ['openid', 'profile', 'email']
 	},
 	mastodon: {
 		credentials: {
@@ -317,7 +323,8 @@ export const providersConfiguration = createProvidersConfiguration({
 			clientSecret: getEnvVar('OKTA_CLIENT_SECRET'),
 			domain: getEnvVar('OKTA_DOMAIN'),
 			redirectUri: getEnvVar('OAUTH2_CALLBACK_URI')
-		}
+		},
+		scope: ['openid', 'offline_access']
 	},
 	osu: {
 		credentials: {
@@ -338,7 +345,8 @@ export const providersConfiguration = createProvidersConfiguration({
 			clientId: getEnvVar('POLAR_CLIENT_ID'),
 			clientSecret: getEnvVar('POLAR_CLIENT_SECRET'),
 			redirectUri: getEnvVar('OAUTH2_CALLBACK_URI')
-		}
+		},
+		scope: ['openid']
 	},
 	polaraccesslink: {
 		credentials: {
@@ -359,14 +367,17 @@ export const providersConfiguration = createProvidersConfiguration({
 			clientId: getEnvVar('REDDIT_CLIENT_ID'),
 			clientSecret: getEnvVar('REDDIT_CLIENT_SECRET'),
 			redirectUri: getEnvVar('OAUTH2_CALLBACK_URI')
-		}
+		},
+		scope: ['identity'],
+		searchParams: [['duration', 'permanent']]
 	},
 	roblox: {
 		credentials: {
 			clientId: getEnvVar('ROBLOX_CLIENT_ID'),
 			clientSecret: getEnvVar('ROBLOX_CLIENT_SECRET'),
 			redirectUri: getEnvVar('OAUTH2_CALLBACK_URI')
-		}
+		},
+		scope: ['openid', 'profile']
 	},
 	salesforce: {
 		credentials: {
@@ -387,7 +398,8 @@ export const providersConfiguration = createProvidersConfiguration({
 			clientId: getEnvVar('SLACK_CLIENT_ID'),
 			clientSecret: getEnvVar('SLACK_CLIENT_SECRET'),
 			redirectUri: getEnvVar('OAUTH2_CALLBACK_URI')
-		}
+		},
+		scope: ['openid']
 	},
 	spotify: {
 		credentials: {

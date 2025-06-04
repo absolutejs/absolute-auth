@@ -53,8 +53,10 @@ export const signout = <UserType>({
 		},
 		{
 			cookie: t.Cookie({
-				user_session_id: t.TemplateLiteral(
-					'${string}-${string}-${string}-${string}-${string}'
+				user_session_id: t.Optional(
+					t.TemplateLiteral(
+						'${string}-${string}-${string}-${string}-${string}'
+					)
 				)
 			})
 		}
