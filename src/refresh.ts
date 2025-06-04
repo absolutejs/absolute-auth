@@ -1,18 +1,25 @@
 import { isRefreshableOAuth2Client, isValidProviderOption } from 'citra';
 import { Elysia } from 'elysia';
 import { sessionStore } from './sessionStore';
-import { ClientProviders, OnRefreshSuccess, RouteString } from './types';
+import {
+	ClientProviders,
+	OnRefreshError,
+	OnRefreshSuccess,
+	RouteString
+} from './types';
 
 type RefreshProps = {
 	clientProviders: ClientProviders;
 	refreshRoute?: RouteString;
 	onRefreshSuccess?: OnRefreshSuccess;
+	onRefreshError?: OnRefreshError;
 };
 
 export const refresh = <UserType>({
 	clientProviders,
 	refreshRoute = '/oauth2/tokens',
-	onRefreshSuccess
+	onRefreshSuccess,
+	onRefreshError
 }: RefreshProps) =>
 	new Elysia()
 		.use(sessionStore<UserType>())
@@ -75,7 +82,7 @@ export const refresh = <UserType>({
 					const tokenResponse =
 						await providerInstance.refreshAccessToken(refreshToken);
 
-					onRefreshSuccess?.({
+					await onRefreshSuccess?.({
 						authProvider: auth_provider.value,
 						tokenResponse
 					});
@@ -84,6 +91,11 @@ export const refresh = <UserType>({
 						status: 204
 					});
 				} catch (err) {
+					await onRefreshError?.({
+						authProvider: auth_provider.value,
+						error: err
+					});
+
 					if (err instanceof Error) {
 						return error(
 							'Internal Server Error',

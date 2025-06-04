@@ -2,18 +2,25 @@ import { isPKCEProviderOption, isValidProviderOption } from 'citra';
 import { Elysia, t } from 'elysia';
 import { sessionStore } from './sessionStore';
 import { isNonEmptyString } from './typeGuards';
-import { ClientProviders, OnCallbackSuccess, RouteString } from './types';
+import {
+	ClientProviders,
+	OnCallbackError,
+	OnCallbackSuccess,
+	RouteString
+} from './types';
 
 type CallbackProps<UserType> = {
 	clientProviders: ClientProviders;
 	callbackRoute?: RouteString;
 	onCallbackSuccess?: OnCallbackSuccess<UserType>;
+	onCallbackError?: OnCallbackError;
 };
 
 export const callback = <UserType>({
 	clientProviders,
 	callbackRoute = '/oauth2/callback',
-	onCallbackSuccess
+	onCallbackSuccess,
+	onCallbackError
 }: CallbackProps<UserType>) =>
 	new Elysia().use(sessionStore<UserType>()).get(
 		callbackRoute,
@@ -104,6 +111,12 @@ export const callback = <UserType>({
 
 				return redirect(originUrl);
 			} catch (err) {
+				await onCallbackError?.({
+					authProvider,
+					error: err,
+					originUrl
+				});
+
 				return err instanceof Error
 					? error(
 							'Internal Server Error',

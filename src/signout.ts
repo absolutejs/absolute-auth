@@ -30,7 +30,7 @@ export const signout = <UserType>({
 			}
 
 			try {
-				onSignOut?.({
+				await onSignOut?.({
 					authProvider: auth_provider.value,
 					session,
 					userSessionId: user_session_id.value

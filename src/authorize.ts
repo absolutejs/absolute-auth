@@ -6,18 +6,25 @@ import {
 } from 'citra';
 import { Elysia } from 'elysia';
 import { COOKIE_DURATION } from './constants';
-import { AuthorizeRoute, ClientProviders, OnAuthorizeSuccess } from './types';
+import {
+	AuthorizeRoute,
+	ClientProviders,
+	OnAuthorizeError,
+	OnAuthorizeSuccess
+} from './types';
 
 type AuthorizeProps = {
 	clientProviders: ClientProviders;
 	authorizeRoute?: AuthorizeRoute;
 	onAuthorizeSuccess?: OnAuthorizeSuccess;
+	onAuthorizeError?: OnAuthorizeError;
 };
 
 export const authorize = ({
 	clientProviders,
 	authorizeRoute = '/oauth2/:provider/authorization',
-	onAuthorizeSuccess
+	onAuthorizeSuccess,
+	onAuthorizeError
 }: AuthorizeProps) =>
 	new Elysia().get(
 		authorizeRoute,
@@ -47,7 +54,6 @@ export const authorize = ({
 				return error('Unauthorized', 'Client provider not found');
 
 			const { providerInstance, scope, searchParams } = providerConfig;
-			const normalizedProvider = provider.toLowerCase();
 			const referer = headers['referer'] ?? '/';
 
 			origin_url.set({
@@ -65,7 +71,7 @@ export const authorize = ({
 				path: '/',
 				sameSite: 'lax',
 				secure: true,
-				value: normalizedProvider
+				value: provider
 			});
 
 			const currentState = generateState();
@@ -105,13 +111,18 @@ export const authorize = ({
 					authorizationURL.searchParams.set(key, value)
 				);
 
-				onAuthorizeSuccess?.({
+				await onAuthorizeSuccess?.({
 					authorizationUrl: authorizationURL,
-					authProvider: normalizedProvider
+					authProvider: provider
 				});
 
 				return redirect(authorizationURL.toString());
 			} catch (err) {
+				await onAuthorizeError?.({
+					authProvider: provider,
+					error: err
+				});
+
 				if (err instanceof Error) {
 					return error(
 						'Internal Server Error',

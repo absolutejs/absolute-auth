@@ -1,18 +1,25 @@
 import { isValidProviderOption } from 'citra';
 import { Elysia } from 'elysia';
 import { sessionStore } from './sessionStore';
-import { ClientProviders, OnProfileSuccess, RouteString } from './types';
+import {
+	ClientProviders,
+	OnProfileError,
+	OnProfileSuccess,
+	RouteString
+} from './types';
 
 type ProfileProps = {
 	clientProviders: ClientProviders;
 	profileRoute?: RouteString;
 	onProfileSuccess?: OnProfileSuccess;
+	onProfileError?: OnProfileError;
 };
 
 export const profile = <UserType>({
 	clientProviders,
 	profileRoute = '/oauth2/profile',
-	onProfileSuccess
+	onProfileSuccess,
+	onProfileError
 }: ProfileProps) =>
 	new Elysia()
 		.use(sessionStore<UserType>())
@@ -66,6 +73,11 @@ export const profile = <UserType>({
 
 					return new Response(JSON.stringify(userProfile));
 				} catch (err) {
+					await onProfileError?.({
+						authProvider: auth_provider.value,
+						error: err
+					});
+
 					return err instanceof Error
 						? error(
 								'Internal Server Error',

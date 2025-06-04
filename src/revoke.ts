@@ -1,18 +1,25 @@
 import { isRevocableOAuth2Client, isValidProviderOption } from 'citra';
 import { Elysia } from 'elysia';
 import { sessionStore } from './sessionStore';
-import { ClientProviders, OnRevocationSuccess, RouteString } from './types';
+import {
+	ClientProviders,
+	OnAuthorizeError,
+	OnRevocationSuccess,
+	RouteString
+} from './types';
 
 type RevokeProps = {
 	clientProviders: ClientProviders;
 	revokeRoute?: RouteString;
 	onRevocationSuccess?: OnRevocationSuccess;
+	onRevocationError?: OnAuthorizeError;
 };
 
 export const revoke = <UserType>({
 	clientProviders,
 	revokeRoute = '/oauth2/revocation',
-	onRevocationSuccess
+	onRevocationSuccess,
+	onRevocationError
 }: RevokeProps) =>
 	new Elysia()
 		.use(sessionStore<UserType>())
@@ -70,7 +77,7 @@ export const revoke = <UserType>({
 				try {
 					await providerInstance.revokeToken(accessToken);
 
-					onRevocationSuccess?.({
+					await onRevocationSuccess?.({
 						authProvider: auth_provider.value,
 						tokenToRevoke: accessToken
 					});
@@ -79,6 +86,11 @@ export const revoke = <UserType>({
 						status: 204
 					});
 				} catch (err) {
+					await onRevocationError?.({
+						authProvider: auth_provider.value,
+						error: err
+					});
+
 					if (err instanceof Error) {
 						return error(
 							'Internal Server Error',

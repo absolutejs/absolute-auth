@@ -1,5 +1,5 @@
 {
-	"version": "0.11.3",
+	"version": "0.12.0",
 	"name": "@absolutejs/auth",
 	"description": "An authorization library for absolutejs",
 	"repository": {
