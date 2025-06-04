@@ -4,7 +4,6 @@ import {
 	OAuth2TokenResponse,
 	ProviderOption
 } from 'citra';
-import { Cookie } from 'elysia';
 
 type SessionData<UserType> = {
 	user: UserType;
@@ -46,14 +45,14 @@ export type OnCallbackSuccess<UserType> = ({
 	tokenResponse,
 	providerInstance,
 	session,
-	user_session_id,
+	userSessionId,
 	originUrl
 }: {
 	providerInstance: OAuth2Client<ProviderOption>;
 	authProvider: string;
 	tokenResponse: OAuth2TokenResponse;
 	session: SessionRecord<UserType>;
-	user_session_id: Cookie<string | undefined>;
+	userSessionId: `${string}-${string}-${string}-${string}-${string}`;
 	originUrl: string;
 }) => void | Promise<void>;
 
@@ -139,10 +138,11 @@ export type OnStatus<UserType> = ({
 
 export type OnSignOut<UserType> = ({
 	authProvider,
-	userSession
+	userSessionId
 }: {
 	authProvider: string;
-	userSession: SessionData<UserType>;
+	userSessionId: `${string}-${string}-${string}-${string}-${string}`;
+	session: SessionRecord<UserType>;
 }) => void | Promise<void>;
 
 export type RouteString = `/${string}`;
@@ -185,7 +185,7 @@ export type InsantiateUserSessionProps<UserType> = {
 	tokenResponse: OAuth2TokenResponse;
 	session: SessionRecord<UserType>;
 	providerInstance: OAuth2Client<ProviderOption>;
-	user_session_id: Cookie<string | undefined>;
+	userSessionId: `${string}-${string}-${string}-${string}-${string}`;
 	createUser: (
 		userProfile: Record<string, unknown>
 	) => UserType | Promise<UserType>;

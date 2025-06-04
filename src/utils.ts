@@ -8,7 +8,7 @@ import {
 } from './types';
 
 export const instantiateUserSession = async <UserType>({
-	user_session_id,
+	userSessionId,
 	authProvider,
 	session,
 	tokenResponse,
@@ -36,21 +36,12 @@ export const instantiateUserSession = async <UserType>({
 	if (!isValidUser<UserType>(user))
 		throw new Error('Internal Server Error - Invalid user schema');
 
-	const sessionKey = crypto.randomUUID();
-
-	session[sessionKey] = {
+	session[userSessionId] = {
 		accessToken: tokenResponse.access_token,
 		expiresAt: Date.now() + MILLISECONDS_IN_A_DAY,
 		refreshToken: tokenResponse.refresh_token,
 		user
 	};
-
-	user_session_id.set({
-		httpOnly: true,
-		sameSite: 'lax',
-		secure: true,
-		value: sessionKey
-	});
 };
 
 export const createAuthConfiguration = <UserType>(

@@ -26,7 +26,7 @@ export const absoluteAuthConfig = (db: NeonHttpDatabase<SchemaType>) =>
 			authProvider,
 			providerInstance,
 			tokenResponse,
-			user_session_id,
+			userSessionId,
 			session
 		}) => {
 			const providerName = isValidProviderOption(authProvider)
@@ -45,7 +45,7 @@ export const absoluteAuthConfig = (db: NeonHttpDatabase<SchemaType>) =>
 				providerInstance,
 				session,
 				tokenResponse,
-				user_session_id,
+				userSessionId,
 				createUser: async (userProfile) => {
 					const user = await createUser({
 						authProvider,
@@ -99,10 +99,20 @@ export const absoluteAuthConfig = (db: NeonHttpDatabase<SchemaType>) =>
 				tokenToRevoke
 			);
 		},
-		onSignOut: ({ authProvider, userSession }) => {
+		onSignOut: ({ authProvider, userSessionId, session }) => {
 			const providerName = isValidProviderOption(authProvider)
 				? providerData[authProvider].name
 				: authProvider;
+
+			const userSession = session[userSessionId];
+
+			if (userSession === undefined) {
+				throw new Error(
+					`User session with id ${userSessionId} not found`
+				);
+			}
+
+			session[userSessionId] = undefined;
 
 			console.log(
 				`\nSuccessfully signed out ${providerName} user:`,
