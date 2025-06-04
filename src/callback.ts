@@ -114,12 +114,5 @@ export const callback = <UserType>({
 							`Failed to validate authorization code: Unknown error: ${err}`
 						);
 			}
-		},
-		{
-			cookie: t.Cookie({
-				user_session_id: t.TemplateLiteral(
-					'${string}-${string}-${string}-${string}-${string}'
-				)
-			})
 		}
 	);
