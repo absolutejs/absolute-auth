@@ -193,7 +193,8 @@ export const providersConfiguration = createProvidersConfiguration({
 			clientId: getEnvVar('GITLAB_CLIENT_ID'),
 			clientSecret: getEnvVar('GITLAB_CLIENT_SECRET'),
 			redirectUri: getEnvVar('OAUTH2_CALLBACK_URI')
-		}
+		},
+		scope: ['openid'],
 	},
 	google: {
 		credentials: {
