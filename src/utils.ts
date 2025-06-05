@@ -18,6 +18,11 @@ export const instantiateUserSession = async <UserType>({
 }: InsantiateUserSessionProps<UserType>) => {
 	let userIdentity;
 
+	console.log(
+		`Token response for ${authProvider} is:`,
+		JSON.stringify(tokenResponse, null, 2)
+	);
+
 	if (tokenResponse.id_token) {
 		userIdentity = decodeJWT(tokenResponse.id_token);
 	} else if (authProvider === 'withings') {
@@ -28,6 +33,11 @@ export const instantiateUserSession = async <UserType>({
 			tokenResponse.access_token
 		);
 	}
+
+	console.log(
+		`User identity for ${authProvider} is:`,
+		JSON.stringify(userIdentity, null, 2)
+	);
 
 	let user = await getUser(userIdentity);
 	user = user ?? (await createUser(userIdentity));
