@@ -3,7 +3,7 @@ import { Elysia } from 'elysia';
 import { sessionStore } from './sessionStore';
 import {
 	ClientProviders,
-	OnAuthorizeError,
+	OnRevocationError,
 	OnRevocationSuccess,
 	RouteString
 } from './types';
@@ -11,8 +11,8 @@ import {
 type RevokeProps = {
 	clientProviders: ClientProviders;
 	revokeRoute?: RouteString;
-	onRevocationSuccess?: OnRevocationSuccess;
-	onRevocationError?: OnAuthorizeError;
+	onRevocationSuccess: OnRevocationSuccess;
+	onRevocationError: OnRevocationError;
 };
 
 export const revoke = <UserType>({

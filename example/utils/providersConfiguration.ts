@@ -61,8 +61,8 @@ export const providersConfiguration = createProvidersConfiguration({
 			domain: getEnvVar('AUTH0_DOMAIN'),
 			redirectUri: getEnvVar('OAUTH2_CALLBACK_URI')
 		},
-		searchParams: [['prompt', 'login']],
-		scope: ['offline_access', 'openid']
+		scope: ['offline_access', 'openid'],
+		searchParams: [['prompt', 'login']]
 	},
 	authentik: {
 		credentials: {

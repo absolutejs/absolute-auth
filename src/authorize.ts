@@ -16,8 +16,8 @@ import {
 type AuthorizeProps = {
 	clientProviders: ClientProviders;
 	authorizeRoute?: AuthorizeRoute;
-	onAuthorizeSuccess?: OnAuthorizeSuccess;
-	onAuthorizeError?: OnAuthorizeError;
+	onAuthorizeSuccess: OnAuthorizeSuccess;
+	onAuthorizeError: OnAuthorizeError;
 };
 
 export const authorize = ({

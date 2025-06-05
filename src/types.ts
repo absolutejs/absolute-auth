@@ -36,110 +36,131 @@ export type GetUser<UserType> = (
 	userIdentity: Record<string, unknown>
 ) => UserType | null | undefined | Promise<UserType | null | undefined>;
 
-export type OnCallbackSuccess<UserType> = ({
-	authProvider,
-	tokenResponse,
-	providerInstance,
-	session,
-	userSessionId,
-	originUrl
-}: {
-	providerInstance: OAuth2Client<ProviderOption>;
-	authProvider: string;
-	tokenResponse: OAuth2TokenResponse;
-	session: SessionRecord<UserType>;
-	userSessionId: `${string}-${string}-${string}-${string}-${string}`;
-	originUrl: string;
-}) => void | Promise<void>;
+export type OnCallbackSuccess<UserType> =
+	| (({
+			authProvider,
+			tokenResponse,
+			providerInstance,
+			session,
+			userSessionId,
+			originUrl
+	  }: {
+			providerInstance: OAuth2Client<ProviderOption>;
+			authProvider: string;
+			tokenResponse: OAuth2TokenResponse;
+			session: SessionRecord<UserType>;
+			userSessionId: `${string}-${string}-${string}-${string}-${string}`;
+			originUrl: string;
+	  }) => void | Promise<void>)
+	| undefined;
 
-export type OnCallbackError = ({
-	error,
-	authProvider,
-	originUrl
-}: {
-	authProvider: string;
-	error: unknown;
-	originUrl: string;
-}) => void | Promise<void>;
+export type OnCallbackError =
+	| (({
+			error,
+			authProvider,
+			originUrl
+	  }: {
+			authProvider: string;
+			error: unknown;
+			originUrl: string;
+	  }) => void | Promise<void>)
+	| undefined;
 
-export type OnAuthorizeSuccess = ({
-	authProvider,
-	authorizationUrl
-}: {
-	authProvider: string;
-	authorizationUrl: URL;
-}) => void | Promise<void>;
+export type OnAuthorizeSuccess =
+	| (({
+			authProvider,
+			authorizationUrl
+	  }: {
+			authProvider: string;
+			authorizationUrl: URL;
+	  }) => void | Promise<void>)
+	| undefined;
 
-export type OnAuthorizeError = ({
-	error,
-	authProvider
-}: {
-	authProvider: string;
-	error: unknown;
-}) => void | Promise<void>;
+export type OnAuthorizeError =
+	| (({
+			error,
+			authProvider
+	  }: {
+			authProvider: string;
+			error: unknown;
+	  }) => void | Promise<void>)
+	| undefined;
 
-export type OnRefreshSuccess = ({
-	tokenResponse,
-	authProvider
-}: {
-	tokenResponse: OAuth2TokenResponse;
-	authProvider: string;
-}) => void | Promise<void>;
+export type OnRefreshSuccess =
+	| (({
+			tokenResponse,
+			authProvider
+	  }: {
+			tokenResponse: OAuth2TokenResponse;
+			authProvider: string;
+	  }) => void | Promise<void>)
+	| undefined;
 
-export type OnRefreshError = ({
-	error,
-	authProvider
-}: {
-	authProvider: string;
-	error: unknown;
-}) => void | Promise<void>;
+export type OnRefreshError =
+	| (({
+			error,
+			authProvider
+	  }: {
+			authProvider: string;
+			error: unknown;
+	  }) => void | Promise<void>)
+	| undefined;
 
-export type OnProfileSuccess = ({
-	userProfile,
-	authProvider
-}: {
-	userProfile: Record<string, unknown>;
-	authProvider: string;
-}) => void | Promise<void>;
+export type OnProfileSuccess =
+	| (({
+			userProfile,
+			authProvider
+	  }: {
+			userProfile: Record<string, unknown>;
+			authProvider: string;
+	  }) => void | Promise<void>)
+	| undefined;
 
-export type OnProfileError = ({
-	error,
-	authProvider
-}: {
-	authProvider: string;
-	error: unknown;
-}) => void | Promise<void>;
+export type OnProfileError =
+	| (({
+			error,
+			authProvider
+	  }: {
+			authProvider: string;
+			error: unknown;
+	  }) => void | Promise<void>)
+	| undefined;
 
-export type OnRevocationSuccess = ({
-	tokenToRevoke,
-	authProvider
-}: {
-	tokenToRevoke: string;
-	authProvider: string;
-}) => void | Promise<void>;
+export type OnRevocationSuccess =
+	| (({
+			tokenToRevoke,
+			authProvider
+	  }: {
+			tokenToRevoke: string;
+			authProvider: string;
+	  }) => void | Promise<void>)
+	| undefined;
 
-export type OnRevocationError = ({
-	error,
-	authProvider
-}: {
-	authProvider: string;
-	error: unknown;
-}) => void | Promise<void>;
+export type OnRevocationError =
+	| (({
+			error,
+			authProvider
+	  }: {
+			authProvider: string;
+			error: unknown;
+	  }) => void | Promise<void>)
+	| undefined;
 
-export type OnStatus<UserType> = ({
-	user
-}: {
-	user: UserType | null;
-}) => void | Promise<void>;
+export type OnStatus<UserType> =
+	| (({ user }: { user: UserType | null }) => void | Promise<void>)
+	| undefined;
 
-export type OnSignOut<UserType> = ({
-	authProvider,
-	userSessionId
-}: {
-	authProvider: string;
-	userSessionId: `${string}-${string}-${string}-${string}-${string}`;
-	session: SessionRecord<UserType>;
-}) => void | Promise<void>;
+export type OnSignOut<UserType> =
+	| (({
+			authProvider,
+			userSessionId,
+			session
+	  }: {
+			authProvider: string;
+			userSessionId: `${string}-${string}-${string}-${string}-${string}`;
+			session: SessionRecord<UserType>;
+	  }) => void | Promise<void>)
+	| undefined;
 
 export type RouteString = `/${string}`;
 export type AuthorizeRoute = `${string}/:provider${'' | `/${string}`}`;

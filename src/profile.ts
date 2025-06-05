@@ -11,8 +11,8 @@ import {
 type ProfileProps = {
 	clientProviders: ClientProviders;
 	profileRoute?: RouteString;
-	onProfileSuccess?: OnProfileSuccess;
-	onProfileError?: OnProfileError;
+	onProfileSuccess: OnProfileSuccess;
+	onProfileError: OnProfileError;
 };
 
 export const profile = <UserType>({

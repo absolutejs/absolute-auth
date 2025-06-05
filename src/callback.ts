@@ -12,8 +12,8 @@ import {
 type CallbackProps<UserType> = {
 	clientProviders: ClientProviders;
 	callbackRoute?: RouteString;
-	onCallbackSuccess?: OnCallbackSuccess<UserType>;
-	onCallbackError?: OnCallbackError;
+	onCallbackSuccess: OnCallbackSuccess<UserType>;
+	onCallbackError: OnCallbackError;
 };
 
 export const callback = <UserType>({

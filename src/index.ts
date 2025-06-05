@@ -20,12 +20,17 @@ export const absoluteAuth = async <UserType>({
 	refreshRoute,
 	revokeRoute,
 	onAuthorizeSuccess,
+	onAuthorizeError,
 	onProfileSuccess,
+	onProfileError,
 	onCallbackSuccess,
+	onCallbackError,
 	onStatus,
 	onRefreshSuccess,
+	onRefreshError,
 	onSignOut,
-	onRevocationSuccess
+	onRevocationSuccess,
+	onRevocationError
 }: AbsoluteAuthProps<UserType>) => {
 	const entryPromises: Array<Promise<[string, ClientProviders[string]]>> = [];
 
@@ -54,20 +59,43 @@ export const absoluteAuth = async <UserType>({
 
 	return new Elysia()
 		.use(signout({ onSignOut, signoutRoute }))
-		.use(revoke({ clientProviders, onRevocationSuccess, revokeRoute }))
+		.use(
+			revoke({
+				clientProviders,
+				onRevocationError,
+				onRevocationSuccess,
+				revokeRoute
+			})
+		)
 		.use(status<UserType>({ onStatus, statusRoute }))
-		.use(refresh({ clientProviders, onRefreshSuccess, refreshRoute }))
-		.use(authorize({ authorizeRoute, clientProviders, onAuthorizeSuccess }))
+		.use(
+			refresh({
+				clientProviders,
+				onRefreshError,
+				onRefreshSuccess,
+				refreshRoute
+			})
+		)
+		.use(
+			authorize({
+				authorizeRoute,
+				clientProviders,
+				onAuthorizeError,
+				onAuthorizeSuccess
+			})
+		)
 		.use(
 			callback<UserType>({
 				callbackRoute,
 				clientProviders,
+				onCallbackError,
 				onCallbackSuccess
 			})
 		)
 		.use(
 			profile({
 				clientProviders,
+				onProfileError,
 				onProfileSuccess,
 				profileRoute
 			})

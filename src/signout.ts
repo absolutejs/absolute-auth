@@ -4,7 +4,7 @@ import { OnSignOut, RouteString } from './types';
 
 type SignOutProps<UserType> = {
 	signoutRoute?: RouteString;
-	onSignOut?: OnSignOut<UserType>;
+	onSignOut: OnSignOut<UserType>;
 };
 
 export const signout = <UserType>({

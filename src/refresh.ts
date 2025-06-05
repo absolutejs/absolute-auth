@@ -11,8 +11,8 @@ import {
 type RefreshProps = {
 	clientProviders: ClientProviders;
 	refreshRoute?: RouteString;
-	onRefreshSuccess?: OnRefreshSuccess;
-	onRefreshError?: OnRefreshError;
+	onRefreshSuccess: OnRefreshSuccess;
+	onRefreshError: OnRefreshError;
 };
 
 export const refresh = <UserType>({

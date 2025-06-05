@@ -4,7 +4,7 @@ import { OnStatus, RouteString } from './types';
 
 type StatusProps<UserType> = {
 	statusRoute?: RouteString;
-	onStatus?: OnStatus<UserType>;
+	onStatus: OnStatus<UserType>;
 };
 
 export const status = <UserType>({
