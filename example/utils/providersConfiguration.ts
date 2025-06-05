@@ -235,7 +235,8 @@ export const providersConfiguration = createProvidersConfiguration({
 			clientId: getEnvVar('KICK_CLIENT_ID'),
 			clientSecret: getEnvVar('KICK_CLIENT_SECRET'),
 			redirectUri: getEnvVar('OAUTH2_CALLBACK_URI')
-		}
+		},
+		scope: ['user:read']
 	},
 	lichess: {
 		credentials: {
