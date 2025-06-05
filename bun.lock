@@ -4,7 +4,7 @@
     "": {
       "name": "@absolutejs/auth",
       "dependencies": {
-        "citra": "0.21.1",
+        "citra": "0.22.0",
       },
       "devDependencies": {
         "@absolutejs/absolute": "0.4.0",
@@ -324,7 +324,7 @@
 
     "chalk": ["chalk@4.1.2", "", { "dependencies": { "ansi-styles": "^4.1.0", "supports-color": "^7.1.0" } }, "sha512-oKnbhFyRIXpUuez8iBMmyEa4nbj4IOQyuhc/wy9kY7/WVPcwIO9VA668Pu8RkO7+0G76SLROeyw9CpQ061i4mA=="],
 
-    "citra": ["citra@0.21.1", "", {}, "sha512-YEQJnyccyWcuysid7b57UtC8psNFYPL/uvB9rAsbKAwf0VZ2v2QZSBiqgIsklHB0JVEgsNG5vz9BWsaBy81/Xw=="],
+    "citra": ["citra@0.22.0", "", {}, "sha512-gt4U1XeD07fVJmqbwCI1vXIg6CilJ7SK/qBBKpIhBac6H8jVlG4aVNZfCrf86zcL/BuVWrF8Zo354f8NI4nvJg=="],
 
     "clone": ["clone@2.1.2", "", {}, "sha512-3Pe/CF1Nn94hyhIYpjtiLhdCoEoz0DqQ+988E9gmeEdQZlojxnOb74wctFyuwWQHzqyf9X7C7MG8juUpqBJT8w=="],
 

@@ -1,7 +1,8 @@
+import { isValidProviderOption, providers } from 'citra';
 import { eq } from 'drizzle-orm';
 import { NeonHttpDatabase } from 'drizzle-orm/neon-http';
-import { UserFunctionProps } from '../../src';
 import { NewUser, schema, SchemaType } from '../db/schema';
+import { UserFunctionProps } from '../utils/types';
 
 export const getDBUser = async ({
 	authSub,
@@ -36,42 +37,43 @@ export const createDBUser = async ({
 };
 
 export const createUser = ({
-	userProfile,
+	userIdentity,
 	authProvider,
 	db
-}: UserFunctionProps & {
-	db: NeonHttpDatabase<SchemaType>;
-}) => {
-	const provider = authProvider.toUpperCase();
-	const { sub, id, userid } = userProfile;
-
-	if (!sub && !id && !userid) {
-		throw new Error('No sub or ID claim found in ID token');
+}: UserFunctionProps<SchemaType>) => {
+	if (!isValidProviderOption(authProvider)) {
+		throw new Error(`Invalid auth provider: ${authProvider}`);
 	}
-	const authSub = `${provider}|${sub ?? id ?? userid}`;
+
+	const provider = authProvider.toUpperCase();
+	const providerConfiguration = providers[authProvider];
+
+	const subject =
+		providerConfiguration.extractSubjectFromIdentity(userIdentity);
+	const authSub = `${provider}|${subject}`;
 
 	return createDBUser({
 		auth_sub: authSub,
 		db,
-		metadata: userProfile
+		metadata: userIdentity
 	});
 };
 
 export const getUser = ({
-	userProfile,
+	userIdentity,
 	authProvider,
 	db
-}: UserFunctionProps & {
-	db: NeonHttpDatabase<SchemaType>;
-}) => {
-	const provider = authProvider.toUpperCase();
-	const { sub, id, userid } = userProfile;
-
-	if (!sub && !id && !userid) {
-		throw new Error('No sub or ID claim found in ID token');
+}: UserFunctionProps<SchemaType>) => {
+	if (!isValidProviderOption(authProvider)) {
+		throw new Error(`Invalid auth provider: ${authProvider}`);
 	}
 
-	const authSub = `${provider}|${sub ?? id ?? userid}`;
+	const provider = authProvider.toUpperCase();
+	const providerConfiguration = providers[authProvider];
+
+	const subject =
+		providerConfiguration.extractSubjectFromIdentity(userIdentity);
+	const authSub = `${provider}|${subject}`;
 
 	return getDBUser({ authSub, db });
 };

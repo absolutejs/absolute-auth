@@ -46,22 +46,22 @@ export const absoluteAuthConfig = (db: NeonHttpDatabase<SchemaType>) =>
 				session,
 				tokenResponse,
 				userSessionId,
-				createUser: async (userProfile) => {
+				createUser: async (userIdentity) => {
 					const user = await createUser({
 						authProvider,
 						db,
-						userProfile
+						userIdentity
 					});
 					if (user === undefined)
 						throw new Error('Failed to create user');
 
 					return user;
 				},
-				getUser: async (userProfile) => {
+				getUser: async (userIdentity) => {
 					const user = await getUser({
 						authProvider,
 						db,
-						userProfile
+						userIdentity
 					});
 
 					return user;

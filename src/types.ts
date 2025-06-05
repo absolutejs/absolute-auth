@@ -28,20 +28,13 @@ export type SessionRecord<UserType> = Record<
 	SessionData<UserType> | undefined
 >;
 
-export type UserFunctionProps = {
-	authProvider: string;
-	userProfile: Record<string, unknown>;
-};
+export type CreateUser<UserType> = (
+	userIdentity: Record<string, unknown>
+) => UserType | Promise<UserType>;
 
-export type CreateUser<UserType> = ({
-	userProfile,
-	authProvider
-}: UserFunctionProps) => Promise<UserType>;
-
-export type GetUser<UserType> = ({
-	userProfile,
-	authProvider
-}: UserFunctionProps) => Promise<UserType | null>;
+export type GetUser<UserType> = (
+	userIdentity: Record<string, unknown>
+) => UserType | null | undefined | Promise<UserType | null | undefined>;
 
 export type OnCallbackSuccess<UserType> = ({
 	authProvider,
@@ -189,10 +182,6 @@ export type InsantiateUserSessionProps<UserType> = {
 	session: SessionRecord<UserType>;
 	providerInstance: OAuth2Client<ProviderOption>;
 	userSessionId: `${string}-${string}-${string}-${string}-${string}`;
-	createUser: (
-		userIdentity: Record<string, unknown>
-	) => UserType | Promise<UserType>;
-	getUser: (
-		userIdentity: Record<string, unknown>
-	) => UserType | null | undefined | Promise<UserType | null | undefined>;
+	createUser: CreateUser<UserType>;
+	getUser: GetUser<UserType>;
 };
