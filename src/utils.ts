@@ -17,12 +17,18 @@ export const instantiateUserSession = async <UserType>({
 	createUser
 }: InsantiateUserSessionProps<UserType>) => {
 	let userIdentity;
+	let accessToken = tokenResponse.access_token;
+	let refreshToken = tokenResponse.refresh_token;
 
 	if (tokenResponse.id_token) {
 		userIdentity = decodeJWT(tokenResponse.id_token);
 	} else if (authProvider === 'withings') {
 		// @ts-expect-error TODO: Withings is its own case edit the validate response to accept this case
-		userIdentity = tokenResponse.body;
+		userIdentity = { userid: tokenResponse.body.userid };
+		// @ts-expect-error TODO: Withings is its own case edit the validate response to accept this case
+		accessToken = tokenResponse.body.access_token;
+		// @ts-expect-error TODO: Withings is its own case edit the validate response to accept this case
+		refreshToken = tokenResponse.body.refresh_token;
 	} else {
 		userIdentity = await providerInstance.fetchUserProfile(
 			tokenResponse.access_token
@@ -37,9 +43,9 @@ export const instantiateUserSession = async <UserType>({
 		throw new Error('Internal Server Error - Invalid user schema');
 
 	session[userSessionId] = {
-		accessToken: tokenResponse.access_token,
+		accessToken,
 		expiresAt: Date.now() + MILLISECONDS_IN_A_DAY,
-		refreshToken: tokenResponse.refresh_token,
+		refreshToken,
 		user
 	};
 };

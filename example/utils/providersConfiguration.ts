@@ -194,7 +194,7 @@ export const providersConfiguration = createProvidersConfiguration({
 			clientSecret: getEnvVar('GITLAB_CLIENT_SECRET'),
 			redirectUri: getEnvVar('OAUTH2_CALLBACK_URI')
 		},
-		scope: ['openid'],
+		scope: ['openid']
 	},
 	google: {
 		credentials: {
@@ -417,7 +417,8 @@ export const providersConfiguration = createProvidersConfiguration({
 			clientId: getEnvVar('STARTGG_CLIENT_ID'),
 			clientSecret: getEnvVar('STARTGG_CLIENT_SECRET'),
 			redirectUri: getEnvVar('OAUTH2_CALLBACK_URI')
-		}
+		},
+		scope: ['user.identity', 'user.email']
 	},
 	strava: {
 		credentials: {
@@ -459,7 +460,9 @@ export const providersConfiguration = createProvidersConfiguration({
 			clientId: getEnvVar('TWITCH_CLIENT_ID'),
 			clientSecret: getEnvVar('TWITCH_CLIENT_SECRET'),
 			redirectUri: getEnvVar('OAUTH2_CALLBACK_URI')
-		}
+		},
+		searchParams: [['force_verify', 'true']],
+		scope: ['openid']
 	},
 	twitter: {
 		credentials: {
@@ -487,8 +490,10 @@ export const providersConfiguration = createProvidersConfiguration({
 		credentials: {
 			clientId: getEnvVar('WORK_OS_CLIENT_ID'),
 			clientSecret: getEnvVar('WORK_OS_CLIENT_SECRET'),
-			redirectUri: getEnvVar('OAUTH2_CALLBACK_URI')
-		}
+			redirectUri: getEnvVar('OAUTH2_CALLBACK_URI'),
+			domain: getEnvVar('WORK_OS_DOMAIN')
+		},
+		scope: ['offline_access', 'openid', 'profile', 'email']
 	},
 	yahoo: {
 		credentials: {
