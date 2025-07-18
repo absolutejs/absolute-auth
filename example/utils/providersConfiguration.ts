@@ -461,8 +461,8 @@ export const providersConfiguration = createProvidersConfiguration({
 			clientSecret: getEnvVar('TWITCH_CLIENT_SECRET'),
 			redirectUri: getEnvVar('OAUTH2_CALLBACK_URI')
 		},
-		searchParams: [['force_verify', 'true']],
-		scope: ['openid']
+		scope: ['openid'],
+		searchParams: [['force_verify', 'true']]
 	},
 	twitter: {
 		credentials: {
@@ -490,8 +490,8 @@ export const providersConfiguration = createProvidersConfiguration({
 		credentials: {
 			clientId: getEnvVar('WORK_OS_CLIENT_ID'),
 			clientSecret: getEnvVar('WORK_OS_CLIENT_SECRET'),
-			redirectUri: getEnvVar('OAUTH2_CALLBACK_URI'),
-			domain: getEnvVar('WORK_OS_DOMAIN')
+			domain: getEnvVar('WORK_OS_DOMAIN'),
+			redirectUri: getEnvVar('OAUTH2_CALLBACK_URI')
 		},
 		scope: ['offline_access', 'openid', 'profile', 'email']
 	},

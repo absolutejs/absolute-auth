@@ -2,7 +2,7 @@ import { env } from 'process';
 import {
 	build,
 	handleReactPageRequest,
-	networkingPlugin
+	networking
 } from '@absolutejs/absolute';
 import { staticPlugin } from '@elysiajs/static';
 import { neon } from '@neondatabase/serverless';
@@ -16,10 +16,9 @@ import { Protected } from './pages/Protected';
 import { absoluteAuthConfig } from './utils/absoluteAuthConfig';
 
 const manifest = await build({
-	assetsDir: 'example/assets',
-	buildDir: 'example/build',
-	reactIndexDir: 'example/indexes',
-	reactPagesDir: 'example/pages'
+	assetsDirectory: 'example/assets',
+	buildDirectory: 'example/build',
+	reactDirectory: 'example/'
 });
 
 if (manifest === null)
@@ -61,7 +60,7 @@ const server = new Elysia()
 			() => handleReactPageRequest(NotAuthorized, notAuthorizedIndex)
 		)
 	)
-	.use(networkingPlugin)
+	.use(networking)
 	.on('error', (error) => {
 		const { request } = error;
 		console.error(
