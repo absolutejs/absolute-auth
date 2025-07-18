@@ -68,7 +68,6 @@ export const callback = <UserType>({
 			}
 			const { providerInstance } = providerConfig;
 
-			// Clear the stored state so the next request doesn't use it
 			stored_state.remove();
 
 			const authProvider = auth_provider.value;
@@ -83,33 +82,14 @@ export const callback = <UserType>({
 
 			const originUrl = origin_url?.value ?? '/';
 
+			let tokenResponse;
 			try {
-				const tokenResponse =
+				tokenResponse =
 					await providerInstance.validateAuthorizationCode(
 						requiresPKCE
 							? { code, codeVerifier: verifier }
 							: { code }
 					);
-
-				const userSessionId = crypto.randomUUID();
-
-				user_session_id.set({
-					httpOnly: true,
-					sameSite: 'lax',
-					secure: true,
-					value: userSessionId
-				});
-
-				await onCallbackSuccess?.({
-					authProvider,
-					originUrl,
-					providerInstance,
-					session,
-					tokenResponse,
-					userSessionId
-				});
-
-				return redirect(originUrl);
 			} catch (err) {
 				await onCallbackError?.({
 					authProvider,
@@ -127,6 +107,31 @@ export const callback = <UserType>({
 							`Failed to validate authorization code: Unknown error: ${err}`
 						);
 			}
+
+			const existingId = user_session_id?.value;
+			const userSessionId = isNonEmptyString(existingId)
+				? existingId
+				: crypto.randomUUID();
+
+			if (existingId === undefined) {
+				user_session_id.set({
+					httpOnly: true,
+					sameSite: 'lax',
+					secure: true,
+					value: userSessionId
+				});
+			}
+
+			await onCallbackSuccess?.({
+				authProvider,
+				originUrl,
+				providerInstance,
+				session,
+				tokenResponse,
+				userSessionId
+			});
+
+			return redirect(originUrl);
 		},
 		{
 			cookie: t.Cookie({
