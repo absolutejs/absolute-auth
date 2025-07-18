@@ -1,6 +1,8 @@
 import { env } from 'process';
 import {
+	asset,
 	build,
+	getEnv,
 	handleReactPageRequest,
 	networking
 } from '@absolutejs/absolute';
@@ -18,29 +20,10 @@ import { absoluteAuthConfig } from './utils/absoluteAuthConfig';
 const manifest = await build({
 	assetsDirectory: 'example/assets',
 	buildDirectory: 'example/build',
-	reactDirectory: 'example/'
+	reactDirectory: 'example'
 });
 
-if (manifest === null)
-	throw new Error('Failed to build the application manifest');
-
-const homeIndex = manifest['HomeIndex'];
-const protectedIndex = manifest['ProtectedIndex'];
-const notAuthorizedIndex = manifest['NotAuthorizedIndex'];
-
-if (
-	homeIndex === undefined ||
-	protectedIndex === undefined ||
-	notAuthorizedIndex === undefined
-) {
-	throw new Error('Missing index file in manifest');
-}
-
-if (!env.DATABASE_URL) {
-	throw new Error('DATABASE_URL is not set in .env file');
-}
-
-const sql = neon(env.DATABASE_URL);
+const sql = neon(getEnv('DATABASE_URL'));
 const db = drizzle(sql, {
 	schema
 });
@@ -53,11 +36,19 @@ const server = new Elysia()
 		})
 	)
 	.use(await absoluteAuth<User>(absoluteAuthConfig(db)))
-	.get('/', () => handleReactPageRequest(Home, homeIndex))
+	.get('/', () => handleReactPageRequest(Home, asset(manifest, 'HomeIndex')))
 	.get('/protected', ({ protectRoute }) =>
 		protectRoute(
-			() => handleReactPageRequest(Protected, protectedIndex),
-			() => handleReactPageRequest(NotAuthorized, notAuthorizedIndex)
+			() =>
+				handleReactPageRequest(
+					Protected,
+					asset(manifest, 'ProtectedIndex')
+				),
+			() =>
+				handleReactPageRequest(
+					NotAuthorized,
+					asset(manifest, 'NotAuthorizedIndex')
+				)
 		)
 	)
 	.use(networking)
