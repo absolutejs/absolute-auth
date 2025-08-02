@@ -119,6 +119,7 @@ export type {
 } from 'citra';
 
 export {
+	providers,
 	providerOptions,
 	refreshableProviderOptions,
 	revocableProviderOptions,
