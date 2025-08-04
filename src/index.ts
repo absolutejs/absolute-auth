@@ -127,6 +127,7 @@ export {
 	pkceProviderOptions,
 	scopeRequiredProviderOptions,
 	decodeJWT,
+	extractPropFromIdentity,
 	isValidProviderOption,
 	isRefreshableOAuth2Client,
 	isRefreshableProviderOption,
