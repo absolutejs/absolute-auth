@@ -21,16 +21,16 @@ export const userStatus = <UserType>({
 				cookie: { user_session_id },
 				store: { session }
 			}) => {
-				const response = await getStatus<UserType>({
+				const { data, error } = await getStatus<UserType>({
 					onStatus,
 					session,
 					user_session_id
 				});
 
-				if (response.type === 'error') {
-					return status(response.error.code, response.error.message);
+				if (error) {
+					return status(error.code, error.message);
 				}
 
-				return { isLoggedIn: response.isLoggedIn, user: response.user };
+				return { isLoggedIn: data.isLoggedIn, user: data.user };
 			}
 		);

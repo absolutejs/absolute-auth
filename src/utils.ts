@@ -66,11 +66,11 @@ export const getStatus = async <UserType>({
 }: GetStatusProps<UserType>) => {
 	if (user_session_id === undefined) {
 		return {
+			data: null,
 			error: {
-				code: 'Bad Request' as const,
+				code: 'Bad Request',
 				message: 'Cookies are missing'
-			},
-			type: 'error' as const
+			} as const
 		};
 	}
 
@@ -83,24 +83,25 @@ export const getStatus = async <UserType>({
 	try {
 		await onStatus?.({ user });
 	} catch (err) {
-		if (err instanceof Error) {
-			return {
-				error: {
-					code: 'Internal Server Error' as const,
-					message: `Error: ${err.message} - ${err.stack ?? ''}`
-				},
-				type: 'error' as const
-			};
-		}
-
-		return {
-			error: {
-				code: 'Internal Server Error' as const,
-				message: `Unknown Error: ${String(err)}`
-			},
-			type: 'error' as const
-		};
+		return err instanceof Error
+			? {
+					data: null,
+					error: {
+						code: 'Internal Server Error',
+						message: `Error: ${err.message} - ${err.stack ?? ''}`
+					} as const
+				}
+			: {
+					data: null,
+					error: {
+						code: 'Internal Server Error',
+						message: `Unknown Error: ${String(err)}`
+					} as const
+				};
 	}
 
-	return { isLoggedIn: user !== null, type: 'success' as const, user };
+	return {
+		data: { isLoggedIn: user !== null, user },
+		error: null
+	};
 };
