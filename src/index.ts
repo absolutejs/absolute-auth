@@ -7,8 +7,8 @@ import { protectRoute } from './protectRoute';
 import { refresh } from './refresh';
 import { revoke } from './revoke';
 import { signout } from './signout';
-import { status } from './status';
 import { AbsoluteAuthProps, ClientProviders } from './types';
+import { userStatus } from './userStatus';
 
 export const absoluteAuth = async <UserType>({
 	providersConfiguration,
@@ -67,7 +67,7 @@ export const absoluteAuth = async <UserType>({
 				revokeRoute
 			})
 		)
-		.use(status<UserType>({ onStatus, statusRoute }))
+		.use(userStatus<UserType>({ onStatus, statusRoute }))
 		.use(
 			refresh({
 				clientProviders,

@@ -26,7 +26,7 @@ export const revoke = <UserType>({
 		.post(
 			revokeRoute,
 			async ({
-				error,
+				status,
 				store: { session },
 				cookie: { user_session_id, auth_provider }
 			}) => {
@@ -34,23 +34,23 @@ export const revoke = <UserType>({
 					auth_provider === undefined ||
 					user_session_id === undefined
 				)
-					return error('Bad Request', 'Cookies are missing');
+					return status('Bad Request', 'Cookies are missing');
 
 				if (auth_provider.value === undefined) {
-					return error('Unauthorized', 'No auth provider found');
+					return status('Unauthorized', 'No auth provider found');
 				}
 
 				if (!isValidProviderOption(auth_provider.value)) {
-					return error('Bad Request', 'Invalid provider');
+					return status('Bad Request', 'Invalid provider');
 				}
 
 				if (user_session_id.value === undefined) {
-					return error('Unauthorized', 'No user session found');
+					return status('Unauthorized', 'No user session found');
 				}
 
 				const providerConfig = clientProviders[auth_provider.value];
 				if (!providerConfig) {
-					return error('Unauthorized', 'Client provider not found');
+					return status('Unauthorized', 'Client provider not found');
 				}
 				const { providerInstance } = providerConfig;
 
@@ -60,7 +60,7 @@ export const revoke = <UserType>({
 						providerInstance
 					)
 				) {
-					return error(
+					return status(
 						'Not Implemented',
 						'Provider does not support revocation'
 					);
@@ -69,7 +69,7 @@ export const revoke = <UserType>({
 				const userSession = session[user_session_id.value];
 
 				if (userSession === undefined) {
-					return error('Unauthorized', 'No user session found');
+					return status('Unauthorized', 'No user session found');
 				}
 
 				const { accessToken } = userSession; // TODO: Some providers use refresh tokenResponse for revocation
@@ -92,15 +92,15 @@ export const revoke = <UserType>({
 					});
 
 					if (err instanceof Error) {
-						return error(
+						return status(
 							'Internal Server Error',
 							`Failed to revoke token: ${err.message}`
 						);
 					}
 
-					return error(
+					return status(
 						'Internal Server Error',
-						`Failed to revoke token: Unknown error: ${err}`
+						`Failed to revoke token: Unknown status: ${err}`
 					);
 				}
 			}

@@ -8,13 +8,12 @@ import { NeonHttpDatabase } from 'drizzle-orm/neon-http';
 import { NewUser, schema, SchemaType } from '../db/schema';
 import { UserFunctionProps } from '../utils/types';
 
-export const getDBUser = async ({
-	authSub,
-	db
-}: {
+type GetDBUserProps = {
 	authSub: string;
 	db: NeonHttpDatabase<SchemaType>;
-}) => {
+};
+
+export const getDBUser = async ({ authSub, db }: GetDBUserProps) => {
 	const [user] = await db
 		.select()
 		.from(schema.users)

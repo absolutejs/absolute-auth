@@ -29,7 +29,7 @@ export const authorize = ({
 	new Elysia().get(
 		authorizeRoute,
 		async ({
-			error,
+			status,
 			redirect,
 			cookie: { state, code_verifier, auth_provider, origin_url },
 			params: { provider },
@@ -41,17 +41,17 @@ export const authorize = ({
 				state === undefined ||
 				code_verifier === undefined
 			)
-				return error('Bad Request', 'Cookies are missing');
+				return status('Bad Request', 'Cookies are missing');
 
 			if (provider === undefined)
-				return error('Bad Request', 'Provider is required');
+				return status('Bad Request', 'Provider is required');
 
 			if (!isValidProviderOption(provider))
-				return error('Bad Request', 'Invalid provider');
+				return status('Bad Request', 'Invalid provider');
 
 			const providerConfig = clientProviders[provider];
 			if (!providerConfig)
-				return error('Unauthorized', 'Client provider not found');
+				return status('Unauthorized', 'Client provider not found');
 
 			const { providerInstance, scope, searchParams } = providerConfig;
 			const referer = headers['referer'] ?? '/';
@@ -124,13 +124,16 @@ export const authorize = ({
 				});
 
 				if (err instanceof Error) {
-					return error(
+					return status(
 						'Internal Server Error',
 						`${err.message} - ${err.stack ?? ''}`
 					);
 				}
 
-				return error('Internal Server Error', `Unknown error: ${err}`);
+				return status(
+					'Internal Server Error',
+					`Unknown status: ${err}`
+				);
 			}
 		}
 	);

@@ -25,7 +25,7 @@ export const callback = <UserType>({
 	new Elysia().use(sessionStore<UserType>()).get(
 		callbackRoute,
 		async ({
-			error,
+			status,
 			redirect,
 			store: { session },
 			cookie: {
@@ -43,28 +43,28 @@ export const callback = <UserType>({
 				auth_provider === undefined ||
 				user_session_id === undefined
 			) {
-				return error('Bad Request', 'Cookies are missing');
+				return status('Bad Request', 'Cookies are missing');
 			}
 
 			if (!isNonEmptyString(code) || stored_state.value === undefined) {
-				return error('Bad Request', 'Invalid callback request');
+				return status('Bad Request', 'Invalid callback request');
 			}
 
 			if (callback_state !== stored_state.value) {
-				return error('Bad Request', 'Invalid state mismatch');
+				return status('Bad Request', 'Invalid state mismatch');
 			}
 
 			if (auth_provider.value === undefined) {
-				return error('Unauthorized', 'No auth provider found');
+				return status('Unauthorized', 'No auth provider found');
 			}
 
 			if (!isValidProviderOption(auth_provider.value)) {
-				return error('Unauthorized', 'Invalid provider');
+				return status('Unauthorized', 'Invalid provider');
 			}
 
 			const providerConfig = clientProviders[auth_provider.value];
 			if (!providerConfig) {
-				return error('Unauthorized', 'Client provider not found');
+				return status('Unauthorized', 'Client provider not found');
 			}
 			const { providerInstance } = providerConfig;
 
@@ -74,7 +74,7 @@ export const callback = <UserType>({
 			const requiresPKCE = isPKCEProviderOption(authProvider);
 			const verifier = requiresPKCE ? code_verifier.value : undefined;
 			if (requiresPKCE && verifier === undefined) {
-				return error(
+				return status(
 					'Bad Request',
 					'Code verifier not found and is required'
 				);
@@ -98,13 +98,13 @@ export const callback = <UserType>({
 				});
 
 				return err instanceof Error
-					? error(
+					? status(
 							'Internal Server Error',
 							`${err.message} - ${err.stack ?? ''}`
 						)
-					: error(
+					: status(
 							'Internal Server Error',
-							`Failed to validate authorization code: Unknown error: ${err}`
+							`Failed to validate authorization code: Unknown status: ${err}`
 						);
 			}
 

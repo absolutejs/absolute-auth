@@ -26,7 +26,7 @@ export const profile = <UserType>({
 		.get(
 			profileRoute,
 			async ({
-				error,
+				status,
 				store: { session },
 				cookie: { user_session_id, auth_provider }
 			}) => {
@@ -34,30 +34,30 @@ export const profile = <UserType>({
 					auth_provider === undefined ||
 					user_session_id === undefined
 				)
-					return error('Bad Request', 'Cookies are missing');
+					return status('Bad Request', 'Cookies are missing');
 
 				if (auth_provider.value === undefined) {
-					return error('Unauthorized', 'No auth provider found');
+					return status('Unauthorized', 'No auth provider found');
 				}
 
 				if (!isValidProviderOption(auth_provider.value)) {
-					return error('Unauthorized', 'Invalid provider');
+					return status('Unauthorized', 'Invalid provider');
 				}
 
 				if (user_session_id.value === undefined) {
-					return error('Unauthorized', 'No user session found');
+					return status('Unauthorized', 'No user session found');
 				}
 
 				const providerConfig = clientProviders[auth_provider.value];
 				if (!providerConfig) {
-					return error('Unauthorized', 'Client provider not found');
+					return status('Unauthorized', 'Client provider not found');
 				}
 				const { providerInstance } = providerConfig;
 
 				const userSession = session[user_session_id.value];
 
 				if (userSession === undefined) {
-					return error('Unauthorized', 'No user session found');
+					return status('Unauthorized', 'No user session found');
 				}
 
 				const { accessToken } = userSession;
@@ -79,13 +79,13 @@ export const profile = <UserType>({
 					});
 
 					return err instanceof Error
-						? error(
+						? status(
 								'Internal Server Error',
 								`${err.message} - ${err.stack ?? ''}`
 							)
-						: error(
+						: status(
 								'Internal Server Error',
-								`Failed to validate authorization code: Unknown error: ${err}`
+								`Failed to validate authorization code: Unknown status: ${err}`
 							);
 				}
 			}

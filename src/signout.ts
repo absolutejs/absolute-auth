@@ -14,19 +14,19 @@ export const signout = <UserType>({
 	new Elysia().use(sessionStore<UserType>()).delete(
 		signoutRoute,
 		async ({
-			error,
+			status,
 			store: { session },
 			cookie: { user_session_id, auth_provider }
 		}) => {
 			if (auth_provider === undefined || user_session_id === undefined) {
-				return error('Bad Request', 'Cookies are missing');
+				return status('Bad Request', 'Cookies are missing');
 			}
 
 			if (auth_provider.value === undefined) {
-				return error('Unauthorized', 'No auth provider found');
+				return status('Unauthorized', 'No auth provider found');
 			}
 			if (user_session_id.value === undefined) {
-				return error('Unauthorized', 'No user session id found');
+				return status('Unauthorized', 'No user session id found');
 			}
 
 			try {
@@ -37,13 +37,13 @@ export const signout = <UserType>({
 				});
 			} catch (err) {
 				if (err instanceof Error) {
-					return error(
+					return status(
 						'Internal Server Error',
 						`Error: ${err.message} - ${err.stack ?? ''}`
 					);
 				}
 
-				return error('Internal Server Error', `Unknown Error: ${err}`);
+				return status('Internal Server Error', `Unknown Error: ${err}`);
 			}
 
 			user_session_id.remove();

@@ -45,7 +45,8 @@ export default [
 			'@stylistic/ts/padding-line-between-statements': [
 				'error',
 				{ blankLine: 'always', next: 'return', prev: '*' }
-			]
+			],
+			"@typescript-eslint/no-unnecessary-type-assertion": "error"
 		}
 	},
 
@@ -74,7 +75,6 @@ export default [
 			'absolute/no-nested-jsx-return': 'error',
 			'absolute/no-or-none-component': 'error',
 			'absolute/no-transition-cssproperties': 'error',
-			'absolute/no-type-cast': 'error',
 			'absolute/no-unnecessary-div': 'error',
 			'absolute/no-unnecessary-key': 'error',
 			'absolute/no-useless-function': 'error',

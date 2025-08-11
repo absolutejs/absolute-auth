@@ -5,18 +5,18 @@ export const protectRoute = <UserType>() =>
 	new Elysia()
 		.use(sessionStore<UserType>())
 		.derive(
-			({ store: { session }, cookie: { user_session_id }, error }) => ({
+			({ store: { session }, cookie: { user_session_id }, status }) => ({
 				protectRoute: async (
 					handleAuth: () => Promise<Response>,
 					handleAuthFail?: () => Promise<Response>
 				) => {
 					if (user_session_id === undefined)
-						return error('Bad Request', 'Cookies are missing');
+						return status('Bad Request', 'Cookies are missing');
 
 					if (user_session_id.value === undefined) {
 						return (
 							handleAuthFail?.() ??
-							error('Unauthorized', 'No session ID found')
+							status('Unauthorized', 'No session ID found')
 						);
 					}
 
@@ -25,7 +25,7 @@ export const protectRoute = <UserType>() =>
 					if (userSession === undefined) {
 						return (
 							handleAuthFail?.() ??
-							error('Unauthorized', 'No session found')
+							status('Unauthorized', 'No session found')
 						);
 					}
 
