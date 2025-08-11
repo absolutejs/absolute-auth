@@ -105,6 +105,7 @@ export const absoluteAuth = async <UserType>({
 
 export * from './types';
 export { isValidUser } from './typeGuards';
+export { sessionStore } from './sessionStore';
 export * from './utils';
 export type {
 	OAuth2TokenResponse,
