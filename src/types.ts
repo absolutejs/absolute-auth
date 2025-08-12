@@ -6,7 +6,7 @@ import {
 	ProviderOption,
 	ProvidersMap
 } from 'citra';
-import { Cookie } from 'elysia';
+import { Cookie, status } from 'elysia';
 
 type SessionData<UserType> = {
 	user: UserType;
@@ -171,6 +171,8 @@ export type GetStatusProps<UserType> = {
 	session: SessionRecord<UserType>;
 	onStatus?: OnStatus<UserType>;
 };
+
+export type StatusReturn = ReturnType<typeof status>;
 
 export type AbsoluteAuthProps<UserType> = {
 	providersConfiguration: OAuth2ConfigurationOptions;

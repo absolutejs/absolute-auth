@@ -1,5 +1,6 @@
 import { Elysia } from 'elysia';
 import { sessionStore } from './sessionStore';
+import { StatusReturn } from './types';
 
 export const protectRoute = <UserType>() =>
 	new Elysia()
@@ -7,8 +8,8 @@ export const protectRoute = <UserType>() =>
 		.derive(
 			({ store: { session }, cookie: { user_session_id }, status }) => ({
 				protectRoute: async (
-					handleAuth: () => Promise<Response>,
-					handleAuthFail?: () => Promise<Response>
+					handleAuth: () => Promise<Response | StatusReturn>,
+					handleAuthFail?: () => Promise<Response | StatusReturn>
 				) => {
 					if (user_session_id === undefined)
 						return status('Bad Request', 'Cookies are missing');
