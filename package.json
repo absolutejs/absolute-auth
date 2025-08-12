@@ -1,5 +1,5 @@
 {
-	"version": "0.16.4",
+	"version": "0.16.5",
 	"name": "@absolutejs/auth",
 	"description": "An authorization library for absolutejs",
 	"repository": {
@@ -33,7 +33,7 @@
 		"elysia": ">= 1.3.8"
 	},
 	"dependencies": {
-		"citra": "0.25.7"
+		"citra": "0.25.8"
 	},
 	"devDependencies": {
 		"@absolutejs/absolute": "0.12.3",
