@@ -21,7 +21,7 @@ export const userStatus = <UserType>({
 				cookie: { user_session_id },
 				store: { session }
 			}) => {
-				const { data, error } = await getStatus<UserType>({
+				const { user, error } = await getStatus<UserType>({
 					onStatus,
 					session,
 					user_session_id
@@ -31,6 +31,6 @@ export const userStatus = <UserType>({
 					return status(error.code, error.message);
 				}
 
-				return { isLoggedIn: data.isLoggedIn, user: data.user };
+				return user;
 			}
 		);

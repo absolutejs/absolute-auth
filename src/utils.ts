@@ -66,11 +66,11 @@ export const getStatus = async <UserType>({
 }: GetStatusProps<UserType>) => {
 	if (user_session_id === undefined) {
 		return {
-			data: null,
 			error: {
 				code: 'Bad Request',
 				message: 'Cookies are missing'
-			} as const
+			} as const,
+			user: null
 		};
 	}
 
@@ -85,23 +85,23 @@ export const getStatus = async <UserType>({
 	} catch (err) {
 		return err instanceof Error
 			? {
-					data: null,
 					error: {
 						code: 'Internal Server Error',
 						message: `Error: ${err.message} - ${err.stack ?? ''}`
-					} as const
+					} as const,
+					user: null
 				}
 			: {
-					data: null,
 					error: {
 						code: 'Internal Server Error',
 						message: `Unknown Error: ${String(err)}`
-					} as const
+					} as const,
+					user: null
 				};
 	}
 
 	return {
-		data: { isLoggedIn: user !== null, user },
-		error: null
+		error: null,
+		user
 	};
 };

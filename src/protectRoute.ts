@@ -1,6 +1,14 @@
 import { Elysia } from 'elysia';
 import { sessionStore } from './sessionStore';
 import { StatusReturn } from './types';
+import { getStatus } from './utils';
+
+type AuthFailError =
+	| Exclude<Awaited<ReturnType<typeof getStatus>>['error'], null>
+	| {
+			readonly code: 'Unauthorized';
+			readonly message: 'User is not authenticated';
+	  };
 
 export const protectRoute = <UserType>() =>
 	new Elysia()
@@ -8,29 +16,36 @@ export const protectRoute = <UserType>() =>
 		.derive(
 			({ store: { session }, cookie: { user_session_id }, status }) => ({
 				protectRoute: async (
-					handleAuth: () => Promise<Response | StatusReturn>,
-					handleAuthFail?: () => Promise<Response | StatusReturn>
+					handleAuth: (
+						user: UserType
+					) => Promise<Response | StatusReturn>,
+					handleAuthFail?: (
+						error: AuthFailError
+					) => Promise<Response | StatusReturn>
 				) => {
-					if (user_session_id === undefined)
-						return status('Bad Request', 'Cookies are missing');
+					const { user, error } = await getStatus<UserType>({
+						session,
+						user_session_id
+					});
 
-					if (user_session_id.value === undefined) {
+					if (error) {
 						return (
-							handleAuthFail?.() ??
-							status('Unauthorized', 'No session ID found')
+							handleAuthFail?.(error) ??
+							status(error.code, error.message)
 						);
 					}
 
-					const userSession = session[user_session_id.value];
-
-					if (userSession === undefined) {
+					if (!user) {
 						return (
-							handleAuthFail?.() ??
-							status('Unauthorized', 'No session found')
+							handleAuthFail?.({
+								code: 'Unauthorized',
+								message: 'User is not authenticated'
+							}) ??
+							status('Unauthorized', 'User is not authenticated')
 						);
 					}
 
-					return handleAuth();
+					return handleAuth(user);
 				}
 			})
 		)
