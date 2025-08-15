@@ -100,10 +100,11 @@ export const absoluteAuth = async <UserType>({
 				profileRoute
 			})
 		)
-		.use(protectRoute());
+		.use(protectRoute<UserType>());
 };
 
 export * from './types';
+export * from './typebox';
 export { isValidUser } from './typeGuards';
 export { sessionStore } from './sessionStore';
 export { protectRoute } from './protectRoute';

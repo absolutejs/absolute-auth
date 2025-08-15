@@ -1,6 +1,7 @@
 import { isRevocableOAuth2Client, isValidProviderOption } from 'citra';
-import { Elysia } from 'elysia';
+import { Elysia, t } from 'elysia';
 import { sessionStore } from './sessionStore';
+import { userSessionIdCookie } from './typebox';
 import {
 	ClientProviders,
 	OnRevocationError,
@@ -21,87 +22,80 @@ export const revoke = <UserType>({
 	onRevocationSuccess,
 	onRevocationError
 }: RevokeProps) =>
-	new Elysia()
-		.use(sessionStore<UserType>())
-		.post(
-			revokeRoute,
-			async ({
-				status,
-				store: { session },
-				cookie: { user_session_id, auth_provider }
-			}) => {
-				if (
-					auth_provider === undefined ||
-					user_session_id === undefined
-				)
-					return status('Bad Request', 'Cookies are missing');
+	new Elysia().use(sessionStore<UserType>()).post(
+		revokeRoute,
+		async ({
+			status,
+			store: { session },
+			cookie: { user_session_id, auth_provider }
+		}) => {
+			if (auth_provider === undefined || user_session_id === undefined)
+				return status('Bad Request', 'Cookies are missing');
 
-				if (auth_provider.value === undefined) {
-					return status('Unauthorized', 'No auth provider found');
-				}
+			if (auth_provider.value === undefined) {
+				return status('Unauthorized', 'No auth provider found');
+			}
 
-				if (!isValidProviderOption(auth_provider.value)) {
-					return status('Bad Request', 'Invalid provider');
-				}
+			if (!isValidProviderOption(auth_provider.value)) {
+				return status('Bad Request', 'Invalid provider');
+			}
 
-				if (user_session_id.value === undefined) {
-					return status('Unauthorized', 'No user session found');
-				}
+			if (user_session_id.value === undefined) {
+				return status('Unauthorized', 'No user session found');
+			}
 
-				const providerConfig = clientProviders[auth_provider.value];
-				if (!providerConfig) {
-					return status('Unauthorized', 'Client provider not found');
-				}
-				const { providerInstance } = providerConfig;
+			const providerConfig = clientProviders[auth_provider.value];
+			if (!providerConfig) {
+				return status('Unauthorized', 'Client provider not found');
+			}
+			const { providerInstance } = providerConfig;
 
-				if (
-					!isRevocableOAuth2Client(
-						auth_provider.value,
-						providerInstance
-					)
-				) {
-					return status(
-						'Not Implemented',
-						'Provider does not support revocation'
-					);
-				}
+			if (
+				!isRevocableOAuth2Client(auth_provider.value, providerInstance)
+			) {
+				return status(
+					'Not Implemented',
+					'Provider does not support revocation'
+				);
+			}
 
-				const userSession = session[user_session_id.value];
+			const userSession = session[user_session_id.value];
 
-				if (userSession === undefined) {
-					return status('Unauthorized', 'No user session found');
-				}
+			if (userSession === undefined) {
+				return status('Unauthorized', 'No user session found');
+			}
 
-				const { accessToken } = userSession; // TODO: Some providers use refresh tokenResponse for revocation
+			const { accessToken } = userSession; // TODO: Some providers use refresh tokenResponse for revocation
 
-				try {
-					await providerInstance.revokeToken(accessToken);
+			try {
+				await providerInstance.revokeToken(accessToken);
 
-					await onRevocationSuccess?.({
-						authProvider: auth_provider.value,
-						tokenToRevoke: accessToken
-					});
+				await onRevocationSuccess?.({
+					authProvider: auth_provider.value,
+					tokenToRevoke: accessToken
+				});
 
-					return new Response('Token revoked', {
-						status: 204
-					});
-				} catch (err) {
-					await onRevocationError?.({
-						authProvider: auth_provider.value,
-						error: err
-					});
+				return new Response('Token revoked', {
+					status: 204
+				});
+			} catch (err) {
+				await onRevocationError?.({
+					authProvider: auth_provider.value,
+					error: err
+				});
 
-					if (err instanceof Error) {
-						return status(
-							'Internal Server Error',
-							`Failed to revoke token: ${err.message}`
-						);
-					}
-
+				if (err instanceof Error) {
 					return status(
 						'Internal Server Error',
-						`Failed to revoke token: Unknown status: ${err}`
+						`Failed to revoke token: ${err.message}`
 					);
 				}
+
+				return status(
+					'Internal Server Error',
+					`Failed to revoke token: Unknown status: ${err}`
+				);
 			}
-		);
+		},
+		{ cookie: t.Cookie({ user_session_id: userSessionIdCookie }) }
+	);

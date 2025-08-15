@@ -26,12 +26,12 @@ export type OAuth2ConfigurationOptions = {
 };
 
 export type SessionRecord<UserType> = Record<
-	string,
+	`${string}-${string}-${string}-${string}-${string}`,
 	SessionData<UserType> | undefined
 >;
 
 export type UnregisteredSessionRecord = Record<
-	string,
+	`${string}-${string}-${string}-${string}-${string}`,
 	{
 		userIdentity: Record<string, unknown>;
 		expiresAt: number;
@@ -200,7 +200,9 @@ export type RouteString = `/${string}`;
 export type AuthorizeRoute = `${string}/:provider${'' | `/${string}`}`;
 
 export type GetStatusProps<UserType> = {
-	user_session_id: Cookie<string | undefined> | undefined;
+	user_session_id: Cookie<
+		`${string}-${string}-${string}-${string}-${string}` | undefined
+	>;
 	session: SessionRecord<UserType>;
 	onStatus?: OnStatus<UserType>;
 };

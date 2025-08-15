@@ -2,6 +2,7 @@ import { isPKCEProviderOption, isValidProviderOption } from 'citra';
 import { Elysia, t } from 'elysia';
 import { sessionStore } from './sessionStore';
 import { isNonEmptyString } from './typeGuards';
+import { userSessionIdCookie } from './typebox';
 import {
 	ClientProviders,
 	OnCallbackError,
@@ -144,11 +145,7 @@ export const callback = <UserType>({
 		},
 		{
 			cookie: t.Cookie({
-				user_session_id: t.Optional(
-					t.TemplateLiteral(
-						'${string}-${string}-${string}-${string}-${string}'
-					)
-				)
+				user_session_id: userSessionIdCookie
 			})
 		}
 	);
