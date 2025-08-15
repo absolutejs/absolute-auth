@@ -6,7 +6,8 @@ import {
 	ProviderOption,
 	ProvidersMap
 } from 'citra';
-import { Cookie, status } from 'elysia';
+import { Cookie, status as statusType, redirect as redirectType } from 'elysia';
+import { ElysiaCustomStatusResponse } from 'elysia/error';
 
 type SessionData<UserType> = {
 	user: UserType;
@@ -29,13 +30,34 @@ export type SessionRecord<UserType> = Record<
 	SessionData<UserType> | undefined
 >;
 
-export type CreateUser<UserType> = (
+export type UnregisteredSessionRecord = Record<
+	string,
+	{
+		userIdentity: Record<string, unknown>;
+		expiresAt: number;
+	}
+>;
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Add better typing for the Elysia codes
+export type StatusReturn = ElysiaCustomStatusResponse<any, any, any>;
+
+export type OnNewUser<UserType> = (
 	userIdentity: Record<string, unknown>
-) => UserType | Promise<UserType>;
+) =>
+	| UserType
+	| StatusReturn
+	| Response
+	| Promise<UserType | StatusReturn | Response>;
 
 export type GetUser<UserType> = (
 	userIdentity: Record<string, unknown>
 ) => UserType | null | undefined | Promise<UserType | null | undefined>;
+
+export type CallbackCookie = Record<string, Cookie<string | undefined>> & {
+	user_session_id: Cookie<
+		`${string}-${string}-${string}-${string}-${string}` | undefined
+	>;
+};
 
 export type OnCallbackSuccess<UserType> =
 	| (({
@@ -44,15 +66,26 @@ export type OnCallbackSuccess<UserType> =
 			providerInstance,
 			session,
 			userSessionId,
-			originUrl
+			originUrl,
+			cookie,
+			redirect,
+			status
 	  }: {
 			providerInstance: OAuth2Client<ProviderOption>;
 			authProvider: string;
 			tokenResponse: OAuth2TokenResponse;
 			session: SessionRecord<UserType>;
+			unregisteredSession: UnregisteredSessionRecord;
 			userSessionId: `${string}-${string}-${string}-${string}-${string}`;
 			originUrl: string;
-	  }) => void | Promise<void>)
+			cookie: CallbackCookie;
+			status: typeof statusType; // TODO There is no valid return type for returning status although it is a valid return, Elysia status is hard to get the return type inferred correctly
+			redirect: typeof redirectType;
+	  }) =>
+			| void
+			| Response
+			| StatusReturn
+			| Promise<void | Response | StatusReturn>)
 	| undefined;
 
 export type OnCallbackError =
@@ -172,8 +205,6 @@ export type GetStatusProps<UserType> = {
 	onStatus?: OnStatus<UserType>;
 };
 
-export type StatusReturn = ReturnType<typeof status>;
-
 export type AbsoluteAuthProps<UserType> = {
 	providersConfiguration: OAuth2ConfigurationOptions;
 	authorizeRoute?: AuthorizeRoute;
@@ -210,8 +241,9 @@ export type InsantiateUserSessionProps<UserType> = {
 	authProvider: string;
 	tokenResponse: OAuth2TokenResponse;
 	session: SessionRecord<UserType>;
+	unregisteredSession: UnregisteredSessionRecord;
 	providerInstance: OAuth2Client<ProviderOption>;
 	userSessionId: `${string}-${string}-${string}-${string}-${string}`;
-	createUser: CreateUser<UserType>;
+	onNewUser: OnNewUser<UserType>;
 	getUser: GetUser<UserType>;
 };

@@ -1,6 +1,6 @@
 import { decodeJWT } from 'citra';
-import { MILLISECONDS_IN_A_DAY } from './constants';
-import { isValidUser } from './typeGuards';
+import { MILLISECONDS_IN_A_DAY, MILLISECONDS_IN_AN_HOUR } from './constants';
+import { isStatusResponse } from './typeGuards';
 import {
 	AbsoluteAuthProps,
 	GetStatusProps,
@@ -12,10 +12,11 @@ export const instantiateUserSession = async <UserType>({
 	userSessionId,
 	authProvider,
 	session,
+	unregisteredSession,
 	tokenResponse,
 	providerInstance,
 	getUser,
-	createUser
+	onNewUser
 }: InsantiateUserSessionProps<UserType>) => {
 	let userIdentity;
 	let accessToken = tokenResponse.access_token;
@@ -37,11 +38,18 @@ export const instantiateUserSession = async <UserType>({
 	}
 
 	let user = await getUser(userIdentity);
-	user = user ?? (await createUser(userIdentity));
+	const response = user ?? (await onNewUser(userIdentity));
 
-	// TODO : See if theres a better way to check valid user and not throw an status
-	if (!isValidUser<UserType>(user))
-		throw new Error('Internal Server Error - Invalid user schema');
+	if (response instanceof Response || isStatusResponse(response)) {
+		unregisteredSession[userSessionId] = {
+			expiresAt: Date.now() + MILLISECONDS_IN_AN_HOUR,
+			userIdentity
+		};
+
+		return response;
+	}
+
+	user = response;
 
 	session[userSessionId] = {
 		accessToken,
@@ -49,6 +57,8 @@ export const instantiateUserSession = async <UserType>({
 		refreshToken,
 		user
 	};
+
+	return void 0;
 };
 
 export const createAuthConfiguration = <UserType>(

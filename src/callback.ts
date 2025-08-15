@@ -27,7 +27,8 @@ export const callback = <UserType>({
 		async ({
 			status,
 			redirect,
-			store: { session },
+			store: { session, unregisteredSession },
+			cookie,
 			cookie: {
 				state: stored_state,
 				code_verifier,
@@ -122,14 +123,22 @@ export const callback = <UserType>({
 				});
 			}
 
-			await onCallbackSuccess?.({
+			const response = await onCallbackSuccess?.({
 				authProvider,
+				cookie,
 				originUrl,
 				providerInstance,
+				redirect,
 				session,
+				status,
 				tokenResponse,
+				unregisteredSession,
 				userSessionId
 			});
+
+			if (response) {
+				return response;
+			}
 
 			return redirect(originUrl);
 		},
