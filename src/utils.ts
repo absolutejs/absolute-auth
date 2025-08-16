@@ -1,17 +1,19 @@
 import { decodeJWT } from 'citra';
+import { Cookie } from 'elysia';
 import { MILLISECONDS_IN_A_DAY, MILLISECONDS_IN_AN_HOUR } from './constants';
-import { isStatusResponse } from './typeGuards';
+import { isNonEmptyString, isStatusResponse } from './typeGuards';
 import {
 	AbsoluteAuthProps,
 	GetStatusProps,
 	InsantiateUserSessionProps,
-	OAuth2ConfigurationOptions
+	OAuth2ConfigurationOptions,
+	UserSessionId
 } from './types';
 
 export const instantiateUserSession = async <UserType>({
-	userSessionId,
 	authProvider,
 	session,
+	userSessionIdCookie,
 	unregisteredSession,
 	tokenResponse,
 	providerInstance,
@@ -37,7 +39,10 @@ export const instantiateUserSession = async <UserType>({
 		);
 	}
 
-	let user = await getUser(userIdentity);
+	const userSession = validateSession({ session, userSessionIdCookie });
+	const userSessionId = getUserSessionId(userSessionIdCookie);
+
+	let user = userSession?.user ?? (await getUser(userIdentity));
 	const response = user ?? (await onNewUser(userIdentity));
 
 	if (response instanceof Response || isStatusResponse(response)) {
@@ -114,4 +119,63 @@ export const getStatus = async <UserType>({
 		error: null,
 		user
 	};
+};
+
+type ValidateSessionProps<
+	SessionType extends Record<string, unknown> & { expiresAt: number }
+> = {
+	userSessionIdCookie: Cookie<UserSessionId | undefined>;
+	session: Record<UserSessionId, SessionType>;
+};
+
+export const validateSession = <
+	SessionType extends Record<string, unknown> & { expiresAt: number }
+>({
+	userSessionIdCookie,
+	session
+}: ValidateSessionProps<SessionType>) => {
+	const userSessionId = userSessionIdCookie.value;
+	if (!userSessionId) {
+		return undefined;
+	}
+
+	const userSession = session[userSessionId];
+	if (!userSession) {
+		return undefined;
+	}
+
+	const isExpired = userSession.expiresAt < Date.now();
+	if (isExpired) {
+		delete session[userSessionId];
+		userSessionIdCookie.set({
+			maxAge: 0,
+			value: ''
+		});
+
+		return undefined;
+	}
+
+	return userSession;
+};
+
+export const getUserSessionId = (
+	user_session_id: Cookie<
+		`${string}-${string}-${string}-${string}-${string}` | undefined
+	>
+) => {
+	const existingId = user_session_id?.value;
+	const userSessionId = isNonEmptyString(existingId)
+		? existingId
+		: crypto.randomUUID();
+
+	if (existingId === undefined) {
+		user_session_id.set({
+			httpOnly: true,
+			sameSite: 'lax',
+			secure: true,
+			value: userSessionId
+		});
+	}
+
+	return userSessionId;
 };

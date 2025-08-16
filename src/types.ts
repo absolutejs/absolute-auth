@@ -25,13 +25,15 @@ export type OAuth2ConfigurationOptions = {
 		: { scope?: string[] });
 };
 
+export type UserSessionId = `${string}-${string}-${string}-${string}-${string}`;
+
 export type SessionRecord<UserType> = Record<
-	`${string}-${string}-${string}-${string}-${string}`,
-	SessionData<UserType> | undefined
+	UserSessionId,
+	SessionData<UserType>
 >;
 
 export type UnregisteredSessionRecord = Record<
-	`${string}-${string}-${string}-${string}-${string}`,
+	UserSessionId,
 	{
 		userIdentity: Record<string, unknown>;
 		expiresAt: number;
@@ -54,9 +56,7 @@ export type GetUser<UserType> = (
 ) => UserType | null | undefined | Promise<UserType | null | undefined>;
 
 export type CallbackCookie = Record<string, Cookie<string | undefined>> & {
-	user_session_id: Cookie<
-		`${string}-${string}-${string}-${string}-${string}` | undefined
-	>;
+	user_session_id: Cookie<UserSessionId | undefined>;
 };
 
 export type OnCallbackSuccess<UserType> =
@@ -76,7 +76,7 @@ export type OnCallbackSuccess<UserType> =
 			tokenResponse: OAuth2TokenResponse;
 			session: SessionRecord<UserType>;
 			unregisteredSession: UnregisteredSessionRecord;
-			userSessionId: `${string}-${string}-${string}-${string}-${string}`;
+			userSessionId: UserSessionId;
 			originUrl: string;
 			cookie: CallbackCookie;
 			status: typeof statusType; // TODO There is no valid return type for returning status although it is a valid return, Elysia status is hard to get the return type inferred correctly
@@ -191,7 +191,7 @@ export type OnSignOut<UserType> =
 			session
 	  }: {
 			authProvider: string;
-			userSessionId: `${string}-${string}-${string}-${string}-${string}`;
+			userSessionId: UserSessionId;
 			session: SessionRecord<UserType>;
 	  }) => void | Promise<void>)
 	| undefined;
@@ -200,9 +200,7 @@ export type RouteString = `/${string}`;
 export type AuthorizeRoute = `${string}/:provider${'' | `/${string}`}`;
 
 export type GetStatusProps<UserType> = {
-	user_session_id: Cookie<
-		`${string}-${string}-${string}-${string}-${string}` | undefined
-	>;
+	user_session_id: Cookie<UserSessionId | undefined>;
 	session: SessionRecord<UserType>;
 	onStatus?: OnStatus<UserType>;
 };
@@ -245,7 +243,7 @@ export type InsantiateUserSessionProps<UserType> = {
 	session: SessionRecord<UserType>;
 	unregisteredSession: UnregisteredSessionRecord;
 	providerInstance: OAuth2Client<ProviderOption>;
-	userSessionId: `${string}-${string}-${string}-${string}-${string}`;
+	userSessionIdCookie: Cookie<UserSessionId | undefined>;
 	onNewUser: OnNewUser<UserType>;
 	getUser: GetUser<UserType>;
 };

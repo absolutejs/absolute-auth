@@ -26,7 +26,7 @@ export const absoluteAuthConfig = (db: NeonHttpDatabase<SchemaType>) =>
 			authProvider,
 			providerInstance,
 			tokenResponse,
-			userSessionId,
+			cookie: { user_session_id },
 			session,
 			unregisteredSession
 		}) => {
@@ -47,7 +47,7 @@ export const absoluteAuthConfig = (db: NeonHttpDatabase<SchemaType>) =>
 				session,
 				tokenResponse,
 				unregisteredSession,
-				userSessionId,
+				userSessionIdCookie: user_session_id,
 				getUser: async (userIdentity) => {
 					const user = await getUser({
 						authProvider,
@@ -114,7 +114,7 @@ export const absoluteAuthConfig = (db: NeonHttpDatabase<SchemaType>) =>
 				);
 			}
 
-			session[userSessionId] = undefined;
+			delete session[userSessionId];
 
 			console.log(
 				`\nSuccessfully signed out ${providerName} user:`,

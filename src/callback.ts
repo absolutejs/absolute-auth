@@ -9,6 +9,7 @@ import {
 	OnCallbackSuccess,
 	RouteString
 } from './types';
+import { getUserSessionId } from './utils';
 
 type CallbackProps<UserType> = {
 	clientProviders: ClientProviders;
@@ -110,19 +111,7 @@ export const callback = <UserType>({
 						);
 			}
 
-			const existingId = user_session_id?.value;
-			const userSessionId = isNonEmptyString(existingId)
-				? existingId
-				: crypto.randomUUID();
-
-			if (existingId === undefined) {
-				user_session_id.set({
-					httpOnly: true,
-					sameSite: 'lax',
-					secure: true,
-					value: userSessionId
-				});
-			}
+			const userSessionId = getUserSessionId(user_session_id);
 
 			const response = await onCallbackSuccess?.({
 				authProvider,
