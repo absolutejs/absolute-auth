@@ -118,6 +118,8 @@ export type {
 	RefreshableProvider,
 	RevocableProvider,
 	ScopeRequiredProvider,
+	ProvidersMap,
+	ProviderConfiguration,
 	CredentialsFor
 } from 'citra';
 

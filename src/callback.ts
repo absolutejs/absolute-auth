@@ -1,8 +1,8 @@
-import { isPKCEProviderOption, isValidProviderOption } from 'citra';
+import { isPKCEProviderOption } from 'citra';
 import { Elysia, t } from 'elysia';
 import { sessionStore } from './sessionStore';
 import { isNonEmptyString } from './typeGuards';
-import { userSessionIdCookie } from './typebox';
+import { authProviderOption, userSessionIdCookie } from './typebox';
 import {
 	ClientProviders,
 	OnCallbackError,
@@ -43,7 +43,6 @@ export const callback = <UserType>({
 			if (
 				stored_state === undefined ||
 				code_verifier === undefined ||
-				auth_provider === undefined ||
 				user_session_id === undefined
 			) {
 				return status('Bad Request', 'Cookies are missing');
@@ -55,14 +54,6 @@ export const callback = <UserType>({
 
 			if (callback_state !== stored_state.value) {
 				return status('Bad Request', 'Invalid state mismatch');
-			}
-
-			if (auth_provider.value === undefined) {
-				return status('Unauthorized', 'No auth provider found');
-			}
-
-			if (!isValidProviderOption(auth_provider.value)) {
-				return status('Unauthorized', 'Invalid provider');
 			}
 
 			const providerConfig = clientProviders[auth_provider.value];
@@ -134,6 +125,7 @@ export const callback = <UserType>({
 		},
 		{
 			cookie: t.Cookie({
+				auth_provider: authProviderOption,
 				user_session_id: userSessionIdCookie
 			})
 		}

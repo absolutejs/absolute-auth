@@ -1,11 +1,11 @@
 import {
 	generateCodeVerifier,
 	generateState,
-	isPKCEProviderOption,
-	isValidProviderOption
+	isPKCEProviderOption
 } from 'citra';
-import { Elysia } from 'elysia';
+import { Elysia, t } from 'elysia';
 import { COOKIE_DURATION } from './constants';
+import { authProviderOption } from './typebox';
 import {
 	AuthorizeRoute,
 	ClientProviders,
@@ -45,9 +45,6 @@ export const authorize = ({
 
 			if (provider === undefined)
 				return status('Bad Request', 'Provider is required');
-
-			if (!isValidProviderOption(provider))
-				return status('Bad Request', 'Invalid provider');
 
 			const providerConfig = clientProviders[provider];
 			if (!providerConfig)
@@ -135,5 +132,13 @@ export const authorize = ({
 					`Unknown status: ${err}`
 				);
 			}
+		},
+		{
+			cookie: t.Cookie({
+				auth_provider: t.Optional(authProviderOption)
+			}),
+			params: t.Object({
+				provider: authProviderOption
+			})
 		}
 	);
