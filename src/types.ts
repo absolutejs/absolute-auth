@@ -243,7 +243,7 @@ export type InsantiateUserSessionProps<UserType> = {
 	session: SessionRecord<UserType>;
 	unregisteredSession: UnregisteredSessionRecord;
 	providerInstance: OAuth2Client<ProviderOption>;
-	userSessionIdCookie: Cookie<UserSessionId | undefined>;
+	userSessionIdTypebox: Cookie<UserSessionId | undefined>;
 	onNewUser: OnNewUser<UserType>;
 	getUser: GetUser<UserType>;
 };

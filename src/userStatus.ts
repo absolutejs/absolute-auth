@@ -1,6 +1,6 @@
 import { Elysia, t } from 'elysia';
 import { sessionStore } from './sessionStore';
-import { userSessionIdCookie } from './typebox';
+import { userSessionIdTypebox } from './typebox';
 import { OnStatus, RouteString } from './types';
 import { getStatus } from './utils';
 
@@ -28,5 +28,5 @@ export const userStatus = <UserType>({
 
 			return user;
 		},
-		{ cookie: t.Cookie({ user_session_id: userSessionIdCookie }) }
+		{ cookie: t.Cookie({ user_session_id: userSessionIdTypebox }) }
 	);

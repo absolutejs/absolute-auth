@@ -13,7 +13,7 @@ import {
 export const instantiateUserSession = async <UserType>({
 	authProvider,
 	session,
-	userSessionIdCookie,
+	userSessionIdTypebox,
 	unregisteredSession,
 	tokenResponse,
 	providerInstance,
@@ -39,8 +39,8 @@ export const instantiateUserSession = async <UserType>({
 		);
 	}
 
-	const userSession = validateSession({ session, userSessionIdCookie });
-	const userSessionId = getUserSessionId(userSessionIdCookie);
+	const userSession = validateSession({ session, userSessionIdTypebox });
+	const userSessionId = getUserSessionId(userSessionIdTypebox);
 
 	let user = userSession?.user ?? (await getUser(userIdentity));
 	const response = user ?? (await onNewUser(userIdentity));
@@ -124,17 +124,17 @@ export const getStatus = async <UserType>({
 type ValidateSessionProps<
 	SessionType extends Record<string, unknown> & { expiresAt: number }
 > = {
-	userSessionIdCookie: Cookie<UserSessionId | undefined>;
+	userSessionIdTypebox: Cookie<UserSessionId | undefined>;
 	session: Record<UserSessionId, SessionType>;
 };
 
 export const validateSession = <
 	SessionType extends Record<string, unknown> & { expiresAt: number }
 >({
-	userSessionIdCookie,
+	userSessionIdTypebox,
 	session
 }: ValidateSessionProps<SessionType>) => {
-	const userSessionId = userSessionIdCookie.value;
+	const userSessionId = userSessionIdTypebox.value;
 	if (!userSessionId) {
 		return undefined;
 	}
@@ -147,7 +147,7 @@ export const validateSession = <
 	const isExpired = userSession.expiresAt < Date.now();
 	if (isExpired) {
 		delete session[userSessionId];
-		userSessionIdCookie.set({
+		userSessionIdTypebox.set({
 			maxAge: 0,
 			value: ''
 		});

@@ -2,7 +2,7 @@ import { isPKCEProviderOption } from 'citra';
 import { Elysia, t } from 'elysia';
 import { sessionStore } from './sessionStore';
 import { isNonEmptyString } from './typeGuards';
-import { authProviderOption, userSessionIdCookie } from './typebox';
+import { authProviderOption, userSessionIdTypebox } from './typebox';
 import {
 	ClientProviders,
 	OnCallbackError,
@@ -126,7 +126,7 @@ export const callback = <UserType>({
 		{
 			cookie: t.Cookie({
 				auth_provider: authProviderOption,
-				user_session_id: userSessionIdCookie
+				user_session_id: userSessionIdTypebox
 			})
 		}
 	);

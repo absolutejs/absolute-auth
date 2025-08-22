@@ -1,7 +1,7 @@
 import { providers, isValidProviderOption } from 'citra';
 import { t } from 'elysia';
 
-export const userSessionIdCookie = t.Optional(
+export const userSessionIdTypebox = t.Optional(
 	t.TemplateLiteral('${string}-${string}-${string}-${string}-${string}')
 );
 

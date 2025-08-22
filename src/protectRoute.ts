@@ -1,6 +1,6 @@
 import { Elysia, t } from 'elysia';
 import { sessionStore } from './sessionStore';
-import { userSessionIdCookie } from './typebox';
+import { userSessionIdTypebox } from './typebox';
 import { StatusReturn } from './types';
 import { getStatus } from './utils';
 
@@ -14,7 +14,7 @@ type AuthFailError =
 export const protectRoute = <UserType>() =>
 	new Elysia()
 		.use(sessionStore<UserType>())
-		.guard({ cookie: t.Cookie({ user_session_id: userSessionIdCookie }) })
+		.guard({ cookie: t.Cookie({ user_session_id: userSessionIdTypebox }) })
 		.derive(
 			({ store: { session }, cookie: { user_session_id }, status }) => ({
 				protectRoute: async (

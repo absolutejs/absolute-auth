@@ -1,7 +1,7 @@
 import { isRevocableOAuth2Client, isValidProviderOption } from 'citra';
 import { Elysia, t } from 'elysia';
 import { sessionStore } from './sessionStore';
-import { userSessionIdCookie } from './typebox';
+import { userSessionIdTypebox } from './typebox';
 import {
 	ClientProviders,
 	OnRevocationError,
@@ -97,5 +97,5 @@ export const revoke = <UserType>({
 				);
 			}
 		},
-		{ cookie: t.Cookie({ user_session_id: userSessionIdCookie }) }
+		{ cookie: t.Cookie({ user_session_id: userSessionIdTypebox }) }
 	);
