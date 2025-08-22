@@ -47,7 +47,7 @@ export const absoluteAuthConfig = (db: NeonHttpDatabase<SchemaType>) =>
 				session,
 				tokenResponse,
 				unregisteredSession,
-				userSessionIdTypebox: user_session_id,
+				user_session_id,
 				getUser: async (userIdentity) => {
 					const user = await getUser({
 						authProvider,
