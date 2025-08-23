@@ -202,7 +202,6 @@ export type AuthorizeRoute = `${string}/:provider${'' | `/${string}`}`;
 export type GetStatusProps<UserType> = {
 	user_session_id: Cookie<UserSessionId | undefined>;
 	session: SessionRecord<UserType>;
-	onStatus?: OnStatus<UserType>;
 };
 
 export type AbsoluteAuthProps<UserType> = {

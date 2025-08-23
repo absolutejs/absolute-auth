@@ -17,13 +17,26 @@ export const userStatus = <UserType>({
 		statusRoute,
 		async ({ status, cookie: { user_session_id }, store: { session } }) => {
 			const { user, error } = await getStatus<UserType>({
-				onStatus,
 				session,
 				user_session_id
 			});
 
 			if (error) {
 				return status(error.code, error.message);
+			}
+
+			try {
+				await onStatus?.({ user });
+			} catch (err) {
+				return err instanceof Error
+					? status(
+							'Internal Server Error',
+							`Error: ${err.message} - ${err.stack ?? ''}`
+						)
+					: status(
+							'Internal Server Error',
+							`Unknown Error: ${String(err)}`
+						);
 			}
 
 			return user;

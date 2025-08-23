@@ -76,8 +76,7 @@ export const createProvidersConfiguration = (
 
 export const getStatus = async <UserType>({
 	user_session_id,
-	session,
-	onStatus
+	session
 }: GetStatusProps<UserType>) => {
 	if (user_session_id === undefined) {
 		return {
@@ -89,31 +88,8 @@ export const getStatus = async <UserType>({
 		};
 	}
 
-	const sessionId = user_session_id.value;
-	const user =
-		sessionId !== undefined && session[sessionId]
-			? session[sessionId].user
-			: null;
-
-	try {
-		await onStatus?.({ user });
-	} catch (err) {
-		return err instanceof Error
-			? {
-					error: {
-						code: 'Internal Server Error',
-						message: `Error: ${err.message} - ${err.stack ?? ''}`
-					} as const,
-					user: null
-				}
-			: {
-					error: {
-						code: 'Internal Server Error',
-						message: `Unknown Error: ${String(err)}`
-					} as const,
-					user: null
-				};
-	}
+	const userSession = validateSession({ session, user_session_id });
+	const user = userSession?.user ?? null;
 
 	return {
 		error: null,
