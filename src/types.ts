@@ -37,6 +37,8 @@ export type UnregisteredSessionRecord = Record<
 	{
 		userIdentity: Record<string, unknown>;
 		expiresAt: number;
+		accessToken: string;
+		refreshToken?: string;
 	}
 >;
 

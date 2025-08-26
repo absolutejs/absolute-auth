@@ -47,7 +47,9 @@ export const instantiateUserSession = async <UserType>({
 
 	if (response instanceof Response || isStatusResponse(response)) {
 		unregisteredSession[userSessionId] = {
+			accessToken,
 			expiresAt: Date.now() + MILLISECONDS_IN_AN_HOUR,
+			refreshToken,
 			userIdentity
 		};
 
