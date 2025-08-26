@@ -4,9 +4,9 @@ import { MILLISECONDS_IN_A_DAY, MILLISECONDS_IN_AN_HOUR } from './constants';
 import { isNonEmptyString, isStatusResponse } from './typeGuards';
 import {
 	AbsoluteAuthProps,
-	GetStatusProps,
 	InsantiateUserSessionProps,
 	OAuth2ConfigurationOptions,
+	SessionRecord,
 	UserSessionId
 } from './types';
 
@@ -76,10 +76,10 @@ export const createProvidersConfiguration = (
 	providersConfiguration: OAuth2ConfigurationOptions
 ) => providersConfiguration;
 
-export const getStatus = async <UserType>({
-	user_session_id,
-	session
-}: GetStatusProps<UserType>) => {
+export const getStatus = async <UserType>(
+	session: SessionRecord<UserType>,
+	user_session_id: Cookie<UserSessionId | undefined>
+) => {
 	if (user_session_id === undefined) {
 		return {
 			error: {

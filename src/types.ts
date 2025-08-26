@@ -201,11 +201,6 @@ export type OnSignOut<UserType> =
 export type RouteString = `/${string}`;
 export type AuthorizeRoute = `${string}/:provider${'' | `/${string}`}`;
 
-export type GetStatusProps<UserType> = {
-	user_session_id: Cookie<UserSessionId | undefined>;
-	session: SessionRecord<UserType>;
-};
-
 export type AbsoluteAuthProps<UserType> = {
 	providersConfiguration: OAuth2ConfigurationOptions;
 	authorizeRoute?: AuthorizeRoute;

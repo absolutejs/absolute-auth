@@ -16,10 +16,10 @@ export const userStatus = <UserType>({
 	new Elysia().use(sessionStore<UserType>()).get(
 		statusRoute,
 		async ({ status, cookie: { user_session_id }, store: { session } }) => {
-			const { user, error } = await getStatus<UserType>({
+			const { user, error } = await getStatus<UserType>(
 				session,
 				user_session_id
-			});
+			);
 
 			if (error) {
 				return status(error.code, error.message);
