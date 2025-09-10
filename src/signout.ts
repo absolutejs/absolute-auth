@@ -46,6 +46,7 @@ export const signout = <UserType>({
 				return status('Internal Server Error', `Unknown Error: ${err}`);
 			}
 
+			delete session[user_session_id.value];
 			user_session_id.remove();
 			auth_provider.remove();
 

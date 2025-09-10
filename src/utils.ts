@@ -125,10 +125,7 @@ export const validateSession = <
 	const isExpired = userSession.expiresAt < Date.now();
 	if (isExpired) {
 		delete session[userSessionId];
-		user_session_id.set({
-			maxAge: 0,
-			value: ''
-		});
+		user_session_id.remove();
 
 		return undefined;
 	}
