@@ -9,13 +9,6 @@ import {
 import { Cookie, status as statusType, redirect as redirectType } from 'elysia';
 import { ElysiaCustomStatusResponse } from 'elysia/error';
 
-type SessionData<UserType> = {
-	user: UserType;
-	accessToken: string;
-	refreshToken?: string;
-	expiresAt: number;
-};
-
 export type OAuth2ConfigurationOptions = {
 	[Provider in ProviderOption]?: {
 		credentials: CredentialsFor<Provider>;
@@ -29,15 +22,21 @@ export type UserSessionId = `${string}-${string}-${string}-${string}-${string}`;
 
 export type SessionRecord<UserType> = Record<
 	UserSessionId,
-	SessionData<UserType>
+	{
+		user: UserType;
+		accessToken: string;
+		refreshToken?: string;
+		expiresAt: number;
+	}
 >;
 
 export type UnregisteredSessionRecord = Record<
 	UserSessionId,
 	{
-		userIdentity: Record<string, unknown>;
+		userIdentity?: Record<string, unknown>;
+		sessionInformation?: Record<string, unknown>;
 		expiresAt: number;
-		accessToken: string;
+		accessToken?: string;
 		refreshToken?: string;
 	}
 >;

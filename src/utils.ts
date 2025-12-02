@@ -45,27 +45,41 @@ export const instantiateUserSession = async <UserType>({
 	let user = userSession?.user ?? (await getUser(userIdentity));
 	const response = user ?? (await onNewUser(userIdentity));
 
-	if (response instanceof Response || isStatusResponse(response)) {
-		unregisteredSession[userSessionId] = {
+	const isRedirectOrStatus =
+		response instanceof Response || isStatusResponse(response);
+
+	if (!isRedirectOrStatus) {
+		user = response;
+
+		session[userSessionId] = {
 			accessToken,
-			expiresAt: Date.now() + MILLISECONDS_IN_AN_HOUR,
+			expiresAt: Date.now() + MILLISECONDS_IN_A_DAY,
 			refreshToken,
-			userIdentity
+			user
 		};
+
+		return void 0;
+	}
+
+	const existingUnregistered = unregisteredSession[userSessionId];
+
+	if (existingUnregistered) {
+		existingUnregistered.accessToken = accessToken;
+		existingUnregistered.expiresAt = Date.now() + MILLISECONDS_IN_AN_HOUR;
+		existingUnregistered.refreshToken = refreshToken;
+		existingUnregistered.userIdentity = userIdentity;
 
 		return response;
 	}
 
-	user = response;
-
-	session[userSessionId] = {
+	unregisteredSession[userSessionId] = {
 		accessToken,
-		expiresAt: Date.now() + MILLISECONDS_IN_A_DAY,
+		expiresAt: Date.now() + MILLISECONDS_IN_AN_HOUR,
 		refreshToken,
-		user
+		userIdentity
 	};
 
-	return void 0;
+	return response;
 };
 
 export const createAuthConfiguration = <UserType>(
