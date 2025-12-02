@@ -73,7 +73,7 @@ export type OnCallbackSuccess<UserType> =
 			status
 	  }: {
 			providerInstance: OAuth2Client<ProviderOption>;
-			authProvider: string;
+			authProvider: ProviderOption;
 			tokenResponse: OAuth2TokenResponse;
 			session: SessionRecord<UserType>;
 			unregisteredSession: UnregisteredSessionRecord;
@@ -233,7 +233,7 @@ export type ClientProviders = Record<
 >;
 
 export type InsantiateUserSessionProps<UserType> = {
-	authProvider: string;
+	authProvider: ProviderOption;
 	tokenResponse: OAuth2TokenResponse;
 	session: SessionRecord<UserType>;
 	unregisteredSession: UnregisteredSessionRecord;

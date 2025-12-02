@@ -30,9 +30,7 @@ export const absoluteAuthConfig = (db: NeonHttpDatabase<SchemaType>) =>
 			session,
 			unregisteredSession
 		}) => {
-			const providerName = isValidProviderOption(authProvider)
-				? providerData[authProvider].name
-				: authProvider;
+			const providerName = providerData[authProvider].name;
 
 			console.log(
 				`\nSuccesfully authorized OAuth2 with ${providerName} and got token response:`,
