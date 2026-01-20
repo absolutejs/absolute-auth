@@ -50,3 +50,9 @@ package-lock.json
 
 # dist folder
 /dist
+
+# Claude 
+CLAUDE.md
+
+# temp
+*SECURITY_AUDIT.md

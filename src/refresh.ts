@@ -1,5 +1,6 @@
 import { isRefreshableOAuth2Client, isValidProviderOption } from 'citra';
 import { Elysia, t } from 'elysia';
+import { MILLISECONDS_IN_A_DAY } from './constants';
 import { sessionStore } from './sessionStore';
 import { userSessionIdTypebox } from './typebox';
 import {
@@ -74,6 +75,13 @@ export const refresh = <UserType>({
 			try {
 				const tokenResponse =
 					await providerInstance.refreshAccessToken(refreshToken);
+
+				userSession.accessToken = tokenResponse.access_token;
+				userSession.expiresAt = Date.now() + MILLISECONDS_IN_A_DAY;
+
+				if (tokenResponse.refresh_token) {
+					userSession.refreshToken = tokenResponse.refresh_token;
+				}
 
 				await onRefreshSuccess?.({
 					authProvider: auth_provider.value,
