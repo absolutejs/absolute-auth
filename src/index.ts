@@ -3,7 +3,7 @@ import { Elysia } from 'elysia';
 import { authorize } from './authorize';
 import { callback } from './callback';
 import { profile } from './profile';
-import { protectRoute } from './protectRoute';
+import { protectRoutePlugin } from './protectRoute';
 import { refresh } from './refresh';
 import { revoke } from './revoke';
 import { signout } from './signout';
@@ -100,14 +100,14 @@ export const absoluteAuth = async <UserType>({
 				profileRoute
 			})
 		)
-		.use(protectRoute<UserType>());
+		.use(protectRoutePlugin<UserType>());
 };
 
 export * from './types';
 export * from './typebox';
 export { isValidUser } from './typeGuards';
 export { sessionStore } from './sessionStore';
-export { protectRoute } from './protectRoute';
+export { protectRoutePlugin } from './protectRoute';
 export * from './utils';
 export type {
 	OAuth2TokenResponse,

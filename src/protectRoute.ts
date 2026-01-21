@@ -10,7 +10,7 @@ type AuthFailError =
 			readonly message: 'User is not authenticated';
 	  };
 
-export const protectRoute = <UserType>() =>
+export const protectRoutePlugin = <UserType>() =>
 	new Elysia()
 		.use(sessionStore<UserType>())
 		.guard({ cookie: t.Cookie({ user_session_id: userSessionIdTypebox }) })
