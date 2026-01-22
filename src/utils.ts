@@ -7,6 +7,7 @@ import {
 	InsantiateUserSessionProps,
 	OAuth2ConfigurationOptions,
 	SessionRecord,
+	UnregisteredSessionRecord,
 	UserSessionId
 } from './types';
 
@@ -40,7 +41,11 @@ export const instantiateUserSession = async <UserType>({
 	}
 
 	const userSession = validateSession({ session, user_session_id });
-	const userSessionId = getUserSessionId(user_session_id);
+	const userSessionId = getUserSessionId({
+		session,
+		unregisteredSession,
+		user_session_id
+	});
 
 	let user = userSession?.user ?? (await getUser(userIdentity));
 	const response = user ?? (await onNewUser(userIdentity));
@@ -147,24 +152,36 @@ export const validateSession = <
 	return userSession;
 };
 
-export const getUserSessionId = (
-	user_session_id: Cookie<
-		`${string}-${string}-${string}-${string}-${string}` | undefined
-	>
-) => {
-	const existingId = user_session_id?.value;
-	const userSessionId = isNonEmptyString(existingId)
-		? existingId
-		: crypto.randomUUID();
+type GetUserSessionIdProps<UserType> = {
+	user_session_id: Cookie<UserSessionId | undefined>;
+	session?: SessionRecord<UserType>;
+	unregisteredSession?: UnregisteredSessionRecord;
+};
 
-	if (existingId === undefined) {
-		user_session_id.set({
-			httpOnly: true,
-			sameSite: 'lax',
-			secure: true,
-			value: userSessionId
-		});
+export const getUserSessionId = <UserType>({
+	user_session_id,
+	session,
+	unregisteredSession
+}: GetUserSessionIdProps<UserType>) => {
+	const existingId = user_session_id?.value;
+
+	if (isNonEmptyString(existingId)) {
+		if (session) {
+			delete session[existingId];
+		}
+		if (unregisteredSession) {
+			delete unregisteredSession[existingId];
+		}
 	}
+
+	const userSessionId = crypto.randomUUID();
+
+	user_session_id.set({
+		httpOnly: true,
+		sameSite: 'lax',
+		secure: true,
+		value: userSessionId
+	});
 
 	return userSessionId;
 };

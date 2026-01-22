@@ -106,7 +106,11 @@ export const callback = <UserType>({
 				);
 			}
 
-			const userSessionId = getUserSessionId(user_session_id);
+			const userSessionId = getUserSessionId({
+				session,
+				unregisteredSession,
+				user_session_id
+			});
 
 			const response = await onCallbackSuccess?.({
 				authProvider,
