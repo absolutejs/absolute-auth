@@ -51,7 +51,21 @@ export const authorize = ({
 				return status('Unauthorized', 'Client provider not found');
 
 			const { providerInstance, scope, searchParams } = providerConfig;
-			const referer = headers['referer'] ?? '/';
+			let referer = '/';
+			const headerReferer = headers['referer'];
+			if (headerReferer) {
+				try {
+					const url = new URL(headerReferer);
+					referer = url.pathname + url.search;
+				} catch {
+					if (
+						headerReferer.startsWith('/') &&
+						!headerReferer.startsWith('//')
+					) {
+						referer = headerReferer;
+					}
+				}
+			}
 
 			origin_url.set({
 				httpOnly: true,
