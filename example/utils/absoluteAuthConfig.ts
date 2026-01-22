@@ -101,6 +101,14 @@ export const absoluteAuthConfig = (
 			tokenToRevoke
 		);
 	},
+	onSessionCleanup({ removedSessions, removedUnregisteredSessions }) {
+		console.log('\nSession cleanup performed:');
+		console.log('Removed sessions:', removedSessions);
+		console.log(
+			'Removed unregistered sessions:',
+			removedUnregisteredSessions
+		);
+	},
 	onSignOut: ({ authProvider, userSessionId, session }) => {
 		const providerName = isValidProviderOption(authProvider)
 			? providerData[authProvider].name
@@ -125,13 +133,5 @@ export const absoluteAuthConfig = (
 		} else {
 			console.log(`\nSuccessfully checked user status:`, user);
 		}
-	},
-	onSessionCleanup({ removedSessions, removedUnregisteredSessions }) {
-		console.log('\nSession cleanup performed:');
-		console.log('Removed sessions:', removedSessions);
-		console.log(
-			'Removed unregistered sessions:',
-			removedUnregisteredSessions
-		);
 	}
 });

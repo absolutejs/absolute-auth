@@ -132,8 +132,8 @@ export const authorize = ({
 				console.error(
 					'[authorize] Failed to create authorization URL:',
 					{
-						provider,
 						error: err instanceof Error ? err.message : err,
+						provider,
 						stack: err instanceof Error ? err.stack : undefined
 					}
 				);
