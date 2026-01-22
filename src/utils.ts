@@ -19,7 +19,9 @@ export const instantiateUserSession = async <UserType>({
 	tokenResponse,
 	providerInstance,
 	getUser,
-	onNewUser
+	onNewUser,
+	sessionDurationMs = MILLISECONDS_IN_A_DAY,
+	unregisteredSessionDurationMs = MILLISECONDS_IN_AN_HOUR
 }: InsantiateUserSessionProps<UserType>) => {
 	let userIdentity;
 	let accessToken = tokenResponse.access_token;
@@ -58,7 +60,7 @@ export const instantiateUserSession = async <UserType>({
 
 		session[userSessionId] = {
 			accessToken,
-			expiresAt: Date.now() + MILLISECONDS_IN_A_DAY,
+			expiresAt: Date.now() + sessionDurationMs,
 			refreshToken,
 			user
 		};
@@ -70,7 +72,8 @@ export const instantiateUserSession = async <UserType>({
 
 	if (existingUnregistered) {
 		existingUnregistered.accessToken = accessToken;
-		existingUnregistered.expiresAt = Date.now() + MILLISECONDS_IN_AN_HOUR;
+		existingUnregistered.expiresAt =
+			Date.now() + unregisteredSessionDurationMs;
 		existingUnregistered.refreshToken = refreshToken;
 		existingUnregistered.userIdentity = userIdentity;
 
@@ -79,7 +82,7 @@ export const instantiateUserSession = async <UserType>({
 
 	unregisteredSession[userSessionId] = {
 		accessToken,
-		expiresAt: Date.now() + MILLISECONDS_IN_AN_HOUR,
+		expiresAt: Date.now() + unregisteredSessionDurationMs,
 		refreshToken,
 		userIdentity
 	};

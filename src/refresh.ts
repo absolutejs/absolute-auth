@@ -15,13 +15,15 @@ type RefreshProps = {
 	refreshRoute?: RouteString;
 	onRefreshSuccess: OnRefreshSuccess;
 	onRefreshError: OnRefreshError;
+	sessionDurationMs?: number;
 };
 
 export const refresh = <UserType>({
 	clientProviders,
 	refreshRoute = '/oauth2/tokens',
 	onRefreshSuccess,
-	onRefreshError
+	onRefreshError,
+	sessionDurationMs = MILLISECONDS_IN_A_DAY
 }: RefreshProps) =>
 	new Elysia().use(sessionStore<UserType>()).post(
 		refreshRoute,
@@ -77,7 +79,7 @@ export const refresh = <UserType>({
 					await providerInstance.refreshAccessToken(refreshToken);
 
 				userSession.accessToken = tokenResponse.access_token;
-				userSession.expiresAt = Date.now() + MILLISECONDS_IN_A_DAY;
+				userSession.expiresAt = Date.now() + sessionDurationMs;
 
 				if (tokenResponse.refresh_token) {
 					userSession.refreshToken = tokenResponse.refresh_token;

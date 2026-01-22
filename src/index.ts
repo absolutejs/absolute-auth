@@ -22,6 +22,7 @@ export const absoluteAuth = async <UserType>({
 	revokeRoute,
 	cleanupIntervalMs,
 	maxSessions,
+	sessionDurationMs,
 	onAuthorizeSuccess,
 	onAuthorizeError,
 	onProfileSuccess,
@@ -84,7 +85,8 @@ export const absoluteAuth = async <UserType>({
 				clientProviders,
 				onRefreshError,
 				onRefreshSuccess,
-				refreshRoute
+				refreshRoute,
+				sessionDurationMs
 			})
 		)
 		.use(

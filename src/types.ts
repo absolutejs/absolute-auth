@@ -228,6 +228,8 @@ export type AbsoluteAuthProps<UserType> = {
 	statusRoute?: RouteString;
 	cleanupIntervalMs?: number;
 	maxSessions?: number;
+	sessionDurationMs?: number;
+	unregisteredSessionDurationMs?: number;
 	onAuthorizeSuccess?: OnAuthorizeSuccess;
 	onAuthorizeError?: OnAuthorizeError;
 	onCallbackSuccess?: OnCallbackSuccess<UserType>;
@@ -261,4 +263,6 @@ export type InsantiateUserSessionProps<UserType> = {
 	user_session_id: Cookie<UserSessionId | undefined>;
 	onNewUser: OnNewUser<UserType>;
 	getUser: GetUser<UserType>;
+	sessionDurationMs?: number;
+	unregisteredSessionDurationMs?: number;
 };
