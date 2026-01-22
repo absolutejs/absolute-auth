@@ -92,21 +92,20 @@ export const refresh = <UserType>({
 					status: 204
 				});
 			} catch (err) {
+				console.error('[refresh] Failed to refresh token:', {
+					authProvider: auth_provider.value,
+					error: err instanceof Error ? err.message : err,
+					stack: err instanceof Error ? err.stack : undefined
+				});
+
 				await onRefreshError?.({
 					authProvider: auth_provider.value,
 					error: err
 				});
 
-				if (err instanceof Error) {
-					return status(
-						'Internal Server Error',
-						`Failed to refresh token: ${err.message}`
-					);
-				}
-
 				return status(
 					'Internal Server Error',
-					`Failed to refresh token: Unknown status: ${err}`
+					'Failed to refresh token'
 				);
 			}
 		},

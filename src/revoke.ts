@@ -79,21 +79,20 @@ export const revoke = <UserType>({
 					status: 204
 				});
 			} catch (err) {
+				console.error('[revoke] Failed to revoke token:', {
+					authProvider: auth_provider.value,
+					error: err instanceof Error ? err.message : err,
+					stack: err instanceof Error ? err.stack : undefined
+				});
+
 				await onRevocationError?.({
 					authProvider: auth_provider.value,
 					error: err
 				});
 
-				if (err instanceof Error) {
-					return status(
-						'Internal Server Error',
-						`Failed to revoke token: ${err.message}`
-					);
-				}
-
 				return status(
 					'Internal Server Error',
-					`Failed to revoke token: Unknown status: ${err}`
+					'Failed to revoke token'
 				);
 			}
 		},

@@ -36,14 +36,16 @@ export const signout = <UserType>({
 					userSessionId: user_session_id.value
 				});
 			} catch (err) {
-				if (err instanceof Error) {
-					return status(
-						'Internal Server Error',
-						`Error: ${err.message} - ${err.stack ?? ''}`
-					);
-				}
+				console.error('[signout] Sign out operation failed:', {
+					authProvider: auth_provider.value,
+					error: err instanceof Error ? err.message : err,
+					stack: err instanceof Error ? err.stack : undefined
+				});
 
-				return status('Internal Server Error', `Unknown Error: ${err}`);
+				return status(
+					'Internal Server Error',
+					'Sign out operation failed'
+				);
 			}
 
 			delete session[user_session_id.value];

@@ -85,21 +85,25 @@ export const callback = <UserType>({
 							: { code }
 					);
 			} catch (err) {
+				console.error(
+					'[callback] Failed to validate authorization code:',
+					{
+						authProvider,
+						error: err instanceof Error ? err.message : err,
+						stack: err instanceof Error ? err.stack : undefined
+					}
+				);
+
 				await onCallbackError?.({
 					authProvider,
 					error: err,
 					originUrl
 				});
 
-				return err instanceof Error
-					? status(
-							'Internal Server Error',
-							`${err.message} - ${err.stack ?? ''}`
-						)
-					: status(
-							'Internal Server Error',
-							`Failed to validate authorization code: Unknown status: ${err}`
-						);
+				return status(
+					'Internal Server Error',
+					'Failed to validate authorization code'
+				);
 			}
 
 			const userSessionId = getUserSessionId(user_session_id);

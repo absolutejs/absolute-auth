@@ -115,21 +115,23 @@ export const authorize = ({
 
 				return redirect(authorizationURL.toString());
 			} catch (err) {
+				console.error(
+					'[authorize] Failed to create authorization URL:',
+					{
+						provider,
+						error: err instanceof Error ? err.message : err,
+						stack: err instanceof Error ? err.stack : undefined
+					}
+				);
+
 				await onAuthorizeError?.({
 					authProvider: provider,
 					error: err
 				});
 
-				if (err instanceof Error) {
-					return status(
-						'Internal Server Error',
-						`${err.message} - ${err.stack ?? ''}`
-					);
-				}
-
 				return status(
 					'Internal Server Error',
-					`Unknown status: ${err}`
+					'Failed to create authorization URL'
 				);
 			}
 		},
