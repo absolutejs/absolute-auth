@@ -58,7 +58,7 @@ const performCleanup = async <UserType>(
 	unregisteredSession: UnregisteredSessionRecord,
 	maxSessions: number,
 	onSessionCleanup?: OnSessionCleanup<UserType>
-): Promise<void> => {
+) => {
 	const now = Date.now();
 	const removedSessions = new Map<UserSessionId, SessionData<UserType>>();
 	const removedUnregisteredSessions = new Map<
