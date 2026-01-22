@@ -20,25 +20,29 @@ export type OAuth2ConfigurationOptions = {
 
 export type UserSessionId = `${string}-${string}-${string}-${string}-${string}`;
 
+export type SessionData<UserType> = {
+	user: UserType;
+	accessToken: string;
+	refreshToken?: string;
+	expiresAt: number;
+};
+
 export type SessionRecord<UserType> = Record<
 	UserSessionId,
-	{
-		user: UserType;
-		accessToken: string;
-		refreshToken?: string;
-		expiresAt: number;
-	}
+	SessionData<UserType>
 >;
+
+export type UnregisteredSessionData = {
+	userIdentity?: Record<string, unknown>;
+	sessionInformation?: Record<string, unknown>;
+	expiresAt: number;
+	accessToken?: string;
+	refreshToken?: string;
+};
 
 export type UnregisteredSessionRecord = Record<
 	UserSessionId,
-	{
-		userIdentity?: Record<string, unknown>;
-		sessionInformation?: Record<string, unknown>;
-		expiresAt: number;
-		accessToken?: string;
-		refreshToken?: string;
-	}
+	UnregisteredSessionData
 >;
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Add better typing for the Elysia codes
@@ -194,6 +198,19 @@ export type OnSignOut<UserType> =
 			authProvider: string;
 			userSessionId: UserSessionId;
 			session: SessionRecord<UserType>;
+	  }) => void | Promise<void>)
+	| undefined;
+
+export type OnSessionCleanup<UserType> =
+	| (({
+			removedSessions,
+			removedUnregisteredSessions
+	  }: {
+			removedSessions: Map<UserSessionId, SessionData<UserType>>;
+			removedUnregisteredSessions: Map<
+				UserSessionId,
+				UnregisteredSessionData
+			>;
 	  }) => void | Promise<void>)
 	| undefined;
 

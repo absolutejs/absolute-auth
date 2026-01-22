@@ -6,8 +6,9 @@ import { profile } from './profile';
 import { protectRoutePlugin } from './protectRoute';
 import { refresh } from './refresh';
 import { revoke } from './revoke';
+import { sessionCleanupPlugin } from './sessionCleanupPlugin';
 import { signout } from './signout';
-import { AbsoluteAuthProps, ClientProviders } from './types';
+import { AbsoluteAuthProps, ClientProviders, OnSessionCleanup } from './types';
 import { userStatus } from './userStatus';
 
 export const absoluteAuth = async <UserType>({
@@ -30,8 +31,15 @@ export const absoluteAuth = async <UserType>({
 	onRefreshError,
 	onSignOut,
 	onRevocationSuccess,
-	onRevocationError
-}: AbsoluteAuthProps<UserType>) => {
+	onRevocationError,
+	onSessionCleanup,
+	cleanupIntervalMs,
+	maxSessions
+}: AbsoluteAuthProps<UserType> & {
+	onSessionCleanup?: OnSessionCleanup<UserType>;
+	cleanupIntervalMs?: number;
+	maxSessions?: number;
+}) => {
 	const entryPromises: Array<Promise<[string, ClientProviders[string]]>> = [];
 
 	for (const [providerName, providerConfig] of Object.entries(
@@ -58,6 +66,13 @@ export const absoluteAuth = async <UserType>({
 	);
 
 	return new Elysia()
+		.use(
+			sessionCleanupPlugin<UserType>({
+				cleanupIntervalMs,
+				maxSessions,
+				onSessionCleanup
+			})
+		)
 		.use(signout({ onSignOut, signoutRoute }))
 		.use(
 			revoke({
@@ -105,9 +120,10 @@ export const absoluteAuth = async <UserType>({
 
 export * from './types';
 export * from './typebox';
-export { isValidUser } from './typeGuards';
+export { isUserSessionId, isValidUser } from './typeGuards';
 export { sessionStore } from './sessionStore';
 export { protectRoutePlugin } from './protectRoute';
+export { sessionCleanupPlugin } from './sessionCleanupPlugin';
 export * from './utils';
 export type {
 	OAuth2TokenResponse,
