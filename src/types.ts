@@ -226,6 +226,8 @@ export type AbsoluteAuthProps<UserType> = {
 	revokeRoute?: RouteString;
 	signoutRoute?: RouteString;
 	statusRoute?: RouteString;
+	cleanupIntervalMs?: number;
+	maxSessions?: number;
 	onAuthorizeSuccess?: OnAuthorizeSuccess;
 	onAuthorizeError?: OnAuthorizeError;
 	onCallbackSuccess?: OnCallbackSuccess<UserType>;
@@ -238,6 +240,7 @@ export type AbsoluteAuthProps<UserType> = {
 	onRevocationError?: OnRevocationError;
 	onProfileSuccess?: OnProfileSuccess;
 	onProfileError?: OnProfileError;
+	onSessionCleanup?: OnSessionCleanup<UserType>;
 };
 
 export type ClientProviders = Record<

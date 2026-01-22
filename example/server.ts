@@ -1,4 +1,3 @@
-import { env } from 'process';
 import {
 	asset,
 	build,
@@ -51,6 +50,9 @@ const server = new Elysia()
 				)
 		)
 	)
+	.post('/cleanup', async ({ cleanupSessions }) => {
+		await cleanupSessions();
+	})
 	.use(networking)
 	.on('error', (error) => {
 		const { request } = error;

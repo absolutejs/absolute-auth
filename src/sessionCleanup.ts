@@ -11,7 +11,7 @@ import {
 	UserSessionId
 } from './types';
 
-export const sessionCleanupPlugin = <UserType>({
+export const sessionCleanup = <UserType>({
 	cleanupIntervalMs = MILLISECONDS_IN_AN_HOUR,
 	maxSessions = DEFAULT_MAX_SESSIONS,
 	onSessionCleanup
