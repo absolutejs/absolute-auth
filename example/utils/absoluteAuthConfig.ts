@@ -1,7 +1,6 @@
 import { NeonHttpDatabase } from 'drizzle-orm/neon-http';
 import {
 	AbsoluteAuthProps,
-	createAuthConfiguration,
 	instantiateUserSession,
 	isValidProviderOption
 } from '../../src';

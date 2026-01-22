@@ -80,10 +80,8 @@ export const refresh = <UserType>({
 
 				userSession.accessToken = tokenResponse.access_token;
 				userSession.expiresAt = Date.now() + sessionDurationMs;
-
-				if (tokenResponse.refresh_token) {
-					userSession.refreshToken = tokenResponse.refresh_token;
-				}
+				userSession.refreshToken =
+					tokenResponse.refresh_token ?? userSession.refreshToken;
 
 				await onRefreshSuccess?.({
 					authProvider: auth_provider.value,

@@ -20,6 +20,22 @@ type AuthorizeProps = {
 	onAuthorizeError: OnAuthorizeError;
 };
 
+const parseReferer = (headerReferer: string | undefined) => {
+	if (!headerReferer) return '/';
+
+	try {
+		const url = new URL(headerReferer);
+
+		return url.pathname + url.search;
+	} catch {
+		if (headerReferer.startsWith('/') && !headerReferer.startsWith('//')) {
+			return headerReferer;
+		}
+
+		return '/';
+	}
+};
+
 export const authorize = ({
 	clientProviders,
 	authorizeRoute = '/oauth2/:provider/authorization',
@@ -51,21 +67,7 @@ export const authorize = ({
 				return status('Unauthorized', 'Client provider not found');
 
 			const { providerInstance, scope, searchParams } = providerConfig;
-			let referer = '/';
-			const headerReferer = headers['referer'];
-			if (headerReferer) {
-				try {
-					const url = new URL(headerReferer);
-					referer = url.pathname + url.search;
-				} catch {
-					if (
-						headerReferer.startsWith('/') &&
-						!headerReferer.startsWith('//')
-					) {
-						referer = headerReferer;
-					}
-				}
-			}
+			const referer = parseReferer(headers['referer']);
 
 			origin_url.set({
 				httpOnly: true,

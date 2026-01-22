@@ -8,7 +8,7 @@ import { refresh } from './refresh';
 import { revoke } from './revoke';
 import { sessionCleanup } from './sessionCleanup';
 import { signout } from './signout';
-import { AbsoluteAuthProps, ClientProviders, OnSessionCleanup } from './types';
+import { AbsoluteAuthProps, ClientProviders } from './types';
 import { userStatus } from './userStatus';
 
 export const absoluteAuth = async <UserType>({

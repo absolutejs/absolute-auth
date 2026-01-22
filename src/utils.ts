@@ -161,6 +161,15 @@ type GetUserSessionIdProps<UserType> = {
 	unregisteredSession?: UnregisteredSessionRecord;
 };
 
+const clearExistingSession = <UserType>(
+	existingId: UserSessionId,
+	session?: SessionRecord<UserType>,
+	unregisteredSession?: UnregisteredSessionRecord
+) => {
+	if (session) delete session[existingId];
+	if (unregisteredSession) delete unregisteredSession[existingId];
+};
+
 export const getUserSessionId = <UserType>({
 	user_session_id,
 	session,
@@ -169,12 +178,7 @@ export const getUserSessionId = <UserType>({
 	const existingId = user_session_id?.value;
 
 	if (isNonEmptyString(existingId)) {
-		if (session) {
-			delete session[existingId];
-		}
-		if (unregisteredSession) {
-			delete unregisteredSession[existingId];
-		}
+		clearExistingSession(existingId, session, unregisteredSession);
 	}
 
 	const userSessionId = crypto.randomUUID();

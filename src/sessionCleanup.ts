@@ -11,15 +11,17 @@ import {
 	UserSessionId
 } from './types';
 
+type SessionCleanupProps<UserType> = {
+	cleanupIntervalMs?: number;
+	maxSessions?: number;
+	onSessionCleanup?: OnSessionCleanup<UserType>;
+};
+
 export const sessionCleanup = <UserType>({
 	cleanupIntervalMs = MILLISECONDS_IN_AN_HOUR,
 	maxSessions = DEFAULT_MAX_SESSIONS,
 	onSessionCleanup
-}: {
-	cleanupIntervalMs?: number;
-	maxSessions?: number;
-	onSessionCleanup?: OnSessionCleanup<UserType>;
-}) => {
+}: SessionCleanupProps<UserType>) => {
 	let intervalId: ReturnType<typeof setInterval> | null = null;
 
 	return new Elysia({ name: 'sessionCleanup' })
@@ -53,6 +55,100 @@ export const sessionCleanup = <UserType>({
 		.as('global');
 };
 
+const collectValidSessionEntries = <UserType>(
+	session: SessionRecord<UserType>
+) => {
+	const entries: [UserSessionId, SessionData<UserType>][] = [];
+	for (const [key, value] of Object.entries(session)) {
+		if (!isUserSessionId(key)) continue;
+		entries.push([key, value]);
+	}
+
+	return entries;
+};
+
+const collectValidUnregisteredEntries = (
+	unregisteredSession: UnregisteredSessionRecord
+) => {
+	const entries: [UserSessionId, UnregisteredSessionData][] = [];
+	for (const [key, value] of Object.entries(unregisteredSession)) {
+		if (!isUserSessionId(key)) continue;
+		entries.push([key, value]);
+	}
+
+	return entries;
+};
+
+const removeExpiredSessions = <UserType>(
+	validEntries: [UserSessionId, SessionData<UserType>][],
+	session: SessionRecord<UserType>,
+	now: number
+) => {
+	const removed = new Map<UserSessionId, SessionData<UserType>>();
+	for (const [sessionId, userSession] of validEntries) {
+		if (userSession.expiresAt >= now) continue;
+		removed.set(sessionId, userSession);
+		delete session[sessionId];
+	}
+
+	return removed;
+};
+
+const removeExpiredUnregisteredSessions = (
+	validEntries: [UserSessionId, UnregisteredSessionData][],
+	unregisteredSession: UnregisteredSessionRecord,
+	now: number
+) => {
+	const removed = new Map<UserSessionId, UnregisteredSessionData>();
+	for (const [sessionId, unregSession] of validEntries) {
+		if (unregSession.expiresAt >= now) continue;
+		removed.set(sessionId, unregSession);
+		delete unregisteredSession[sessionId];
+	}
+
+	return removed;
+};
+
+const evictExcessSessions = <UserType>(
+	remainingEntries: [UserSessionId, SessionData<UserType>][],
+	session: SessionRecord<UserType>,
+	maxSessions: number,
+	removedSessions: Map<UserSessionId, SessionData<UserType>>
+) => {
+	const excessCount = remainingEntries.length - maxSessions;
+	if (excessCount <= 0) return;
+
+	const sortedByExpiry = remainingEntries.sort(
+		([, entryA], [, entryB]) => entryA.expiresAt - entryB.expiresAt
+	);
+	const toEvict = sortedByExpiry.slice(0, excessCount);
+
+	for (const [key, value] of toEvict) {
+		removedSessions.set(key, value);
+		delete session[key];
+	}
+};
+
+const evictExcessUnregisteredSessions = (
+	remainingEntries: [UserSessionId, UnregisteredSessionData][],
+	unregisteredSession: UnregisteredSessionRecord,
+	maxSessions: number,
+	removedUnregisteredSessions: Map<UserSessionId, UnregisteredSessionData>
+) => {
+	const excessCount = remainingEntries.length - maxSessions;
+	if (excessCount <= 0) return;
+
+	const sortedByExpiry = remainingEntries.sort(
+		([, entryA], [, entryB]) => entryA.expiresAt - entryB.expiresAt
+	);
+	const toEvict = sortedByExpiry.slice(0, excessCount);
+
+	for (const [key, value] of toEvict) {
+		removedUnregisteredSessions.set(key, value);
+		delete unregisteredSession[key];
+	}
+};
+
 const performCleanup = async <UserType>(
 	session: SessionRecord<UserType>,
 	unregisteredSession: UnregisteredSessionRecord,
@@ -60,74 +156,41 @@ const performCleanup = async <UserType>(
 	onSessionCleanup?: OnSessionCleanup<UserType>
 ) => {
 	const now = Date.now();
-	const removedSessions = new Map<UserSessionId, SessionData<UserType>>();
-	const removedUnregisteredSessions = new Map<
-		UserSessionId,
-		UnregisteredSessionData
-	>();
 
-	const validSessionEntries: [UserSessionId, SessionData<UserType>][] = [];
-	for (const [key, value] of Object.entries(session)) {
-		if (isUserSessionId(key)) {
-			validSessionEntries.push([key, value]);
-		}
-	}
+	const validSessionEntries = collectValidSessionEntries(session);
+	const removedSessions = removeExpiredSessions(
+		validSessionEntries,
+		session,
+		now
+	);
 
-	for (const [sessionId, userSession] of validSessionEntries) {
-		if (userSession.expiresAt < now) {
-			removedSessions.set(sessionId, userSession);
-			delete session[sessionId];
-		}
-	}
-
-	const validUnregisteredEntries: [UserSessionId, UnregisteredSessionData][] =
-		[];
-	for (const [key, value] of Object.entries(unregisteredSession)) {
-		if (isUserSessionId(key)) {
-			validUnregisteredEntries.push([key, value]);
-		}
-	}
-
-	for (const [sessionId, unregSession] of validUnregisteredEntries) {
-		if (unregSession.expiresAt < now) {
-			removedUnregisteredSessions.set(sessionId, unregSession);
-			delete unregisteredSession[sessionId];
-		}
-	}
+	const validUnregisteredEntries =
+		collectValidUnregisteredEntries(unregisteredSession);
+	const removedUnregisteredSessions = removeExpiredUnregisteredSessions(
+		validUnregisteredEntries,
+		unregisteredSession,
+		now
+	);
 
 	const remainingEntries = validSessionEntries.filter(
 		([key]) => !removedSessions.has(key)
 	);
-	const excessSessions = remainingEntries.length - maxSessions;
-
-	if (excessSessions > 0) {
-		const sortedByExpiry = remainingEntries.sort(
-			([, entryA], [, entryB]) => entryA.expiresAt - entryB.expiresAt
-		);
-		const toEvict = sortedByExpiry.slice(0, excessSessions);
-
-		for (const [key, value] of toEvict) {
-			removedSessions.set(key, value);
-			delete session[key];
-		}
-	}
+	evictExcessSessions(
+		remainingEntries,
+		session,
+		maxSessions,
+		removedSessions
+	);
 
 	const remainingUnregistered = validUnregisteredEntries.filter(
 		([key]) => !removedUnregisteredSessions.has(key)
 	);
-	const excessUnregistered = remainingUnregistered.length - maxSessions;
-
-	if (excessUnregistered > 0) {
-		const sortedByExpiry = remainingUnregistered.sort(
-			([, entryA], [, entryB]) => entryA.expiresAt - entryB.expiresAt
-		);
-		const toEvict = sortedByExpiry.slice(0, excessUnregistered);
-
-		for (const [key, value] of toEvict) {
-			removedUnregisteredSessions.set(key, value);
-			delete unregisteredSession[key];
-		}
-	}
+	evictExcessUnregisteredSessions(
+		remainingUnregistered,
+		unregisteredSession,
+		maxSessions,
+		removedUnregisteredSessions
+	);
 
 	try {
 		await onSessionCleanup?.({
