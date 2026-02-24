@@ -39,7 +39,7 @@ export const userStatus = <UserType>({
 						);
 			}
 
-			return user;
+			return { user };
 		},
 		{ cookie: t.Cookie({ user_session_id: userSessionIdTypebox }) }
 	);
