@@ -2,7 +2,7 @@ import { isRefreshableOAuth2Client, isValidProviderOption } from 'citra';
 import { Elysia, t } from 'elysia';
 import { MILLISECONDS_IN_A_DAY } from './constants';
 import { sessionStore } from './sessionStore';
-import { userSessionIdTypebox } from './typebox';
+import { authProviderOption, userSessionIdTypebox } from './typebox';
 import {
 	ClientProviders,
 	OnRefreshError,
@@ -109,5 +109,10 @@ export const refresh = <UserType>({
 				);
 			}
 		},
-		{ cookie: t.Cookie({ user_session_id: userSessionIdTypebox }) }
+		{
+			cookie: t.Cookie({
+				auth_provider: authProviderOption,
+				user_session_id: userSessionIdTypebox
+			})
+		}
 	);

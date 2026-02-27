@@ -60,7 +60,7 @@ export type GetUser<UserType> = (
 	userIdentity: Record<string, unknown>
 ) => UserType | null | undefined | Promise<UserType | null | undefined>;
 
-export type CallbackCookie = Record<string, Cookie<string | undefined>> & {
+export type CallbackCookie = Record<string, Cookie<unknown>> & {
 	user_session_id: Cookie<UserSessionId | undefined>;
 };
 

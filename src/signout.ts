@@ -1,5 +1,6 @@
 import { Elysia, t } from 'elysia';
 import { sessionStore } from './sessionStore';
+import { authProviderOption } from './typebox';
 import { OnSignOut, RouteString } from './types';
 
 type SignOutProps<UserType> = {
@@ -56,6 +57,7 @@ export const signout = <UserType>({
 		},
 		{
 			cookie: t.Cookie({
+				auth_provider: authProviderOption,
 				user_session_id: t.Optional(
 					t.TemplateLiteral(
 						'${string}-${string}-${string}-${string}-${string}'

@@ -134,6 +134,9 @@ export const callback = <UserType>({
 		{
 			cookie: t.Cookie({
 				auth_provider: authProviderOption,
+				code_verifier: t.Optional(t.String()),
+				origin_url: t.Optional(t.String()),
+				state: t.Optional(t.String()),
 				user_session_id: userSessionIdTypebox
 			})
 		}
