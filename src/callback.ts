@@ -1,27 +1,49 @@
 import { isPKCEProviderOption } from 'citra';
 import { Elysia, t } from 'elysia';
+import { AbsoluteAuthIdentityConflictError } from './errors';
+import { resolveClientProviderEntry } from './providerClients';
+import { createSessionCompatibilityLayer } from './sessionAccess';
 import { sessionStore } from './sessionStore';
-import { isNonEmptyString } from './typeGuards';
-import { authProviderOption, userSessionIdTypebox } from './typebox';
+import type { AbsoluteAuthSessionStore } from './sessionTypes';
+import { isAuthIntent, isNonEmptyString } from './typeGuards';
+import {
+	authClientOption,
+	authIntentOption,
+	authProviderOption,
+	userSessionIdTypebox
+} from './typebox';
 import {
 	ClientProviders,
 	OnCallbackError,
 	OnCallbackSuccess,
+	OnLinkConnector,
+	OnLinkIdentity,
+	OnLinkIdentityConflict,
+	ResolveAuthIntent,
 	RouteString
 } from './types';
-import { getUserSessionId } from './utils';
 
 type CallbackProps<UserType> = {
+	authSessionStore?: AbsoluteAuthSessionStore<UserType>;
 	clientProviders: ClientProviders;
 	callbackRoute?: RouteString;
+	resolveAuthIntent?: ResolveAuthIntent<UserType>;
 	onCallbackSuccess: OnCallbackSuccess<UserType>;
+	onLinkIdentity?: OnLinkIdentity<UserType>;
+	onLinkIdentityConflict?: OnLinkIdentityConflict<UserType>;
+	onLinkConnector?: OnLinkConnector<UserType>;
 	onCallbackError: OnCallbackError;
 };
 
 export const callback = <UserType>({
+	authSessionStore,
 	clientProviders,
 	callbackRoute = '/oauth2/callback',
+	resolveAuthIntent,
 	onCallbackSuccess,
+	onLinkIdentity,
+	onLinkIdentityConflict,
+	onLinkConnector,
 	onCallbackError
 }: CallbackProps<UserType>) =>
 	new Elysia().use(sessionStore<UserType>()).get(
@@ -36,14 +58,18 @@ export const callback = <UserType>({
 				code_verifier,
 				origin_url,
 				user_session_id,
-				auth_provider
+				auth_provider,
+				auth_client,
+				auth_intent
 			},
 			query: { code, state: callback_state }
 		}) => {
 			if (
 				stored_state === undefined ||
 				code_verifier === undefined ||
-				user_session_id === undefined
+				user_session_id === undefined ||
+				auth_client === undefined ||
+				auth_intent === undefined
 			) {
 				return status('Bad Request', 'Cookies are missing');
 			}
@@ -56,11 +82,15 @@ export const callback = <UserType>({
 				return status('Bad Request', 'Invalid state mismatch');
 			}
 
-			const providerConfig = clientProviders[auth_provider.value];
-			if (!providerConfig) {
-				return status('Unauthorized', 'Client provider not found');
+			const resolvedProvider = resolveClientProviderEntry({
+				clientName: auth_client.value || undefined,
+				clientProviders,
+				providerName: auth_provider.value
+			});
+			if ('error' in resolvedProvider) {
+				return status('Unauthorized', resolvedProvider.error);
 			}
-			const { providerInstance } = providerConfig;
+			const { clientName, providerInstance } = resolvedProvider.entry;
 
 			stored_state.remove();
 
@@ -88,6 +118,7 @@ export const callback = <UserType>({
 				console.error(
 					'[callback] Failed to validate authorization code:',
 					{
+						authClient: clientName,
 						authProvider,
 						error: err instanceof Error ? err.message : err,
 						stack: err instanceof Error ? err.stack : undefined
@@ -95,6 +126,7 @@ export const callback = <UserType>({
 				);
 
 				await onCallbackError?.({
+					authClient: clientName,
 					authProvider,
 					error: err,
 					originUrl
@@ -106,24 +138,81 @@ export const callback = <UserType>({
 				);
 			}
 
-			const userSessionId = getUserSessionId({
-				session,
-				unregisteredSession,
-				user_session_id
+			const compatibilityLayer = await createSessionCompatibilityLayer({
+				authSessionStore,
+				userSessionId: user_session_id.value
 			});
+			const callbackSession = authSessionStore
+				? compatibilityLayer.session
+				: session;
+			const callbackUnregisteredSession = authSessionStore
+				? compatibilityLayer.unregisteredSession
+				: unregisteredSession;
+			const currentUser =
+				user_session_id.value !== undefined
+					? callbackSession[user_session_id.value]?.user
+					: undefined;
+			const authIntent =
+				(isAuthIntent(auth_intent.value)
+					? auth_intent.value
+					: undefined) ??
+				(await resolveAuthIntent?.({
+					authClient: clientName,
+					authProvider,
+					currentUser,
+					originUrl,
+					session: callbackSession,
+					userSessionId: user_session_id.value
+				})) ??
+				'login';
+			auth_intent.remove();
 
-			const response = await onCallbackSuccess?.({
+			const userSessionId = user_session_id.value ?? crypto.randomUUID();
+			const callbackContext = {
+				authClient: clientName,
+				authIntent,
 				authProvider,
 				cookie,
+				currentUser,
 				originUrl,
 				providerInstance,
 				redirect,
-				session,
+				session: callbackSession,
 				status,
 				tokenResponse,
-				unregisteredSession,
+				unregisteredSession: callbackUnregisteredSession,
 				userSessionId
-			});
+			} as const;
+
+			let response;
+			try {
+				response =
+					authIntent === 'link_identity' && onLinkIdentity
+						? await onLinkIdentity(callbackContext)
+						: authIntent === 'link_connector' && onLinkConnector
+							? await onLinkConnector(callbackContext)
+							: await onCallbackSuccess?.(callbackContext);
+			} catch (err) {
+				if (
+					authIntent === 'link_identity' &&
+					err instanceof AbsoluteAuthIdentityConflictError &&
+					onLinkIdentityConflict
+				) {
+					response = await onLinkIdentityConflict({
+						...callbackContext,
+						conflict: {
+							...err.conflict,
+							intent: authIntent
+						}
+					});
+				} else {
+					throw err;
+				}
+			}
+
+			if (authSessionStore) {
+				await compatibilityLayer.persist();
+			}
 
 			if (response) {
 				return response;
@@ -133,6 +222,8 @@ export const callback = <UserType>({
 		},
 		{
 			cookie: t.Cookie({
+				auth_client: authClientOption,
+				auth_intent: authIntentOption,
 				auth_provider: authProviderOption,
 				code_verifier: t.Optional(t.String()),
 				origin_url: t.Optional(t.String()),

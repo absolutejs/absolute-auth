@@ -1,19 +1,53 @@
 import { ProviderOption } from 'citra';
 import { FiUser } from 'react-icons/fi';
 import {
-	oauthButtonStyle,
 	oauthButtonContentStyle,
-	oauthIconStyle,
-	oauthButtonTextStyle
+	oauthButtonStyle,
+	oauthButtonTextStyle,
+	oauthIconStyle
 } from '../../styles/authModalStyles';
 import { providerData, ProviderInfo } from '../../utils/providerData';
 
 type OAuthButtonProps = {
-	mode: 'login' | 'signup';
+	action?: 'login' | 'signup' | 'link';
 	provider: Lowercase<ProviderOption> | undefined;
 };
 
-export const OAuthButton = ({ mode, provider }: OAuthButtonProps) => {
+const providersRequiringLoginClient = new Set<Lowercase<ProviderOption>>([
+	'facebook',
+	'google'
+]);
+
+const buildAuthorizationHref = (
+	provider: Lowercase<ProviderOption> | undefined
+) => {
+	if (!provider) return undefined;
+	if (providersRequiringLoginClient.has(provider)) {
+		return `/oauth2/${provider}/authorization?client=login`;
+	}
+
+	return `/oauth2/${provider}/authorization`;
+};
+
+const buildButtonText = (
+	action: 'login' | 'signup' | 'link',
+	providerName: string
+) => {
+	switch (action) {
+		case 'signup':
+			return `Sign up with ${providerName}`;
+		case 'link':
+			return `Link ${providerName}`;
+		case 'login':
+		default:
+			return `Sign in with ${providerName}`;
+	}
+};
+
+export const OAuthButton = ({
+	action = 'login',
+	provider
+}: OAuthButtonProps) => {
 	const defaultData: ProviderInfo = {
 		logoUrl: '/assets/svg/todo-put-file.svg',
 		name: 'other provider',
@@ -29,7 +63,7 @@ export const OAuthButton = ({ mode, provider }: OAuthButtonProps) => {
 
 	return (
 		<a
-			href={provider ? `/oauth2/${provider}/authorization` : undefined}
+			href={buildAuthorizationHref(provider)}
 			style={oauthButtonStyle({
 				isProviderSelected,
 				providerPrimaryColor: isProviderSelected
@@ -48,9 +82,7 @@ export const OAuthButton = ({ mode, provider }: OAuthButtonProps) => {
 					<FiUser style={oauthIconStyle} />
 				)}
 				<span style={oauthButtonTextStyle}>
-					{mode === 'login'
-						? `Sign in with ${name}`
-						: `Sign up with ${name}`}
+					{buildButtonText(action, name)}
 				</span>
 			</div>
 		</a>

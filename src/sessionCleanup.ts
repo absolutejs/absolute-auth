@@ -1,8 +1,9 @@
 import { Elysia } from 'elysia';
 import { DEFAULT_MAX_SESSIONS, MILLISECONDS_IN_AN_HOUR } from './constants';
 import { sessionStore } from './sessionStore';
+import type { AbsoluteAuthSessionStore } from './sessionTypes';
 import { isUserSessionId } from './typeGuards';
-import {
+import type {
 	OnSessionCleanup,
 	SessionData,
 	SessionRecord,
@@ -12,12 +13,14 @@ import {
 } from './types';
 
 type SessionCleanupProps<UserType> = {
+	authSessionStore?: AbsoluteAuthSessionStore<UserType>;
 	cleanupIntervalMs?: number;
 	maxSessions?: number;
 	onSessionCleanup?: OnSessionCleanup<UserType>;
 };
 
 export const sessionCleanup = <UserType>({
+	authSessionStore,
 	cleanupIntervalMs = MILLISECONDS_IN_AN_HOUR,
 	maxSessions = DEFAULT_MAX_SESSIONS,
 	onSessionCleanup
@@ -28,12 +31,13 @@ export const sessionCleanup = <UserType>({
 		.use(sessionStore<UserType>())
 		.onStart(({ store: { session, unregisteredSession } }) => {
 			intervalId = setInterval(async () => {
-				await performCleanup(
-					session,
-					unregisteredSession,
+				await performCleanup({
+					authSessionStore,
 					maxSessions,
-					onSessionCleanup
-				);
+					onSessionCleanup,
+					session,
+					unregisteredSession
+				});
 			}, cleanupIntervalMs);
 		})
 		.onStop(() => {
@@ -44,12 +48,13 @@ export const sessionCleanup = <UserType>({
 		})
 		.derive(({ store: { session, unregisteredSession } }) => ({
 			cleanupSessions: async () => {
-				await performCleanup(
-					session,
-					unregisteredSession,
+				await performCleanup({
+					authSessionStore,
 					maxSessions,
-					onSessionCleanup
-				);
+					onSessionCleanup,
+					session,
+					unregisteredSession
+				});
 			}
 		}))
 		.as('global');
@@ -149,12 +154,17 @@ const evictExcessUnregisteredSessions = (
 	}
 };
 
-const performCleanup = async <UserType>(
-	session: SessionRecord<UserType>,
-	unregisteredSession: UnregisteredSessionRecord,
-	maxSessions: number,
-	onSessionCleanup?: OnSessionCleanup<UserType>
-) => {
+const performRecordCleanup = async <UserType>({
+	maxSessions,
+	onSessionCleanup,
+	session,
+	unregisteredSession
+}: {
+	maxSessions: number;
+	onSessionCleanup?: OnSessionCleanup<UserType>;
+	session: SessionRecord<UserType>;
+	unregisteredSession: UnregisteredSessionRecord;
+}) => {
 	const now = Date.now();
 
 	const validSessionEntries = collectValidSessionEntries(session);
@@ -200,4 +210,138 @@ const performCleanup = async <UserType>(
 	} catch (err) {
 		console.error('[sessionCleanup] onSessionCleanup handler failed:', err);
 	}
+};
+
+const loadStoreSessions = async <UserType>(
+	authSessionStore: AbsoluteAuthSessionStore<UserType>
+) => {
+	const sessionIds = await authSessionStore.listSessionIds?.();
+	if (!sessionIds) return null;
+
+	const entries: [UserSessionId, SessionData<UserType>][] = [];
+	for (const sessionId of sessionIds) {
+		const session = await authSessionStore.getSession(sessionId);
+		if (session) entries.push([sessionId, session]);
+	}
+
+	return entries;
+};
+
+const loadStoreUnregisteredSessions = async <UserType>(
+	authSessionStore: AbsoluteAuthSessionStore<UserType>
+) => {
+	const sessionIds = await authSessionStore.listUnregisteredSessionIds?.();
+	if (!sessionIds) return null;
+
+	const entries: [UserSessionId, UnregisteredSessionData][] = [];
+	for (const sessionId of sessionIds) {
+		const session =
+			await authSessionStore.getUnregisteredSession(sessionId);
+		if (session) entries.push([sessionId, session]);
+	}
+
+	return entries;
+};
+
+const performStoreCleanup = async <UserType>({
+	authSessionStore,
+	maxSessions,
+	onSessionCleanup
+}: {
+	authSessionStore: AbsoluteAuthSessionStore<UserType>;
+	maxSessions: number;
+	onSessionCleanup?: OnSessionCleanup<UserType>;
+}) => {
+	const now = Date.now();
+	const sessionEntries = await loadStoreSessions(authSessionStore);
+	const unregisteredEntries =
+		await loadStoreUnregisteredSessions(authSessionStore);
+	if (!sessionEntries || !unregisteredEntries) {
+		return;
+	}
+
+	const removedSessions = new Map<UserSessionId, SessionData<UserType>>();
+	const removedUnregisteredSessions = new Map<
+		UserSessionId,
+		UnregisteredSessionData
+	>();
+
+	const remainingSessions = sessionEntries.filter(([sessionId, session]) => {
+		if (session.expiresAt >= now) return true;
+		removedSessions.set(sessionId, session);
+		return false;
+	});
+	for (const sessionId of removedSessions.keys()) {
+		await authSessionStore.removeSession(sessionId);
+	}
+
+	const remainingUnregistered = unregisteredEntries.filter(
+		([sessionId, session]) => {
+			if (session.expiresAt >= now) return true;
+			removedUnregisteredSessions.set(sessionId, session);
+			return false;
+		}
+	);
+	for (const sessionId of removedUnregisteredSessions.keys()) {
+		await authSessionStore.removeUnregisteredSession(sessionId);
+	}
+
+	if (remainingSessions.length > maxSessions) {
+		const overflow = [...remainingSessions]
+			.sort(([, left], [, right]) => left.expiresAt - right.expiresAt)
+			.slice(0, remainingSessions.length - maxSessions);
+		for (const [sessionId, session] of overflow) {
+			removedSessions.set(sessionId, session);
+			await authSessionStore.removeSession(sessionId);
+		}
+	}
+
+	if (remainingUnregistered.length > maxSessions) {
+		const overflow = [...remainingUnregistered]
+			.sort(([, left], [, right]) => left.expiresAt - right.expiresAt)
+			.slice(0, remainingUnregistered.length - maxSessions);
+		for (const [sessionId, session] of overflow) {
+			removedUnregisteredSessions.set(sessionId, session);
+			await authSessionStore.removeUnregisteredSession(sessionId);
+		}
+	}
+
+	try {
+		await onSessionCleanup?.({
+			removedSessions,
+			removedUnregisteredSessions
+		});
+	} catch (err) {
+		console.error('[sessionCleanup] onSessionCleanup handler failed:', err);
+	}
+};
+
+const performCleanup = async <UserType>({
+	authSessionStore,
+	maxSessions,
+	onSessionCleanup,
+	session,
+	unregisteredSession
+}: {
+	authSessionStore?: AbsoluteAuthSessionStore<UserType>;
+	maxSessions: number;
+	onSessionCleanup?: OnSessionCleanup<UserType>;
+	session: SessionRecord<UserType>;
+	unregisteredSession: UnregisteredSessionRecord;
+}) => {
+	if (authSessionStore) {
+		await performStoreCleanup({
+			authSessionStore,
+			maxSessions,
+			onSessionCleanup
+		});
+		return;
+	}
+
+	await performRecordCleanup({
+		maxSessions,
+		onSessionCleanup,
+		session,
+		unregisteredSession
+	});
 };

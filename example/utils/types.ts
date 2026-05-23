@@ -28,3 +28,8 @@ export type UserFunctionProps<SchemaType extends Record<string, unknown>> = {
 	userIdentity: Record<string, unknown>;
 	db: NeonHttpDatabase<SchemaType>;
 };
+
+export type LinkUserIdentityProps<SchemaType extends Record<string, unknown>> =
+	UserFunctionProps<SchemaType> & {
+		userSub: string;
+	};

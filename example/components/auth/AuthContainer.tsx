@@ -3,8 +3,8 @@ import { useState } from 'react';
 import {
 	containerStyle,
 	headingStyle,
-	loginTextStyle,
-	loginLinkTextStyle
+	loginLinkTextStyle,
+	loginTextStyle
 } from '../../styles/authModalStyles';
 import { Divider } from '../utils/Divider';
 import { ProviderDropdown } from '../utils/ProviderDropdown';
@@ -14,9 +14,9 @@ import { OAuthButtons } from './OAuthButtons';
 export const AuthContainer = () => {
 	const [currentProvider, setCurrentProvider] =
 		useState<Lowercase<ProviderOption>>();
-	const [mode, setMode] = useState<'login' | 'signup'>('login');
-	const switchMode = () => {
-		setMode((prev) => (prev === 'login' ? 'signup' : 'login'));
+	const [action, setAction] = useState<'login' | 'signup'>('login');
+	const switchAction = () => {
+		setAction((prev) => (prev === 'login' ? 'signup' : 'login'));
 	};
 
 	return (
@@ -33,23 +33,23 @@ export const AuthContainer = () => {
 				Absolute Auth
 			</a>
 			<h1 style={headingStyle}>
-				{mode === 'login'
+				{action === 'login'
 					? 'Sign in to your Account'
 					: 'Create an account'}
 			</h1>
 
-			<OAuthButtons mode={mode} />
+			<OAuthButtons action={action} />
 
 			<Divider text="or" />
 
 			<ProviderDropdown setCurrentProvider={setCurrentProvider} />
 
-			<OAuthButton mode={'login'} provider={currentProvider} />
+			<OAuthButton action={action} provider={currentProvider} />
 
 			<p style={loginTextStyle}>
-				{mode === 'login' ? 'Need an account? ' : 'Have an account? '}
-				<button style={loginLinkTextStyle} onClick={switchMode}>
-					{mode === 'login' ? 'Sign Up' : 'Sign In'}
+				{action === 'login' ? 'Need an account? ' : 'Have an account? '}
+				<button style={loginLinkTextStyle} onClick={switchAction}>
+					{action === 'login' ? 'Sign Up' : 'Sign In'}
 				</button>
 			</p>
 		</div>

@@ -1,7 +1,12 @@
 import { isValidProviderOption } from 'citra';
 import { Elysia, t } from 'elysia';
+import { resolveClientProviderEntry } from './providerClients';
 import { sessionStore } from './sessionStore';
-import { authProviderOption, userSessionIdTypebox } from './typebox';
+import {
+	authClientOption,
+	authProviderOption,
+	userSessionIdTypebox
+} from './typebox';
 import {
 	ClientProviders,
 	OnProfileError,
@@ -27,9 +32,13 @@ export const profile = <UserType>({
 		async ({
 			status,
 			store: { session },
-			cookie: { user_session_id, auth_provider }
+			cookie: { user_session_id, auth_provider, auth_client }
 		}) => {
-			if (auth_provider === undefined || user_session_id === undefined)
+			if (
+				auth_provider === undefined ||
+				auth_client === undefined ||
+				user_session_id === undefined
+			)
 				return status('Bad Request', 'Cookies are missing');
 
 			if (auth_provider.value === undefined) {
@@ -44,11 +53,15 @@ export const profile = <UserType>({
 				return status('Unauthorized', 'No user session found');
 			}
 
-			const providerConfig = clientProviders[auth_provider.value];
-			if (!providerConfig) {
-				return status('Unauthorized', 'Client provider not found');
+			const resolvedProvider = resolveClientProviderEntry({
+				clientName: auth_client.value || undefined,
+				clientProviders,
+				providerName: auth_provider.value
+			});
+			if ('error' in resolvedProvider) {
+				return status('Unauthorized', resolvedProvider.error);
 			}
-			const { providerInstance } = providerConfig;
+			const { clientName, providerInstance } = resolvedProvider.entry;
 
 			const userSession = session[user_session_id.value];
 
@@ -63,6 +76,7 @@ export const profile = <UserType>({
 					await providerInstance.fetchUserProfile(accessToken);
 
 				await onProfileSuccess?.({
+					authClient: clientName,
 					authProvider: auth_provider.value,
 					userProfile
 				});
@@ -70,6 +84,7 @@ export const profile = <UserType>({
 				return new Response(JSON.stringify(userProfile));
 			} catch (err) {
 				await onProfileError?.({
+					authClient: clientName,
 					authProvider: auth_provider.value,
 					error: err
 				});
@@ -87,6 +102,7 @@ export const profile = <UserType>({
 		},
 		{
 			cookie: t.Cookie({
+				auth_client: authClientOption,
 				auth_provider: authProviderOption,
 				user_session_id: userSessionIdTypebox
 			})

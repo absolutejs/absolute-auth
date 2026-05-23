@@ -11,19 +11,34 @@ export const Modal = ({ isOpen, onClose, onOpen, children }: ModalProps) => {
 	const dialogRef = useRef<HTMLDialogElement>(null);
 
 	useEffect(() => {
-		const dialog = dialogRef.current;
-		if (!dialog) return;
-
-		if (isOpen) {
-			dialog.showModal();
-			onOpen?.(dialog);
-			document.body.style.overflow = 'hidden';
-		} else if (dialog.open) {
-			dialog.close();
-			onClose?.();
+		if (!isOpen) {
 			document.body.style.overflow = '';
+			return;
 		}
-	}, [isOpen, onClose, onOpen]);
+
+		const dialog = dialogRef.current;
+		if (!dialog) {
+			return;
+		}
+
+		if (!dialog.open) {
+			dialog.showModal();
+		}
+
+		onOpen?.(dialog);
+		document.body.style.overflow = 'hidden';
+
+		return () => {
+			document.body.style.overflow = '';
+			if (dialog.open) {
+				dialog.close();
+			}
+		};
+	}, [isOpen, onOpen]);
+
+	if (!isOpen) {
+		return null;
+	}
 
 	return (
 		<dialog
@@ -64,7 +79,7 @@ export const Modal = ({ isOpen, onClose, onOpen, children }: ModalProps) => {
 				}}
 			>
 				<button
-					onClick={() => dialogRef.current?.close()}
+					onClick={() => onClose?.()}
 					aria-label="Close modal"
 					style={{
 						background: 'transparent',

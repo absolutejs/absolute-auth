@@ -158,10 +158,25 @@ export const providersConfiguration = createProvidersConfiguration({
 		}
 	},
 	facebook: {
-		credentials: {
-			clientId: getEnvVar('FACEBOOK_CLIENT_ID'),
-			clientSecret: getEnvVar('FACEBOOK_CLIENT_SECRET'),
-			redirectUri: getEnvVar('OAUTH2_CALLBACK_URI')
+		login: {
+			credentials: {
+				clientId: getEnvVar('FACEBOOK_CLIENT_ID'),
+				clientSecret: getEnvVar('FACEBOOK_CLIENT_SECRET'),
+				redirectUri: getEnvVar('OAUTH2_CALLBACK_URI')
+			},
+			scope: ['email']
+		},
+		connector: {
+			credentials: {
+				clientId: getEnvVar('FACEBOOK_CONNECTOR_CLIENT_ID'),
+				clientSecret: getEnvVar('FACEBOOK_CONNECTOR_CLIENT_SECRET'),
+				redirectUri: getEnvVar('OAUTH2_CALLBACK_URI')
+			},
+			scope: [
+				'pages_show_list',
+				'pages_read_engagement',
+				'instagram_basic'
+			]
 		}
 	},
 	figma: {
@@ -197,16 +212,36 @@ export const providersConfiguration = createProvidersConfiguration({
 		scope: ['openid']
 	},
 	google: {
-		credentials: {
-			clientId: getEnvVar('GOOGLE_CLIENT_ID'),
-			clientSecret: getEnvVar('GOOGLE_CLIENT_SECRET'),
-			redirectUri: getEnvVar('OAUTH2_CALLBACK_URI')
+		login: {
+			credentials: {
+				clientId: getEnvVar('GOOGLE_CLIENT_ID'),
+				clientSecret: getEnvVar('GOOGLE_CLIENT_SECRET'),
+				redirectUri: getEnvVar('OAUTH2_CALLBACK_URI')
+			},
+			scope: ['profile', 'email', 'openid'],
+			searchParams: [
+				['access_type', 'offline'],
+				['prompt', 'consent']
+			]
 		},
-		scope: ['profile', 'openid'],
-		searchParams: [
-			['access_type', 'offline'],
-			['prompt', 'consent']
-		]
+		connector: {
+			credentials: {
+				clientId: getEnvVar('GOOGLE_CLIENT_ID'),
+				clientSecret: getEnvVar('GOOGLE_CLIENT_SECRET'),
+				redirectUri: getEnvVar('OAUTH2_CALLBACK_URI')
+			},
+			scope: [
+				'profile',
+				'email',
+				'openid',
+				'https://www.googleapis.com/auth/gmail.readonly',
+				'https://www.googleapis.com/auth/contacts.readonly'
+			],
+			searchParams: [
+				['access_type', 'offline'],
+				['prompt', 'consent']
+			]
+		}
 	},
 	intuit: {
 		credentials: {

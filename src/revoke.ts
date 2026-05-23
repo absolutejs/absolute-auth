@@ -1,7 +1,14 @@
 import { isRevocableOAuth2Client, isValidProviderOption } from 'citra';
 import { Elysia, t } from 'elysia';
+import { resolveClientProviderEntry } from './providerClients';
+import { loadSessionFromSource } from './sessionAccess';
 import { sessionStore } from './sessionStore';
-import { authProviderOption, userSessionIdTypebox } from './typebox';
+import type { AbsoluteAuthSessionStore } from './sessionTypes';
+import {
+	authClientOption,
+	authProviderOption,
+	userSessionIdTypebox
+} from './typebox';
 import {
 	ClientProviders,
 	OnRevocationError,
@@ -9,7 +16,8 @@ import {
 	RouteString
 } from './types';
 
-type RevokeProps = {
+type RevokeProps<UserType> = {
+	authSessionStore?: AbsoluteAuthSessionStore<UserType>;
 	clientProviders: ClientProviders;
 	revokeRoute?: RouteString;
 	onRevocationSuccess: OnRevocationSuccess;
@@ -17,19 +25,24 @@ type RevokeProps = {
 };
 
 export const revoke = <UserType>({
+	authSessionStore,
 	clientProviders,
 	revokeRoute = '/oauth2/revocation',
 	onRevocationSuccess,
 	onRevocationError
-}: RevokeProps) =>
+}: RevokeProps<UserType>) =>
 	new Elysia().use(sessionStore<UserType>()).post(
 		revokeRoute,
 		async ({
 			status,
 			store: { session },
-			cookie: { user_session_id, auth_provider }
+			cookie: { user_session_id, auth_provider, auth_client }
 		}) => {
-			if (auth_provider === undefined || user_session_id === undefined)
+			if (
+				auth_provider === undefined ||
+				auth_client === undefined ||
+				user_session_id === undefined
+			)
 				return status('Bad Request', 'Cookies are missing');
 
 			if (auth_provider.value === undefined) {
@@ -44,11 +57,15 @@ export const revoke = <UserType>({
 				return status('Unauthorized', 'No user session found');
 			}
 
-			const providerConfig = clientProviders[auth_provider.value];
-			if (!providerConfig) {
-				return status('Unauthorized', 'Client provider not found');
+			const resolvedProvider = resolveClientProviderEntry({
+				clientName: auth_client.value || undefined,
+				clientProviders,
+				providerName: auth_provider.value
+			});
+			if ('error' in resolvedProvider) {
+				return status('Unauthorized', resolvedProvider.error);
 			}
-			const { providerInstance } = providerConfig;
+			const { clientName, providerInstance } = resolvedProvider.entry;
 
 			if (
 				!isRevocableOAuth2Client(auth_provider.value, providerInstance)
@@ -59,18 +76,23 @@ export const revoke = <UserType>({
 				);
 			}
 
-			const userSession = session[user_session_id.value];
+			const userSession = await loadSessionFromSource({
+				authSessionStore,
+				session,
+				userSessionId: user_session_id.value
+			});
 
 			if (userSession === undefined) {
 				return status('Unauthorized', 'No user session found');
 			}
 
-			const { accessToken } = userSession; // TODO: Some providers use refresh tokenResponse for revocation
+			const { accessToken } = userSession;
 
 			try {
 				await providerInstance.revokeToken(accessToken);
 
 				await onRevocationSuccess?.({
+					authClient: clientName,
 					authProvider: auth_provider.value,
 					tokenToRevoke: accessToken
 				});
@@ -80,12 +102,14 @@ export const revoke = <UserType>({
 				});
 			} catch (err) {
 				console.error('[revoke] Failed to revoke token:', {
+					authClient: clientName,
 					authProvider: auth_provider.value,
 					error: err instanceof Error ? err.message : err,
 					stack: err instanceof Error ? err.stack : undefined
 				});
 
 				await onRevocationError?.({
+					authClient: clientName,
 					authProvider: auth_provider.value,
 					error: err
 				});
@@ -98,6 +122,7 @@ export const revoke = <UserType>({
 		},
 		{
 			cookie: t.Cookie({
+				auth_client: authClientOption,
 				auth_provider: authProviderOption,
 				user_session_id: userSessionIdTypebox
 			})

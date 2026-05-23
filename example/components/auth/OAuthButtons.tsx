@@ -1,10 +1,10 @@
 import { OAuthButton } from './OAuthButton';
 
 type OAuthButtonsProps = {
-	mode: 'login' | 'signup';
+	action?: 'login' | 'signup';
 };
 
-export const OAuthButtons = ({ mode }: OAuthButtonsProps) => (
+export const OAuthButtons = ({ action = 'login' }: OAuthButtonsProps) => (
 	<nav
 		style={{
 			display: 'flex',
@@ -12,7 +12,7 @@ export const OAuthButtons = ({ mode }: OAuthButtonsProps) => (
 			width: '100%'
 		}}
 	>
-		<OAuthButton mode={mode} provider="google" />
-		<OAuthButton mode={mode} provider="github" />
+		<OAuthButton action={action} provider="google" />
+		<OAuthButton action={action} provider="github" />
 	</nav>
 );

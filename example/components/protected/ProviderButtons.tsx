@@ -1,126 +1,45 @@
-import { isRefreshableProviderOption, isRevocableProviderOption } from 'citra';
-import { User } from '../../db/schema';
-import { buttonStyle } from '../../styles/styles';
-import { useToast } from '../utils/ToastProvider';
+import { ProviderOption, providerOptions } from 'citra';
+import { useState } from 'react';
+import { containerStyle, headingStyle } from '../../styles/authModalStyles';
+import { OAuthButton } from '../auth/OAuthButton';
+import { ProviderDropdown } from '../utils/ProviderDropdown';
 
-type ProviderButtonsProps = {
-	user: User | undefined;
-	handleSignOut: () => Promise<void>;
-};
+const cardStyle = {
+	background: '#fff',
+	border: '1px solid #d9e2ec',
+	borderRadius: '0.75rem',
+	boxShadow: '0 10px 30px rgba(15, 23, 42, 0.08)',
+	padding: '1rem',
+	width: 'min(960px, 92vw)'
+} as const;
 
-export const ProviderButtons = ({
-	user,
-	handleSignOut
-}: ProviderButtonsProps) => {
-	const { addToast } = useToast();
-	const provider = user?.auth_sub?.split('|')[0]?.toLocaleLowerCase();
-
-	const handleRefresh = async () => {
-		const response = await fetch('/oauth2/tokens', {
-			method: 'POST'
-		});
-
-		if (!response.ok) {
-			const errorText = await response.text();
-			addToast({
-				duration: 0,
-				message: `${errorText}`,
-				style: { background: '#f8d7da', color: '#721c24' }
-			});
-
-			return;
-		}
-		addToast({
-			message: 'Refreshed profile successfully!',
-			style: { background: '#d4edda', color: '#155724' }
-		});
-	};
-
-	const handleRevocation = async () => {
-		const response = await fetch('/oauth2/revocation', {
-			method: 'POST'
-		});
-		if (!response.ok) {
-			const errorText = await response.text();
-			addToast({
-				duration: 0,
-				message: `${errorText}`,
-				style: { background: '#f8d7da', color: '#721c24' }
-			});
-
-			return;
-		}
-		addToast({
-			message: 'Revoked profile successfully!',
-			style: { background: '#d4edda', color: '#155724' }
-		});
-		await handleSignOut();
-		window.location.reload();
-	};
-
-	const handleProfile = async () => {
-		const response = await fetch('/oauth2/profile', {
-			method: 'GET'
-		});
-		if (!response.ok) {
-			const errorText = await response.text();
-			addToast({
-				duration: 0,
-				message: `${errorText}`,
-				style: { background: '#f8d7da', color: '#721c24' }
-			});
-
-			return;
-		}
-		addToast({
-			message: 'Profile fetched successfully!',
-			style: { background: '#d4edda', color: '#155724' }
-		});
-	};
+export const ProviderButtons = () => {
+	const [currentProvider, setCurrentProvider] =
+		useState<Lowercase<ProviderOption>>();
 
 	return (
-		<nav
+		<div
 			style={{
-				display: 'flex',
-				flexDirection: 'column',
+				...containerStyle,
 				gap: '1rem',
-				marginTop: '1rem'
+				minWidth: 'min(960px, 92vw)',
+				padding: '0'
 			}}
 		>
-			{provider !== undefined && (
-				<button
-					style={buttonStyle({
-						backgroundColor: 'green',
-						color: 'white'
-					})}
-					onClick={handleProfile}
-				>
-					Profile
-				</button>
-			)}
-			{provider !== undefined &&
-				isRefreshableProviderOption(provider) === true && (
-					<button
-						style={buttonStyle({
-							backgroundColor: 'blue',
-							color: 'white'
-						})}
-						onClick={handleRefresh}
-					>
-						Refresh
-					</button>
-				)}
-			{isRevocableProviderOption(provider ?? '') === true && (
-				<button
-					style={buttonStyle({
-						backgroundColor: 'red',
-						color: 'white'
-					})}
-					onClick={handleRevocation}
-				>
-					Revoke
-				</button>
-			)}
-		</nav>
+			<div style={cardStyle}>
+				<h2 style={{ ...headingStyle, marginBottom: '1rem' }}>
+					Link Login Provider
+				</h2>
+				<p style={{ marginBottom: '1rem', textAlign: 'center' }}>
+					Choose any configured provider and attach it to the current
+					account.
+				</p>
+				<ProviderDropdown
+					providers={providerOptions}
+					setCurrentProvider={setCurrentProvider}
+				/>
+				<OAuthButton action="link" provider={currentProvider} />
+			</div>
+		</div>
 	);
 };

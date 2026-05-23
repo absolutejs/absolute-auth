@@ -26,9 +26,12 @@ export const useAuthStatus = () => {
 		}
 
 		setUser({
-			auth_sub: data.user.auth_sub,
+			sub: data.user.sub,
+			first_name: data.user.first_name ?? null,
+			last_name: data.user.last_name ?? null,
+			email: data.user.email ?? null,
 			created_at: data.user.created_at,
-			metadata: data.user.metadata
+			primary_auth_identity_id: data.user.primary_auth_identity_id ?? null
 		});
 	};
 

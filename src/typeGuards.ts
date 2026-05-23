@@ -1,4 +1,4 @@
-import { StatusReturn, UserSessionId } from './types';
+import { AuthIntent, StatusReturn, UserSessionId } from './types';
 
 export const isValidUser = <UserType>(user: unknown): user is UserType => true;
 
@@ -17,3 +17,8 @@ export const isStatusResponse = (value: unknown): value is StatusReturn =>
 	value !== null &&
 	'status' in value &&
 	typeof Reflect.get(value, 'status') === 'number';
+
+export const isAuthIntent = (value: unknown): value is AuthIntent =>
+	value === 'login' ||
+	value === 'link_identity' ||
+	value === 'link_connector';

@@ -5,7 +5,13 @@ import {
 } from 'citra';
 import { Elysia, t } from 'elysia';
 import { COOKIE_DURATION } from './constants';
-import { authProviderOption } from './typebox';
+import { resolveClientProviderEntry } from './providerClients';
+import { isAuthIntent } from './typeGuards';
+import {
+	authClientOption,
+	authIntentOption,
+	authProviderOption
+} from './typebox';
 import {
 	AuthorizeRoute,
 	ClientProviders,
@@ -47,12 +53,22 @@ export const authorize = ({
 		async ({
 			status,
 			redirect,
-			cookie: { state, code_verifier, auth_provider, origin_url },
+			cookie: {
+				state,
+				code_verifier,
+				auth_provider,
+				auth_client,
+				auth_intent,
+				origin_url
+			},
 			params: { provider },
+			query: { client, intent },
 			headers
 		}) => {
 			if (
 				auth_provider === undefined ||
+				auth_client === undefined ||
+				auth_intent === undefined ||
 				origin_url === undefined ||
 				state === undefined ||
 				code_verifier === undefined
@@ -62,12 +78,19 @@ export const authorize = ({
 			if (provider === undefined)
 				return status('Bad Request', 'Provider is required');
 
-			const providerConfig = clientProviders[provider];
-			if (!providerConfig)
-				return status('Unauthorized', 'Client provider not found');
+			const resolvedProvider = resolveClientProviderEntry({
+				clientName: client,
+				clientProviders,
+				providerName: provider
+			});
+			if ('error' in resolvedProvider) {
+				return status('Unauthorized', resolvedProvider.error);
+			}
 
-			const { providerInstance, scope, searchParams } = providerConfig;
+			const { clientName, providerInstance, scope, searchParams } =
+				resolvedProvider.entry;
 			const referer = parseReferer(headers['referer']);
+			const authIntent = isAuthIntent(intent) ? intent : undefined;
 
 			origin_url.set({
 				httpOnly: true,
@@ -86,6 +109,28 @@ export const authorize = ({
 				secure: true,
 				value: provider
 			});
+
+			auth_client.set({
+				httpOnly: true,
+				maxAge: COOKIE_DURATION,
+				path: '/',
+				sameSite: 'lax',
+				secure: true,
+				value: clientName ?? ''
+			});
+
+			if (authIntent !== undefined) {
+				auth_intent.set({
+					httpOnly: true,
+					maxAge: COOKIE_DURATION,
+					path: '/',
+					sameSite: 'lax',
+					secure: true,
+					value: authIntent
+				});
+			} else {
+				auth_intent.remove();
+			}
 
 			const currentState = generateState();
 			state.set({
@@ -126,6 +171,8 @@ export const authorize = ({
 
 				await onAuthorizeSuccess?.({
 					authorizationUrl: authorizationURL,
+					authClient: clientName,
+					authIntent,
 					authProvider: provider
 				});
 
@@ -134,6 +181,7 @@ export const authorize = ({
 				console.error(
 					'[authorize] Failed to create authorization URL:',
 					{
+						authClient: clientName,
 						error: err instanceof Error ? err.message : err,
 						provider,
 						stack: err instanceof Error ? err.stack : undefined
@@ -141,6 +189,7 @@ export const authorize = ({
 				);
 
 				await onAuthorizeError?.({
+					authClient: clientName,
 					authProvider: provider,
 					error: err
 				});
@@ -153,10 +202,16 @@ export const authorize = ({
 		},
 		{
 			cookie: t.Cookie({
+				auth_client: authClientOption,
+				auth_intent: authIntentOption,
 				auth_provider: t.Optional(authProviderOption)
 			}),
 			params: t.Object({
 				provider: authProviderOption
+			}),
+			query: t.Object({
+				client: authClientOption,
+				intent: authIntentOption
 			})
 		}
 	);

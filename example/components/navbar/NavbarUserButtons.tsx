@@ -62,13 +62,9 @@ export const NavbarUserButtons = ({
 				{user ? 'Sign Out' : 'Login'}
 			</button>
 			{user !== undefined && (
-				<animated.a style={profileButtonStyle} href="/protected">
+				<animated.a style={profileButtonStyle} href="/settings">
 					<ProfilePicture
-						userImage={
-							typeof user.metadata?.picture === 'string'
-								? user.metadata.picture
-								: undefined
-						}
+						userImage={undefined}
 						backupImage={'/assets/svg/default-account-icon.svg'}
 						width="100%"
 						height="100%"

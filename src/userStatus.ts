@@ -1,25 +1,29 @@
 import { Elysia, t } from 'elysia';
+import { getStatusFromSource } from './sessionAccess';
 import { sessionStore } from './sessionStore';
+import type { AbsoluteAuthSessionStore } from './sessionTypes';
 import { userSessionIdTypebox } from './typebox';
 import { OnStatus, RouteString } from './types';
-import { getStatus } from './utils';
 
 type StatusProps<UserType> = {
+	authSessionStore?: AbsoluteAuthSessionStore<UserType>;
 	statusRoute?: RouteString;
 	onStatus: OnStatus<UserType>;
 };
 
 export const userStatus = <UserType>({
+	authSessionStore,
 	statusRoute = '/oauth2/status',
 	onStatus
 }: StatusProps<UserType>) =>
 	new Elysia().use(sessionStore<UserType>()).get(
 		statusRoute,
 		async ({ status, cookie: { user_session_id }, store: { session } }) => {
-			const { user, error } = await getStatus<UserType>(
+			const { user, error } = await getStatusFromSource<UserType>({
+				authSessionStore,
 				session,
 				user_session_id
-			);
+			});
 
 			if (error) {
 				return status(error.code, error.message);

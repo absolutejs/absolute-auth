@@ -8,14 +8,25 @@ import {
 } from 'citra';
 import { Cookie, status as statusType, redirect as redirectType } from 'elysia';
 import { ElysiaCustomStatusResponse } from 'elysia/error';
+import type { AuthIdentityConflict } from './errors';
+import type { AbsoluteAuthSessionStore } from './sessionTypes';
 
-export type OAuth2ConfigurationOptions = {
-	[Provider in ProviderOption]?: {
+export type AuthIntent = 'login' | 'link_identity' | 'link_connector';
+
+export type OAuth2ProviderClientConfiguration<Provider extends ProviderOption> =
+	{
 		credentials: CredentialsFor<Provider>;
 		searchParams?: [string, string][];
 	} & (ProvidersMap[Provider]['scopeRequired'] extends true
 		? { scope: NonEmptyArray<string> }
 		: { scope?: string[] });
+
+export type OAuth2ProviderConfiguration<Provider extends ProviderOption> =
+	| OAuth2ProviderClientConfiguration<Provider>
+	| Record<string, OAuth2ProviderClientConfiguration<Provider>>;
+
+export type OAuth2ConfigurationOptions = {
+	[Provider in ProviderOption]?: OAuth2ProviderConfiguration<Provider>;
 };
 
 export type UserSessionId = `${string}-${string}-${string}-${string}-${string}`;
@@ -45,6 +56,14 @@ export type UnregisteredSessionRecord = Record<
 	UnregisteredSessionData
 >;
 
+export type ResolvedOAuthAuthorization = {
+	userIdentity: Record<string, unknown>;
+	accessToken: string;
+	refreshToken?: string;
+	expiresAt?: number;
+	tokenType?: string;
+};
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Add better typing for the Elysia codes
 export type StatusReturn = ElysiaCustomStatusResponse<any, any, any>;
 
@@ -61,32 +80,81 @@ export type GetUser<UserType> = (
 ) => UserType | null | undefined | Promise<UserType | null | undefined>;
 
 export type CallbackCookie = Record<string, Cookie<unknown>> & {
+	auth_client: Cookie<string | undefined>;
+	auth_intent: Cookie<AuthIntent | undefined>;
 	user_session_id: Cookie<UserSessionId | undefined>;
 };
 
-export type OnCallbackSuccess<UserType> =
+export type CallbackContext<UserType> = {
+	providerInstance: OAuth2Client<ProviderOption>;
+	authProvider: ProviderOption;
+	authClient?: string;
+	authIntent: AuthIntent;
+	tokenResponse: OAuth2TokenResponse;
+	session: SessionRecord<UserType>;
+	unregisteredSession: UnregisteredSessionRecord;
+	userSessionId: UserSessionId;
+	originUrl: string;
+	cookie: CallbackCookie;
+	currentUser?: UserType;
+	status: typeof statusType;
+	redirect: typeof redirectType;
+};
+
+export type ResolveAuthIntent<UserType> =
 	| (({
 			authProvider,
-			tokenResponse,
-			providerInstance,
+			authClient,
+			originUrl,
 			session,
 			userSessionId,
-			originUrl,
-			cookie,
-			redirect,
-			status
+			currentUser
 	  }: {
-			providerInstance: OAuth2Client<ProviderOption>;
 			authProvider: ProviderOption;
-			tokenResponse: OAuth2TokenResponse;
-			session: SessionRecord<UserType>;
-			unregisteredSession: UnregisteredSessionRecord;
-			userSessionId: UserSessionId;
+			authClient?: string;
 			originUrl: string;
-			cookie: CallbackCookie;
-			status: typeof statusType; // TODO There is no valid return type for returning status although it is a valid return, Elysia status is hard to get the return type inferred correctly
-			redirect: typeof redirectType;
-	  }) =>
+			session: SessionRecord<UserType>;
+			userSessionId?: UserSessionId;
+			currentUser?: UserType;
+	  }) => AuthIntent | Promise<AuthIntent>)
+	| undefined;
+
+export type OnCallbackSuccess<UserType> =
+	| ((
+			context: CallbackContext<UserType>
+	  ) =>
+			| void
+			| Response
+			| StatusReturn
+			| Promise<void | Response | StatusReturn>)
+	| undefined;
+
+export type OnLinkIdentity<UserType> =
+	| ((
+			context: CallbackContext<UserType>
+	  ) =>
+			| void
+			| Response
+			| StatusReturn
+			| Promise<void | Response | StatusReturn>)
+	| undefined;
+
+export type OnLinkIdentityConflict<UserType> =
+	| ((
+			context: CallbackContext<UserType> & {
+				conflict: AuthIdentityConflict;
+			}
+	  ) =>
+			| void
+			| Response
+			| StatusReturn
+			| Promise<void | Response | StatusReturn>)
+	| undefined;
+
+export type OnLinkConnector<UserType> =
+	| ((
+			context: CallbackContext<UserType>
+	  ) =>
 			| void
 			| Response
 			| StatusReturn
@@ -100,6 +168,7 @@ export type OnCallbackError =
 			originUrl
 	  }: {
 			authProvider: string;
+			authClient?: string;
 			error: unknown;
 			originUrl: string;
 	  }) => void | Promise<void>)
@@ -108,9 +177,13 @@ export type OnCallbackError =
 export type OnAuthorizeSuccess =
 	| (({
 			authProvider,
+			authClient,
+			authIntent,
 			authorizationUrl
 	  }: {
 			authProvider: string;
+			authClient?: string;
+			authIntent?: AuthIntent;
 			authorizationUrl: URL;
 	  }) => void | Promise<void>)
 	| undefined;
@@ -121,6 +194,7 @@ export type OnAuthorizeError =
 			authProvider
 	  }: {
 			authProvider: string;
+			authClient?: string;
 			error: unknown;
 	  }) => void | Promise<void>)
 	| undefined;
@@ -132,6 +206,7 @@ export type OnRefreshSuccess =
 	  }: {
 			tokenResponse: OAuth2TokenResponse;
 			authProvider: string;
+			authClient?: string;
 	  }) => void | Promise<void>)
 	| undefined;
 
@@ -141,6 +216,7 @@ export type OnRefreshError =
 			authProvider
 	  }: {
 			authProvider: string;
+			authClient?: string;
 			error: unknown;
 	  }) => void | Promise<void>)
 	| undefined;
@@ -152,6 +228,7 @@ export type OnProfileSuccess =
 	  }: {
 			userProfile: Record<string, unknown>;
 			authProvider: string;
+			authClient?: string;
 	  }) => void | Promise<void>)
 	| undefined;
 
@@ -161,6 +238,7 @@ export type OnProfileError =
 			authProvider
 	  }: {
 			authProvider: string;
+			authClient?: string;
 			error: unknown;
 	  }) => void | Promise<void>)
 	| undefined;
@@ -172,6 +250,7 @@ export type OnRevocationSuccess =
 	  }: {
 			tokenToRevoke: string;
 			authProvider: string;
+			authClient?: string;
 	  }) => void | Promise<void>)
 	| undefined;
 
@@ -181,6 +260,7 @@ export type OnRevocationError =
 			authProvider
 	  }: {
 			authProvider: string;
+			authClient?: string;
 			error: unknown;
 	  }) => void | Promise<void>)
 	| undefined;
@@ -229,10 +309,15 @@ export type AbsoluteAuthProps<UserType> = {
 	cleanupIntervalMs?: number;
 	maxSessions?: number;
 	sessionDurationMs?: number;
+	authSessionStore?: AbsoluteAuthSessionStore<UserType>;
 	unregisteredSessionDurationMs?: number;
+	resolveAuthIntent?: ResolveAuthIntent<UserType>;
 	onAuthorizeSuccess?: OnAuthorizeSuccess;
 	onAuthorizeError?: OnAuthorizeError;
 	onCallbackSuccess?: OnCallbackSuccess<UserType>;
+	onLinkIdentity?: OnLinkIdentity<UserType>;
+	onLinkIdentityConflict?: OnLinkIdentityConflict<UserType>;
+	onLinkConnector?: OnLinkConnector<UserType>;
 	onCallbackError?: OnCallbackError;
 	onStatus?: OnStatus<UserType>;
 	onRefreshSuccess?: OnRefreshSuccess;
@@ -245,14 +330,19 @@ export type AbsoluteAuthProps<UserType> = {
 	onSessionCleanup?: OnSessionCleanup<UserType>;
 };
 
-export type ClientProviders = Record<
-	string,
-	{
-		providerInstance: OAuth2Client<ProviderOption>;
-		scope?: string[];
-		searchParams?: [string, string][];
-	}
->;
+export type ClientProviderEntry = {
+	clientName?: string;
+	providerInstance: OAuth2Client<ProviderOption>;
+	scope?: string[];
+	searchParams?: [string, string][];
+};
+
+export type ClientProviderGroup = {
+	entries: Record<string, ClientProviderEntry>;
+	isSingleClient: boolean;
+};
+
+export type ClientProviders = Record<string, ClientProviderGroup>;
 
 export type InsantiateUserSessionProps<UserType> = {
 	authProvider: ProviderOption;
@@ -263,6 +353,7 @@ export type InsantiateUserSessionProps<UserType> = {
 	user_session_id: Cookie<UserSessionId | undefined>;
 	onNewUser: OnNewUser<UserType>;
 	getUser: GetUser<UserType>;
+	resolvedAuthorization?: ResolvedOAuthAuthorization;
 	sessionDurationMs?: number;
 	unregisteredSessionDurationMs?: number;
 };

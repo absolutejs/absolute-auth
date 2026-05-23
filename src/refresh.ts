@@ -1,8 +1,15 @@
 import { isRefreshableOAuth2Client, isValidProviderOption } from 'citra';
 import { Elysia, t } from 'elysia';
 import { MILLISECONDS_IN_A_DAY } from './constants';
+import { resolveClientProviderEntry } from './providerClients';
+import { loadSessionFromSource } from './sessionAccess';
 import { sessionStore } from './sessionStore';
-import { authProviderOption, userSessionIdTypebox } from './typebox';
+import type { AbsoluteAuthSessionStore } from './sessionTypes';
+import {
+	authClientOption,
+	authProviderOption,
+	userSessionIdTypebox
+} from './typebox';
 import {
 	ClientProviders,
 	OnRefreshError,
@@ -10,7 +17,8 @@ import {
 	RouteString
 } from './types';
 
-type RefreshProps = {
+type RefreshProps<UserType> = {
+	authSessionStore?: AbsoluteAuthSessionStore<UserType>;
 	clientProviders: ClientProviders;
 	refreshRoute?: RouteString;
 	onRefreshSuccess: OnRefreshSuccess;
@@ -19,20 +27,25 @@ type RefreshProps = {
 };
 
 export const refresh = <UserType>({
+	authSessionStore,
 	clientProviders,
 	refreshRoute = '/oauth2/tokens',
 	onRefreshSuccess,
 	onRefreshError,
 	sessionDurationMs = MILLISECONDS_IN_A_DAY
-}: RefreshProps) =>
+}: RefreshProps<UserType>) =>
 	new Elysia().use(sessionStore<UserType>()).post(
 		refreshRoute,
 		async ({
 			status,
 			store: { session },
-			cookie: { user_session_id, auth_provider }
+			cookie: { user_session_id, auth_provider, auth_client }
 		}) => {
-			if (auth_provider === undefined || user_session_id === undefined)
+			if (
+				auth_provider === undefined ||
+				auth_client === undefined ||
+				user_session_id === undefined
+			)
 				return status('Bad Request', 'Cookies are missing');
 
 			if (auth_provider.value === undefined) {
@@ -47,13 +60,21 @@ export const refresh = <UserType>({
 				return status('Unauthorized', 'No user session found');
 			}
 
-			const providerConfig = clientProviders[auth_provider.value];
-			if (!providerConfig) {
-				return status('Unauthorized', 'Client provider not found');
+			const resolvedProvider = resolveClientProviderEntry({
+				clientName: auth_client.value || undefined,
+				clientProviders,
+				providerName: auth_provider.value
+			});
+			if ('error' in resolvedProvider) {
+				return status('Unauthorized', resolvedProvider.error);
 			}
-			const { providerInstance } = providerConfig;
+			const { clientName, providerInstance } = resolvedProvider.entry;
 
-			const userSession = session[user_session_id.value];
+			const userSession = await loadSessionFromSource({
+				authSessionStore,
+				session,
+				userSessionId: user_session_id.value
+			});
 
 			if (userSession === undefined) {
 				return status('Unauthorized', 'No user session found');
@@ -83,7 +104,15 @@ export const refresh = <UserType>({
 				userSession.refreshToken =
 					tokenResponse.refresh_token ?? userSession.refreshToken;
 
+				if (authSessionStore) {
+					await authSessionStore.setSession(
+						user_session_id.value,
+						userSession
+					);
+				}
+
 				await onRefreshSuccess?.({
+					authClient: clientName,
 					authProvider: auth_provider.value,
 					tokenResponse
 				});
@@ -93,12 +122,14 @@ export const refresh = <UserType>({
 				});
 			} catch (err) {
 				console.error('[refresh] Failed to refresh token:', {
+					authClient: clientName,
 					authProvider: auth_provider.value,
 					error: err instanceof Error ? err.message : err,
 					stack: err instanceof Error ? err.stack : undefined
 				});
 
 				await onRefreshError?.({
+					authClient: clientName,
 					authProvider: auth_provider.value,
 					error: err
 				});
@@ -111,6 +142,7 @@ export const refresh = <UserType>({
 		},
 		{
 			cookie: t.Cookie({
+				auth_client: authClientOption,
 				auth_provider: authProviderOption,
 				user_session_id: userSessionIdTypebox
 			})

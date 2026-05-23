@@ -1,7 +1,8 @@
-import { isValidProviderOption, createOAuth2Client } from 'citra';
+import { createOAuth2Client } from 'citra';
 import { Elysia } from 'elysia';
 import { authorize } from './authorize';
 import { callback } from './callback';
+import { buildClientProviders } from './providerClients';
 import { profile } from './profile';
 import { protectRoutePlugin } from './protectRoute';
 import { refresh } from './refresh';
@@ -23,11 +24,16 @@ export const absoluteAuth = async <UserType>({
 	cleanupIntervalMs,
 	maxSessions,
 	sessionDurationMs,
+	authSessionStore,
+	resolveAuthIntent,
 	onAuthorizeSuccess,
 	onAuthorizeError,
 	onProfileSuccess,
 	onProfileError,
 	onCallbackSuccess,
+	onLinkIdentity,
+	onLinkIdentityConflict,
+	onLinkConnector,
 	onCallbackError,
 	onStatus,
 	onRefreshSuccess,
@@ -37,51 +43,34 @@ export const absoluteAuth = async <UserType>({
 	onRevocationError,
 	onSessionCleanup
 }: AbsoluteAuthProps<UserType>) => {
-	const entryPromises: Array<Promise<[string, ClientProviders[string]]>> = [];
-
-	for (const [providerName, providerConfig] of Object.entries(
-		providersConfiguration
-	)) {
-		if (!isValidProviderOption(providerName)) continue;
-
-		entryPromises.push(
-			createOAuth2Client(providerName, providerConfig.credentials).then(
-				(providerInstance) => [
-					providerName,
-					{
-						providerInstance,
-						scope: providerConfig.scope,
-						searchParams: providerConfig.searchParams
-					}
-				]
-			)
-		);
-	}
-
-	const clientProviders: ClientProviders = Object.fromEntries(
-		await Promise.all(entryPromises)
+	const clientProviders: ClientProviders = await buildClientProviders(
+		providersConfiguration,
+		createOAuth2Client
 	);
 
 	return new Elysia()
 		.use(
 			sessionCleanup<UserType>({
+				authSessionStore,
 				cleanupIntervalMs,
 				maxSessions,
 				onSessionCleanup
 			})
 		)
-		.use(signout({ onSignOut, signoutRoute }))
+		.use(signout({ authSessionStore, onSignOut, signoutRoute }))
 		.use(
 			revoke({
+				authSessionStore,
 				clientProviders,
 				onRevocationError,
 				onRevocationSuccess,
 				revokeRoute
 			})
 		)
-		.use(userStatus<UserType>({ onStatus, statusRoute }))
+		.use(userStatus<UserType>({ authSessionStore, onStatus, statusRoute }))
 		.use(
 			refresh({
+				authSessionStore,
 				clientProviders,
 				onRefreshError,
 				onRefreshSuccess,
@@ -99,10 +88,15 @@ export const absoluteAuth = async <UserType>({
 		)
 		.use(
 			callback<UserType>({
+				authSessionStore,
 				callbackRoute,
 				clientProviders,
+				resolveAuthIntent,
 				onCallbackError,
-				onCallbackSuccess
+				onCallbackSuccess,
+				onLinkIdentity,
+				onLinkIdentityConflict,
+				onLinkConnector
 			})
 		)
 		.use(
@@ -113,16 +107,32 @@ export const absoluteAuth = async <UserType>({
 				profileRoute
 			})
 		)
-		.use(protectRoutePlugin<UserType>());
+		.use(protectRoutePlugin<UserType>({ authSessionStore }));
 };
 
 export * from './types';
 export * from './typebox';
-export { isUserSessionId, isValidUser } from './typeGuards';
+export type { AbsoluteAuthSessionStore } from './sessionTypes';
+export { isAuthIntent, isUserSessionId, isValidUser } from './typeGuards';
+export { AbsoluteAuthIdentityConflictError } from './errors';
 export { sessionStore } from './sessionStore';
+export { createInMemoryAuthSessionStore } from './authSessionStores';
+export { createNeonAuthSessionStore } from './neonAuthSessionStore';
+export { createLinkedProviderCredentialResolver } from './linkedProviderResolver';
+export { createOAuthLinkedProviderCredentialResolver } from './oauthLinkedProviderResolver';
+export {
+	createNeonLinkedProviderStores,
+	createNeonOAuthLinkedProviderCredentialResolver
+} from './neonLinkedProviders';
+export { createInMemoryLinkedProviderStores } from './linkedProviderStores';
 export { protectRoutePlugin } from './protectRoute';
 export { sessionCleanup } from './sessionCleanup';
 export * from './utils';
+export {
+	buildClientProviders,
+	resolveClientProviderEntry,
+	resolveProviderClientConfiguration
+} from './providerClients';
 export type {
 	OAuth2TokenResponse,
 	OAuth2Client,

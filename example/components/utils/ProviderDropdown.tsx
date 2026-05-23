@@ -3,12 +3,14 @@ import { Dispatch, SetStateAction } from 'react';
 import { providerData } from '../../utils/providerData';
 
 type ProviderDropdownProps = {
+	providers?: Lowercase<ProviderOption>[];
 	setCurrentProvider: Dispatch<
 		SetStateAction<Lowercase<ProviderOption> | undefined>
 	>;
 };
 
 export const ProviderDropdown = ({
+	providers = providerOptions,
 	setCurrentProvider
 }: ProviderDropdownProps) => (
 	<select
@@ -19,7 +21,7 @@ export const ProviderDropdown = ({
 			if (index < 0) {
 				setCurrentProvider(undefined);
 			} else {
-				setCurrentProvider(providerOptions[index]);
+				setCurrentProvider(providers[index]);
 			}
 		}}
 		style={{
@@ -40,7 +42,7 @@ export const ProviderDropdown = ({
 		>
 			Select provider
 		</option>
-		{providerOptions.map((provider, index) => (
+		{providers.map((provider, index) => (
 			<option
 				key={provider}
 				value={index}
