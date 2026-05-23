@@ -25,14 +25,13 @@ Absolute Auth is a TypeScript-based authentication system that provides a compre
 
 ## Usage
 
-### Running the Example Server
+### Example app
 
-Start the example server:
-   ```bash
-   bun dev
-   ```
-
-3. Open your browser and navigate to `http://localhost:3000` to test the authentication flow.
+A full, runnable demo lives in the AbsoluteJS examples repo under
+[`examples/auth`](https://github.com/absolutejs/examples/tree/main/auth). It
+shows `@absolutejs/auth` across all six AbsoluteJS frontends (React, Vue,
+Svelte, Angular, HTML, HTMX) — login, identity linking/merging, and connector
+grants — against one shared Elysia server.
 
 ## Authentication System
 
@@ -50,12 +49,6 @@ Start the example server:
 - **Routes**: Customize the routes for authorization, callback, signout, status, refresh, and revoke.
 - **Event Handlers**: Define custom event handlers for authorization, callback, status, refresh, signout, and revoke events.
 - **User Management**: Implement custom functions for creating and retrieving users.
-
-### Example Components and Utilities in the `example` Directory
-
-- `components/Example.tsx`: A React component that demonstrates the usage of the authentication system, including login, signout, and protected routes.
-- `components/Navbar.tsx`: A React component that provides a navigation bar with authentication-related links and actions.
-- `server.ts`: The main server file that sets up the example server, handles routes, and integrates the authentication system.
 
 ## Note
 

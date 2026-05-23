@@ -13,6 +13,6 @@
 		"noUncheckedIndexedAccess": true,
 		"lib": ["DOM", "DOM.Iterable", "ESNext"]
 	},
-	"include": ["src/**/*", "example/**/*"],
+	"include": ["src/**/*"],
 	"exclude": ["node_modules"]
 }
