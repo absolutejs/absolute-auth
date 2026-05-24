@@ -1,10 +1,10 @@
 import { isPKCEProviderOption } from 'citra';
 import { Elysia, t } from 'elysia';
-import { AbsoluteAuthIdentityConflictError } from './errors';
+import { AuthIdentityConflictError } from './errors';
 import { resolveClientProviderEntry } from './providerClients';
 import { createSessionCompatibilityLayer } from './sessionAccess';
 import { sessionStore } from './sessionStore';
-import type { AbsoluteAuthSessionStore } from './sessionTypes';
+import type { AuthSessionStore } from './sessionTypes';
 import { isAuthIntent, isNonEmptyString } from './typeGuards';
 import {
 	authClientOption,
@@ -24,7 +24,7 @@ import {
 } from './types';
 
 type CallbackProps<UserType> = {
-	authSessionStore?: AbsoluteAuthSessionStore<UserType>;
+	authSessionStore?: AuthSessionStore<UserType>;
 	clientProviders: ClientProviders;
 	callbackRoute?: RouteString;
 	resolveAuthIntent?: ResolveAuthIntent<UserType>;
@@ -195,7 +195,7 @@ export const callback = <UserType>({
 			} catch (err) {
 				if (
 					authIntent === 'link_identity' &&
-					err instanceof AbsoluteAuthIdentityConflictError &&
+					err instanceof AuthIdentityConflictError &&
 					onLinkIdentityConflict
 				) {
 					response = await onLinkIdentityConflict({

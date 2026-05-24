@@ -1,5 +1,5 @@
 import type { Cookie } from 'elysia';
-import type { AbsoluteAuthSessionStore } from './sessionTypes';
+import type { AuthSessionStore } from './sessionTypes';
 import { isUserSessionId } from './typeGuards';
 import type {
 	SessionData,
@@ -39,7 +39,7 @@ export const loadSessionFromSource = async <UserType>({
 	userSessionId,
 	removeExpired = true
 }: {
-	authSessionStore?: AbsoluteAuthSessionStore<UserType>;
+	authSessionStore?: AuthSessionStore<UserType>;
 	session?: SessionRecord<UserType>;
 	userSessionId?: UserSessionId;
 	removeExpired?: boolean;
@@ -69,7 +69,7 @@ export const getStatusFromSource = async <UserType>({
 	session,
 	user_session_id
 }: {
-	authSessionStore?: AbsoluteAuthSessionStore<UserType>;
+	authSessionStore?: AuthSessionStore<UserType>;
 	session?: SessionRecord<UserType>;
 	user_session_id: Cookie<UserSessionId | undefined>;
 }) => {
@@ -104,7 +104,7 @@ export const createSessionCompatibilityLayer = async <UserType>({
 	authSessionStore,
 	userSessionId
 }: {
-	authSessionStore?: AbsoluteAuthSessionStore<UserType>;
+	authSessionStore?: AuthSessionStore<UserType>;
 	userSessionId?: UserSessionId;
 }): Promise<{
 	session: SessionRecord<UserType>;

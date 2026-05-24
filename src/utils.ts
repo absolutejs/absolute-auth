@@ -10,7 +10,7 @@ import { Cookie } from 'elysia';
 import { MILLISECONDS_IN_A_DAY, MILLISECONDS_IN_AN_HOUR } from './constants';
 import { isNonEmptyString, isStatusResponse } from './typeGuards';
 import {
-	AbsoluteAuthProps,
+	AuthConfig,
 	InsantiateUserSessionProps,
 	OAuth2ConfigurationOptions,
 	ResolvedOAuthAuthorization,
@@ -157,11 +157,11 @@ export const instantiateUserSession = async <UserType>({
 	return response;
 };
 
-export const createAuthConfiguration = <UserType>(
-	configuration: AbsoluteAuthProps<UserType>
+export const defineAuthConfig = <UserType>(
+	configuration: AuthConfig<UserType>
 ) => configuration;
 
-export const createProvidersConfiguration = (
+export const defineProvidersConfiguration = (
 	providersConfiguration: OAuth2ConfigurationOptions
 ) => providersConfiguration;
 

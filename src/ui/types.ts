@@ -104,7 +104,7 @@ export type ResolvedAuthHtmxRenderers = Required<AuthHtmxRenderOverrides> & {
 	escapeHtml: (value: string) => string;
 };
 
-/** Config for the `htmx` option on `absoluteAuth`. Extends the renderers
+/** Config for the `htmx` option on `auth`. Extends the renderers
  *  config with the data actions the fragment routes call — keeping the auth
  *  package agnostic of your identity schema while it owns the route wiring
  *  (protectRoute gating, payload re-rendering, signout, delete-account flow). */

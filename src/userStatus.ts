@@ -1,12 +1,12 @@
 import { Elysia, t } from 'elysia';
 import { getStatusFromSource } from './sessionAccess';
 import { sessionStore } from './sessionStore';
-import type { AbsoluteAuthSessionStore } from './sessionTypes';
+import type { AuthSessionStore } from './sessionTypes';
 import { userSessionIdTypebox } from './typebox';
 import { OnStatus, RouteString } from './types';
 
 type StatusProps<UserType> = {
-	authSessionStore?: AbsoluteAuthSessionStore<UserType>;
+	authSessionStore?: AuthSessionStore<UserType>;
 	statusRoute?: RouteString;
 	onStatus: OnStatus<UserType>;
 };

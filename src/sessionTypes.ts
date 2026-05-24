@@ -4,7 +4,7 @@ import type {
 	UserSessionId
 } from './types';
 
-export type AbsoluteAuthSessionStore<UserType> = {
+export type AuthSessionStore<UserType> = {
 	getSession: (
 		id: UserSessionId
 	) => Promise<SessionData<UserType> | undefined>;

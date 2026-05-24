@@ -9,7 +9,7 @@ import {
 	timestamp,
 	varchar
 } from 'drizzle-orm/pg-core';
-import type { AbsoluteAuthSessionStore } from './sessionTypes';
+import type { AuthSessionStore } from './sessionTypes';
 import type {
 	SessionData,
 	UnregisteredSessionData,
@@ -83,7 +83,7 @@ const toUnregisteredSessionData = (
 
 export const createNeonAuthSessionStore = <UserType>(
 	databaseUrl: string
-): AbsoluteAuthSessionStore<UserType> => {
+): AuthSessionStore<UserType> => {
 	const sql = neon(databaseUrl);
 	const db: NeonHttpDatabase<AuthSessionSchema> = drizzle(sql, {
 		schema: authSessionSchema

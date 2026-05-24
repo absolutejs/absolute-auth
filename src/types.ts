@@ -9,7 +9,7 @@ import {
 import { Cookie, status as statusType, redirect as redirectType } from 'elysia';
 import { ElysiaCustomStatusResponse } from 'elysia/error';
 import type { AuthIdentityConflict } from './errors';
-import type { AbsoluteAuthSessionStore } from './sessionTypes';
+import type { AuthSessionStore } from './sessionTypes';
 import type { AuthHtmxConfig, AuthHtmxUser } from './ui/types';
 
 export type AuthIntent = 'login' | 'link_identity' | 'link_connector';
@@ -298,7 +298,7 @@ export type OnSessionCleanup<UserType> =
 export type RouteString = `/${string}`;
 export type AuthorizeRoute = `${string}/:provider${'' | `/${string}`}`;
 
-export type AbsoluteAuthProps<UserType> = {
+export type AuthConfig<UserType> = {
 	providersConfiguration: OAuth2ConfigurationOptions;
 	authorizeRoute?: AuthorizeRoute;
 	profileRoute?: RouteString;
@@ -310,7 +310,7 @@ export type AbsoluteAuthProps<UserType> = {
 	cleanupIntervalMs?: number;
 	maxSessions?: number;
 	sessionDurationMs?: number;
-	authSessionStore?: AbsoluteAuthSessionStore<UserType>;
+	authSessionStore?: AuthSessionStore<UserType>;
 	/** Enable the built-in HTMX fragment routes (login, identities, connectors,
 	 *  account, signout, delete-account). Supply provider display data + the
 	 *  identity/connector data actions; the package owns the route wiring and

@@ -8,14 +8,14 @@ export type AuthIdentityConflict = {
 	intent?: AuthIntent;
 };
 
-export class AbsoluteAuthIdentityConflictError extends Error {
+export class AuthIdentityConflictError extends Error {
 	conflict: AuthIdentityConflict;
 
 	constructor(conflict: AuthIdentityConflict) {
 		super(
 			`${conflict.authProvider} identity ${conflict.providerSubject} is already linked to ${conflict.existingUserAuthSub}`
 		);
-		this.name = 'AbsoluteAuthIdentityConflictError';
+		this.name = 'AuthIdentityConflictError';
 		this.conflict = conflict;
 	}
 }

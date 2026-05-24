@@ -3,7 +3,7 @@ import { Elysia, t } from 'elysia';
 import { resolveClientProviderEntry } from './providerClients';
 import { loadSessionFromSource } from './sessionAccess';
 import { sessionStore } from './sessionStore';
-import type { AbsoluteAuthSessionStore } from './sessionTypes';
+import type { AuthSessionStore } from './sessionTypes';
 import {
 	authClientOption,
 	authProviderOption,
@@ -17,7 +17,7 @@ import {
 } from './types';
 
 type RevokeProps<UserType> = {
-	authSessionStore?: AbsoluteAuthSessionStore<UserType>;
+	authSessionStore?: AuthSessionStore<UserType>;
 	clientProviders: ClientProviders;
 	revokeRoute?: RouteString;
 	onRevocationSuccess: OnRevocationSuccess;

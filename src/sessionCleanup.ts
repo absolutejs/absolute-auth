@@ -1,7 +1,7 @@
 import { Elysia } from 'elysia';
 import { DEFAULT_MAX_SESSIONS, MILLISECONDS_IN_AN_HOUR } from './constants';
 import { sessionStore } from './sessionStore';
-import type { AbsoluteAuthSessionStore } from './sessionTypes';
+import type { AuthSessionStore } from './sessionTypes';
 import { isUserSessionId } from './typeGuards';
 import type {
 	OnSessionCleanup,
@@ -13,7 +13,7 @@ import type {
 } from './types';
 
 type SessionCleanupProps<UserType> = {
-	authSessionStore?: AbsoluteAuthSessionStore<UserType>;
+	authSessionStore?: AuthSessionStore<UserType>;
 	cleanupIntervalMs?: number;
 	maxSessions?: number;
 	onSessionCleanup?: OnSessionCleanup<UserType>;
@@ -213,7 +213,7 @@ const performRecordCleanup = async <UserType>({
 };
 
 const loadStoreSessions = async <UserType>(
-	authSessionStore: AbsoluteAuthSessionStore<UserType>
+	authSessionStore: AuthSessionStore<UserType>
 ) => {
 	const sessionIds = await authSessionStore.listSessionIds?.();
 	if (!sessionIds) return null;
@@ -228,7 +228,7 @@ const loadStoreSessions = async <UserType>(
 };
 
 const loadStoreUnregisteredSessions = async <UserType>(
-	authSessionStore: AbsoluteAuthSessionStore<UserType>
+	authSessionStore: AuthSessionStore<UserType>
 ) => {
 	const sessionIds = await authSessionStore.listUnregisteredSessionIds?.();
 	if (!sessionIds) return null;
@@ -248,7 +248,7 @@ const performStoreCleanup = async <UserType>({
 	maxSessions,
 	onSessionCleanup
 }: {
-	authSessionStore: AbsoluteAuthSessionStore<UserType>;
+	authSessionStore: AuthSessionStore<UserType>;
 	maxSessions: number;
 	onSessionCleanup?: OnSessionCleanup<UserType>;
 }) => {
@@ -323,7 +323,7 @@ const performCleanup = async <UserType>({
 	session,
 	unregisteredSession
 }: {
-	authSessionStore?: AbsoluteAuthSessionStore<UserType>;
+	authSessionStore?: AuthSessionStore<UserType>;
 	maxSessions: number;
 	onSessionCleanup?: OnSessionCleanup<UserType>;
 	session: SessionRecord<UserType>;

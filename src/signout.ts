@@ -1,12 +1,12 @@
 import { Elysia, t } from 'elysia';
 import { createSessionCompatibilityLayer } from './sessionAccess';
 import { sessionStore } from './sessionStore';
-import type { AbsoluteAuthSessionStore } from './sessionTypes';
+import type { AuthSessionStore } from './sessionTypes';
 import { authProviderOption } from './typebox';
 import { OnSignOut, RouteString } from './types';
 
 type SignOutProps<UserType> = {
-	authSessionStore?: AbsoluteAuthSessionStore<UserType>;
+	authSessionStore?: AuthSessionStore<UserType>;
 	signoutRoute?: RouteString;
 	onSignOut: OnSignOut<UserType>;
 };

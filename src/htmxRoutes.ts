@@ -1,7 +1,7 @@
 import { isValidProviderOption } from 'citra';
 import { Elysia } from 'elysia';
 import { protectRoutePlugin } from './protectRoute';
-import type { AbsoluteAuthSessionStore } from './sessionTypes';
+import type { AuthSessionStore } from './sessionTypes';
 import { isUserSessionId } from './typeGuards';
 import { resolveAuthHtmxRenderers } from './ui/renderers';
 import type { AuthHtmxConfig, AuthHtmxUser } from './ui/types';
@@ -15,13 +15,13 @@ const html = (markup: string) =>
 
 const signInPrompt = `<section class="auth-content"><h1 class="page-heading">Not authorized</h1><p class="muted">You need to sign in to view this page.</p><a class="btn btn--primary" href="/htmx">Go to sign in</a></section>`;
 
-/* The HTMX fragment routes mounted by `absoluteAuth`'s `htmx` option. They use
+/* The HTMX fragment routes mounted by `auth`'s `htmx` option. They use
  * the package's fragment renderers and gate every data route behind
  * `protectRoute`; the identity/connector data operations are supplied via the
  * config so the auth package stays agnostic of your storage schema. */
 export const createAuthHtmxRoutes = <UserType extends AuthHtmxUser>(
 	config: AuthHtmxConfig & {
-		authSessionStore?: AbsoluteAuthSessionStore<UserType>;
+		authSessionStore?: AuthSessionStore<UserType>;
 	}
 ) => {
 	const renderers = resolveAuthHtmxRenderers(config);

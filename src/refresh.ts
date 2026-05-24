@@ -4,7 +4,7 @@ import { MILLISECONDS_IN_A_DAY } from './constants';
 import { resolveClientProviderEntry } from './providerClients';
 import { loadSessionFromSource } from './sessionAccess';
 import { sessionStore } from './sessionStore';
-import type { AbsoluteAuthSessionStore } from './sessionTypes';
+import type { AuthSessionStore } from './sessionTypes';
 import {
 	authClientOption,
 	authProviderOption,
@@ -18,7 +18,7 @@ import {
 } from './types';
 
 type RefreshProps<UserType> = {
-	authSessionStore?: AbsoluteAuthSessionStore<UserType>;
+	authSessionStore?: AuthSessionStore<UserType>;
 	clientProviders: ClientProviders;
 	refreshRoute?: RouteString;
 	onRefreshSuccess: OnRefreshSuccess;

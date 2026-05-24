@@ -1,7 +1,7 @@
 import { Elysia, t } from 'elysia';
 import { getStatusFromSource } from './sessionAccess';
 import { sessionStore } from './sessionStore';
-import type { AbsoluteAuthSessionStore } from './sessionTypes';
+import type { AuthSessionStore } from './sessionTypes';
 import { userSessionIdTypebox } from './typebox';
 
 type AuthFailError =
@@ -17,7 +17,7 @@ type AuthFailError =
 export const protectRoutePlugin = <UserType>({
 	authSessionStore
 }: {
-	authSessionStore?: AbsoluteAuthSessionStore<UserType>;
+	authSessionStore?: AuthSessionStore<UserType>;
 } = {}) =>
 	new Elysia()
 		.use(sessionStore<UserType>())

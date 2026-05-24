@@ -1,4 +1,4 @@
-import type { AbsoluteAuthSessionStore } from './sessionTypes';
+import type { AuthSessionStore } from './sessionTypes';
 import type {
 	SessionData,
 	UnregisteredSessionData,
@@ -28,7 +28,7 @@ const cloneUnregisteredSessionData = (
 
 export const createInMemoryAuthSessionStore = <UserType>(
 	input: CreateInMemoryAuthSessionStoreOptions<UserType> = {}
-): AbsoluteAuthSessionStore<UserType> => {
+): AuthSessionStore<UserType> => {
 	const sessions = new Map<UserSessionId, SessionData<UserType>>(
 		Object.entries(input.sessions ?? {}).map(([id, value]) => [
 			id as UserSessionId,

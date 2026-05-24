@@ -9,13 +9,13 @@ import { buildClientProviders } from './providerClients';
 import { refresh } from './refresh';
 import { revoke } from './revoke';
 import { sessionCleanup } from './sessionCleanup';
-import type { AbsoluteAuthSessionStore } from './sessionTypes';
+import type { AuthSessionStore } from './sessionTypes';
 import { signout } from './signout';
-import { AbsoluteAuthProps, ClientProviders } from './types';
+import { AuthConfig, ClientProviders } from './types';
 import type { AuthHtmxConfig, AuthHtmxUser } from './ui/types';
 import { userStatus } from './userStatus';
 
-export const absoluteAuth = async <UserType>({
+export const auth = async <UserType>({
 	providersConfiguration,
 	authorizeRoute,
 	callbackRoute,
@@ -46,7 +46,7 @@ export const absoluteAuth = async <UserType>({
 	onRevocationSuccess,
 	onRevocationError,
 	onSessionCleanup
-}: AbsoluteAuthProps<UserType>) => {
+}: AuthConfig<UserType>) => {
 	const clientProviders: ClientProviders = await buildClientProviders(
 		providersConfiguration,
 		createOAuth2Client
@@ -114,13 +114,13 @@ export const absoluteAuth = async <UserType>({
 		.use(protectRoutePlugin<UserType>({ authSessionStore }))
 		.use(
 			// `htmx` is gated to `UserType extends AuthHtmxUser` at the public
-			// API (AbsoluteAuthProps), so this bridge is sound — TS just can't
+			// API (AuthConfig), so this bridge is sound — TS just can't
 			// re-derive the bound inside an unconstrained generic body.
 			htmx
 				? createAuthHtmxRoutes<UserType & AuthHtmxUser>({
 						...(htmx as AuthHtmxConfig),
 						authSessionStore: authSessionStore as
-							| AbsoluteAuthSessionStore<UserType & AuthHtmxUser>
+							| AuthSessionStore<UserType & AuthHtmxUser>
 							| undefined
 					})
 				: new Elysia()
@@ -129,9 +129,9 @@ export const absoluteAuth = async <UserType>({
 
 export * from './types';
 export * from './typebox';
-export type { AbsoluteAuthSessionStore } from './sessionTypes';
+export type { AuthSessionStore } from './sessionTypes';
 export { isAuthIntent, isUserSessionId, isValidUser } from './typeGuards';
-export { AbsoluteAuthIdentityConflictError } from './errors';
+export { AuthIdentityConflictError } from './errors';
 export { sessionStore } from './sessionStore';
 export { createInMemoryAuthSessionStore } from './authSessionStores';
 export { createNeonAuthSessionStore } from './neonAuthSessionStore';
