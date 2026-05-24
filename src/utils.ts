@@ -18,6 +18,7 @@ import {
 	UnregisteredSessionRecord,
 	UserSessionId
 } from './types';
+import { AuthHtmxConfig } from './ui/types';
 
 export const resolveOAuthTokenExpiresAt = (
 	tokenResponse: OAuth2TokenResponse,
@@ -160,6 +161,9 @@ export const instantiateUserSession = async <UserType>({
 export const defineAuthConfig = <UserType>(
 	configuration: AuthConfig<UserType>
 ) => configuration;
+
+export const defineAuthHtmxConfig = (htmxConfig: AuthHtmxConfig) =>
+	htmxConfig;
 
 export const defineProvidersConfiguration = (
 	providersConfiguration: OAuth2ConfigurationOptions
