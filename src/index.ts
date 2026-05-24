@@ -3,18 +3,19 @@ import { Elysia } from 'elysia';
 import { authorize } from './authorize';
 import { callback } from './callback';
 import { createAuthHtmxRoutes } from './htmxRoutes';
-import { buildClientProviders } from './providerClients';
 import { profile } from './profile';
 import { protectRoutePlugin } from './protectRoute';
+import { buildClientProviders } from './providerClients';
 import { refresh } from './refresh';
 import { revoke } from './revoke';
 import { sessionCleanup } from './sessionCleanup';
+import type { AbsoluteAuthSessionStore } from './sessionTypes';
 import { signout } from './signout';
 import { AbsoluteAuthProps, ClientProviders } from './types';
-import type { AuthHtmxUser } from './ui/types';
+import type { AuthHtmxConfig, AuthHtmxUser } from './ui/types';
 import { userStatus } from './userStatus';
 
-export const absoluteAuth = async <UserType extends AuthHtmxUser>({
+export const absoluteAuth = async <UserType>({
 	providersConfiguration,
 	authorizeRoute,
 	callbackRoute,
@@ -94,12 +95,12 @@ export const absoluteAuth = async <UserType extends AuthHtmxUser>({
 				authSessionStore,
 				callbackRoute,
 				clientProviders,
-				resolveAuthIntent,
 				onCallbackError,
 				onCallbackSuccess,
+				onLinkConnector,
 				onLinkIdentity,
 				onLinkIdentityConflict,
-				onLinkConnector
+				resolveAuthIntent
 			})
 		)
 		.use(
@@ -112,8 +113,16 @@ export const absoluteAuth = async <UserType extends AuthHtmxUser>({
 		)
 		.use(protectRoutePlugin<UserType>({ authSessionStore }))
 		.use(
+			// `htmx` is gated to `UserType extends AuthHtmxUser` at the public
+			// API (AbsoluteAuthProps), so this bridge is sound — TS just can't
+			// re-derive the bound inside an unconstrained generic body.
 			htmx
-				? createAuthHtmxRoutes<UserType>({ ...htmx, authSessionStore })
+				? createAuthHtmxRoutes<UserType & AuthHtmxUser>({
+						...(htmx as AuthHtmxConfig),
+						authSessionStore: authSessionStore as
+							| AbsoluteAuthSessionStore<UserType & AuthHtmxUser>
+							| undefined
+					})
 				: new Elysia()
 		);
 };

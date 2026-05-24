@@ -10,7 +10,7 @@ import { Cookie, status as statusType, redirect as redirectType } from 'elysia';
 import { ElysiaCustomStatusResponse } from 'elysia/error';
 import type { AuthIdentityConflict } from './errors';
 import type { AbsoluteAuthSessionStore } from './sessionTypes';
-import type { AuthHtmxConfig } from './ui/types';
+import type { AuthHtmxConfig, AuthHtmxUser } from './ui/types';
 
 export type AuthIntent = 'login' | 'link_identity' | 'link_connector';
 
@@ -314,8 +314,12 @@ export type AbsoluteAuthProps<UserType> = {
 	/** Enable the built-in HTMX fragment routes (login, identities, connectors,
 	 *  account, signout, delete-account). Supply provider display data + the
 	 *  identity/connector data actions; the package owns the route wiring and
-	 *  renderers. See @absolutejs/auth/ui to override individual fragments. */
-	htmx?: AuthHtmxConfig;
+	 *  renderers. See @absolutejs/auth/ui to override individual fragments.
+	 *
+	 *  Only available when `UserType` has the fields the fragments render
+	 *  (`sub` + optional email/name); users that don't enable HTMX are never
+	 *  constrained. */
+	htmx?: UserType extends AuthHtmxUser ? AuthHtmxConfig : never;
 	unregisteredSessionDurationMs?: number;
 	resolveAuthIntent?: ResolveAuthIntent<UserType>;
 	onAuthorizeSuccess?: OnAuthorizeSuccess;
