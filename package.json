@@ -1,5 +1,5 @@
 {
-	"version": "0.22.7",
+	"version": "0.23.0",
 	"name": "@absolutejs/auth",
 	"description": "An authorization library for absolutejs",
 	"repository": {
@@ -10,7 +10,7 @@
 	"license": "CC BY-NC 4.0",
 	"author": "Alex Kahn",
 	"scripts": {
-		"build": "rm -rf dist && bun build src/index.ts --outdir dist --sourcemap --target=bun --external elysia && tsc --emitDeclarationOnly --project tsconfig.json && bun -e \"await Bun.write(\\\"dist/index.d.ts\\\", \\\"export * from \\\\\\\"./src/index\\\\\\\";\\n\\\")\"",
+		"build": "rm -rf dist && bun build src/index.ts src/ui/index.ts --outdir dist --sourcemap --target=bun --external elysia && tsc --emitDeclarationOnly --project tsconfig.json",
 		"test": "echo \"Error: no test specified\" && exit 1",
 		"format": "prettier --write \"./**/*.{js,jsx,ts,tsx,css,json}\"",
 		"lint": "eslint ./src ./eslint.config.mjs",
@@ -52,6 +52,10 @@
 		".": {
 			"import": "./dist/index.js",
 			"types": "./dist/index.d.ts"
+		},
+		"./ui": {
+			"import": "./dist/ui/index.js",
+			"types": "./dist/ui/index.d.ts"
 		}
 	},
 	"type": "module",
