@@ -29,7 +29,8 @@ export const resolveAuthHtmxRenderers = (
 	config: AuthHtmxRenderersConfig
 ): ResolvedAuthHtmxRenderers => {
 	const { connectorTargets, featuredLoginProviders, providerData } = config;
-	const authorizationHref = config.authorizationHref ?? defaultAuthorizationHref;
+	const authorizationHref =
+		config.authorizationHref ?? defaultAuthorizationHref;
 	const overrides = config.render ?? {};
 
 	const providerLabel = (key: string) =>
@@ -73,7 +74,9 @@ export const resolveAuthHtmxRenderers = (
 	const connectors = (payload: LinkedProviderPayload) => {
 		const scopeList = (scopes: string[]) =>
 			scopes
-				.map((scope) => `<span class="scope">${escapeHtml(scope)}</span>`)
+				.map(
+					(scope) => `<span class="scope">${escapeHtml(scope)}</span>`
+				)
 				.join('');
 
 		const bindings =

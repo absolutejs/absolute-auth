@@ -103,3 +103,50 @@ export type AuthHtmxRenderersConfig = {
 export type ResolvedAuthHtmxRenderers = Required<AuthHtmxRenderOverrides> & {
 	escapeHtml: (value: string) => string;
 };
+
+/** Config for the `htmx` option on `absoluteAuth`. Extends the renderers
+ *  config with the data actions the fragment routes call — keeping the auth
+ *  package agnostic of your identity schema while it owns the route wiring
+ *  (protectRoute gating, payload re-rendering, signout, delete-account flow). */
+export type AuthHtmxConfig = AuthHtmxRenderersConfig & {
+	/** Load the current user's grouped identities + pending merge requests. */
+	loadAuthIdentities: (
+		userSub: string
+	) => AuthIdentityPayload | Promise<AuthIdentityPayload>;
+	/** Load the current user's connector grants + external-account bindings. */
+	loadLinkedProviders: (
+		userSub: string
+	) => LinkedProviderPayload | Promise<LinkedProviderPayload>;
+	/** Promote an identity to the user's primary. */
+	setPrimaryIdentity: (input: {
+		identityId: string;
+		userSub: string;
+	}) => void | Promise<unknown>;
+	/** Remove an identity (the route already guards last-identity + primary). */
+	removeIdentity: (input: {
+		identityId: string;
+		userSub: string;
+	}) => void | Promise<unknown>;
+	/** Accept a pending merge request into the current user. */
+	mergeIdentity: (input: {
+		mergeRequestId: string;
+		userSub: string;
+	}) => void | Promise<unknown>;
+	/** Dismiss a pending merge request. */
+	dismissMergeRequest: (input: {
+		mergeRequestId: string;
+		userSub: string;
+	}) => void | Promise<unknown>;
+	/** Revoke a connector grant the user owns. */
+	removeGrant: (input: {
+		grantId: string;
+		userSub: string;
+	}) => void | Promise<unknown>;
+	/** Remove an external-account binding the user owns. */
+	removeBinding: (input: {
+		bindingId: string;
+		userSub: string;
+	}) => void | Promise<unknown>;
+	/** Delete the user's account and all linked data. */
+	deleteAccount: (input: { userSub: string }) => void | Promise<unknown>;
+};

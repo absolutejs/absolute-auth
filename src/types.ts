@@ -10,6 +10,7 @@ import { Cookie, status as statusType, redirect as redirectType } from 'elysia';
 import { ElysiaCustomStatusResponse } from 'elysia/error';
 import type { AuthIdentityConflict } from './errors';
 import type { AbsoluteAuthSessionStore } from './sessionTypes';
+import type { AuthHtmxConfig } from './ui/types';
 
 export type AuthIntent = 'login' | 'link_identity' | 'link_connector';
 
@@ -310,6 +311,11 @@ export type AbsoluteAuthProps<UserType> = {
 	maxSessions?: number;
 	sessionDurationMs?: number;
 	authSessionStore?: AbsoluteAuthSessionStore<UserType>;
+	/** Enable the built-in HTMX fragment routes (login, identities, connectors,
+	 *  account, signout, delete-account). Supply provider display data + the
+	 *  identity/connector data actions; the package owns the route wiring and
+	 *  renderers. See @absolutejs/auth/ui to override individual fragments. */
+	htmx?: AuthHtmxConfig;
 	unregisteredSessionDurationMs?: number;
 	resolveAuthIntent?: ResolveAuthIntent<UserType>;
 	onAuthorizeSuccess?: OnAuthorizeSuccess;

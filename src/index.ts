@@ -2,6 +2,7 @@ import { createOAuth2Client } from 'citra';
 import { Elysia } from 'elysia';
 import { authorize } from './authorize';
 import { callback } from './callback';
+import { createAuthHtmxRoutes } from './htmxRoutes';
 import { buildClientProviders } from './providerClients';
 import { profile } from './profile';
 import { protectRoutePlugin } from './protectRoute';
@@ -10,9 +11,10 @@ import { revoke } from './revoke';
 import { sessionCleanup } from './sessionCleanup';
 import { signout } from './signout';
 import { AbsoluteAuthProps, ClientProviders } from './types';
+import type { AuthHtmxUser } from './ui/types';
 import { userStatus } from './userStatus';
 
-export const absoluteAuth = async <UserType>({
+export const absoluteAuth = async <UserType extends AuthHtmxUser>({
 	providersConfiguration,
 	authorizeRoute,
 	callbackRoute,
@@ -25,6 +27,7 @@ export const absoluteAuth = async <UserType>({
 	maxSessions,
 	sessionDurationMs,
 	authSessionStore,
+	htmx,
 	resolveAuthIntent,
 	onAuthorizeSuccess,
 	onAuthorizeError,
@@ -107,7 +110,12 @@ export const absoluteAuth = async <UserType>({
 				profileRoute
 			})
 		)
-		.use(protectRoutePlugin<UserType>({ authSessionStore }));
+		.use(protectRoutePlugin<UserType>({ authSessionStore }))
+		.use(
+			htmx
+				? createAuthHtmxRoutes<UserType>({ ...htmx, authSessionStore })
+				: new Elysia()
+		);
 };
 
 export * from './types';
@@ -127,6 +135,19 @@ export {
 export { createInMemoryLinkedProviderStores } from './linkedProviderStores';
 export { protectRoutePlugin } from './protectRoute';
 export { sessionCleanup } from './sessionCleanup';
+export { createAuthHtmxRoutes } from './htmxRoutes';
+export { resolveAuthHtmxRenderers } from './ui/renderers';
+export type {
+	AuthHtmxConfig,
+	AuthHtmxConnectorTarget,
+	AuthHtmxProviderData,
+	AuthHtmxProviderInfo,
+	AuthHtmxRenderOverrides,
+	AuthHtmxRenderersConfig,
+	AuthHtmxUser,
+	AuthIdentityPayload,
+	LinkedProviderPayload
+} from './ui/types';
 export * from './utils';
 export {
 	buildClientProviders,
