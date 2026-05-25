@@ -2,6 +2,7 @@ import {
 	MILLISECONDS_IN_A_DAY,
 	MILLISECONDS_IN_AN_HOUR
 } from '../constants';
+import type { LockoutGuard } from '../lockout/config';
 import type { AuthSessionStore } from '../session/types';
 import type { OrganizationId } from '../tenancy';
 import type { RouteString, StatusReturn, UserSessionId } from '../types';
@@ -71,4 +72,5 @@ export type CredentialsConfig<UserType> = {
 // to persist promoted sessions, so they accept this superset of the public config.
 export type CredentialRouteProps<UserType> = CredentialsConfig<UserType> & {
 	authSessionStore?: AuthSessionStore<UserType>;
+	lockoutGuard?: LockoutGuard;
 };

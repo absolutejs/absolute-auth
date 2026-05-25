@@ -15,6 +15,7 @@ export const credentialsLogin = <UserType>({
 	credentialStore,
 	getUserByEmail,
 	isMfaRequired,
+	lockoutGuard,
 	loginRoute = '/auth/login',
 	onCredentialsLoginError,
 	onCredentialsLoginSuccess,
@@ -30,6 +31,16 @@ export const credentialsLogin = <UserType>({
 			store: { session, unregisteredSession }
 		}) => {
 			const normalizedEmail = email.trim().toLowerCase();
+			const lockState = lockoutGuard
+				? await lockoutGuard.check(normalizedEmail)
+				: undefined;
+			if (lockState?.locked) {
+				return status('Too Many Requests', {
+					retryAfterMs: lockState.retryAfterMs,
+					status: 'account_locked'
+				});
+			}
+
 			const credential =
 				await credentialStore.getCredentialByEmail(normalizedEmail);
 			const user = await getUserByEmail(normalizedEmail);
@@ -44,6 +55,7 @@ export const credentialsLogin = <UserType>({
 				credential.status !== 'active' ||
 				!passwordValid
 			) {
+				await lockoutGuard?.recordFailure(normalizedEmail);
 				await onCredentialsLoginError?.({
 					email: normalizedEmail,
 					error: new Error('invalid_credentials')
@@ -51,6 +63,8 @@ export const credentialsLogin = <UserType>({
 
 				return status('Unauthorized', 'Invalid email or password');
 			}
+
+			await lockoutGuard?.recordSuccess(normalizedEmail);
 
 			if (requireEmailVerification && !credential.emailVerified) {
 				return status('Forbidden', { status: 'email_not_verified' });

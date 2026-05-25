@@ -329,7 +329,9 @@ breaking changes). Each block ships its in-memory store for zero-config dev.
    signal; E1 is a SOC 2 prerequisite).
    - ✅ E1 audit: `AuditSink` (in-memory + Postgres), `AuditConfig`, `createAuditEmitter`,
      `compose*Audit` wrappers; `auth()` emits register/login/mfa/logout/etc. events.
-   - ⬜ E2 rate limiting & account lockout.
+   - ✅ E2 lockout: `LockoutStore` (in-memory + Postgres) + `createLockoutGuard`
+     (per-identity progressive lockout); credential login returns 429 once locked.
+     (per-IP keying is supported by the store; login keys by email today.)
    - ⬜ E3 session management (list + remote revoke).
 5. **Workstream C — SSO (OIDC first, then SAML)** → the headline enterprise sale.
 6. **Workstream D — SCIM** → follows SSO (same per-org connection model).

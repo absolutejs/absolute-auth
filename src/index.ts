@@ -10,6 +10,7 @@ import {
 } from './audit/wrap';
 import { credentialRoutes } from './credentials/routes';
 import { createAuthHtmxRoutes } from './htmx/routes';
+import { createLockoutGuard } from './lockout/config';
 import { createMfaGate } from './mfa/gate';
 import { mfaRoutes } from './mfa/routes';
 import type { AuthHtmxConfig, AuthHtmxUser } from './htmx/types';
@@ -43,6 +44,7 @@ export const auth = async <UserType>({
 	audit,
 	credentials,
 	mfa,
+	lockout,
 	htmx,
 	resolveAuthIntent,
 	onAuthorizeSuccess,
@@ -68,6 +70,7 @@ export const auth = async <UserType>({
 	);
 
 	const auditEmit = audit ? createAuditEmitter(audit) : undefined;
+	const lockoutGuard = lockout ? createLockoutGuard(lockout) : undefined;
 
 	// When both blocks are configured, default the login MFA gate to the MFAStore
 	// enrollment check unless the consumer supplied their own.
@@ -167,7 +170,8 @@ export const auth = async <UserType>({
 			auditedCredentials
 				? credentialRoutes<UserType>({
 						...auditedCredentials,
-						authSessionStore
+						authSessionStore,
+						lockoutGuard
 					})
 				: new Elysia()
 		)
@@ -303,6 +307,14 @@ export {
 
 export * from './audit/config';
 export * from './audit/types';
+export * from './lockout/config';
+export * from './lockout/types';
+export { createInMemoryLockoutStore } from './lockout/inMemoryLockoutStore';
+export {
+	createNeonLockoutStore,
+	createPostgresLockoutStore,
+	lockoutsTable
+} from './lockout/postgresLockoutStore';
 export { createInMemoryAuditSink } from './audit/inMemoryAuditStore';
 export {
 	auditEventsTable,

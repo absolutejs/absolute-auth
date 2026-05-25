@@ -12,6 +12,7 @@ import type { AuditConfig } from './audit/config';
 import type { CredentialsConfig } from './credentials/config';
 import type { AuthIdentityConflict } from './errors';
 import type { AuthHtmxConfig, AuthHtmxUser } from './htmx/types';
+import type { LockoutConfig } from './lockout/config';
 import type { MfaConfig } from './mfa/config';
 import type { AuthSessionStore } from './session/types';
 
@@ -332,6 +333,9 @@ export type AuthConfig<UserType> = {
 	 *  `auth()` auto-wires the login MFA gate, mounts the enroll/challenge routes, and
 	 *  promotes the parked session once a factor is verified. */
 	mfa?: MfaConfig<UserType>;
+	/** Per-identity attempt throttling + account lockout on the credential login route
+	 *  (progressive: locks after `maxAttempts` failures within `windowMs`). */
+	lockout?: LockoutConfig;
 	/** Enable the built-in HTMX fragment routes (login, identities, connectors,
 	 *  account, signout, delete-account). Supply provider display data + the
 	 *  identity/connector data actions; the package owns the route wiring and
