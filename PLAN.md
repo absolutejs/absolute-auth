@@ -11,8 +11,8 @@ way, on the grain the package already has.
 
 Current version: `0.25.1` (stable) / `0.26.0-beta.3` (beta). License CC BY-NC 4.0.
 
-> **WorkOS-parity additions (2026-05-25, post-plan — on `main`, 112 tests green):** beyond the
-> original plan, four WorkOS-style feature blocks landed to close the gap with hosted auth
+> **WorkOS-parity additions (2026-05-25, post-plan — on `main`, 117 tests green):** beyond the
+> original plan, five WorkOS-style feature blocks landed to close the gap with hosted auth
 > platforms. All additive/optional, same store + hook + audit conventions.
 > - **`organizations`** — first-class tenancy: Organization + membership + email invitations
 >   (`src/organizations/`, 3 Postgres tables). Turns the bare `organizationId` into a real model.
@@ -22,6 +22,10 @@ Current version: `0.25.1` (stable) / `0.26.0-beta.3` (beta). License CC BY-NC 4.
 >   only when its send hook is set; both mint the standard session.
 > - **`webhooks`** — Standard-Webhooks-signed outbound delivery of every auth event
 >   (`src/webhooks/`); configuring it forwards the whole audit taxonomy to your endpoints.
+> - **`portal`** — headless WorkOS-style admin setup links (`src/portal/`): a scoped, time-boxed
+>   setup token (`createSetupSession`) + JSON endpoints a customer's IT admin calls to read the SP
+>   URLs and self-configure their SSO connection / SCIM token. JSON contract = build the portal UI
+>   in any of the 6 frameworks (or HTMX); the package ships the backend, not a coupled UI.
 
 > **Build status (2026-05-25):** F1–F4 + **Workstream A (email/password)** + **Workstream B
 > (MFA)** + **Workstream E (E1 audit, E2 lockout, E3 session mgmt, E4 RBAC, E5 compliance)** +
