@@ -42,7 +42,7 @@ export default defineConfig([
 			parser: tsParser,
 			parserOptions: {
 				createDefaultProgram: true,
-				project: './tsconfig.json',
+				project: './tsconfig.eslint.json',
 				tsconfigRootDir: __dirname
 			}
 		},

@@ -8,6 +8,9 @@
 # testing
 /coverage
 
+# absolute CLI cache (eslint/prettier/typecheck)
+.absolutejs/
+
 # playwright / MCP browser artifacts
 .playwright-mcp/
 
