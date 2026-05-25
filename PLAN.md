@@ -12,13 +12,12 @@ way, on the grain the package already has.
 Current version: `0.25.1`. License CC BY-NC 4.0.
 
 > **Build status (2026-05-24):** F1–F4 + **Workstream A (email/password)** + **Workstream B
-> (MFA: TOTP enroll + challenge + backup codes + step-up)** are DONE on branch
-> `feat/enterprise-auth` — 48 tests green, `build`/`typecheck`/`lint` clean. Next up:
-> Workstream E1/E2/E3 (audit, lockout, session mgmt). See §11 for the live checklist.
+> (MFA)** + **Workstream E1/E2/E3 (audit, lockout, session mgmt)** are DONE on branch
+> `feat/enterprise-auth` — 54 tests green, `build`/`typecheck`/`lint` clean. Next up:
+> Workstream C (SSO) then D (SCIM). See §11 for the live checklist.
 >
-> New migrations since A: `auth_sessions` gains a nullable `authenticated_at_ms` column
-> (`ALTER TABLE auth_sessions ADD COLUMN authenticated_at_ms bigint`); create the
-> `auth_mfa_enrollments` table.
+> New Postgres tables/migrations since A: nullable `auth_sessions.authenticated_at_ms`;
+> new tables `auth_mfa_enrollments`, `auth_audit_events`, `auth_lockouts`.
 >
 > **Design defaults:** registration **auto-logs-in** by default (`requireEmailVerification:
 > true` switches to verify-first: no session on register, login blocked until verified).
@@ -325,14 +324,15 @@ breaking changes). Each block ships its in-memory store for zero-config dev.
    - ✅ B4 `/auth/mfa/challenge` promotes the parked session; `createMfaGate` auto-wired
      into `credentials.isMfaRequired` by `auth()`; full enroll→login→challenge test.
    - ✅ B5 step-up: `authenticatedAt` on `SessionData` + `stepUpPlugin` (`requireRecentAuth`).
-4. 🚧 **Workstream E1/E2/E3 — audit, lockout, session mgmt** (cheap, high enterprise
-   signal; E1 is a SOC 2 prerequisite).
+4. ✅ **Workstream E1/E2/E3 — audit, lockout, session mgmt** — DONE (E1 = SOC 2 prereq).
    - ✅ E1 audit: `AuditSink` (in-memory + Postgres), `AuditConfig`, `createAuditEmitter`,
      `compose*Audit` wrappers; `auth()` emits register/login/mfa/logout/etc. events.
    - ✅ E2 lockout: `LockoutStore` (in-memory + Postgres) + `createLockoutGuard`
      (per-identity progressive lockout); credential login returns 429 once locked.
      (per-IP keying is supported by the store; login keys by email today.)
-   - ⬜ E3 session management (list + remote revoke).
+   - ✅ E3 sessions: `GET /auth/sessions` + `DELETE /auth/sessions/:id` (own sessions),
+     `listUserSessions`/`revokeUserSessions` helpers (the latter for password-reset
+     revocation via the `onPasswordReset` hook). TODO: device/UA/IP metadata + idle timeout.
 5. **Workstream C — SSO (OIDC first, then SAML)** → the headline enterprise sale.
 6. **Workstream D — SCIM** → follows SSO (same per-org connection model).
 7. **Workstream E4/E5 + WebAuthn** — RBAC hooks, compliance, passkeys.

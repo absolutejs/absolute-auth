@@ -14,6 +14,7 @@ import type { AuthIdentityConflict } from './errors';
 import type { AuthHtmxConfig, AuthHtmxUser } from './htmx/types';
 import type { LockoutConfig } from './lockout/config';
 import type { MfaConfig } from './mfa/config';
+import type { SessionsConfig } from './session/sessionsConfig';
 import type { AuthSessionStore } from './session/types';
 
 export type AuthIntent = 'login' | 'link_identity' | 'link_connector';
@@ -336,6 +337,10 @@ export type AuthConfig<UserType> = {
 	/** Per-identity attempt throttling + account lockout on the credential login route
 	 *  (progressive: locks after `maxAttempts` failures within `windowMs`). */
 	lockout?: LockoutConfig;
+	/** Self-service session management: `GET /auth/sessions` (list the caller's active
+	 *  sessions) and `DELETE /auth/sessions/:id` (remote revoke). Requires an
+	 *  `authSessionStore` that can enumerate sessions. */
+	sessions?: SessionsConfig<UserType>;
 	/** Enable the built-in HTMX fragment routes (login, identities, connectors,
 	 *  account, signout, delete-account). Supply provider display data + the
 	 *  identity/connector data actions; the package owns the route wiring and

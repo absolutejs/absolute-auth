@@ -21,6 +21,7 @@ import { profile } from './routes/profile';
 import { protectRoutePlugin } from './routes/protectRoute';
 import { refresh } from './routes/refresh';
 import { revoke } from './routes/revoke';
+import { sessionRoutes } from './routes/sessions';
 import { stepUpPlugin } from './routes/stepUp';
 import { signout } from './routes/signout';
 import { userStatus } from './routes/userStatus';
@@ -45,6 +46,7 @@ export const auth = async <UserType>({
 	credentials,
 	mfa,
 	lockout,
+	sessions,
 	htmx,
 	resolveAuthIntent,
 	onAuthorizeSuccess,
@@ -180,6 +182,11 @@ export const auth = async <UserType>({
 				? mfaRoutes<UserType>({ ...auditedMfa, authSessionStore })
 				: new Elysia()
 		)
+		.use(
+			sessions
+				? sessionRoutes<UserType>({ ...sessions, authSessionStore })
+				: new Elysia()
+		)
 		.use(protectRoutePlugin<UserType>({ authSessionStore }))
 		.use(stepUpPlugin<UserType>({ authSessionStore }))
 		.use(
@@ -215,7 +222,14 @@ export {
 } from './linkedProviders/neonStores';
 export { createInMemoryLinkedProviderStores } from './linkedProviders/inMemoryStores';
 export { protectRoutePlugin } from './routes/protectRoute';
+export { sessionRoutes } from './routes/sessions';
 export { stepUpPlugin } from './routes/stepUp';
+export * from './session/sessionsConfig';
+export {
+	listUserSessions,
+	revokeUserSessions
+} from './session/userSessions';
+export type { UserSession } from './session/userSessions';
 export { sessionCleanup } from './session/cleanup';
 export { createAuthHtmxRoutes } from './htmx/routes';
 export { resolveAuthHtmxRenderers } from './htmx/renderers';
