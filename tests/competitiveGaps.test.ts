@@ -173,9 +173,7 @@ describe('anonymous sessions', () => {
 		const guest = await request(app, '/guest', 'POST', '');
 		const cookie = jarFrom(guest, '');
 
-		const who = await (
-			await request(app, '/whoami', 'GET', cookie)
-		).json();
+		const who = await (await request(app, '/whoami', 'GET', cookie)).json();
 		expect(who).toEqual({ anonymous: true, sub: 'guest:1' });
 	});
 });
@@ -189,8 +187,14 @@ describe('multi-session (account switcher)', () => {
 
 	test('holds multiple accounts, switches, and signs one out', async () => {
 		let jar = '';
-		jar = jarFrom(await request(app, '/login', 'POST', jar, { sub: 'alice' }), jar);
-		jar = jarFrom(await request(app, '/login', 'POST', jar, { sub: 'bob' }), jar);
+		jar = jarFrom(
+			await request(app, '/login', 'POST', jar, { sub: 'alice' }),
+			jar
+		);
+		jar = jarFrom(
+			await request(app, '/login', 'POST', jar, { sub: 'bob' }),
+			jar
+		);
 
 		const accounts = await (
 			await request(app, '/accounts', 'GET', jar)
@@ -201,9 +205,9 @@ describe('multi-session (account switcher)', () => {
 		]);
 
 		// most recent login (bob) is active
-		expect((await (await request(app, '/whoami', 'GET', jar)).json()).sub).toBe(
-			'bob'
-		);
+		expect(
+			(await (await request(app, '/whoami', 'GET', jar)).json()).sub
+		).toBe('bob');
 
 		const aliceId = accounts.find(
 			(a: { sub: string }) => a.sub === 'alice'
@@ -212,9 +216,9 @@ describe('multi-session (account switcher)', () => {
 			await request(app, '/switch', 'POST', jar, { sessionId: aliceId }),
 			jar
 		);
-		expect((await (await request(app, '/whoami', 'GET', jar)).json()).sub).toBe(
-			'alice'
-		);
+		expect(
+			(await (await request(app, '/whoami', 'GET', jar)).json()).sub
+		).toBe('alice');
 
 		const bobId = accounts.find(
 			(a: { sub: string }) => a.sub === 'bob'
@@ -225,7 +229,9 @@ describe('multi-session (account switcher)', () => {
 			}),
 			jar
 		);
-		const after = await (await request(app, '/accounts', 'GET', jar)).json();
+		const after = await (
+			await request(app, '/accounts', 'GET', jar)
+		).json();
 		expect(after.map((a: { sub: string }) => a.sub)).toEqual(['alice']);
 	});
 });

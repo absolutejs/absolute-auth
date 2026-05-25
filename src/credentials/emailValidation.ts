@@ -63,7 +63,10 @@ export const validateEmailDeliverability = async (
 	if (isDisposableEmail(normalized, options?.disposableDomains)) {
 		return { ok: false, reason: 'disposable' };
 	}
-	if (options?.checkMx === true && !(await hasMxRecord(domainOf(normalized)))) {
+	if (
+		options?.checkMx === true &&
+		!(await hasMxRecord(domainOf(normalized)))
+	) {
 		return { ok: false, reason: 'no_mx' };
 	}
 
