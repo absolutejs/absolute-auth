@@ -24,6 +24,7 @@ import type { SessionsConfig } from './session/sessionsConfig';
 import type { AuthSessionStore } from './session/types';
 import type { SSOConfig } from './sso/config';
 import type { WebAuthnConfig } from './webauthn/config';
+import type { WebhooksConfig } from './webhooks/config';
 
 export type AuthIntent = 'login' | 'link_identity' | 'link_connector';
 
@@ -394,6 +395,11 @@ export type AuthConfig<UserType> = {
 	 *  → mints the same `SessionData<UserType>`). A `webauthnAdapter` wraps a vetted library (e.g.
 	 *  `@simplewebauthn/server`); the package never bundles the WebAuthn crypto. */
 	webauthn?: WebAuthnConfig<UserType>;
+	/** Signed outbound webhooks. When present, every emitted auth event (the audit taxonomy) is
+	 *  HMAC-signed (Standard Webhooks scheme) and POSTed to each endpoint. Delivery is best-effort
+	 *  and isolated per endpoint; configuring this alone (without `audit`) is enough to turn on
+	 *  event emission. PII redaction (`audit.redact`) applies before delivery. */
+	webhooks?: WebhooksConfig;
 	/** Enable the built-in HTMX fragment routes (login, identities, connectors,
 	 *  account, signout, delete-account). Supply provider display data + the
 	 *  identity/connector data actions; the package owns the route wiring and

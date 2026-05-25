@@ -37,6 +37,7 @@ import { ssoDiscoveryRoute } from './sso/discoveryRoute';
 import { oidcSsoRoutes } from './sso/oidcRoutes';
 import { samlSsoRoutes } from './sso/samlRoutes';
 import { webauthnRoutes } from './webauthn/routes';
+import { createWebhookDispatcher } from './webhooks/dispatcher';
 import { AuthConfig, ClientProviders } from './types';
 
 export const auth = async <UserType>({
@@ -65,6 +66,7 @@ export const auth = async <UserType>({
 	authorization,
 	compliance,
 	webauthn,
+	webhooks,
 	htmx,
 	resolveAuthIntent,
 	onAuthorizeSuccess,
@@ -89,7 +91,21 @@ export const auth = async <UserType>({
 		createOAuth2Client
 	);
 
-	const auditEmit = audit ? createAuditEmitter(audit) : undefined;
+	// `webhooks` forwards every emitted event; composing it into the audit emitter means
+	// configuring webhooks alone (without `audit`) is enough to turn on event emission.
+	const webhookDispatch = webhooks
+		? createWebhookDispatcher(webhooks)
+		: undefined;
+	const auditEmit =
+		audit || webhookDispatch
+			? createAuditEmitter<UserType>({
+					...audit,
+					onAuditEvent: async (event) => {
+						await audit?.onAuditEvent?.(event);
+						await webhookDispatch?.(event);
+					}
+				})
+			: undefined;
 	const lockoutGuard = lockout ? createLockoutGuard(lockout) : undefined;
 
 	// When both blocks are configured, default the login MFA gate to the MFAStore
@@ -508,3 +524,7 @@ export {
 	createPostgresPasswordlessTokenStore,
 	passwordlessTokensTable
 } from './passwordless/postgresPasswordlessTokenStore';
+export * from './webhooks/config';
+export * from './webhooks/types';
+export { createWebhookDispatcher } from './webhooks/dispatcher';
+export { signWebhook, verifyWebhookSignature } from './webhooks/sign';
