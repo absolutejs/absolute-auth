@@ -13,7 +13,7 @@
 		"build": "rm -rf dist && bun build src/index.ts src/htmx/index.ts --outdir dist --sourcemap --target=bun --external elysia && tsc --emitDeclarationOnly --project tsconfig.json",
 		"test": "echo \"Error: no test specified\" && exit 1",
 		"format": "prettier --write \"./**/*.{js,jsx,ts,tsx,css,json}\"",
-		"lint": "eslint ./src ./eslint.config.mjs",
+		"lint": "eslint .",
 		"typecheck": "bun run tsc --noEmit",
 		"release": "bun run format && bun run build && bun publish"
 	},
@@ -35,17 +35,19 @@
 		"drizzle-orm": "0.41.0"
 	},
 	"devDependencies": {
-		"@stylistic/eslint-plugin-ts": "4.2.0",
+		"@eslint/js": "^10.0.1",
+		"@stylistic/eslint-plugin": "^5.10.0",
 		"@types/bun": "1.2.9",
+		"@typescript-eslint/parser": "^8.57.2",
 		"elysia": "1.4.26",
-		"eslint": "9.26.0",
-		"eslint-plugin-absolute": "0.0.3",
-		"eslint-plugin-import": "2.31.0",
-		"eslint-plugin-promise": "7.2.1",
-		"eslint-plugin-security": "3.0.1",
+		"eslint": "^10.1.0",
+		"eslint-plugin-absolute": "^0.11.0",
+		"eslint-plugin-promise": "^7.2.1",
+		"eslint-plugin-security": "^4.0.0",
+		"globals": "^17.4.0",
 		"prettier": "3.5.3",
 		"typescript": "5.8.3",
-		"typescript-eslint": "8.32.0"
+		"typescript-eslint": "^8.57.2"
 	},
 	"module": "./dist/index.js",
 	"exports": {

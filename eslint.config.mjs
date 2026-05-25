@@ -1,22 +1,31 @@
 // eslint.config.mjs
 import { dirname } from 'path';
 import { fileURLToPath } from 'url';
-const __dirname = dirname(fileURLToPath(import.meta.url));
-
 import pluginJs from '@eslint/js';
-import stylisticTs from '@stylistic/eslint-plugin-ts';
+import stylistic from '@stylistic/eslint-plugin';
 import tsParser from '@typescript-eslint/parser';
+import { defineConfig } from 'eslint/config';
 import absolutePlugin from 'eslint-plugin-absolute';
-import importPlugin from 'eslint-plugin-import';
 import promisePlugin from 'eslint-plugin-promise';
 import securityPlugin from 'eslint-plugin-security';
 import globals from 'globals';
 import tseslint from 'typescript-eslint';
 
-export default [
+const __dirname = dirname(fileURLToPath(import.meta.url));
+
+export default defineConfig([
 	{
-		ignores: ['dist/**']
+		ignores: [
+			'node_modules/**',
+			'dist/**',
+			'**/*.min.js',
+			'**/*.min.css',
+			'**/compiled/**',
+			'.cache/**',
+			'.claude/**'
+		]
 	},
+
 	pluginJs.configs.recommended,
 
 	...tseslint.configs.recommended,
@@ -24,33 +33,45 @@ export default [
 	{
 		files: ['**/*.{ts,tsx}'],
 		languageOptions: {
-			globals: globals.browser,
+			globals: {
+				...globals.node,
+				Buffer: 'readonly',
+				Bun: 'readonly',
+				NodeJS: 'readonly'
+			},
 			parser: tsParser,
 			parserOptions: {
 				createDefaultProgram: true,
 				project: './tsconfig.json',
 				tsconfigRootDir: __dirname
 			}
-		}
-	},
-
-	{
-		files: ['**/*.{ts,tsx}'],
-		plugins: { '@stylistic/ts': stylisticTs },
+		},
+		plugins: { '@stylistic': stylistic },
 		rules: {
-			'@stylistic/ts/padding-line-between-statements': [
+			'@stylistic/padding-line-between-statements': [
 				'error',
 				{ blankLine: 'always', next: 'return', prev: '*' }
 			],
-			"@typescript-eslint/no-unnecessary-type-assertion": "error"
+
+			'@typescript-eslint/consistent-type-assertions': [
+				'error',
+				{ assertionStyle: 'never' }
+			],
+			'@typescript-eslint/consistent-type-definitions': ['error', 'type'],
+			'@typescript-eslint/no-non-null-assertion': 'error',
+			'@typescript-eslint/no-unnecessary-type-assertion': 'error'
 		}
 	},
-
 	{
 		files: ['**/*.{js,mjs,cjs,ts,tsx,jsx}'],
+		ignores: ['node_modules/**'],
+		languageOptions: {
+			globals: {
+				...globals.browser
+			}
+		},
 		plugins: {
 			absolute: absolutePlugin,
-			import: importPlugin,
 			promise: promisePlugin,
 			security: securityPlugin
 		},
@@ -61,19 +82,11 @@ export default [
 			'absolute/max-jsxnesting': ['error', 5],
 			'absolute/min-var-length': [
 				'error',
-				{ allowedVars: ['_', 'id', 'db', 'OK'], minLength: 3 }
+				{ allowedVars: ['_', 'id', 'db', 'OK', 'ws'], minLength: 3 }
 			],
-			'absolute/no-button-navigation': 'error',
 			'absolute/no-explicit-return-type': 'error',
-			'absolute/no-inline-prop-types': 'error',
-			'absolute/no-multi-style-objects': 'error',
-			'absolute/no-nested-jsx-return': 'error',
-			'absolute/no-or-none-component': 'error',
-			'absolute/no-transition-cssproperties': 'error',
-			'absolute/no-unnecessary-div': 'error',
-			'absolute/no-unnecessary-key': 'error',
+			'absolute/no-import-meta-path': 'error',
 			'absolute/no-useless-function': 'error',
-			'absolute/seperate-style-files': 'error',
 			'absolute/sort-exports': [
 				'error',
 				{
@@ -95,18 +108,8 @@ export default [
 			'arrow-body-style': ['error', 'as-needed'],
 			'consistent-return': 'error',
 			eqeqeq: 'error',
-			'func-style': [
-				'error',
-				'expression',
-				{ allowArrowFunctions: true }
-			],
-			'import/no-cycle': 'error',
-			'import/no-default-export': 'error',
-			'import/no-relative-packages': 'error',
-			'import/no-unused-modules': ['error', { missingExports: true }],
-			'import/order': ['error', { alphabetize: { order: 'asc' } }],
+			'func-style': ['error', 'expression', { allowArrowFunctions: true }],
 			'no-await-in-loop': 'error',
-			'no-console': ['error', { allow: ['warn', 'error'] }],
 			'no-debugger': 'error',
 			'no-duplicate-case': 'error',
 			'no-duplicate-imports': 'error',
@@ -122,13 +125,17 @@ export default [
 			'no-loop-func': 'error',
 			'no-magic-numbers': [
 				'warn',
-				{ detectObjects: false, enforceConst: true, ignore: [0, 1, -1, 2] }
+				{ detectObjects: false, enforceConst: true, ignore: [0, 1, 2] }
 			],
 			'no-misleading-character-class': 'error',
 			'no-nested-ternary': 'error',
 			'no-new-native-nonconstructor': 'error',
 			'no-new-wrappers': 'error',
 			'no-param-reassign': 'error',
+			'no-restricted-exports': [
+				'error',
+				{ restrictDefaultExports: { direct: true } }
+			],
 			'no-restricted-imports': [
 				'error',
 				{
@@ -138,13 +145,22 @@ export default [
 							message:
 								'Import only named React exports for tree-shaking.',
 							name: 'react'
-						},
-						{
-							importNames: ['default'],
-							message: 'Import only the required Bun exports.',
-							name: 'bun'
 						}
 					]
+				}
+			],
+			'no-restricted-syntax': [
+				'error',
+				{
+					message:
+						'Do not use IIFEs. Extract to a named function instead.',
+					selector:
+						'CallExpression[callee.type="ArrowFunctionExpression"]'
+				},
+				{
+					message:
+						'Do not use IIFEs. Extract to a named function instead.',
+					selector: 'CallExpression[callee.type="FunctionExpression"]'
 				}
 			],
 			'no-return-await': 'error',
@@ -177,13 +193,9 @@ export default [
 	{
 		files: ['eslint.config.mjs'],
 		rules: {
-			'no-magic-numbers': 'off'
-		}
-	},
-	{
-		files: ['eslint.config.mjs'],
-		rules: {
-			'import/no-default-export': 'off'
+			// Config file: run directly, never bundled — import.meta.url is safe.
+			'absolute/no-import-meta-path': 'off',
+			'no-restricted-exports': 'off'
 		}
 	}
-];
+]);
