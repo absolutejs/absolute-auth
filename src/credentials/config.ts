@@ -2,6 +2,7 @@ import {
 	MILLISECONDS_IN_A_DAY,
 	MILLISECONDS_IN_AN_HOUR
 } from '../constants';
+import type { AuthSessionStore } from '../session/types';
 import type { OrganizationId } from '../tenancy';
 import type { RouteString, StatusReturn, UserSessionId } from '../types';
 import type { PasswordPolicy } from './passwordPolicy';
@@ -55,9 +56,19 @@ export type CredentialsConfig<UserType> = {
 	onSendEmail: (message: CredentialEmailMessage) => void | Promise<void>;
 	passwordPolicy?: PasswordPolicy;
 	registerRoute?: RouteString;
+	/** When true, registration creates the account but NOT a session, and login is
+	 *  rejected until the email is verified. Default false = auto-login on register and
+	 *  verification acts as a soft, later gate. */
+	requireEmailVerification?: boolean;
 	resetPasswordRoute?: RouteString;
 	resetTokenDurationMs?: number;
 	sessionDurationMs?: number;
 	verificationTokenDurationMs?: number;
 	verifyEmailRoute?: RouteString;
+};
+
+// The route modules also need the top-level `authSessionStore` (threaded in by `auth()`)
+// to persist promoted sessions, so they accept this superset of the public config.
+export type CredentialRouteProps<UserType> = CredentialsConfig<UserType> & {
+	authSessionStore?: AuthSessionStore<UserType>;
 };

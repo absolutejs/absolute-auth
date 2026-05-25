@@ -78,6 +78,9 @@ export const credentialsPasswordReset = <UserType>({
 					updatedAt: now,
 					userId: existing?.userId
 				});
+				// TODO(Workstream E3): once a user→sessions index exists, revoke all of
+				// the user's other active sessions here. For now consumers can do so via
+				// the onPasswordReset hook.
 				await onPasswordReset?.({ email: consumed.email });
 
 				return status('OK', { status: 'password_reset' });

@@ -12,8 +12,15 @@ way, on the grain the package already has.
 Current version: `0.25.1`. License CC BY-NC 4.0.
 
 > **Build status (2026-05-24):** F1–F4 foundations + **Workstream A (email/password) are
-> DONE** on branch `feat/enterprise-auth` — 33 tests green, `build`/`typecheck`/`lint` clean.
+> DONE** on branch `feat/enterprise-auth` — 35 tests green, `build`/`typecheck`/`lint` clean.
 > Next up: Workstream B (MFA). See §11 for the live checklist.
+>
+> **Design defaults:** registration **auto-logs-in** by default (`requireEmailVerification:
+> true` switches to verify-first: no session on register, login blocked until verified).
+> `SessionData.accessToken` is now **optional** — credential/SSO sessions omit it (only the
+> OAuth routes read it). Migration for existing Neon consumers:
+> `ALTER TABLE auth_sessions ALTER COLUMN access_token DROP NOT NULL;` plus create the new
+> `auth_credentials` / `auth_credential_*_tokens` tables.
 >
 > **Layout note:** `src/` is now organized into **feature folders** (`routes/`, `session/`,
 > `credentials/`, `stores/`, …), not flat. The composed entry function is `auth<UserType>()`
@@ -246,7 +253,10 @@ The "anything else enterprise expects" tail. Each is small and orthogonal.
 - **E3 · Session management UX** (`src/sessions.ts`): `GET /auth/sessions` (list active
   — needs the store's optional `listSessionIds`, add device/UA/IP metadata to
   `SessionData`), `DELETE /auth/sessions/:id` (remote revoke), concurrent-session
-  caps (extend `sessionCleanup`), absolute + idle timeout config.
+  caps (extend `sessionCleanup`), absolute + idle timeout config. **Also wire
+  password-reset / password-change to revoke all of a user's other sessions** — this
+  needs the user→sessions index E3 introduces (today it is delegated to the
+  `onPasswordReset` hook; see the TODO in `credentials/passwordReset.ts`).
 - **E4 · Org / tenancy & RBAC hooks** (`src/authorization.ts`): build on F3; add a
   `protectPermission(check)` derive alongside `protectRoute`, delegating the actual
   role/permission decision to a consumer hook (`hasPermission(user, perm, orgId)`).

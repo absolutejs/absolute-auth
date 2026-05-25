@@ -35,7 +35,10 @@ export type UserSessionId = `${string}-${string}-${string}-${string}-${string}`;
 
 export type SessionData<UserType> = {
 	user: UserType;
-	accessToken: string;
+	/** OAuth provider access token. Optional: credential / SSO sessions are not backed
+	 *  by a provider token, so they omit it. Only the OAuth routes (profile, refresh,
+	 *  revoke) read it, and they are all gated on an `auth_provider`. */
+	accessToken?: string;
 	refreshToken?: string;
 	expiresAt: number;
 };

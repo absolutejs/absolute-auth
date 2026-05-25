@@ -88,6 +88,13 @@ export const revoke = <UserType>({
 
 			const { accessToken } = userSession;
 
+			if (accessToken === undefined) {
+				return status(
+					'Bad Request',
+					'Session has no access token to revoke'
+				);
+			}
+
 			try {
 				await providerInstance.revokeToken(accessToken);
 

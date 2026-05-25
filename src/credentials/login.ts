@@ -1,18 +1,14 @@
 import { Elysia, t } from 'elysia';
 import { MILLISECONDS_IN_AN_HOUR } from '../constants';
-import { generateSecureToken, verifyPassword } from '../crypto';
+import { verifyPassword } from '../crypto';
 import { createSessionCompatibilityLayer } from '../session/access';
 import { sessionStore } from '../session/state';
-import type { AuthSessionStore } from '../session/types';
 import { userSessionIdTypebox } from '../typebox';
 import {
-	type CredentialsConfig,
+	type CredentialRouteProps,
 	DEFAULT_CREDENTIAL_SESSION_TTL_MS
 } from './config';
-
-type CredentialsLoginProps<UserType> = CredentialsConfig<UserType> & {
-	authSessionStore?: AuthSessionStore<UserType>;
-};
+import { promoteToSession } from './session';
 
 const persistWhen = async (
 	shouldPersist: boolean,
@@ -29,8 +25,9 @@ export const credentialsLogin = <UserType>({
 	loginRoute = '/auth/login',
 	onCredentialsLoginError,
 	onCredentialsLoginSuccess,
+	requireEmailVerification = false,
 	sessionDurationMs = DEFAULT_CREDENTIAL_SESSION_TTL_MS
-}: CredentialsLoginProps<UserType>) =>
+}: CredentialRouteProps<UserType>) =>
 	new Elysia().use(sessionStore<UserType>()).post(
 		loginRoute,
 		async ({
@@ -62,22 +59,23 @@ export const credentialsLogin = <UserType>({
 				return status('Unauthorized', 'Invalid email or password');
 			}
 
-			const compatibilityLayer = await createSessionCompatibilityLayer({
-				authSessionStore,
-				userSessionId: user_session_id.value
-			});
-			const loginSession = authSessionStore
-				? compatibilityLayer.session
-				: session;
-			const loginUnregistered = authSessionStore
-				? compatibilityLayer.unregisteredSession
-				: unregisteredSession;
-			const userSessionId = crypto.randomUUID();
+			if (requireEmailVerification && !credential.emailVerified) {
+				return status('Forbidden', { status: 'email_not_verified' });
+			}
 
 			// MFA seam: when a factor is enrolled, keep an unregistered session and
 			// defer promotion to the (Workstream B) challenge route.
 			if (await isMfaRequired?.(user)) {
-				loginUnregistered[userSessionId] = {
+				const compatibilityLayer =
+					await createSessionCompatibilityLayer({
+						authSessionStore,
+						userSessionId: user_session_id.value
+					});
+				const pendingUnregistered = authSessionStore
+					? compatibilityLayer.unregisteredSession
+					: unregisteredSession;
+				const pendingSessionId = crypto.randomUUID();
+				pendingUnregistered[pendingSessionId] = {
 					expiresAt: Date.now() + MILLISECONDS_IN_AN_HOUR,
 					userIdentity: { email: normalizedEmail }
 				};
@@ -85,7 +83,7 @@ export const credentialsLogin = <UserType>({
 					httpOnly: true,
 					sameSite: 'lax',
 					secure: true,
-					value: userSessionId
+					value: pendingSessionId
 				});
 				await persistWhen(
 					authSessionStore !== undefined,
@@ -95,21 +93,13 @@ export const credentialsLogin = <UserType>({
 				return status('OK', { status: 'mfa_required' });
 			}
 
-			loginSession[userSessionId] = {
-				accessToken: generateSecureToken(),
-				expiresAt: Date.now() + sessionDurationMs,
+			const userSessionId = await promoteToSession({
+				authSessionStore,
+				cookie: user_session_id,
+				inMemorySession: session,
+				sessionDurationMs,
 				user
-			};
-			user_session_id.set({
-				httpOnly: true,
-				sameSite: 'lax',
-				secure: true,
-				value: userSessionId
 			});
-			await persistWhen(
-				authSessionStore !== undefined,
-				compatibilityLayer.persist
-			);
 			await onCredentialsLoginSuccess?.({ user, userSessionId });
 
 			return status('OK', { status: 'authenticated' });

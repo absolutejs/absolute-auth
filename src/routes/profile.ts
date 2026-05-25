@@ -71,6 +71,13 @@ export const profile = <UserType>({
 
 			const { accessToken } = userSession;
 
+			if (accessToken === undefined) {
+				return status(
+					'Bad Request',
+					'Session has no access token to fetch a profile'
+				);
+			}
+
 			try {
 				const userProfile =
 					await providerInstance.fetchUserProfile(accessToken);

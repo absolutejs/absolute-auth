@@ -190,3 +190,54 @@ describe('password reset flow', () => {
 		expect(newLogin.status).toBe(200);
 	});
 });
+
+describe('registration session behavior', () => {
+	test('auto-logs in on registration by default', async () => {
+		const { app } = buildHarness();
+
+		const response = await registerUser(
+			app,
+			'auto@example.com',
+			'supersecret'
+		);
+
+		expect(response.status).toBe(201);
+		expect(response.headers.get('set-cookie') ?? '').toContain(
+			'user_session_id'
+		);
+	});
+
+	test('requireEmailVerification gates the session until verified', async () => {
+		const { app, sent } = buildHarness({ requireEmailVerification: true });
+
+		const registered = await registerUser(
+			app,
+			'verify-first@example.com',
+			'supersecret'
+		);
+		expect(registered.status).toBe(201);
+		expect(registered.headers.get('set-cookie') ?? '').not.toContain(
+			'user_session_id'
+		);
+		expect(await registered.json()).toMatchObject({
+			status: 'verification_required'
+		});
+
+		const blocked = await postJson(app, '/auth/login', {
+			email: 'verify-first@example.com',
+			password: 'supersecret'
+		});
+		expect(blocked.status).toBe(403);
+
+		const token =
+			sent.find((message) => message.type === 'verify_email')?.token ?? '';
+		const verified = await postJson(app, '/auth/verify-email', { token });
+		expect(verified.status).toBe(200);
+
+		const allowed = await postJson(app, '/auth/login', {
+			email: 'verify-first@example.com',
+			password: 'supersecret'
+		});
+		expect(allowed.status).toBe(200);
+	});
+});

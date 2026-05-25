@@ -1,24 +1,37 @@
 import { Elysia, t } from 'elysia';
 import { generateSecureToken, hashPassword, hashToken } from '../crypto';
+import { sessionStore } from '../session/state';
 import { isStatusResponse } from '../typeGuards';
+import { userSessionIdTypebox } from '../typebox';
 import {
-	type CredentialsConfig,
+	type CredentialRouteProps,
+	DEFAULT_CREDENTIAL_SESSION_TTL_MS,
 	DEFAULT_VERIFICATION_TOKEN_TTL_MS
 } from './config';
 import { evaluatePassword } from './passwordPolicy';
+import { promoteToSession } from './session';
 
 export const credentialsRegister = <UserType>({
+	authSessionStore,
 	credentialStore,
 	onCreateCredentialUser,
+	onCredentialsLoginSuccess,
 	onRegistrationSuccess,
 	onSendEmail,
 	passwordPolicy,
 	registerRoute = '/auth/register',
+	requireEmailVerification = false,
+	sessionDurationMs = DEFAULT_CREDENTIAL_SESSION_TTL_MS,
 	verificationTokenDurationMs = DEFAULT_VERIFICATION_TOKEN_TTL_MS
-}: CredentialsConfig<UserType>) =>
-	new Elysia().post(
+}: CredentialRouteProps<UserType>) =>
+	new Elysia().use(sessionStore<UserType>()).post(
 		registerRoute,
-		async ({ body: { email, password }, status }) => {
+		async ({
+			body: { email, password },
+			cookie: { user_session_id },
+			status,
+			store: { session }
+		}) => {
 			const normalizedEmail = email.trim().toLowerCase();
 			if (!normalizedEmail.includes('@')) {
 				return status('Bad Request', 'A valid email is required');
@@ -68,10 +81,30 @@ export const credentialsRegister = <UserType>({
 				token,
 				type: 'verify_email'
 			});
+			await onRegistrationSuccess?.({
+				email: normalizedEmail,
+				user: created
+			});
 
-			await onRegistrationSuccess?.({ email: normalizedEmail, user: created });
+			if (requireEmailVerification) {
+				return status('Created', { status: 'verification_required' });
+			}
 
-			return status('Created', { status: 'registered' });
+			// Auto-login. A freshly registered user has no enrolled factors yet, so the
+			// MFA seam (enforced on subsequent logins) does not apply here.
+			const userSessionId = await promoteToSession({
+				authSessionStore,
+				cookie: user_session_id,
+				inMemorySession: session,
+				sessionDurationMs,
+				user: created
+			});
+			await onCredentialsLoginSuccess?.({ user: created, userSessionId });
+
+			return status('Created', { status: 'authenticated' });
 		},
-		{ body: t.Object({ email: t.String(), password: t.String() }) }
+		{
+			body: t.Object({ email: t.String(), password: t.String() }),
+			cookie: t.Cookie({ user_session_id: userSessionIdTypebox })
+		}
 	);
