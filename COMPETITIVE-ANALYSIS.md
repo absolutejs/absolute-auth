@@ -40,7 +40,7 @@ Legend: ✅ full · ◐ partial / hook-only / BYO · ✖ none · — N/A for a l
 | Account linking | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | GDPR export / erasure | ✅ | ◐ | ✅ | ◐ | ◐ | ✖ |
 | MFA encryption-key rotation tool | ✅ | — | — | — | — | ✖ |
-| **AI-agent auth (token exchange / MCP / OBO)** | ✖ | ◐ (FGA) | ✅ (Auth for MCP) | ✅ (Connected Apps) | ◐ (Hydra) | ✅ |
+| **AI-agent auth (token exchange / MCP / OBO)** | ✅ | ◐ (FGA) | ✅ (Auth for MCP) | ✅ (Connected Apps) | ◐ (Hydra) | ✅ |
 | **Multi-session (switch accounts)** | ✖ | ◐ | ◐ | ◐ | ◐ | ✅ |
 | **Anonymous / guest → upgrade** | ✖ | ✖ | ◐ | ◐ | ✖ | ✅ |
 | Email deliverability validation | ✖ | ✖ | ◐ | ◐ | ✖ | ✅ |
@@ -59,14 +59,12 @@ Legend: ✅ full · ◐ partial / hook-only / BYO · ✖ none · — N/A for a l
 
 ## Gaps (ranked by value), with extension path
 
-1. **AI-agent auth — the 2026 frontier.** Auth0 shipped "Auth for MCP" (GA May 2026);
-   Better Auth, Stytch (Connected Apps), and WorkOS (FGA-for-agents) all lean in. The
-   MCP authorization spec is just OAuth 2.1 + **Resource Indicators (RFC 8707)** +
-   **Token Exchange (RFC 8693)** for on-behalf-of delegation. **We're one extension away**
-   — our OIDC provider already does authorization_code + PKCE + JWKS. Add: a
-   `urn:ietf:params:oauth:grant-type:token-exchange` grant (trade a user token for a
-   narrow, short-lived, audience-bound agent token), `resource`/audience binding, and an
-   MCP `protected-resource` discovery doc. Highest-leverage gap.
+1. **AI-agent auth — the 2026 frontier. ✅ SHIPPED (beta.5).** The OIDC provider now
+   supports the `urn:ietf:params:oauth:grant-type:token-exchange` grant (RFC 8693): an
+   agent (authenticated client) trades a user's access token for a narrow, short-lived,
+   audience-bound (`resource`/`audience`, RFC 8707) token whose `act` claim records the
+   delegation — DPoP-bindable. `mcpProtectedResourceMetadata` emits the MCP/RFC 9728
+   discovery doc. `exchangeToken` is exported. Matches Auth0 "Auth for MCP" + Better Auth.
 2. **Device fingerprinting (proprietary-grade).** Stytch (99.99% bot detection), WorkOS
    Radar, Auth0 all ship data-network fingerprints. We ship the framework + hooks only.
    Can't match their data, but can: ship a stronger default fingerprint (FP-JS-style

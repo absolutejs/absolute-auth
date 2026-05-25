@@ -8,6 +8,7 @@ import type { RouteString } from '../types';
 import { userSessionIdTypebox } from '../typebox';
 import {
 	DEFAULT_OIDC_ROUTE,
+	exchangeToken,
 	issueTokenSet,
 	verifyPkce,
 	type OidcProviderConfig
@@ -202,11 +203,61 @@ export const oidcProviderRoutes = <UserType>(
 		);
 	};
 
+	const grantTokenExchange = async (
+		client: OAuthClient,
+		body: Record<string, string | undefined>,
+		dpop: string | undefined
+	) => {
+		if (body.subject_token === undefined) {
+			return oauthError(HTTP_BAD_REQUEST, 'invalid_request');
+		}
+		const dpopResult =
+			dpop === undefined
+				? undefined
+				: await verifyDpopProof({
+						htm: 'POST',
+						htu: tokenUrl,
+						proof: dpop
+					});
+		if (dpop !== undefined && dpopResult === undefined) {
+			return oauthError(HTTP_BAD_REQUEST, 'invalid_dpop_proof');
+		}
+
+		const result = await exchangeToken({
+			actorClientId: client.clientId,
+			audience: body.resource ?? body.audience,
+			config,
+			dpopJkt: dpopResult?.jkt,
+			requestedScopes:
+				body.scope === undefined || body.scope.length === 0
+					? undefined
+					: body.scope.split(' '),
+			subjectToken: body.subject_token
+		});
+		if (!result.ok) return oauthError(HTTP_BAD_REQUEST, result.error);
+
+		return jsonResponse(
+			{
+				access_token: result.accessToken,
+				expires_in: result.expiresIn,
+				issued_token_type:
+					'urn:ietf:params:oauth:token-type:access_token',
+				scope: result.scope,
+				token_type: dpopResult === undefined ? 'Bearer' : 'DPoP'
+			},
+			HTTP_OK
+		);
+	};
+
 	const discovery: Record<string, string | string[]> = {
 		authorization_endpoint: `${issuer}${authorizeRoute}`,
 		code_challenge_methods_supported: ['S256'],
 		dpop_signing_alg_values_supported: ['ES256'],
-		grant_types_supported: ['authorization_code', 'refresh_token'],
+		grant_types_supported: [
+			'authorization_code',
+			'refresh_token',
+			'urn:ietf:params:oauth:grant-type:token-exchange'
+		],
 		id_token_signing_alg_values_supported: ['ES256'],
 		issuer,
 		jwks_uri: `${issuer}${jwksRoute}`,
@@ -360,11 +411,18 @@ export const oidcProviderRoutes = <UserType>(
 				if (body.grant_type === 'refresh_token') {
 					return grantRefreshToken(client, body, headers.dpop);
 				}
+				if (
+					body.grant_type ===
+					'urn:ietf:params:oauth:grant-type:token-exchange'
+				) {
+					return grantTokenExchange(client, body, headers.dpop);
+				}
 
 				return oauthError(HTTP_BAD_REQUEST, 'unsupported_grant_type');
 			},
 			{
 				body: t.Object({
+					audience: t.Optional(t.String()),
 					client_id: t.Optional(t.String()),
 					client_secret: t.Optional(t.String()),
 					code: t.Optional(t.String()),
@@ -372,7 +430,10 @@ export const oidcProviderRoutes = <UserType>(
 					grant_type: t.Optional(t.String()),
 					redirect_uri: t.Optional(t.String()),
 					refresh_token: t.Optional(t.String()),
-					scope: t.Optional(t.String())
+					resource: t.Optional(t.String()),
+					scope: t.Optional(t.String()),
+					subject_token: t.Optional(t.String()),
+					subject_token_type: t.Optional(t.String())
 				})
 			}
 		)

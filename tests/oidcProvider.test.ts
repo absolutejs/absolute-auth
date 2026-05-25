@@ -265,3 +265,78 @@ describe('OIDC provider', () => {
 		);
 	});
 });
+
+const TOKEN_EXCHANGE = 'urn:ietf:params:oauth:grant-type:token-exchange';
+
+describe('OIDC token exchange (RFC 8693) — AI-agent / MCP delegation', () => {
+	let app = { handle: async () => new Response() };
+
+	beforeEach(async () => {
+		app = await buildApp();
+	});
+
+	const getUserAccessToken = async () => {
+		const challenge = await hashToken(VERIFIER);
+		const code = codeFromRedirect(
+			await authorize(app, challenge, `user_session_id=${SESSION_ID}`)
+		);
+		const tokens = await (
+			await token(app, {
+				client_id: 'app1',
+				code,
+				code_verifier: VERIFIER,
+				grant_type: 'authorization_code',
+				redirect_uri: REDIRECT_URI
+			})
+		).json();
+
+		return tokens.access_token;
+	};
+
+	test('exchanges a user token for a narrowed, audience-bound delegated token', async () => {
+		const userToken = await getUserAccessToken();
+		const response = await token(app, {
+			audience: 'https://api.example/mcp',
+			client_id: 'app1',
+			grant_type: TOKEN_EXCHANGE,
+			scope: 'openid',
+			subject_token: userToken,
+			subject_token_type:
+				'urn:ietf:params:oauth:token-type:access_token'
+		});
+		expect(response.status).toBe(200);
+		const body = await response.json();
+		expect(body.issued_token_type).toBe(
+			'urn:ietf:params:oauth:token-type:access_token'
+		);
+		expect(body.scope).toBe('openid'); // narrowed from "openid profile"
+
+		const jwks = await (
+			await app.handle(new Request('http://localhost/oauth2/jwks'))
+		).json();
+		const decoded = await verifyJwt(body.access_token, jwks.keys[0]);
+		expect(decoded?.payload.sub).toBe('user-alice'); // still the user
+		expect(decoded?.payload.aud).toBe('https://api.example/mcp'); // RFC 8707
+		expect(decoded?.payload.act.sub).toBe('app1'); // RFC 8693 delegation
+	});
+
+	test('rejects a scope outside the subject token', async () => {
+		const userToken = await getUserAccessToken();
+		const response = await token(app, {
+			client_id: 'app1',
+			grant_type: TOKEN_EXCHANGE,
+			scope: 'admin:write',
+			subject_token: userToken
+		});
+		expect(response.status).toBe(400);
+	});
+
+	test('rejects an invalid subject token', async () => {
+		const response = await token(app, {
+			client_id: 'app1',
+			grant_type: TOKEN_EXCHANGE,
+			subject_token: 'not.a.real.jwt'
+		});
+		expect(response.status).toBe(400);
+	});
+});
