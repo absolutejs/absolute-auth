@@ -136,10 +136,12 @@ export const createPostgresCredentialStore = (
 		await db
 			.insert(credentialsTable)
 			.values(values)
-			.onConflictDoUpdate({ set: values, target: credentialsTable.email });
+			.onConflictDoUpdate({
+				set: values,
+				target: credentialsTable.email
+			});
 	},
-	saveResetToken: (token) =>
-		saveToken(db, credentialResetTokensTable, token),
+	saveResetToken: (token) => saveToken(db, credentialResetTokensTable, token),
 	saveVerificationToken: (token) =>
 		saveToken(db, credentialVerificationTokensTable, token),
 	setEmailVerified: async (email) => {

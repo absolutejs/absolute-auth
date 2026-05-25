@@ -26,7 +26,11 @@ export const sessionRoutes = <UserType>({
 		.use(sessionStore<UserType>())
 		.get(
 			sessionsRoute,
-			async ({ cookie: { user_session_id }, status, store: { session } }) => {
+			async ({
+				cookie: { user_session_id },
+				status,
+				store: { session }
+			}) => {
 				if (!authSessionStore) {
 					return status(
 						'Not Implemented',
@@ -87,7 +91,10 @@ export const sessionRoutes = <UserType>({
 				}
 
 				const target = await authSessionStore.getSession(id);
-				if (!target || getUserId(target.user) !== getUserId(current.user)) {
+				if (
+					!target ||
+					getUserId(target.user) !== getUserId(current.user)
+				) {
 					return status('Not Found', 'Session not found');
 				}
 

@@ -25,7 +25,9 @@ export const knownDevicesTable = pgTable(
 			mode: 'number'
 		}).notNull(),
 		label: varchar('label', { length: ID_LENGTH }),
-		last_seen_at_ms: bigint('last_seen_at_ms', { mode: 'number' }).notNull(),
+		last_seen_at_ms: bigint('last_seen_at_ms', {
+			mode: 'number'
+		}).notNull(),
 		trusted: boolean('trusted').notNull().default(false),
 		user_id: varchar('user_id', { length: ID_LENGTH }).notNull()
 	},

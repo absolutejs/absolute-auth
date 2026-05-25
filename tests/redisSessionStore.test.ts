@@ -4,7 +4,10 @@ import {
 	type RedisSessionClient
 } from '../src/session/redisStore';
 import type { SessionData, UserSessionId } from '../src/types';
-import { listUserSessions, revokeUserSessions } from '../src/session/userSessions';
+import {
+	listUserSessions,
+	revokeUserSessions
+} from '../src/session/userSessions';
 
 type TestUser = { id: string };
 

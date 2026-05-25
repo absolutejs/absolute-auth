@@ -56,10 +56,14 @@ export const createInMemoryApiKeyStore = (): ApiKeyStore => {
 			keys.delete(keyId);
 		},
 		findByHashedKey: async (hashedKey) =>
-			Array.from(keys.values()).find((key) => key.hashedKey === hashedKey),
+			Array.from(keys.values()).find(
+				(key) => key.hashedKey === hashedKey
+			),
 		listKeys: async (ownerId) =>
 			Array.from(keys.values())
-				.filter((key) => ownerId === undefined || key.ownerId === ownerId)
+				.filter(
+					(key) => ownerId === undefined || key.ownerId === ownerId
+				)
 				.sort((left, right) => right.createdAt - left.createdAt),
 		saveKey: async (key) => {
 			keys.set(key.keyId, { ...key });

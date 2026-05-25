@@ -46,10 +46,12 @@ describe('in-memory credential store', () => {
 			tokenHash: 'verify-hash'
 		});
 
-		expect((await store.consumeVerificationToken('verify-hash'))?.email).toBe(
-			'a@b.com'
-		);
-		expect(await store.consumeVerificationToken('verify-hash')).toBeUndefined();
+		expect(
+			(await store.consumeVerificationToken('verify-hash'))?.email
+		).toBe('a@b.com');
+		expect(
+			await store.consumeVerificationToken('verify-hash')
+		).toBeUndefined();
 	});
 
 	test('expired reset tokens are rejected and consumed', async () => {

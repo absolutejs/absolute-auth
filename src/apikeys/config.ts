@@ -151,7 +151,8 @@ export const exchangeClientCredentials = async ({
 	}
 
 	if (
-		requestedScopes?.some((scope) => !client.scopes.includes(scope)) === true
+		requestedScopes?.some((scope) => !client.scopes.includes(scope)) ===
+		true
 	) {
 		return { error: 'invalid_scope', ok: false };
 	}
@@ -259,7 +260,9 @@ export const verifyApiKey = async (
 	presented: string,
 	now = Date.now()
 ) => {
-	const record = await apiKeyStore.findByHashedKey(await hashToken(presented));
+	const record = await apiKeyStore.findByHashedKey(
+		await hashToken(presented)
+	);
 	if (record === undefined) return undefined;
 	if (record.expiresAt !== undefined && record.expiresAt <= now) {
 		return undefined;

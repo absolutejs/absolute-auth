@@ -1,5 +1,12 @@
 import { eq } from 'drizzle-orm';
-import { bigint, boolean, jsonb, pgTable, text, varchar } from 'drizzle-orm/pg-core';
+import {
+	bigint,
+	boolean,
+	jsonb,
+	pgTable,
+	text,
+	varchar
+} from 'drizzle-orm/pg-core';
 import { type AnyPgDatabase, createNeonDatabase } from '../stores/postgres';
 import type { MfaEnrollment, MFAStore } from './types';
 
@@ -58,12 +65,9 @@ export const createPostgresMfaStore = (db: AnyPgDatabase): MFAStore => ({
 			updated_at_ms: enrollment.updatedAt,
 			user_id: enrollment.userId
 		};
-		await db
-			.insert(mfaEnrollmentsTable)
-			.values(values)
-			.onConflictDoUpdate({
-				set: values,
-				target: mfaEnrollmentsTable.user_id
-			});
+		await db.insert(mfaEnrollmentsTable).values(values).onConflictDoUpdate({
+			set: values,
+			target: mfaEnrollmentsTable.user_id
+		});
 	}
 });

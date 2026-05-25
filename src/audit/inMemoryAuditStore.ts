@@ -11,7 +11,9 @@ export const createInMemoryAuditSink = (): AuditSink => {
 			const matched = filter?.userId
 				? events.filter((event) => event.userId === filter.userId)
 				: events;
-			const ordered = [...matched].sort((left, right) => right.at - left.at);
+			const ordered = [...matched].sort(
+				(left, right) => right.at - left.at
+			);
 			const limited =
 				filter?.limit === undefined
 					? ordered

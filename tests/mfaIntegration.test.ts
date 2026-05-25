@@ -77,7 +77,9 @@ const cookieFrom = (response: Response) =>
 		.find((cookie) => cookie.startsWith('user_session_id='))
 		?.split(';')[0] ?? '';
 
-const enroll = async (app: { handle: (request: Request) => Promise<Response> }) => {
+const enroll = async (app: {
+	handle: (request: Request) => Promise<Response>;
+}) => {
 	const registered = await post(app, '/auth/register', {
 		email: 'flow@example.com',
 		password: 'supersecret'

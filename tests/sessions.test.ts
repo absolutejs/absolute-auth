@@ -58,7 +58,10 @@ const send = (
 	path: string,
 	method: string,
 	cookie: string
-) => app.handle(new Request(`http://localhost${path}`, { headers: { cookie }, method }));
+) =>
+	app.handle(
+		new Request(`http://localhost${path}`, { headers: { cookie }, method })
+	);
 
 const cookieFrom = (response: Response) =>
 	response.headers

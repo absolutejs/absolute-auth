@@ -230,7 +230,8 @@ describe('registration session behavior', () => {
 		expect(blocked.status).toBe(403);
 
 		const token =
-			sent.find((message) => message.type === 'verify_email')?.token ?? '';
+			sent.find((message) => message.type === 'verify_email')?.token ??
+			'';
 		const verified = await postJson(app, '/auth/verify-email', { token });
 		expect(verified.status).toBe(200);
 

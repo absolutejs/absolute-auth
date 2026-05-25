@@ -1,7 +1,4 @@
-import {
-	MILLISECONDS_IN_A_DAY,
-	MILLISECONDS_IN_AN_HOUR
-} from '../constants';
+import { MILLISECONDS_IN_A_DAY, MILLISECONDS_IN_AN_HOUR } from '../constants';
 import type { LockoutGuard } from '../lockout/config';
 import type { AuthSessionStore } from '../session/types';
 import type { OrganizationId } from '../tenancy';
@@ -41,7 +38,11 @@ export type CredentialsConfig<UserType> = {
 	// (e.g. given_name) the consumer's signup form sends — read them off `identity`.
 	onCreateCredentialUser: (
 		identity: CredentialIdentity & Record<string, unknown>
-	) => Promise<Response | StatusReturn | UserType> | Response | StatusReturn | UserType;
+	) =>
+		| Promise<Response | StatusReturn | UserType>
+		| Response
+		| StatusReturn
+		| UserType;
 	onCredentialsLoginError?: (context: {
 		email: string;
 		error: unknown;

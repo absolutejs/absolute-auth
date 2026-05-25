@@ -51,12 +51,12 @@ describe('secure tokens', () => {
 
 describe('constantTimeEqual', () => {
 	test('matches equal strings and rejects different ones', async () => {
-		expect(await constantTimeEqual('a-secret-token', 'a-secret-token')).toBe(
-			true
-		);
-		expect(await constantTimeEqual('a-secret-token', 'a-secret-tokem')).toBe(
-			false
-		);
+		expect(
+			await constantTimeEqual('a-secret-token', 'a-secret-token')
+		).toBe(true);
+		expect(
+			await constantTimeEqual('a-secret-token', 'a-secret-tokem')
+		).toBe(false);
 		expect(await constantTimeEqual('short', 'a-much-longer-value')).toBe(
 			false
 		);
@@ -148,8 +148,13 @@ describe('AES-GCM secret encryption', () => {
 	});
 
 	test('fails to decrypt with the wrong key', async () => {
-		const ciphertext = await encryptSecret('secret', generateEncryptionKey());
+		const ciphertext = await encryptSecret(
+			'secret',
+			generateEncryptionKey()
+		);
 
-		expect(decryptSecret(ciphertext, generateEncryptionKey())).rejects.toThrow();
+		expect(
+			decryptSecret(ciphertext, generateEncryptionKey())
+		).rejects.toThrow();
 	});
 });

@@ -108,7 +108,11 @@ export default defineConfig([
 			'arrow-body-style': ['error', 'as-needed'],
 			'consistent-return': 'error',
 			eqeqeq: 'error',
-			'func-style': ['error', 'expression', { allowArrowFunctions: true }],
+			'func-style': [
+				'error',
+				'expression',
+				{ allowArrowFunctions: true }
+			],
 			'no-await-in-loop': 'error',
 			'no-debugger': 'error',
 			'no-duplicate-case': 'error',

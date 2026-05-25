@@ -17,7 +17,10 @@ export const createInMemoryLockoutStore = (): LockoutStore => {
 			const next: LockoutRecord =
 				existing !== undefined &&
 				now - existing.windowStartedAt <= windowMs
-					? { ...existing, failedAttempts: existing.failedAttempts + 1 }
+					? {
+							...existing,
+							failedAttempts: existing.failedAttempts + 1
+						}
 					: { failedAttempts: 1, key, windowStartedAt: now };
 			records.set(key, next);
 

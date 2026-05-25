@@ -26,7 +26,11 @@ export const mfaTotpRoutes = <UserType>({
 		.use(sessionStore<UserType>())
 		.post(
 			totpSetupRoute,
-			async ({ cookie: { user_session_id }, status, store: { session } }) => {
+			async ({
+				cookie: { user_session_id },
+				status,
+				store: { session }
+			}) => {
 				const userSession = await loadSessionFromSource({
 					authSessionStore,
 					session,
@@ -54,7 +58,11 @@ export const mfaTotpRoutes = <UserType>({
 
 				return status('OK', {
 					secret,
-					uri: createTotpKeyUri({ accountName: userId, issuer, secret })
+					uri: createTotpKeyUri({
+						accountName: userId,
+						issuer,
+						secret
+					})
 				});
 			},
 			{ cookie: t.Cookie({ user_session_id: userSessionIdTypebox }) }
@@ -79,7 +87,10 @@ export const mfaTotpRoutes = <UserType>({
 				const userId = getUserId(userSession.user);
 				const enrollment = await mfaStore.getEnrollment(userId);
 				if (!enrollment?.totpSecretCiphertext) {
-					return status('Bad Request', 'No TOTP enrollment in progress');
+					return status(
+						'Bad Request',
+						'No TOTP enrollment in progress'
+					);
 				}
 
 				const secret = await decryptTotpSecret(

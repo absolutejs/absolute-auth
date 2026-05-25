@@ -1,9 +1,6 @@
 import { Elysia, t } from 'elysia';
 import { generateSecureToken, hashPassword, hashToken } from '../crypto';
-import {
-	type CredentialsConfig,
-	DEFAULT_RESET_TOKEN_TTL_MS
-} from './config';
+import { type CredentialsConfig, DEFAULT_RESET_TOKEN_TTL_MS } from './config';
 import { evaluatePassword } from './passwordPolicy';
 
 export const credentialsPasswordReset = <UserType>({
@@ -64,8 +61,9 @@ export const credentialsPasswordReset = <UserType>({
 					});
 				}
 
-				const existing =
-					await credentialStore.getCredentialByEmail(consumed.email);
+				const existing = await credentialStore.getCredentialByEmail(
+					consumed.email
+				);
 				const now = Date.now();
 				await credentialStore.saveCredential({
 					createdAt: existing?.createdAt ?? now,

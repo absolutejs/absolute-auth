@@ -31,7 +31,10 @@ const base64UrlDecode = (encoded: string) =>
 	new Uint8Array(Buffer.from(encoded, 'base64url'));
 
 const sha256 = async (input: string) => {
-	const digest = await crypto.subtle.digest('SHA-256', textEncoder.encode(input));
+	const digest = await crypto.subtle.digest(
+		'SHA-256',
+		textEncoder.encode(input)
+	);
 
 	return new Uint8Array(digest);
 };
@@ -154,7 +157,10 @@ export const createTotpKeyUri = ({
 
 	return `otpauth://totp/${label}?${params.toString()}`;
 };
-export const decryptSecret = async (ciphertext: string, keyMaterial: string) => {
+export const decryptSecret = async (
+	ciphertext: string,
+	keyMaterial: string
+) => {
 	const key = await importAesKey(keyMaterial);
 	const combined = base64UrlDecode(ciphertext);
 	const nonce = combined.subarray(0, AES_IV_BYTES);

@@ -43,7 +43,10 @@ const readBasicAuth = (
 
 const oauthError = (statusCode: number, error: string) =>
 	new Response(JSON.stringify({ error }), {
-		headers: { 'cache-control': 'no-store', 'content-type': 'application/json' },
+		headers: {
+			'cache-control': 'no-store',
+			'content-type': 'application/json'
+		},
 		status: statusCode
 	});
 

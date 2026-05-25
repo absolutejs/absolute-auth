@@ -45,7 +45,10 @@ export const createRedisLockoutStore = (
 			const next: LockoutRecord =
 				existing !== undefined &&
 				now - existing.windowStartedAt <= windowMs
-					? { ...existing, failedAttempts: existing.failedAttempts + 1 }
+					? {
+							...existing,
+							failedAttempts: existing.failedAttempts + 1
+						}
 					: { failedAttempts: 1, key, windowStartedAt: now };
 			await redis.set(keyPrefix + key, JSON.stringify(next), windowMs);
 

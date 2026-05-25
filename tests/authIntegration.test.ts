@@ -66,7 +66,8 @@ describe('auth() credentials integration', () => {
 		expect(registered.status).toBe(201);
 
 		const verifyToken =
-			sent.find((message) => message.type === 'verify_email')?.token ?? '';
+			sent.find((message) => message.type === 'verify_email')?.token ??
+			'';
 		const verified = await post(app, '/auth/verify-email', {
 			token: verifyToken
 		});
@@ -95,9 +96,7 @@ describe('auth() credentials integration', () => {
 			user: { email: 'flow@example.com' }
 		});
 
-		const anonymous = await app.handle(
-			new Request('http://localhost/me')
-		);
+		const anonymous = await app.handle(new Request('http://localhost/me'));
 		expect(anonymous.status).toBe(401);
 	});
 });

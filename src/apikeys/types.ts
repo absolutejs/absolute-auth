@@ -56,7 +56,9 @@ export type AccessToken = {
 export type AccessTokenStore = {
 	deleteExpired: (now: number) => Promise<void>;
 	deleteToken: (tokenId: string) => Promise<void>;
-	findByHashedToken: (hashedToken: string) => Promise<AccessToken | undefined>;
+	findByHashedToken: (
+		hashedToken: string
+	) => Promise<AccessToken | undefined>;
 	saveToken: (token: AccessToken) => Promise<void>;
 };
 

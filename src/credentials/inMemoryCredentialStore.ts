@@ -1,4 +1,8 @@
-import type { CredentialRecord, CredentialStore, CredentialToken } from './types';
+import type {
+	CredentialRecord,
+	CredentialStore,
+	CredentialToken
+} from './types';
 
 const cloneCredential = (value: CredentialRecord): CredentialRecord => ({
 	...value
