@@ -19,6 +19,7 @@ export type AuditEventType =
 	| 'organization_created'
 	| 'password_reset'
 	| 'register'
+	| 'role_assigned'
 	| 'scim_provision'
 	| 'session_revoked'
 	| 'sso_login'

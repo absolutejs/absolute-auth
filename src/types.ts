@@ -17,6 +17,7 @@ import type { AuthHtmxConfig, AuthHtmxUser } from './htmx/types';
 import type { LockoutConfig } from './lockout/config';
 import type { MfaConfig } from './mfa/config';
 import type { OrganizationsConfig } from './organizations/config';
+import type { RolesConfig } from './roles/config';
 import type { ScimConfig } from './scim/config';
 import type { SessionsConfig } from './session/sessionsConfig';
 import type { AuthSessionStore } from './session/types';
@@ -369,6 +370,10 @@ export type AuthConfig<UserType> = {
 	 *  one (caller becomes owner), invite/accept/revoke by email, and list/remove members. Ties the
 	 *  bare `organizationId` used by SSO/SCIM/RBAC into a real tenant model with org-scoped roles. */
 	organizations?: OrganizationsConfig<UserType>;
+	/** Org-scoped roles & permissions (builds on `organizations`). When present, mounts routes to
+	 *  list an org's role definitions and set a member's roles. Pair with
+	 *  `createMembershipPermissionResolver` to make `authorization.hasPermission` turnkey. */
+	roles?: RolesConfig<UserType>;
 	/** Role-based / attribute-based access control (E4). When present, `auth()` exposes a
 	 *  `protectPermission(check, handler)` derive (alongside `protectRoute`) that delegates the
 	 *  decision to your `hasPermission` hook — the package stays schema-agnostic about roles. */

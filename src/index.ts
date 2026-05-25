@@ -16,6 +16,7 @@ import { createLockoutGuard } from './lockout/config';
 import { createMfaGate } from './mfa/gate';
 import { mfaRoutes } from './mfa/routes';
 import { organizationRoutes } from './organizations/routes';
+import { roleRoutes } from './roles/routes';
 import type { AuthHtmxConfig, AuthHtmxUser } from './htmx/types';
 import { buildClientProviders } from './providers/clients';
 import { authorize } from './routes/authorize';
@@ -58,6 +59,7 @@ export const auth = async <UserType>({
 	sso,
 	scim,
 	organizations,
+	roles,
 	authorization,
 	compliance,
 	webauthn,
@@ -230,6 +232,15 @@ export const auth = async <UserType>({
 			organizations
 				? organizationRoutes<UserType>({
 						...organizations,
+						authSessionStore,
+						emit: auditEmit
+					})
+				: new Elysia()
+		)
+		.use(
+			roles
+				? roleRoutes<UserType>({
+						...roles,
 						authSessionStore,
 						emit: auditEmit
 					})
@@ -463,3 +474,17 @@ export {
 	organizationMembershipsTable,
 	organizationsTable
 } from './organizations/postgresOrganizationStore';
+export * from './roles/config';
+export * from './roles/types';
+export {
+	createMembershipPermissionResolver,
+	resolvePermissions
+} from './roles/resolver';
+export { setMemberRoles } from './roles/operations';
+export { roleRoutes } from './roles/routes';
+export { createInMemoryRoleStore } from './roles/inMemoryRoleStore';
+export {
+	createNeonRoleStore,
+	createPostgresRoleStore,
+	rolesTable
+} from './roles/postgresRoleStore';
