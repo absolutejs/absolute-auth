@@ -329,6 +329,8 @@ export {
 	createPostgresLockoutStore,
 	lockoutsTable
 } from './lockout/postgresLockoutStore';
+export { createRedisLockoutStore } from './lockout/redisLockoutStore';
+export type { RedisLike } from './stores/redis';
 export { createInMemoryAuditSink } from './audit/inMemoryAuditStore';
 export {
 	auditEventsTable,
