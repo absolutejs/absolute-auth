@@ -80,8 +80,16 @@ describe('SIEM log stream', () => {
 		try {
 			const stream = createSiemLogStream({
 				endpoints: [
-					{ format: 'datadog', token: 'dd', url: 'https://dd.example' },
-					{ format: 'splunk', token: 'sp', url: 'https://splunk.example' }
+					{
+						format: 'datadog',
+						token: 'dd',
+						url: 'https://dd.example'
+					},
+					{
+						format: 'splunk',
+						token: 'sp',
+						url: 'https://splunk.example'
+					}
 				]
 			});
 			await stream.append({ at: 1, type: 'oauth_login', userId: 'u1' });

@@ -67,12 +67,17 @@ const CRAWLER_PATTERN = /googlebot|bingbot|duckduckbot|baiduspider|yandex/iu;
 const ipv4ToInt = (ipAddress: string) =>
 	ipAddress
 		.split('.')
-		.reduce((acc, octet) => acc * IPV4_OCTET_SPACE + Number(octet), 0) >>> 0;
+		.reduce((acc, octet) => acc * IPV4_OCTET_SPACE + Number(octet), 0) >>>
+	0;
 
 const matchCidrV4 = (ipAddress: string, cidr: string) => {
 	const [range, bitsRaw] = cidr.split('/');
 	const bits = Number(bitsRaw);
-	if (range === undefined || !Number.isInteger(bits) || !ipAddress.includes('.')) {
+	if (
+		range === undefined ||
+		!Number.isInteger(bits) ||
+		!ipAddress.includes('.')
+	) {
 		return false;
 	}
 	const mask = bits === 0 ? 0 : (FULL_MASK << (IPV4_BITS - bits)) >>> 0;
@@ -82,7 +87,9 @@ const matchCidrV4 = (ipAddress: string, cidr: string) => {
 
 const ipInList = (ipAddress: string, list: string[]) =>
 	list.some((entry) =>
-		entry.includes('/') ? matchCidrV4(ipAddress, entry) : entry === ipAddress
+		entry.includes('/')
+			? matchCidrV4(ipAddress, entry)
+			: entry === ipAddress
 	);
 
 const mostSevere = (reasons: AbuseReason[]) =>

@@ -43,9 +43,9 @@ describe('abuse guard', () => {
 			verifyCaptcha: (token) => token === 'good'
 		};
 
-		expect((await assessAbuse(config, { captchaToken: 'good' })).action).toBe(
-			'allow'
-		);
+		expect(
+			(await assessAbuse(config, { captchaToken: 'good' })).action
+		).toBe('allow');
 		const bad = await assessAbuse(config, { captchaToken: 'bad' });
 		expect(bad.action).toBe('challenge');
 		expect(bad.reasons[0]?.signal).toBe('captcha_failed');
@@ -58,8 +58,11 @@ describe('abuse guard', () => {
 			(await assessAbuse(config, { userAgent: 'curl/8.4.0' })).action
 		).toBe('deny');
 		expect(
-			(await assessAbuse(config, { userAgent: 'Mozilla/5.0 (Macintosh)' }))
-				.action
+			(
+				await assessAbuse(config, {
+					userAgent: 'Mozilla/5.0 (Macintosh)'
+				})
+			).action
 		).toBe('allow');
 		expect(defaultBotClassifier({ userAgent: 'Googlebot/2.1' })).toBe(
 			'crawler'

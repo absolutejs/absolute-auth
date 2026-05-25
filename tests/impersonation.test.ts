@@ -17,7 +17,9 @@ const HOUR_MS = 3_600_000;
 const admin: TestUser = { email: 'admin@acme.test', sub: 'admin-1' };
 const target: TestUser = { email: 'alice@acme.test', sub: 'user-alice' };
 
-const cookieSchema = { cookie: t.Cookie({ user_session_id: userSessionIdTypebox }) };
+const cookieSchema = {
+	cookie: t.Cookie({ user_session_id: userSessionIdTypebox })
+};
 
 const buildApp = () => {
 	const authSessionStore = createInMemoryAuthSessionStore<TestUser>();
@@ -115,14 +117,21 @@ describe('admin impersonation', () => {
 		const login = await send(app, '/login-admin', 'POST', '');
 		const adminCookie = cookieFrom(login);
 
-		const asAdmin = await (await send(app, '/whoami', 'GET', adminCookie)).json();
+		const asAdmin = await (
+			await send(app, '/whoami', 'GET', adminCookie)
+		).json();
 		expect(asAdmin).toEqual({
 			actorId: null,
 			email: admin.email,
 			impersonating: false
 		});
 
-		const impersonate = await send(app, '/impersonate', 'POST', adminCookie);
+		const impersonate = await send(
+			app,
+			'/impersonate',
+			'POST',
+			adminCookie
+		);
 		const imperCookie = cookieFrom(impersonate);
 		expect(imperCookie).not.toBe(adminCookie);
 
@@ -139,7 +148,12 @@ describe('admin impersonation', () => {
 	test('ending impersonation restores the original admin session', async () => {
 		const login = await send(app, '/login-admin', 'POST', '');
 		const adminCookie = cookieFrom(login);
-		const impersonate = await send(app, '/impersonate', 'POST', adminCookie);
+		const impersonate = await send(
+			app,
+			'/impersonate',
+			'POST',
+			adminCookie
+		);
 		const imperCookie = cookieFrom(impersonate);
 
 		const ended = await send(app, '/end', 'POST', imperCookie);

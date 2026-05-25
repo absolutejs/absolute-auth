@@ -42,7 +42,9 @@ const hmacSha256Hex = async (secret: string, message: string) => {
 		['sign']
 	);
 
-	return toHex(await crypto.subtle.sign('HMAC', key, encoder.encode(message)));
+	return toHex(
+		await crypto.subtle.sign('HMAC', key, encoder.encode(message))
+	);
 };
 
 const sortKeys = (value: unknown) =>

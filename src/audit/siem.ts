@@ -26,7 +26,11 @@ const requestFor = (endpoint: SiemEndpoint, event: AuditEvent) => {
 
 	if (endpoint.format === 'datadog') {
 		return {
-			body: JSON.stringify({ ...event, ddsource: SOURCE, service: SOURCE }),
+			body: JSON.stringify({
+				...event,
+				ddsource: SOURCE,
+				service: SOURCE
+			}),
 			headers:
 				endpoint.token === undefined
 					? base
@@ -62,9 +66,11 @@ export const createSiemLogStream = ({
 		await Promise.all(
 			endpoints.map(async (endpoint) => {
 				const { body, headers } = requestFor(endpoint, event);
-				await fetch(endpoint.url, { body, headers, method: 'POST' }).catch(
-					() => undefined
-				);
+				await fetch(endpoint.url, {
+					body,
+					headers,
+					method: 'POST'
+				}).catch(() => undefined);
 			})
 		);
 	}
