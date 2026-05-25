@@ -12,13 +12,16 @@ way, on the grain the package already has.
 Current version: `0.25.1`. License CC BY-NC 4.0.
 
 > **Build status (2026-05-25):** F1–F4 + **Workstream A (email/password)** + **Workstream B
-> (MFA)** + **Workstream E (E1 audit, E2 lockout, E3 session mgmt, E4 RBAC, E5 compliance)** are
-> DONE on branch `feat/enterprise-auth` — 90 tests green, `build`/`typecheck`/`lint` clean.
-> **Workstreams C (SSO) + D (SCIM) + E (hardening) COMPLETE.** SSO: OIDC + SAML + discovery + full
-> signed SP/IdP-initiated SLO. SCIM: `ScimTokenStore` + `{scimRoute}/Users` + `/Groups` +
+> (MFA)** + **Workstream E (E1 audit, E2 lockout, E3 session mgmt, E4 RBAC, E5 compliance)** +
+> **WebAuthn/passkeys** are DONE on branch `feat/enterprise-auth` — 95 tests green,
+> `build`/`typecheck`/`lint` clean. **Workstreams C (SSO) + D (SCIM) + E (hardening) + WebAuthn
+> COMPLETE — every headline workstream in this plan is now done.** SSO: OIDC + SAML + discovery +
+> full signed SP/IdP-initiated SLO. SCIM: `ScimTokenStore` + `{scimRoute}/Users` + `/Groups` +
 > `/ServiceProviderConfig` with per-org bearer auth + mapping hooks, mounted via the `scim` block.
 > E4: `protectPermission` derive (delegates to `hasPermission` hook). E5: GDPR export/erasure
-> routes + audit PII redaction + AES-GCM field cipher. Next per §11: **WebAuthn/passkeys**.
+> routes + audit PII redaction + AES-GCM field cipher. WebAuthn: register + passwordless
+> authenticate ceremonies behind a dependency-light `WebAuthnAdapter` (consumer wraps
+> `@simplewebauthn/server`; package never bundles the WebAuthn crypto).
 >
 > New Postgres tables/migrations since A: nullable `auth_sessions.authenticated_at_ms`;
 > new tables `auth_mfa_enrollments`, `auth_audit_events`, `auth_lockouts`,
@@ -302,6 +305,8 @@ const auth = await absoluteAuth<User>({
   lockout:     { maxAttempts, window, backoff },
   authorization: { hasPermission },                          // E4 — RBAC, schema-agnostic
   compliance:  { exportUserData, deleteUserData, getUserId }, // E5 — GDPR access/erasure
+  webauthn:    { webauthnAdapter, credentialStore, rpId, rpName, origin,
+                 getUserId, getWebAuthnUser },                // passkeys (passwordless)
 });
 ```
 Every block is optional; existing OAuth-only consumers are unaffected (additive, no
@@ -395,8 +400,20 @@ breaking changes). Each block ships its in-memory store for zero-config dev.
      (getScimGroup, listScimGroups, onScimGroupCreate/Replace/Delete) — routes 501 when omitted.
      (`ScimUserFilter` generalized to `ScimFilter`, shared by Users + Groups). **Workstream D COMPLETE.**
 7. ✅ **Workstream E4/E5** — RBAC hooks + compliance helpers DONE (see Workstream E above).
-   Remaining headline item: **WebAuthn/passkeys** (`@simplewebauthn/server` behind a dep-light
-   adapter, same pattern as `SamlAdapter`/`RedisLike`).
+8. ✅ **WebAuthn / passkeys** (`src/webauthn/`) — DONE. Dependency-light `WebAuthnAdapter` (consumer
+   wraps `@simplewebauthn/server`; the package never bundles the CBOR/COSE/attestation footgun —
+   same pattern as `SamlAdapter`/`RedisLike`). Routes: `{webauthnRoute=/auth/webauthn}/register/
+   options` + `/register/verify` (add a passkey to the authenticated caller, `excludeCredentials`
+   from the user's existing keys), `.../authenticate/options` + `/authenticate/verify` (passwordless
+   discoverable-credential sign-in → `promoteToSession`, mints the same `SessionData<UserType>`).
+   Short-lived single-use `webauthn_challenge` cookie binds options→verify (open-redirect-free,
+   no challenge store needed). `WebAuthnCredentialStore` (in-memory + Postgres + Neon,
+   `auth_webauthn_credentials`, PK credential_id, list-by-user); signature counter persisted +
+   bumped each assertion. Audit: `webauthn_registered` / `webauthn_authenticated`. Mounted via the
+   optional `webauthn` block. 5 tests (fake adapter). **All headline workstreams complete.**
+
+   Possible future polish (not in this plan): passwordless *signup* (create-user-on-first-passkey),
+   per-user passkey list/delete management route, conditional-UI / allowCredentials hints.
 
 Start at **F1 → Workstream A** to make immediate progress in parallel with the onSpark
 voice work; A is also the highest-leverage piece for the dealroom auth migration.
@@ -412,10 +429,10 @@ voice work; A is also the highest-leverage piece for the dealroom auth migration
 - **JWKS verify:** ✅ in-house via WebCrypto (`crypto.subtle` RS256/ES256). No `jose`.
 - **OIDC enterprise:** ✅ extend `citra` with a runtime/discovery-configured provider so
   all OAuth/OIDC lives there (Workstream C).
-- **SAML dep:** ⏳ deferred to Workstream C. Lean: `@node-saml/node-saml` behind a
-  `SamlAdapter` (hand-rolling XML DSig is a security footgun) — confirm when we start C.
-- **WebAuthn:** ⏳ deferred to late phase. Lean: `@simplewebauthn/server` behind an
-  adapter — confirm when we start it.
+- **SAML dep:** ✅ resolved in Workstream C. `@node-saml/node-saml` (or any vetted XML-DSig lib)
+  behind the `SamlAdapter` — the package never bundles it.
+- **WebAuthn:** ✅ resolved. `@simplewebauthn/server` behind the `WebAuthnAdapter` — the package
+  never bundles it; the consumer pins their own version (the lib churns hard across majors).
 
 > Principle that drove the above: **do it in-house with Bun + WebCrypto + Elysia**
 > (passwords, TOTP, tokens, AES-GCM, JWKS, SCIM, audit, lockout). A bundled dependency is

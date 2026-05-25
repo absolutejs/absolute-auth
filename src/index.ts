@@ -33,6 +33,7 @@ import type { AuthSessionStore } from './session/types';
 import { ssoDiscoveryRoute } from './sso/discoveryRoute';
 import { oidcSsoRoutes } from './sso/oidcRoutes';
 import { samlSsoRoutes } from './sso/samlRoutes';
+import { webauthnRoutes } from './webauthn/routes';
 import { AuthConfig, ClientProviders } from './types';
 
 export const auth = async <UserType>({
@@ -57,6 +58,7 @@ export const auth = async <UserType>({
 	scim,
 	authorization,
 	compliance,
+	webauthn,
 	htmx,
 	resolveAuthIntent,
 	onAuthorizeSuccess,
@@ -222,6 +224,15 @@ export const auth = async <UserType>({
 				: new Elysia()
 		)
 		.use(scim ? scimRoutes(scim) : new Elysia())
+		.use(
+			webauthn
+				? webauthnRoutes<UserType>({
+						...webauthn,
+						authSessionStore,
+						emit: auditEmit
+					})
+				: new Elysia()
+		)
 		.use(
 			compliance
 				? complianceRoutes<UserType>({
@@ -414,3 +425,13 @@ export {
 	createPostgresSsoConnectionStore,
 	ssoConnectionsTable
 } from './sso/postgresSsoConnectionStore';
+export * from './webauthn/adapter';
+export * from './webauthn/config';
+export * from './webauthn/types';
+export { webauthnRoutes } from './webauthn/routes';
+export { createInMemoryWebAuthnCredentialStore } from './webauthn/inMemoryWebAuthnCredentialStore';
+export {
+	createNeonWebAuthnCredentialStore,
+	createPostgresWebAuthnCredentialStore,
+	webauthnCredentialsTable
+} from './webauthn/postgresWebAuthnCredentialStore';

@@ -19,7 +19,9 @@ export type AuditEventType =
 	| 'session_revoked'
 	| 'sso_login'
 	| 'token_refreshed'
-	| 'token_revoked';
+	| 'token_revoked'
+	| 'webauthn_authenticated'
+	| 'webauthn_registered';
 
 export type AuditEvent = {
 	at: number;

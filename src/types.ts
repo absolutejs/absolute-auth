@@ -20,6 +20,7 @@ import type { ScimConfig } from './scim/config';
 import type { SessionsConfig } from './session/sessionsConfig';
 import type { AuthSessionStore } from './session/types';
 import type { SSOConfig } from './sso/config';
+import type { WebAuthnConfig } from './webauthn/config';
 
 export type AuthIntent = 'login' | 'link_identity' | 'link_connector';
 
@@ -370,6 +371,12 @@ export type AuthConfig<UserType> = {
 	 *  (right to access) and `DELETE {complianceRoute}` (right to erasure — runs your delete hook,
 	 *  revokes the user's sessions, clears the cookie). Pair with `audit.redact` for PII redaction. */
 	compliance?: ComplianceConfig<UserType>;
+	/** Passwordless / passkey auth (WebAuthn). When present, mounts the registration ceremony
+	 *  (`{webauthnRoute}/register/options` + `/verify`, adds a passkey to the authenticated caller)
+	 *  and the authentication ceremony (`.../authenticate/options` + `/verify`, passwordless sign-in
+	 *  → mints the same `SessionData<UserType>`). A `webauthnAdapter` wraps a vetted library (e.g.
+	 *  `@simplewebauthn/server`); the package never bundles the WebAuthn crypto. */
+	webauthn?: WebAuthnConfig<UserType>;
 	/** Enable the built-in HTMX fragment routes (login, identities, connectors,
 	 *  account, signout, delete-account). Supply provider display data + the
 	 *  identity/connector data actions; the package owns the route wiring and
