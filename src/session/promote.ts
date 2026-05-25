@@ -48,6 +48,7 @@ export const persistWhen = async (
 };
 
 type PromoteToSessionProps<UserType> = {
+	anonymous?: boolean;
 	authSessionStore?: AuthSessionStore<UserType>;
 	cookie: Cookie<UserSessionId | undefined>;
 	impersonator?: SessionData<UserType>['impersonator'];
@@ -62,6 +63,7 @@ type PromoteToSessionProps<UserType> = {
 // backed by an OAuth provider token. Shared by credential register/login, the MFA challenge
 // route, and the SSO callbacks. `samlLogout` carries the SAML SP-initiated SLO context.
 export const promoteToSession = async <UserType>({
+	anonymous,
 	authSessionStore,
 	cookie,
 	impersonator,
@@ -86,6 +88,7 @@ export const promoteToSession = async <UserType>({
 	};
 	if (samlLogout !== undefined) data.samlLogout = samlLogout;
 	if (impersonator !== undefined) data.impersonator = impersonator;
+	if (anonymous === true) data.anonymous = true;
 	targetSession[userSessionId] = data;
 	cookie.set({
 		httpOnly: true,

@@ -362,6 +362,17 @@ export {
 	isImpersonating,
 	startImpersonation
 } from './session/impersonation';
+export {
+	createAnonymousSession,
+	isAnonymousSession
+} from './session/anonymous';
+export {
+	addToSessionRing,
+	listRingSessions,
+	readSessionRing,
+	removeFromSessionRing,
+	switchActiveSession
+} from './session/multiSession';
 export { listUserSessions, revokeUserSessions } from './session/userSessions';
 export type { UserSession } from './session/userSessions';
 export { sessionCleanup } from './session/cleanup';
@@ -421,6 +432,7 @@ export * from './crypto';
 export * from './tenancy';
 export * from './credentials/config';
 export * from './credentials/passwordPolicy';
+export * from './credentials/emailValidation';
 export * from './credentials/types';
 export { credentialRoutes } from './credentials/routes';
 export { credentialsEmailVerification } from './credentials/emailVerification';

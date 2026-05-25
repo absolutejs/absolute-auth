@@ -82,6 +82,9 @@ export type SessionData<UserType> = {
 	};
 	/** Present only when this session was created via admin impersonation. */
 	impersonator?: Impersonator;
+	/** True for a guest/anonymous session (createAnonymousSession) that can later be
+	 *  upgraded by a real login. */
+	anonymous?: boolean;
 };
 
 export type SessionRecord<UserType> = Record<

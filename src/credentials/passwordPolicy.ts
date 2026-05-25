@@ -85,3 +85,9 @@ export const evaluatePassword = async (
 
 	return { ok: violations.length === 0, violations };
 };
+
+// Compromised-credential detection at LOGIN (HaveIBeenPwned k-anonymity). Call it on a
+// successful credential login: if a password that was fine at sign-up later appears in a
+// breach, force a reset / notify — what Auth0 "Credential Guard" does at sign-in. Fails open.
+export const isPasswordCompromised = (password: string) =>
+	isPasswordBreached(password);

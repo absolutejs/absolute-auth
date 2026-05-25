@@ -41,10 +41,10 @@ Legend: ✅ full · ◐ partial / hook-only / BYO · ✖ none · — N/A for a l
 | GDPR export / erasure | ✅ | ◐ | ✅ | ◐ | ◐ | ✖ |
 | MFA encryption-key rotation tool | ✅ | — | — | — | — | ✖ |
 | **AI-agent auth (token exchange / MCP / OBO)** | ✅ | ◐ (FGA) | ✅ (Auth for MCP) | ✅ (Connected Apps) | ◐ (Hydra) | ✅ |
-| **Multi-session (switch accounts)** | ✖ | ◐ | ◐ | ◐ | ◐ | ✅ |
-| **Anonymous / guest → upgrade** | ✖ | ✖ | ◐ | ◐ | ✖ | ✅ |
-| Email deliverability validation | ✖ | ✖ | ◐ | ◐ | ✖ | ✅ |
-| Proactive credential-leak monitoring | ✖ | ✖ | ✅ (Credential Guard) | ◐ | ✖ | ✖ |
+| **Multi-session (switch accounts)** | ✅ | ◐ | ◐ | ◐ | ◐ | ✅ |
+| **Anonymous / guest → upgrade** | ✅ | ✖ | ◐ | ◐ | ✖ | ✅ |
+| Email deliverability validation | ✅ | ✖ | ◐ | ◐ | ✖ | ✅ |
+| Proactive credential-leak monitoring | ◐ | ✖ | ✅ (Credential Guard) | ◐ | ✖ | ✖ |
 | Extensibility pipeline (Actions/Rules) | ◐ (hooks) | ◐ | ✅ (Actions) | ◐ | ◐ | ✅ (plugins) |
 | Hosted UI / drop-in components | ◐ (HTMX) | ✅ (AuthKit) | ✅ (Universal Login) | ✅ | ✅ (Kratos UI) | ◐ |
 | Per-MAU / per-check pricing | none | yes | yes | yes | none (OSS) | none (OSS) |
@@ -69,15 +69,16 @@ Legend: ✅ full · ◐ partial / hook-only / BYO · ✖ none · — N/A for a l
    Radar, Auth0 all ship data-network fingerprints. We ship the framework + hooks only.
    Can't match their data, but can: ship a stronger default fingerprint (FP-JS-style
    signal hashing) + first-class adapters for Stytch/Cloudflare Turnstile/etc.
-3. **Multi-session (multiple accounts, switch).** Better Auth has it; common consumer
-   need. Extend the session store/cookie model to hold N sessions + an active selector.
-4. **Anonymous / guest sessions that upgrade to a real account.** Better Auth has it;
-   useful for trials/carts. Extend: mint a guest session, merge on register/login.
-5. **Proactive credential-leak monitoring.** Auth0 Credential Guard monitors the dark
-   web and notifies on post-hoc compromise (we only check at register/reset). Extend:
-   a `monitorBreaches` hook + an audit/webhook event + a notify path.
-6. **Email deliverability validation** (disposable/typo/MX). Extend: a `validateEmail`
-   hook on register + a sensible default (disposable-domain list + MX check).
+3. **Multi-session (multiple accounts, switch). ✅ SHIPPED (beta.6).** A session-ring
+   toolkit (`addToSessionRing` / `listRingSessions` / `switchActiveSession` /
+   `removeFromSessionRing`) over a second cookie; active session stays in `user_session_id`.
+4. **Anonymous / guest sessions that upgrade. ✅ SHIPPED (beta.6).** `createAnonymousSession`
+   flags the session `anonymous`; `isAnonymousSession` detects it; upgrade = a normal login.
+5. **Proactive credential-leak monitoring. ◐ PARTIAL (beta.6).** Shipped login-time
+   compromised-credential detection (`isPasswordCompromised`, HIBP at sign-in — what Auth0
+   does at login). True ongoing dark-web monitoring needs a data feed we don't have.
+6. **Email deliverability validation. ✅ SHIPPED (beta.6).** `validateEmailDeliverability`
+   (format + disposable-domain block + optional MX) and `isDisposableEmail`.
 7. **Extensibility pipeline (Actions/Rules).** Auth0 Actions / Better Auth plugins offer
    an ordered, composable pipeline. We have per-event lifecycle hooks (◐). Extend: a
    documented `onAuthAction` pipeline (ordered middleware over the auth lifecycle).
