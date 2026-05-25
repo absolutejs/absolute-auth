@@ -25,6 +25,7 @@ import { sessionRoutes } from './routes/sessions';
 import { stepUpPlugin } from './routes/stepUp';
 import { signout } from './routes/signout';
 import { userStatus } from './routes/userStatus';
+import { scimRoutes } from './scim/routes';
 import { sessionCleanup } from './session/cleanup';
 import type { AuthSessionStore } from './session/types';
 import { ssoDiscoveryRoute } from './sso/discoveryRoute';
@@ -51,6 +52,7 @@ export const auth = async <UserType>({
 	lockout,
 	sessions,
 	sso,
+	scim,
 	htmx,
 	resolveAuthIntent,
 	onAuthorizeSuccess,
@@ -215,6 +217,7 @@ export const auth = async <UserType>({
 					})
 				: new Elysia()
 		)
+		.use(scim ? scimRoutes(scim) : new Elysia())
 		.use(protectRoutePlugin<UserType>({ authSessionStore }))
 		.use(stepUpPlugin<UserType>({ authSessionStore }))
 		.use(
@@ -364,6 +367,15 @@ export {
 } from './audit/postgresAuditStore';
 export * from './sso/types';
 export * from './sso/config';
+export * from './scim/types';
+export * from './scim/config';
+export { scimRoutes } from './scim/routes';
+export { createInMemoryScimTokenStore } from './scim/inMemoryScimTokenStore';
+export {
+	createNeonScimTokenStore,
+	createPostgresScimTokenStore,
+	scimTokensTable
+} from './scim/postgresScimTokenStore';
 export { ssoDiscoveryRoute } from './sso/discoveryRoute';
 export { oidcSsoRoutes } from './sso/oidcRoutes';
 export { samlSsoRoutes } from './sso/samlRoutes';

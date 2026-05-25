@@ -13,10 +13,10 @@ Current version: `0.25.1`. License CC BY-NC 4.0.
 
 > **Build status (2026-05-25):** F1–F4 + **Workstream A (email/password)** + **Workstream B
 > (MFA)** + **Workstream E1/E2/E3 (audit, lockout, session mgmt)** are DONE on branch
-> `feat/enterprise-auth` — 71 tests green, `build`/`typecheck`/`lint` clean. **Workstream C
-> (SSO) COMPLETE:** C1 `SSOConnectionStore` + C2 enterprise OIDC (citra 0.28.0 discovery/JWKS
-> client) + C3 SAML 2.0 (dep-light `SamlAdapter`) + home-realm discovery + SAML SLO; `auth()`
-> mounts `/sso/oidc/:org/*`, `/sso/saml/:org/*`, and `/sso/authorize?email=`. Next: SCIM (D). §11.
+> `feat/enterprise-auth` — 75 tests green, `build`/`typecheck`/`lint` clean. **Workstream C
+> (SSO) COMPLETE** (OIDC + SAML + discovery + SLO). **Workstream D (SCIM) — Users DONE:**
+> `ScimTokenStore` + `{scimRoute}/Users` (+ ServiceProviderConfig) with per-org bearer auth,
+> mapping hooks, mounted via the `scim` block. Remaining: SCIM Groups, then E4/E5 + WebAuthn. §11.
 >
 > New Postgres tables/migrations since A: nullable `auth_sessions.authenticated_at_ms`;
 > new tables `auth_mfa_enrollments`, `auth_audit_events`, `auth_lockouts`,
@@ -356,6 +356,15 @@ breaking changes). Each block ships its in-memory store for zero-config dev.
      via shared `clearSession` + bounces to the IdP SLO URL), and a full IdP-mocked OIDC
      authorize→callback E2E (signed id_token verified against a mock JWKS). **Workstream C COMPLETE.**
 6. **Workstream D — SCIM** → follows SSO (same per-org connection model).
+   - ✅ D1 `ScimTokenStore` (in-memory + Postgres + Neon, `auth_scim_tokens`) — per-org bearer
+     tokens, hashed; `createScimToken` (plaintext once) + `resolveScimOrganization` (bearer→org).
+   - ✅ D2 SCIM 2.0 Users: `{scimRoute=/scim/v2}/ServiceProviderConfig` + `/Users`
+     (POST/GET-list+filter/GET:id/PUT/PATCH/DELETE), in-house serialize/parse + PatchOp merge,
+     per-org bearer auth, `application/scim+json` parsing. Mapping hooks (getScimUser,
+     listScimUsers, onScimUserCreate/Replace/Deactivate).
+   - ✅ D3 wired into `auth()` via the `scim` block; exports; 4 tests (token store + full
+     create→list→get→patch-deactivate→delete round-trip + 401).
+   - ⏳ Remaining in D: SCIM Groups (`/Groups` + `onScimGroupSync`).
 7. **Workstream E4/E5 + WebAuthn** — RBAC hooks, compliance, passkeys.
 
 Start at **F1 → Workstream A** to make immediate progress in parallel with the onSpark

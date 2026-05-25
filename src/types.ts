@@ -14,6 +14,7 @@ import type { AuthIdentityConflict } from './errors';
 import type { AuthHtmxConfig, AuthHtmxUser } from './htmx/types';
 import type { LockoutConfig } from './lockout/config';
 import type { MfaConfig } from './mfa/config';
+import type { ScimConfig } from './scim/config';
 import type { SessionsConfig } from './session/sessionsConfig';
 import type { AuthSessionStore } from './session/types';
 import type { SSOConfig } from './sso/config';
@@ -347,6 +348,10 @@ export type AuthConfig<UserType> = {
 	 *  OIDC connection from `ssoConnectionStore`, verifies the id_token in-house against the
 	 *  issuer's JWKS, and mints the same `SessionData<UserType>` as every other flow. */
 	sso?: SSOConfig<UserType>;
+	/** SCIM 2.0 auto-provisioning for enterprise directory sync (Okta / Azure AD). When present,
+	 *  mounts `{scimRoute}/Users` (+ `/ServiceProviderConfig`) with per-org bearer-token auth via
+	 *  `scimTokenStore`, and maps SCIM resources to the consumer's user store through hooks. */
+	scim?: ScimConfig;
 	/** Enable the built-in HTMX fragment routes (login, identities, connectors,
 	 *  account, signout, delete-account). Supply provider display data + the
 	 *  identity/connector data actions; the package owns the route wiring and
