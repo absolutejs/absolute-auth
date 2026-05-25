@@ -301,8 +301,7 @@ describe('OIDC token exchange (RFC 8693) — AI-agent / MCP delegation', () => {
 			grant_type: TOKEN_EXCHANGE,
 			scope: 'openid',
 			subject_token: userToken,
-			subject_token_type:
-				'urn:ietf:params:oauth:token-type:access_token'
+			subject_token_type: 'urn:ietf:params:oauth:token-type:access_token'
 		});
 		expect(response.status).toBe(200);
 		const body = await response.json();
