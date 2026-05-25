@@ -350,6 +350,11 @@ export { protectRoutePlugin } from './routes/protectRoute';
 export { sessionRoutes } from './routes/sessions';
 export { stepUpPlugin } from './routes/stepUp';
 export * from './session/sessionsConfig';
+export {
+	endImpersonation,
+	isImpersonating,
+	startImpersonation
+} from './session/impersonation';
 export { listUserSessions, revokeUserSessions } from './session/userSessions';
 export type { UserSession } from './session/userSessions';
 export { sessionCleanup } from './session/cleanup';

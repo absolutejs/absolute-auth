@@ -8,6 +8,8 @@ export type AuditEventType =
 	| 'data_exported'
 	| 'email_verified'
 	| 'identity_conflict'
+	| 'impersonation_ended'
+	| 'impersonation_started'
 	| 'invitation_accepted'
 	| 'invitation_created'
 	| 'logout'

@@ -48,6 +48,18 @@ export type OAuth2ConfigurationOptions = {
 
 export type UserSessionId = `${string}-${string}-${string}-${string}-${string}`;
 
+/** Stamped on a session created via admin impersonation (`startImpersonation`). RFC 8693
+ *  actor semantics: `actorId`/`actorEmail` are the admin acting as the user, `reason` is
+ *  required and audited, `returnToSessionId` is the admin's own session to restore on exit.
+ *  Surfaced by userStatus so your UI can show an "impersonating" banner. */
+export type Impersonator = {
+	actorEmail?: string;
+	actorId: string;
+	reason: string;
+	returnToSessionId?: UserSessionId;
+	startedAt: number;
+};
+
 export type SessionData<UserType> = {
 	user: UserType;
 	/** OAuth provider access token. Optional: credential / SSO sessions are not backed
@@ -67,6 +79,8 @@ export type SessionData<UserType> = {
 		nameId: string;
 		sessionIndex?: string;
 	};
+	/** Present only when this session was created via admin impersonation. */
+	impersonator?: Impersonator;
 };
 
 export type SessionRecord<UserType> = Record<

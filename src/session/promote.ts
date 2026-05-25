@@ -50,6 +50,7 @@ export const persistWhen = async (
 type PromoteToSessionProps<UserType> = {
 	authSessionStore?: AuthSessionStore<UserType>;
 	cookie: Cookie<UserSessionId | undefined>;
+	impersonator?: SessionData<UserType>['impersonator'];
 	inMemorySession: SessionRecord<UserType>;
 	samlLogout?: SessionData<UserType>['samlLogout'];
 	sessionDurationMs: number;
@@ -63,6 +64,7 @@ type PromoteToSessionProps<UserType> = {
 export const promoteToSession = async <UserType>({
 	authSessionStore,
 	cookie,
+	impersonator,
 	inMemorySession,
 	samlLogout,
 	sessionDurationMs,
@@ -83,6 +85,7 @@ export const promoteToSession = async <UserType>({
 		user
 	};
 	if (samlLogout !== undefined) data.samlLogout = samlLogout;
+	if (impersonator !== undefined) data.impersonator = impersonator;
 	targetSession[userSessionId] = data;
 	cookie.set({
 		httpOnly: true,
