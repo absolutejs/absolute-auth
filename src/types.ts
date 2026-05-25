@@ -8,6 +8,7 @@ import {
 } from 'citra';
 import { Cookie, status as statusType, redirect as redirectType } from 'elysia';
 import { ElysiaCustomStatusResponse } from 'elysia/error';
+import type { ApiKeysConfig } from './apikeys/config';
 import type { AuditConfig } from './audit/config';
 import type { AuthorizationConfig } from './authorization/config';
 import type { ComplianceConfig } from './compliance/config';
@@ -373,6 +374,13 @@ export type AuthConfig<UserType> = {
 	 *  mounts `{scimRoute}/Users` (+ `/ServiceProviderConfig`) with per-org bearer-token auth via
 	 *  `scimTokenStore`, and maps SCIM resources to the consumer's user store through hooks. */
 	scim?: ScimConfig;
+	/** Machine-to-machine authentication: static API keys (`sk_…`) + the OAuth2
+	 *  client_credentials grant. When `apiClientStore` + `accessTokenStore` are set,
+	 *  mounts `{tokenRoute}` (defaults `/oauth2/token`) so registered clients can
+	 *  exchange `client_id`/`client_secret` for short-lived `at_…` access tokens.
+	 *  Pair with the exported `createApiKey` / `resolveApiPrincipal` / `hasScopes`
+	 *  helpers to issue and guard with static keys. */
+	apikeys?: ApiKeysConfig;
 	/** First-class multi-tenancy (the WorkOS model). When present, mounts organization +
 	 *  membership + invitation routes under `{organizationsRoute}`: list the caller's orgs, create
 	 *  one (caller becomes owner), invite/accept/revoke by email, and list/remove members. Ties the

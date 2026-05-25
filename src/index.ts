@@ -1,5 +1,6 @@
 import { createOAuth2Client } from 'citra';
 import { Elysia } from 'elysia';
+import { apiKeysRoutes } from './apikeys/routes';
 import { createAuditEmitter } from './audit/config';
 import {
 	composeCallbackAudit,
@@ -62,6 +63,7 @@ export const auth = async <UserType>({
 	sessions,
 	sso,
 	scim,
+	apikeys,
 	organizations,
 	roles,
 	portal,
@@ -257,6 +259,7 @@ export const auth = async <UserType>({
 				: new Elysia()
 		)
 		.use(scim ? scimRoutes(scim) : new Elysia())
+		.use(apikeys ? apiKeysRoutes(apikeys) : new Elysia())
 		.use(
 			organizations
 				? organizationRoutes<UserType>({
@@ -474,6 +477,25 @@ export {
 	createPostgresScimTokenStore,
 	scimTokensTable
 } from './scim/postgresScimTokenStore';
+export * from './apikeys/config';
+export * from './apikeys/types';
+export { apiKeysRoutes } from './apikeys/routes';
+export {
+	createInMemoryAccessTokenStore,
+	createInMemoryApiClientStore,
+	createInMemoryApiKeyStore
+} from './apikeys/inMemoryStores';
+export {
+	accessTokensTable,
+	apiClientsTable,
+	apiKeysTable,
+	createNeonAccessTokenStore,
+	createNeonApiClientStore,
+	createNeonApiKeyStore,
+	createPostgresAccessTokenStore,
+	createPostgresApiClientStore,
+	createPostgresApiKeyStore
+} from './apikeys/postgresStores';
 export { ssoDiscoveryRoute } from './sso/discoveryRoute';
 export { oidcSsoRoutes } from './sso/oidcRoutes';
 export { samlSsoRoutes } from './sso/samlRoutes';
