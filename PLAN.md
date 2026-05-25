@@ -11,13 +11,15 @@ way, on the grain the package already has.
 
 Current version: `0.25.1`. License CC BY-NC 4.0.
 
-> **Build status (2026-05-24):** F1–F4 + **Workstream A (email/password)** + **Workstream B
+> **Build status (2026-05-25):** F1–F4 + **Workstream A (email/password)** + **Workstream B
 > (MFA)** + **Workstream E1/E2/E3 (audit, lockout, session mgmt)** are DONE on branch
-> `feat/enterprise-auth` — 54 tests green, `build`/`typecheck`/`lint` clean. Next up:
-> Workstream C (SSO) then D (SCIM). See §11 for the live checklist.
+> `feat/enterprise-auth` — 63 tests green, `build`/`typecheck`/`lint` clean. **Workstream C
+> (SSO) is in progress:** C1 `SSOConnectionStore` done; enterprise OIDC (C2) next, then SAML
+> (C3). See §11 for the live checklist.
 >
 > New Postgres tables/migrations since A: nullable `auth_sessions.authenticated_at_ms`;
-> new tables `auth_mfa_enrollments`, `auth_audit_events`, `auth_lockouts`.
+> new tables `auth_mfa_enrollments`, `auth_audit_events`, `auth_lockouts`,
+> `auth_sso_connections`.
 >
 > **Design defaults:** registration **auto-logs-in** by default (`requireEmailVerification:
 > true` switches to verify-first: no session on register, login blocked until verified).
@@ -334,6 +336,11 @@ breaking changes). Each block ships its in-memory store for zero-config dev.
      `listUserSessions`/`revokeUserSessions` helpers (the latter for password-reset
      revocation via the `onPasswordReset` hook). TODO: device/UA/IP metadata + idle timeout.
 5. **Workstream C — SSO (OIDC first, then SAML)** → the headline enterprise sale.
+   - ✅ C1 `SSOConnectionStore` (in-memory + Postgres + Neon) — per-org OIDC/SAML config
+     keyed by `organizationId` (`auth_sso_connections`, type-specific config in a jsonb
+     column); enabled-only resolution for sign-in + full list for admin. 6 tests.
+   - ⏳ C2 enterprise OIDC: discovery + PKCE + in-house JWKS verify + `/sso/oidc/:org/*`.
+   - ⏳ C3 SAML 2.0 behind `SamlAdapter`; C4 wire into `auth()` + domain→org routing.
 6. **Workstream D — SCIM** → follows SSO (same per-org connection model).
 7. **Workstream E4/E5 + WebAuthn** — RBAC hooks, compliance, passkeys.
 

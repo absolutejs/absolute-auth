@@ -337,3 +337,10 @@ export {
 	createNeonAuditSink,
 	createPostgresAuditSink
 } from './audit/postgresAuditStore';
+export * from './sso/types';
+export { createInMemorySsoConnectionStore } from './sso/inMemorySsoConnectionStore';
+export {
+	createNeonSsoConnectionStore,
+	createPostgresSsoConnectionStore,
+	ssoConnectionsTable
+} from './sso/postgresSsoConnectionStore';
