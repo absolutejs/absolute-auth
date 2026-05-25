@@ -2,7 +2,7 @@ import type {
 	SessionData,
 	UnregisteredSessionData,
 	UserSessionId
-} from './types';
+} from '../types';
 
 export type AuthSessionStore<UserType> = {
 	getSession: (

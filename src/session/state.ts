@@ -1,5 +1,5 @@
 import { Elysia } from 'elysia';
-import { SessionRecord, UnregisteredSessionRecord } from './types';
+import { SessionRecord, UnregisteredSessionRecord } from '../types';
 
 export const sessionStore = <UserType>() => {
 	const initialSession: SessionRecord<UserType> = {};

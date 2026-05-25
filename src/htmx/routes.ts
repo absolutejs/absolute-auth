@@ -1,10 +1,10 @@
 import { isValidProviderOption } from 'citra';
 import { Elysia } from 'elysia';
-import { protectRoutePlugin } from './protectRoute';
-import type { AuthSessionStore } from './sessionTypes';
-import { isUserSessionId } from './typeGuards';
-import { resolveAuthHtmxRenderers } from './ui/renderers';
-import type { AuthHtmxConfig, AuthHtmxUser } from './ui/types';
+import { protectRoutePlugin } from '../routes/protectRoute';
+import type { AuthSessionStore } from '../session/types';
+import { isUserSessionId } from '../typeGuards';
+import { resolveAuthHtmxRenderers } from './renderers';
+import type { AuthHtmxConfig, AuthHtmxUser } from './types';
 
 const SEE_OTHER = 303;
 

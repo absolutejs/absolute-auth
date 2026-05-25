@@ -1,15 +1,15 @@
-import { neon } from '@neondatabase/serverless';
-import { desc, eq } from 'drizzle-orm';
-import { drizzle, NeonHttpDatabase } from 'drizzle-orm/neon-http';
-import { jsonb, pgTable, text, timestamp, varchar } from 'drizzle-orm/pg-core';
 import type {
 	LinkedProviderBinding,
 	LinkedProviderBindingStore,
 	LinkedProviderGrant,
 	LinkedProviderGrantStore
 } from '@absolutejs/linked-providers';
-import { createOAuthLinkedProviderCredentialResolver } from './oauthLinkedProviderResolver';
-import type { OAuth2ConfigurationOptions } from './types';
+import { neon } from '@neondatabase/serverless';
+import { desc, eq } from 'drizzle-orm';
+import { drizzle, NeonHttpDatabase } from 'drizzle-orm/neon-http';
+import { jsonb, pgTable, text, timestamp, varchar } from 'drizzle-orm/pg-core';
+import type { OAuth2ConfigurationOptions } from '../types';
+import { createOAuthLinkedProviderCredentialResolver } from './oauthResolver';
 
 export const linkedProviderGrantsTable = pgTable('linked_provider_grants', {
 	id: varchar('id', { length: 255 }).primaryKey(),

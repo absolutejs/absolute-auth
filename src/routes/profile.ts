@@ -1,18 +1,18 @@
 import { isValidProviderOption } from 'citra';
 import { Elysia, t } from 'elysia';
-import { resolveClientProviderEntry } from './providerClients';
-import { sessionStore } from './sessionStore';
+import { resolveClientProviderEntry } from '../providers/clients';
+import { sessionStore } from '../session/state';
 import {
 	authClientOption,
 	authProviderOption,
 	userSessionIdTypebox
-} from './typebox';
+} from '../typebox';
 import {
 	ClientProviders,
 	OnProfileError,
 	OnProfileSuccess,
 	RouteString
-} from './types';
+} from '../types';
 
 type ProfileProps = {
 	clientProviders: ClientProviders;

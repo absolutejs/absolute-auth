@@ -1,8 +1,6 @@
 import { Elysia } from 'elysia';
-import { DEFAULT_MAX_SESSIONS, MILLISECONDS_IN_AN_HOUR } from './constants';
-import { sessionStore } from './sessionStore';
-import type { AuthSessionStore } from './sessionTypes';
-import { isUserSessionId } from './typeGuards';
+import { DEFAULT_MAX_SESSIONS, MILLISECONDS_IN_AN_HOUR } from '../constants';
+import { isUserSessionId } from '../typeGuards';
 import type {
 	OnSessionCleanup,
 	SessionData,
@@ -10,7 +8,9 @@ import type {
 	UnregisteredSessionData,
 	UnregisteredSessionRecord,
 	UserSessionId
-} from './types';
+} from '../types';
+import { sessionStore } from './state';
+import type { AuthSessionStore } from './types';
 
 type SessionCleanupProps<UserType> = {
 	authSessionStore?: AuthSessionStore<UserType>;
@@ -269,6 +269,7 @@ const performStoreCleanup = async <UserType>({
 	const remainingSessions = sessionEntries.filter(([sessionId, session]) => {
 		if (session.expiresAt >= now) return true;
 		removedSessions.set(sessionId, session);
+
 		return false;
 	});
 	for (const sessionId of removedSessions.keys()) {
@@ -279,6 +280,7 @@ const performStoreCleanup = async <UserType>({
 		([sessionId, session]) => {
 			if (session.expiresAt >= now) return true;
 			removedUnregisteredSessions.set(sessionId, session);
+
 			return false;
 		}
 	);
@@ -335,6 +337,7 @@ const performCleanup = async <UserType>({
 			maxSessions,
 			onSessionCleanup
 		});
+
 		return;
 	}
 

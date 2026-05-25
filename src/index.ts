@@ -1,19 +1,19 @@
 import { createOAuth2Client } from 'citra';
 import { Elysia } from 'elysia';
-import { authorize } from './authorize';
-import { callback } from './callback';
-import { createAuthHtmxRoutes } from './htmxRoutes';
-import { profile } from './profile';
-import { protectRoutePlugin } from './protectRoute';
-import { buildClientProviders } from './providerClients';
-import { refresh } from './refresh';
-import { revoke } from './revoke';
-import { sessionCleanup } from './sessionCleanup';
-import type { AuthSessionStore } from './sessionTypes';
-import { signout } from './signout';
+import { createAuthHtmxRoutes } from './htmx/routes';
+import type { AuthHtmxConfig, AuthHtmxUser } from './htmx/types';
+import { buildClientProviders } from './providers/clients';
+import { authorize } from './routes/authorize';
+import { callback } from './routes/callback';
+import { profile } from './routes/profile';
+import { protectRoutePlugin } from './routes/protectRoute';
+import { refresh } from './routes/refresh';
+import { revoke } from './routes/revoke';
+import { signout } from './routes/signout';
+import { userStatus } from './routes/userStatus';
+import { sessionCleanup } from './session/cleanup';
+import type { AuthSessionStore } from './session/types';
 import { AuthConfig, ClientProviders } from './types';
-import type { AuthHtmxConfig, AuthHtmxUser } from './ui/types';
-import { userStatus } from './userStatus';
 
 export const auth = async <UserType>({
 	providersConfiguration,
@@ -129,23 +129,23 @@ export const auth = async <UserType>({
 
 export * from './types';
 export * from './typebox';
-export type { AuthSessionStore } from './sessionTypes';
+export type { AuthSessionStore } from './session/types';
 export { isAuthIntent, isUserSessionId, isValidUser } from './typeGuards';
 export { AuthIdentityConflictError } from './errors';
-export { sessionStore } from './sessionStore';
-export { createInMemoryAuthSessionStore } from './authSessionStores';
-export { createNeonAuthSessionStore } from './neonAuthSessionStore';
-export { createLinkedProviderCredentialResolver } from './linkedProviderResolver';
-export { createOAuthLinkedProviderCredentialResolver } from './oauthLinkedProviderResolver';
+export { sessionStore } from './session/state';
+export { createInMemoryAuthSessionStore } from './session/inMemoryStore';
+export { createNeonAuthSessionStore } from './session/neonStore';
+export { createLinkedProviderCredentialResolver } from './linkedProviders/resolver';
+export { createOAuthLinkedProviderCredentialResolver } from './linkedProviders/oauthResolver';
 export {
 	createNeonLinkedProviderStores,
 	createNeonOAuthLinkedProviderCredentialResolver
-} from './neonLinkedProviders';
-export { createInMemoryLinkedProviderStores } from './linkedProviderStores';
-export { protectRoutePlugin } from './protectRoute';
-export { sessionCleanup } from './sessionCleanup';
-export { createAuthHtmxRoutes } from './htmxRoutes';
-export { resolveAuthHtmxRenderers } from './ui/renderers';
+} from './linkedProviders/neonStores';
+export { createInMemoryLinkedProviderStores } from './linkedProviders/inMemoryStores';
+export { protectRoutePlugin } from './routes/protectRoute';
+export { sessionCleanup } from './session/cleanup';
+export { createAuthHtmxRoutes } from './htmx/routes';
+export { resolveAuthHtmxRenderers } from './htmx/renderers';
 export type {
 	AuthHtmxConfig,
 	AuthHtmxConnectorTarget,
@@ -156,13 +156,13 @@ export type {
 	AuthHtmxUser,
 	AuthIdentityPayload,
 	LinkedProviderPayload
-} from './ui/types';
+} from './htmx/types';
 export * from './utils';
 export {
 	buildClientProviders,
 	resolveClientProviderEntry,
 	resolveProviderClientConfiguration
-} from './providerClients';
+} from './providers/clients';
 export type {
 	OAuth2TokenResponse,
 	OAuth2Client,

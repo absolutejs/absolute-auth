@@ -4,20 +4,20 @@ import {
 	isPKCEProviderOption
 } from 'citra';
 import { Elysia, t } from 'elysia';
-import { COOKIE_DURATION } from './constants';
-import { resolveClientProviderEntry } from './providerClients';
-import { isAuthIntent } from './typeGuards';
+import { COOKIE_DURATION } from '../constants';
+import { resolveClientProviderEntry } from '../providers/clients';
+import { isAuthIntent } from '../typeGuards';
 import {
 	authClientOption,
 	authIntentOption,
 	authProviderOption
-} from './typebox';
+} from '../typebox';
 import {
 	AuthorizeRoute,
 	ClientProviders,
 	OnAuthorizeError,
 	OnAuthorizeSuccess
-} from './types';
+} from '../types';
 
 type AuthorizeProps = {
 	clientProviders: ClientProviders;

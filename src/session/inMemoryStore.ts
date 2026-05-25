@@ -1,9 +1,9 @@
-import type { AuthSessionStore } from './sessionTypes';
 import type {
 	SessionData,
 	UnregisteredSessionData,
 	UserSessionId
-} from './types';
+} from '../types';
+import type { AuthSessionStore } from './types';
 
 export type CreateInMemoryAuthSessionStoreOptions<UserType> = {
 	sessions?: Record<UserSessionId, SessionData<UserType>>;

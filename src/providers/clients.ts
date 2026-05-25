@@ -11,7 +11,7 @@ import {
 	OAuth2ProviderClientConfiguration,
 	ClientProviderEntry,
 	ClientProviderGroup
-} from './types';
+} from '../types';
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
 	typeof value === 'object' && value !== null && !Array.isArray(value);

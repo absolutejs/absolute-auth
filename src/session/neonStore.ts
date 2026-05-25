@@ -9,12 +9,12 @@ import {
 	timestamp,
 	varchar
 } from 'drizzle-orm/pg-core';
-import type { AuthSessionStore } from './sessionTypes';
 import type {
 	SessionData,
 	UnregisteredSessionData,
 	UserSessionId
-} from './types';
+} from '../types';
+import type { AuthSessionStore } from './types';
 
 export const authSessionsTable = pgTable('auth_sessions', {
 	id: varchar('id', { length: 255 }).primaryKey(),

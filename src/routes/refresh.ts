@@ -1,38 +1,41 @@
-import { isRevocableOAuth2Client, isValidProviderOption } from 'citra';
+import { isRefreshableOAuth2Client, isValidProviderOption } from 'citra';
 import { Elysia, t } from 'elysia';
-import { resolveClientProviderEntry } from './providerClients';
-import { loadSessionFromSource } from './sessionAccess';
-import { sessionStore } from './sessionStore';
-import type { AuthSessionStore } from './sessionTypes';
+import { MILLISECONDS_IN_A_DAY } from '../constants';
+import { resolveClientProviderEntry } from '../providers/clients';
+import { loadSessionFromSource } from '../session/access';
+import { sessionStore } from '../session/state';
+import type { AuthSessionStore } from '../session/types';
 import {
 	authClientOption,
 	authProviderOption,
 	userSessionIdTypebox
-} from './typebox';
+} from '../typebox';
 import {
 	ClientProviders,
-	OnRevocationError,
-	OnRevocationSuccess,
+	OnRefreshError,
+	OnRefreshSuccess,
 	RouteString
-} from './types';
+} from '../types';
 
-type RevokeProps<UserType> = {
+type RefreshProps<UserType> = {
 	authSessionStore?: AuthSessionStore<UserType>;
 	clientProviders: ClientProviders;
-	revokeRoute?: RouteString;
-	onRevocationSuccess: OnRevocationSuccess;
-	onRevocationError: OnRevocationError;
+	refreshRoute?: RouteString;
+	onRefreshSuccess: OnRefreshSuccess;
+	onRefreshError: OnRefreshError;
+	sessionDurationMs?: number;
 };
 
-export const revoke = <UserType>({
+export const refresh = <UserType>({
 	authSessionStore,
 	clientProviders,
-	revokeRoute = '/oauth2/revocation',
-	onRevocationSuccess,
-	onRevocationError
-}: RevokeProps<UserType>) =>
+	refreshRoute = '/oauth2/tokens',
+	onRefreshSuccess,
+	onRefreshError,
+	sessionDurationMs = MILLISECONDS_IN_A_DAY
+}: RefreshProps<UserType>) =>
 	new Elysia().use(sessionStore<UserType>()).post(
-		revokeRoute,
+		refreshRoute,
 		async ({
 			status,
 			store: { session },
@@ -67,15 +70,6 @@ export const revoke = <UserType>({
 			}
 			const { clientName, providerInstance } = resolvedProvider.entry;
 
-			if (
-				!isRevocableOAuth2Client(auth_provider.value, providerInstance)
-			) {
-				return status(
-					'Not Implemented',
-					'Provider does not support revocation'
-				);
-			}
-
 			const userSession = await loadSessionFromSource({
 				authSessionStore,
 				session,
@@ -86,29 +80,55 @@ export const revoke = <UserType>({
 				return status('Unauthorized', 'No user session found');
 			}
 
-			const { accessToken } = userSession;
+			const { refreshToken } = userSession;
+
+			if (
+				!isRefreshableOAuth2Client(
+					auth_provider.value,
+					providerInstance
+				)
+			) {
+				return status('Not Implemented', 'Provider is not refreshable');
+			}
+
+			if (refreshToken === undefined) {
+				return status('Bad Request', 'No refresh token found');
+			}
 
 			try {
-				await providerInstance.revokeToken(accessToken);
+				const tokenResponse =
+					await providerInstance.refreshAccessToken(refreshToken);
 
-				await onRevocationSuccess?.({
+				userSession.accessToken = tokenResponse.access_token;
+				userSession.expiresAt = Date.now() + sessionDurationMs;
+				userSession.refreshToken =
+					tokenResponse.refresh_token ?? userSession.refreshToken;
+
+				if (authSessionStore) {
+					await authSessionStore.setSession(
+						user_session_id.value,
+						userSession
+					);
+				}
+
+				await onRefreshSuccess?.({
 					authClient: clientName,
 					authProvider: auth_provider.value,
-					tokenToRevoke: accessToken
+					tokenResponse
 				});
 
-				return new Response('Token revoked', {
+				return new Response('Token refreshed', {
 					status: 204
 				});
 			} catch (err) {
-				console.error('[revoke] Failed to revoke token:', {
+				console.error('[refresh] Failed to refresh token:', {
 					authClient: clientName,
 					authProvider: auth_provider.value,
 					error: err instanceof Error ? err.message : err,
 					stack: err instanceof Error ? err.stack : undefined
 				});
 
-				await onRevocationError?.({
+				await onRefreshError?.({
 					authClient: clientName,
 					authProvider: auth_provider.value,
 					error: err
@@ -116,7 +136,7 @@ export const revoke = <UserType>({
 
 				return status(
 					'Internal Server Error',
-					'Failed to revoke token'
+					'Failed to refresh token'
 				);
 			}
 		},

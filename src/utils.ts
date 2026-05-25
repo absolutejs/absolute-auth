@@ -8,6 +8,7 @@ import {
 } from 'citra';
 import { Cookie } from 'elysia';
 import { MILLISECONDS_IN_A_DAY, MILLISECONDS_IN_AN_HOUR } from './constants';
+import { AuthHtmxConfig } from './htmx/types';
 import { isNonEmptyString, isStatusResponse } from './typeGuards';
 import {
 	AuthConfig,
@@ -18,7 +19,6 @@ import {
 	UnregisteredSessionRecord,
 	UserSessionId
 } from './types';
-import { AuthHtmxConfig } from './ui/types';
 
 export const resolveOAuthTokenExpiresAt = (
 	tokenResponse: OAuth2TokenResponse,

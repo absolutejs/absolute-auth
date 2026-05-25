@@ -9,8 +9,8 @@ import {
 import { Cookie, status as statusType, redirect as redirectType } from 'elysia';
 import { ElysiaCustomStatusResponse } from 'elysia/error';
 import type { AuthIdentityConflict } from './errors';
-import type { AuthSessionStore } from './sessionTypes';
-import type { AuthHtmxConfig, AuthHtmxUser } from './ui/types';
+import type { AuthHtmxConfig, AuthHtmxUser } from './htmx/types';
+import type { AuthSessionStore } from './session/types';
 
 export type AuthIntent = 'login' | 'link_identity' | 'link_connector';
 

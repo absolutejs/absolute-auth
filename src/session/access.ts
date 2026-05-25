@@ -1,13 +1,13 @@
 import type { Cookie } from 'elysia';
-import type { AuthSessionStore } from './sessionTypes';
-import { isUserSessionId } from './typeGuards';
+import { isUserSessionId } from '../typeGuards';
 import type {
 	SessionData,
 	SessionRecord,
 	UnregisteredSessionData,
 	UnregisteredSessionRecord,
 	UserSessionId
-} from './types';
+} from '../types';
+import type { AuthSessionStore } from './types';
 
 const collectSessionEntries = <UserType>(
 	session: SessionRecord<UserType>

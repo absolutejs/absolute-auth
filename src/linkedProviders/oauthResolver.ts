@@ -1,15 +1,15 @@
+import type {
+	LinkedProviderBindingStore,
+	LinkedProviderGrantStore
+} from '@absolutejs/linked-providers';
 import {
 	createOAuth2Client,
 	isRefreshableOAuth2Client,
 	isValidProviderOption
 } from 'citra';
-import type {
-	LinkedProviderBindingStore,
-	LinkedProviderGrantStore
-} from '@absolutejs/linked-providers';
-import { createLinkedProviderCredentialResolver } from './linkedProviderResolver';
-import { resolveProviderClientConfiguration } from './providerClients';
-import type { OAuth2ConfigurationOptions } from './types';
+import { resolveProviderClientConfiguration } from '../providers/clients';
+import type { OAuth2ConfigurationOptions } from '../types';
+import { createLinkedProviderCredentialResolver } from './resolver';
 
 export type CreateOAuthLinkedProviderCredentialResolverOptions = {
 	grantStore: LinkedProviderGrantStore;

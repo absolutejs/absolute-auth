@@ -1,8 +1,8 @@
 import { Elysia, t } from 'elysia';
-import { getStatusFromSource } from './sessionAccess';
-import { sessionStore } from './sessionStore';
-import type { AuthSessionStore } from './sessionTypes';
-import { userSessionIdTypebox } from './typebox';
+import { getStatusFromSource } from '../session/access';
+import { sessionStore } from '../session/state';
+import type { AuthSessionStore } from '../session/types';
+import { userSessionIdTypebox } from '../typebox';
 
 type AuthFailError =
 	| {

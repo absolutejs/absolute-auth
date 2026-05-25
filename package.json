@@ -10,7 +10,7 @@
 	"license": "CC BY-NC 4.0",
 	"author": "Alex Kahn",
 	"scripts": {
-		"build": "rm -rf dist && bun build src/index.ts src/ui/index.ts --outdir dist --sourcemap --target=bun --external elysia && tsc --emitDeclarationOnly --project tsconfig.json",
+		"build": "rm -rf dist && bun build src/index.ts src/htmx/index.ts --outdir dist --sourcemap --target=bun --external elysia && tsc --emitDeclarationOnly --project tsconfig.json",
 		"test": "echo \"Error: no test specified\" && exit 1",
 		"format": "prettier --write \"./**/*.{js,jsx,ts,tsx,css,json}\"",
 		"lint": "eslint ./src ./eslint.config.mjs",
@@ -53,9 +53,9 @@
 			"import": "./dist/index.js",
 			"types": "./dist/index.d.ts"
 		},
-		"./ui": {
-			"import": "./dist/ui/index.js",
-			"types": "./dist/ui/index.d.ts"
+		"./htmx": {
+			"import": "./dist/htmx/index.js",
+			"types": "./dist/htmx/index.d.ts"
 		}
 	},
 	"type": "module",

@@ -1,17 +1,17 @@
 import { isPKCEProviderOption } from 'citra';
 import { Elysia, t } from 'elysia';
-import { AuthIdentityConflictError } from './errors';
-import { resolveClientProviderEntry } from './providerClients';
-import { createSessionCompatibilityLayer } from './sessionAccess';
-import { sessionStore } from './sessionStore';
-import type { AuthSessionStore } from './sessionTypes';
-import { isAuthIntent, isNonEmptyString } from './typeGuards';
+import { AuthIdentityConflictError } from '../errors';
+import { resolveClientProviderEntry } from '../providers/clients';
+import { createSessionCompatibilityLayer } from '../session/access';
+import { sessionStore } from '../session/state';
+import type { AuthSessionStore } from '../session/types';
+import { isAuthIntent, isNonEmptyString } from '../typeGuards';
 import {
 	authClientOption,
 	authIntentOption,
 	authProviderOption,
 	userSessionIdTypebox
-} from './typebox';
+} from '../typebox';
 import {
 	ClientProviders,
 	OnCallbackError,
@@ -21,7 +21,7 @@ import {
 	OnLinkIdentityConflict,
 	ResolveAuthIntent,
 	RouteString
-} from './types';
+} from '../types';
 
 type CallbackProps<UserType> = {
 	authSessionStore?: AuthSessionStore<UserType>;
