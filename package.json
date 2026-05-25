@@ -11,6 +11,7 @@
 	"author": "Alex Kahn",
 	"scripts": {
 		"build": "rm -rf dist && bun build src/index.ts src/htmx/index.ts --outdir dist --sourcemap --target=bun --external elysia && tsc --emitDeclarationOnly --project tsconfig.json",
+		"config": "absolute config",
 		"test": "bun test",
 		"format": "absolute prettier --write",
 		"lint": "absolute eslint",
