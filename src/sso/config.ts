@@ -84,6 +84,12 @@ export type SsoIdentity = OidcSsoIdentity | SamlSsoIdentity;
 // reject); the route then mints the same `SessionData<UserType>` as every other flow. OIDC is
 // always available; SAML routes mount only when a `samlAdapter` is supplied.
 export type SSOConfig<UserType> = {
+	// Home-realm discovery: map an email domain to the organization whose connection should
+	// handle sign-in. When supplied, mounts `GET {ssoRoute}/authorize?email=…` which routes the
+	// user to their org's OIDC/SAML authorize route.
+	getOrganizationByEmailDomain?: (
+		domain: string
+	) => OrganizationId | undefined | Promise<OrganizationId | undefined>;
 	getSsoUser: (identity: SsoIdentity) => Promise<UserType> | UserType;
 	onSsoCallbackError?: (context: {
 		error: unknown;

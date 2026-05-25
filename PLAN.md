@@ -13,10 +13,10 @@ Current version: `0.25.1`. License CC BY-NC 4.0.
 
 > **Build status (2026-05-25):** F1–F4 + **Workstream A (email/password)** + **Workstream B
 > (MFA)** + **Workstream E1/E2/E3 (audit, lockout, session mgmt)** are DONE on branch
-> `feat/enterprise-auth` — 69 tests green, `build`/`typecheck`/`lint` clean. **Workstream C
-> (SSO) DONE:** C1 `SSOConnectionStore` + C2 enterprise OIDC (citra 0.28.0 discovery/JWKS client)
-> + C3 SAML 2.0 (dep-light `SamlAdapter`); `auth()` mounts `/sso/oidc/:org/*` + `/sso/saml/:org/*`.
-> Remaining: SCIM (D), domain→org routing, SAML SLO. §11 checklist.
+> `feat/enterprise-auth` — 71 tests green, `build`/`typecheck`/`lint` clean. **Workstream C
+> (SSO) COMPLETE:** C1 `SSOConnectionStore` + C2 enterprise OIDC (citra 0.28.0 discovery/JWKS
+> client) + C3 SAML 2.0 (dep-light `SamlAdapter`) + home-realm discovery + SAML SLO; `auth()`
+> mounts `/sso/oidc/:org/*`, `/sso/saml/:org/*`, and `/sso/authorize?email=`. Next: SCIM (D). §11.
 >
 > New Postgres tables/migrations since A: nullable `auth_sessions.authenticated_at_ms`;
 > new tables `auth_mfa_enrollments`, `auth_audit_events`, `auth_lockouts`,
@@ -351,8 +351,10 @@ breaking changes). Each block ships its in-memory store for zero-config dev.
      `promoteToSession`), `GET .../saml/:org/metadata` (SP metadata). `SsoIdentity` is now an
      OIDC|SAML discriminated union (`protocol`). Mounts only when `sso.samlAdapter` supplied.
      4 route tests (fake adapter). C4 wiring done for both protocols.
-   - ⏳ Remaining in C: domain→org routing (`getOrganizationByEmailDomain`); SAML SLO; a full
-     IdP-mocked OIDC callback E2E.
+   - ✅ Closed out C: home-realm discovery (`getOrganizationByEmailDomain` →
+     `GET {ssoRoute}/authorize?email=`), SAML SLO (`GET .../saml/:org/logout` clears the session
+     via shared `clearSession` + bounces to the IdP SLO URL), and a full IdP-mocked OIDC
+     authorize→callback E2E (signed id_token verified against a mock JWKS). **Workstream C COMPLETE.**
 6. **Workstream D — SCIM** → follows SSO (same per-org connection model).
 7. **Workstream E4/E5 + WebAuthn** — RBAC hooks, compliance, passkeys.
 

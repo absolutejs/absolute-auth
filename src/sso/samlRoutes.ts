@@ -1,5 +1,5 @@
 import { Elysia, t } from 'elysia';
-import { promoteToSession } from '../session/promote';
+import { clearSession, promoteToSession } from '../session/promote';
 import { sessionStore } from '../session/state';
 import type { AuthSessionStore } from '../session/types';
 import { userSessionIdTypebox } from '../typebox';
@@ -48,6 +48,7 @@ export const samlSsoRoutes = <UserType>({
 	const authorizeRoute: RouteString = `${ssoRoute}/saml/:organizationId/authorize`;
 	const acsRoute: RouteString = `${ssoRoute}/saml/:organizationId/acs`;
 	const metadataRoute: RouteString = `${ssoRoute}/saml/:organizationId/metadata`;
+	const logoutRoute: RouteString = `${ssoRoute}/saml/:organizationId/logout`;
 
 	const acsUrlFor = (requestUrl: string, organizationId: string) =>
 		`${new URL(requestUrl).origin}${ssoRoute}/saml/${organizationId}/acs`;
@@ -185,5 +186,39 @@ export const samlSsoRoutes = <UserType>({
 				});
 			},
 			{ params: t.Object({ organizationId: t.String() }) }
+		)
+		.get(
+			logoutRoute,
+			// Single Logout: always clear the local session, then bounce to the IdP's SLO
+			// endpoint (if the connection declares one) so the IdP can end its own session.
+			async ({
+				cookie: { user_session_id },
+				params: { organizationId },
+				redirect,
+				store: { session }
+			}) => {
+				const connection =
+					await ssoConnectionStore.getConnectionByOrganization(
+						organizationId,
+						'saml'
+					);
+				await clearSession({
+					authSessionStore,
+					cookie: user_session_id,
+					inMemorySession: session
+				});
+				const idpSloUrl =
+					connection?.type === 'saml'
+						? connection.config.idpSloUrl
+						: undefined;
+
+				return redirect(idpSloUrl ?? '/');
+			},
+			{
+				cookie: t.Cookie({
+					user_session_id: t.Optional(userSessionIdTypebox)
+				}),
+				params: t.Object({ organizationId: t.String() })
+			}
 		);
 };

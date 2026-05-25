@@ -132,4 +132,40 @@ describe('SAML SSO routes', () => {
 		);
 		expect(await response.text()).toContain('EntityDescriptor');
 	});
+
+	test('logout clears the session and bounces to the IdP SLO endpoint', async () => {
+		const ssoConnectionStore = createInMemorySsoConnectionStore();
+		const app = auth<TestUser>({
+			providersConfiguration: {},
+			sso: {
+				getSsoUser: resolveUser,
+				samlAdapter: fakeSamlAdapter,
+				ssoConnectionStore
+			}
+		});
+		await ssoConnectionStore.saveConnection({
+			...samlConnection,
+			config: {
+				...samlConnection.config,
+				idpSloUrl: 'https://idp.test/slo'
+			}
+		});
+
+		const response = await (
+			await app
+		).handle(
+			new Request('http://localhost/sso/saml/acme/logout', {
+				headers: {
+					cookie: 'user_session_id=11111111-1111-1111-1111-111111111111'
+				},
+				redirect: 'manual'
+			})
+		);
+
+		expect(response.status).toBe(HTTP_FOUND);
+		expect(response.headers.get('location')).toBe('https://idp.test/slo');
+		expect(response.headers.getSetCookie().join(';')).toContain(
+			'user_session_id'
+		);
+	});
 });

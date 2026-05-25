@@ -27,6 +27,7 @@ import { signout } from './routes/signout';
 import { userStatus } from './routes/userStatus';
 import { sessionCleanup } from './session/cleanup';
 import type { AuthSessionStore } from './session/types';
+import { ssoDiscoveryRoute } from './sso/discoveryRoute';
 import { oidcSsoRoutes } from './sso/oidcRoutes';
 import { samlSsoRoutes } from './sso/samlRoutes';
 import { AuthConfig, ClientProviders } from './types';
@@ -204,6 +205,16 @@ export const auth = async <UserType>({
 					})
 				: new Elysia()
 		)
+		.use(
+			sso && sso.getOrganizationByEmailDomain
+				? ssoDiscoveryRoute({
+						getOrganizationByEmailDomain:
+							sso.getOrganizationByEmailDomain,
+						ssoConnectionStore: sso.ssoConnectionStore,
+						ssoRoute: sso.ssoRoute
+					})
+				: new Elysia()
+		)
 		.use(protectRoutePlugin<UserType>({ authSessionStore }))
 		.use(stepUpPlugin<UserType>({ authSessionStore }))
 		.use(
@@ -353,6 +364,7 @@ export {
 } from './audit/postgresAuditStore';
 export * from './sso/types';
 export * from './sso/config';
+export { ssoDiscoveryRoute } from './sso/discoveryRoute';
 export { oidcSsoRoutes } from './sso/oidcRoutes';
 export { samlSsoRoutes } from './sso/samlRoutes';
 export { createInMemorySsoConnectionStore } from './sso/inMemorySsoConnectionStore';
