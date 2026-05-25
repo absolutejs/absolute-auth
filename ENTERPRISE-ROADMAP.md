@@ -51,7 +51,7 @@ fingerprint signal intake.
 the **framework + hooks**, not a proprietary fingerprint.
 **Size:** medium.
 
-## #1 — OAuth2/OIDC provider ("Sign in with <yourapp>") ☐
+## #1 — OAuth2/OIDC provider ("Sign in with <yourapp>") ☑ (shipped, with DPoP)
 **WorkOS:** "OAuth Applications" — your app becomes an OAuth/OIDC provider; issues JWT
 access/id tokens verified via hosted JWKS (`api.workos.com/sso/jwks/<clientId>`).
 ([docs](https://workos.com/docs/authkit/connect/oauth))

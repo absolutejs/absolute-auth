@@ -17,6 +17,7 @@ import type { AuthIdentityConflict } from './errors';
 import type { AuthHtmxConfig, AuthHtmxUser } from './htmx/types';
 import type { LockoutConfig } from './lockout/config';
 import type { MfaConfig } from './mfa/config';
+import type { OidcProviderConfig } from './oidc/config';
 import type { OrganizationsConfig } from './organizations/config';
 import type { PasswordlessConfig } from './passwordless/config';
 import type { PortalConfig } from './portal/config';
@@ -395,6 +396,13 @@ export type AuthConfig<UserType> = {
 	 *  Pair with the exported `createApiKey` / `resolveApiPrincipal` / `hasScopes`
 	 *  helpers to issue and guard with static keys. */
 	apikeys?: ApiKeysConfig;
+	/** OAuth2 / OIDC provider — makes your app an identity provider ("Sign in with
+	 *  <yourapp>"). Mounts `{oidcRoute}/authorize` + `/token` + `/jwks` and
+	 *  `/.well-known/openid-configuration`: authorization_code + mandatory PKCE, ES256
+	 *  JWTs signed by a key you own (self-hosted JWKS), refresh-token rotation, and
+	 *  optional DPoP (RFC 9449) sender-constrained tokens. The authorize endpoint reuses
+	 *  the package session, so the IdP login gets passkeys / MFA / SSO for free. */
+	oidc?: OidcProviderConfig<UserType>;
 	/** First-class multi-tenancy (the WorkOS model). When present, mounts organization +
 	 *  membership + invitation routes under `{organizationsRoute}`: list the caller's orgs, create
 	 *  one (caller becomes owner), invite/accept/revoke by email, and list/remove members. Ties the

@@ -16,6 +16,7 @@ import { createAuthHtmxRoutes } from './htmx/routes';
 import { createLockoutGuard } from './lockout/config';
 import { createMfaGate } from './mfa/gate';
 import { mfaRoutes } from './mfa/routes';
+import { oidcProviderRoutes } from './oidc/routes';
 import { organizationRoutes } from './organizations/routes';
 import { passwordlessRoutes } from './passwordless/routes';
 import { portalRoutes } from './portal/routes';
@@ -64,6 +65,7 @@ export const auth = async <UserType>({
 	sso,
 	scim,
 	apikeys,
+	oidc,
 	organizations,
 	roles,
 	portal,
@@ -260,6 +262,11 @@ export const auth = async <UserType>({
 		)
 		.use(scim ? scimRoutes(scim) : new Elysia())
 		.use(apikeys ? apiKeysRoutes(apikeys) : new Elysia())
+		.use(
+			oidc
+				? oidcProviderRoutes<UserType>({ ...oidc, authSessionStore })
+				: new Elysia()
+		)
 		.use(
 			organizations
 				? organizationRoutes<UserType>({
@@ -512,6 +519,35 @@ export {
 	createPostgresApiClientStore,
 	createPostgresApiKeyStore
 } from './apikeys/postgresStores';
+export * from './oidc/config';
+export * from './oidc/types';
+export { oidcProviderRoutes } from './oidc/routes';
+export {
+	generateSigningKey,
+	jwkThumbprint,
+	signJwt,
+	toPublicJwk,
+	verifyJwt
+} from './oidc/keys';
+export type { SigningKey } from './oidc/keys';
+export { verifyDpopProof } from './oidc/dpop';
+export type { DpopResult } from './oidc/dpop';
+export {
+	createInMemoryAuthorizationCodeStore,
+	createInMemoryOAuthClientStore,
+	createInMemoryOidcRefreshTokenStore
+} from './oidc/inMemoryStores';
+export {
+	createNeonAuthorizationCodeStore,
+	createNeonOAuthClientStore,
+	createNeonOidcRefreshTokenStore,
+	createPostgresAuthorizationCodeStore,
+	createPostgresOAuthClientStore,
+	createPostgresOidcRefreshTokenStore,
+	oauthClientsTable,
+	oauthCodesTable,
+	oauthRefreshTokensTable
+} from './oidc/postgresStores';
 export * from './adaptive/config';
 export * from './adaptive/types';
 export {
