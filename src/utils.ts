@@ -12,6 +12,7 @@ import { AuthHtmxConfig } from './htmx/types';
 import { isNonEmptyString, isStatusResponse } from './typeGuards';
 import {
 	AuthConfig,
+	AuthSettings,
 	InsantiateUserSessionProps,
 	OAuth2ConfigurationOptions,
 	ResolvedOAuthAuthorization,
@@ -24,6 +25,7 @@ export const defineAuthConfig = <UserType>(
 	configuration: AuthConfig<UserType>
 ) => configuration;
 export const defineAuthHtmxConfig = (htmxConfig: AuthHtmxConfig) => htmxConfig;
+export const defineAuthSettings = (settings: AuthSettings) => settings;
 export const defineProvidersConfiguration = (
 	providersConfiguration: OAuth2ConfigurationOptions
 ) => providersConfiguration;

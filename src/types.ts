@@ -435,6 +435,26 @@ export type AuthConfig<UserType> = {
 	onSessionCleanup?: OnSessionCleanup<UserType>;
 };
 
+/** The serializable subset of `AuthConfig` — the route paths, session durations, and
+ *  limits that can live in a data file (`auth.config.ts` via `defineAuthSettings`) and
+ *  be edited from tooling, separate from the code wiring (stores, hooks, callbacks)
+ *  that stays in the `auth()` call. Spread alongside the rest:
+ *  `auth({ ...defineAuthSettings({...}), authSessionStore, providersConfiguration })`. */
+export type AuthSettings = Pick<
+	AuthConfig<unknown>,
+	| 'authorizeRoute'
+	| 'callbackRoute'
+	| 'cleanupIntervalMs'
+	| 'maxSessions'
+	| 'profileRoute'
+	| 'refreshRoute'
+	| 'revokeRoute'
+	| 'sessionDurationMs'
+	| 'signoutRoute'
+	| 'statusRoute'
+	| 'unregisteredSessionDurationMs'
+>;
+
 export type ClientProviderEntry = {
 	clientName?: string;
 	providerInstance: OAuth2Client<ProviderOption>;
