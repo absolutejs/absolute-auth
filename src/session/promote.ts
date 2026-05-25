@@ -1,7 +1,7 @@
 import type { Cookie } from 'elysia';
-import { createSessionCompatibilityLayer } from '../session/access';
-import type { AuthSessionStore } from '../session/types';
 import type { SessionRecord, UserSessionId } from '../types';
+import { createSessionCompatibilityLayer } from './access';
+import type { AuthSessionStore } from './types';
 
 type PromoteToSessionProps<UserType> = {
 	authSessionStore?: AuthSessionStore<UserType>;
@@ -11,9 +11,10 @@ type PromoteToSessionProps<UserType> = {
 	user: UserType;
 };
 
-// Creates a registered session for a credential-authenticated user and rotates the
-// session cookie. Deliberately omits `accessToken` — credential sessions are not backed
-// by an OAuth provider token. Shared by register (auto-login) and login.
+// Creates a registered session for a non-OAuth (credential / MFA-promoted) user and
+// rotates the session cookie. Deliberately omits `accessToken` — these sessions are not
+// backed by an OAuth provider token. Shared by credential register/login and the MFA
+// challenge route.
 export const promoteToSession = async <UserType>({
 	authSessionStore,
 	cookie,
