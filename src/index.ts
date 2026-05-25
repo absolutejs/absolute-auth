@@ -450,6 +450,14 @@ export {
 
 export * from './audit/config';
 export * from './audit/types';
+export {
+	createTamperEvidentSink,
+	hashAuditEvent,
+	verifyAuditChain
+} from './audit/integrity';
+export type { AuditChainResult, AuditIntegrity } from './audit/integrity';
+export { createSiemLogStream } from './audit/siem';
+export type { SiemEndpoint, SiemFormat } from './audit/siem';
 export * from './authorization/config';
 export { protectPermissionPlugin } from './authorization/protectPermission';
 export * from './compliance/config';

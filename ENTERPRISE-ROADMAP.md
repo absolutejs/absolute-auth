@@ -29,7 +29,7 @@ event; admin-gated by the consumer.
 works with the Redis session store; impersonated sessions visibly flagged.
 **Size:** small.
 
-## #3 — Tamper-evident audit + SIEM streaming ☐
+## #3 — Tamper-evident audit + SIEM streaming ☑ (shipped)
 **WorkOS:** typed event schema, search/CSV export, **Log Streams** to
 Datadog/Splunk/S3/GCS/HTTP, retention tiers — *not* tamper-evident.
 ([audit](https://workos.com/docs/audit-logs) · [log streams](https://workos.com/docs/audit-logs/log-streams))
