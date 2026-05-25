@@ -9,7 +9,14 @@ way, on the grain the package already has.
 > `~/onspark/absolutejs/dealroom/MIGRATION_PLAN.md`. onSpark is the first consumer;
 > build to its needs, ship to the ecosystem.
 
-Current version: `0.22.7`. License CC BY-NC 4.0.
+Current version: `0.25.1`. License CC BY-NC 4.0.
+
+> **Build status (2026-05-24):** F1–F4 foundations + Workstream A stores/policy are DONE on
+> branch `feat/enterprise-auth` (tests green). See §11 for the live checklist.
+>
+> **Layout note:** `src/` is now organized into **feature folders** (`routes/`, `session/`,
+> `credentials/`, `stores/`, …), not flat. The composed entry function is `auth<UserType>()`
+> in `src/index.ts`. New families get their own folder (`src/mfa/`, `src/sso/`, …).
 
 ---
 
@@ -17,9 +24,9 @@ Current version: `0.22.7`. License CC BY-NC 4.0.
 
 Every new feature MUST follow the patterns already in `src/`:
 
-- **One responsibility per file, flat `src/`.** Mirror `authorize.ts`, `callback.ts`,
-  `refresh.ts`. Use prefixes for new families: `credentials*`, `mfa*`, `sso*`,
-  `scim*`, `audit*`. Named exports only — no default exports.
+- **One responsibility per file, in feature folders.** `src/` is organized into folders
+  (`routes/`, `session/`, `credentials/`, `stores/`, …); new families get their own folder
+  (`src/mfa/`, `src/sso/`, `src/scim/`, `src/audit/`). Named exports only — no default exports.
 - **A feature is a generic function returning an Elysia instance**, mounted via
   `.use()` inside `absoluteAuth<UserType>()` in `src/index.ts`, **before**
   `protectRoutePlugin`. Reuse `.use(sessionStore<UserType>())` for state.
@@ -285,8 +292,15 @@ breaking changes). Each block ships its in-memory store for zero-config dev.
 
 ## 11. Sequencing (and onSpark unblocks)
 
-1. **F1–F4 foundations** (test runner + crypto + tenancy + store scaffolding).
-2. **Workstream A — email/password** → unblocks onSpark `AU2` + backlog P33/P40.
+1. ✅ **F1–F4 foundations** (test runner + crypto + tenancy + store scaffolding) — DONE.
+   - ✅ F1 `bun test` + `tsconfig.eslint.json`; tooling on the `absolute` CLI.
+   - ✅ F2 `src/crypto.ts` (password/tokens/TOTP/AES-GCM; RFC 6238 vectors verified).
+   - ✅ F3 `src/tenancy.ts` (`OrganizationId` + `WithOrganization`).
+   - ✅ F4 `src/stores/postgres.ts` (`AnyPgDatabase` + `createNeonDatabase`).
+2. 🚧 **Workstream A — email/password** → unblocks onSpark `AU2` + backlog P33/P40.
+   - ✅ `CredentialStore` (in-memory + Postgres), `passwordPolicy.ts` (+ HIBP).
+   - ⬜ `register`/`emailVerification`, `login` (MFA seam)/`passwordReset` routes.
+   - ⬜ Wire `credentials` block into `auth()`, exports, round-trip integration test.
 3. **Workstream B — MFA (TOTP + backup codes)** → unblocks onSpark `AU3` / backlog P34.
 4. **Workstream E1/E2/E3 — audit, lockout, session mgmt** (cheap, high enterprise
    signal; E1 is a SOC 2 prerequisite).
@@ -297,15 +311,23 @@ breaking changes). Each block ships its in-memory store for zero-config dev.
 Start at **F1 → Workstream A** to make immediate progress in parallel with the onSpark
 voice work; A is also the highest-leverage piece for the dealroom auth migration.
 
-## 12. Open decisions
+## 12. Decisions (resolved 2026-05-24)
 
-- **SAML dep:** `@node-saml/node-saml` vs `samlify` vs minimal in-house DSig — pick
-  one, isolate behind `SamlAdapter`.
-- **OIDC enterprise:** extend `citra` with a runtime/discovery-configured provider, or
-  keep enterprise OIDC inside auth? (Prefer extending citra so all OAuth lives there.)
-- **JWKS verify:** WebCrypto in-house vs `jose` dependency.
-- **WebAuthn:** in-house vs `@simplewebauthn/server`.
-- **Drizzle dialect:** Neon today — do we also ship a generic Postgres/SQLite store to
-  match `@absolutejs/rag` adapters? (Recommend yes, for parity.)
-- **First-party email transport:** stay hook-only (`onSendEmail`), or ship an optional
-  Resend adapter? (Recommend hook-only to keep the package transport-agnostic.)
+- **Drizzle dialect:** ✅ each new store ships in-memory + ONE generic Drizzle-Postgres
+  impl that accepts an `AnyPgDatabase` (`PgDatabase<PgQueryResultHKT>`) — runs on Neon AND
+  node-postgres, no second driver bundled. `createNeon<X>Store(url)` is a convenience
+  wrapper. SQLite deferred unless a consumer needs it.
+- **First-party email/SMS transport:** ✅ hook-only (`onSendEmail` / `onSendOtp`). The
+  package bundles no transport and stays agnostic; consumer brings Resend/SES/Twilio.
+- **JWKS verify:** ✅ in-house via WebCrypto (`crypto.subtle` RS256/ES256). No `jose`.
+- **OIDC enterprise:** ✅ extend `citra` with a runtime/discovery-configured provider so
+  all OAuth/OIDC lives there (Workstream C).
+- **SAML dep:** ⏳ deferred to Workstream C. Lean: `@node-saml/node-saml` behind a
+  `SamlAdapter` (hand-rolling XML DSig is a security footgun) — confirm when we start C.
+- **WebAuthn:** ⏳ deferred to late phase. Lean: `@simplewebauthn/server` behind an
+  adapter — confirm when we start it.
+
+> Principle that drove the above: **do it in-house with Bun + WebCrypto + Elysia**
+> (passwords, TOTP, tokens, AES-GCM, JWKS, SCIM, audit, lockout). A bundled dependency is
+> reserved for the two primitives where hand-rolling is genuinely dangerous — SAML
+> signature validation and WebAuthn attestation — each isolated behind an adapter.
