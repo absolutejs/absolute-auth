@@ -15,6 +15,7 @@ import { createAuthHtmxRoutes } from './htmx/routes';
 import { createLockoutGuard } from './lockout/config';
 import { createMfaGate } from './mfa/gate';
 import { mfaRoutes } from './mfa/routes';
+import { organizationRoutes } from './organizations/routes';
 import type { AuthHtmxConfig, AuthHtmxUser } from './htmx/types';
 import { buildClientProviders } from './providers/clients';
 import { authorize } from './routes/authorize';
@@ -56,6 +57,7 @@ export const auth = async <UserType>({
 	sessions,
 	sso,
 	scim,
+	organizations,
 	authorization,
 	compliance,
 	webauthn,
@@ -224,6 +226,15 @@ export const auth = async <UserType>({
 				: new Elysia()
 		)
 		.use(scim ? scimRoutes(scim) : new Elysia())
+		.use(
+			organizations
+				? organizationRoutes<UserType>({
+						...organizations,
+						authSessionStore,
+						emit: auditEmit
+					})
+				: new Elysia()
+		)
 		.use(
 			webauthn
 				? webauthnRoutes<UserType>({
@@ -435,3 +446,20 @@ export {
 	createPostgresWebAuthnCredentialStore,
 	webauthnCredentialsTable
 } from './webauthn/postgresWebAuthnCredentialStore';
+export * from './organizations/config';
+export * from './organizations/types';
+export {
+	acceptInvitation,
+	createOrganization,
+	inviteToOrganization,
+	listUserOrganizations
+} from './organizations/operations';
+export { organizationRoutes } from './organizations/routes';
+export { createInMemoryOrganizationStore } from './organizations/inMemoryOrganizationStore';
+export {
+	createNeonOrganizationStore,
+	createPostgresOrganizationStore,
+	organizationInvitationsTable,
+	organizationMembershipsTable,
+	organizationsTable
+} from './organizations/postgresOrganizationStore';

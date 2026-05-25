@@ -16,6 +16,7 @@ import type { AuthIdentityConflict } from './errors';
 import type { AuthHtmxConfig, AuthHtmxUser } from './htmx/types';
 import type { LockoutConfig } from './lockout/config';
 import type { MfaConfig } from './mfa/config';
+import type { OrganizationsConfig } from './organizations/config';
 import type { ScimConfig } from './scim/config';
 import type { SessionsConfig } from './session/sessionsConfig';
 import type { AuthSessionStore } from './session/types';
@@ -363,6 +364,11 @@ export type AuthConfig<UserType> = {
 	 *  mounts `{scimRoute}/Users` (+ `/ServiceProviderConfig`) with per-org bearer-token auth via
 	 *  `scimTokenStore`, and maps SCIM resources to the consumer's user store through hooks. */
 	scim?: ScimConfig;
+	/** First-class multi-tenancy (the WorkOS model). When present, mounts organization +
+	 *  membership + invitation routes under `{organizationsRoute}`: list the caller's orgs, create
+	 *  one (caller becomes owner), invite/accept/revoke by email, and list/remove members. Ties the
+	 *  bare `organizationId` used by SSO/SCIM/RBAC into a real tenant model with org-scoped roles. */
+	organizations?: OrganizationsConfig<UserType>;
 	/** Role-based / attribute-based access control (E4). When present, `auth()` exposes a
 	 *  `protectPermission(check, handler)` derive (alongside `protectRoute`) that delegates the
 	 *  decision to your `hasPermission` hook — the package stays schema-agnostic about roles. */
