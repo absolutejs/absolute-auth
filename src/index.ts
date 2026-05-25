@@ -1,5 +1,13 @@
 import { createOAuth2Client } from 'citra';
 import { Elysia } from 'elysia';
+import { createAuditEmitter } from './audit/config';
+import {
+	composeCallbackAudit,
+	composeCredentialsAudit,
+	composeMfaAudit,
+	composeRevocationAudit,
+	composeSignOutAudit
+} from './audit/wrap';
 import { credentialRoutes } from './credentials/routes';
 import { createAuthHtmxRoutes } from './htmx/routes';
 import { createMfaGate } from './mfa/gate';
@@ -32,6 +40,7 @@ export const auth = async <UserType>({
 	maxSessions,
 	sessionDurationMs,
 	authSessionStore,
+	audit,
 	credentials,
 	mfa,
 	htmx,
@@ -58,6 +67,8 @@ export const auth = async <UserType>({
 		createOAuth2Client
 	);
 
+	const auditEmit = audit ? createAuditEmitter(audit) : undefined;
+
 	// When both blocks are configured, default the login MFA gate to the MFAStore
 	// enrollment check unless the consumer supplied their own.
 	const credentialsConfig = credentials
@@ -68,6 +79,24 @@ export const auth = async <UserType>({
 					(mfa ? createMfaGate(mfa) : undefined)
 			}
 		: undefined;
+	const auditedCredentials =
+		credentialsConfig && auditEmit
+			? composeCredentialsAudit(
+					credentialsConfig,
+					auditEmit,
+					audit?.getUserId
+				)
+			: credentialsConfig;
+	const auditedMfa = mfa && auditEmit ? composeMfaAudit(mfa, auditEmit) : mfa;
+	const auditedOnCallbackSuccess = auditEmit
+		? composeCallbackAudit(onCallbackSuccess, auditEmit)
+		: onCallbackSuccess;
+	const auditedOnRevocationSuccess = auditEmit
+		? composeRevocationAudit(onRevocationSuccess, auditEmit)
+		: onRevocationSuccess;
+	const auditedOnSignOut = auditEmit
+		? composeSignOutAudit(onSignOut, auditEmit)
+		: onSignOut;
 
 	return new Elysia()
 		.use(
@@ -78,13 +107,19 @@ export const auth = async <UserType>({
 				onSessionCleanup
 			})
 		)
-		.use(signout({ authSessionStore, onSignOut, signoutRoute }))
+		.use(
+			signout({
+				authSessionStore,
+				onSignOut: auditedOnSignOut,
+				signoutRoute
+			})
+		)
 		.use(
 			revoke({
 				authSessionStore,
 				clientProviders,
 				onRevocationError,
-				onRevocationSuccess,
+				onRevocationSuccess: auditedOnRevocationSuccess,
 				revokeRoute
 			})
 		)
@@ -113,7 +148,7 @@ export const auth = async <UserType>({
 				callbackRoute,
 				clientProviders,
 				onCallbackError,
-				onCallbackSuccess,
+				onCallbackSuccess: auditedOnCallbackSuccess,
 				onLinkConnector,
 				onLinkIdentity,
 				onLinkIdentityConflict,
@@ -129,15 +164,17 @@ export const auth = async <UserType>({
 			})
 		)
 		.use(
-			credentialsConfig
+			auditedCredentials
 				? credentialRoutes<UserType>({
-						...credentialsConfig,
+						...auditedCredentials,
 						authSessionStore
 					})
 				: new Elysia()
 		)
 		.use(
-			mfa ? mfaRoutes<UserType>({ ...mfa, authSessionStore }) : new Elysia()
+			auditedMfa
+				? mfaRoutes<UserType>({ ...auditedMfa, authSessionStore })
+				: new Elysia()
 		)
 		.use(protectRoutePlugin<UserType>({ authSessionStore }))
 		.use(stepUpPlugin<UserType>({ authSessionStore }))
@@ -263,3 +300,12 @@ export {
 	createPostgresMfaStore,
 	mfaEnrollmentsTable
 } from './mfa/postgresMfaStore';
+
+export * from './audit/config';
+export * from './audit/types';
+export { createInMemoryAuditSink } from './audit/inMemoryAuditStore';
+export {
+	auditEventsTable,
+	createNeonAuditSink,
+	createPostgresAuditSink
+} from './audit/postgresAuditStore';

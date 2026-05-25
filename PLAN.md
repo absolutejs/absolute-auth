@@ -325,8 +325,12 @@ breaking changes). Each block ships its in-memory store for zero-config dev.
    - ✅ B4 `/auth/mfa/challenge` promotes the parked session; `createMfaGate` auto-wired
      into `credentials.isMfaRequired` by `auth()`; full enroll→login→challenge test.
    - ✅ B5 step-up: `authenticatedAt` on `SessionData` + `stepUpPlugin` (`requireRecentAuth`).
-4. **Workstream E1/E2/E3 — audit, lockout, session mgmt** (cheap, high enterprise
+4. 🚧 **Workstream E1/E2/E3 — audit, lockout, session mgmt** (cheap, high enterprise
    signal; E1 is a SOC 2 prerequisite).
+   - ✅ E1 audit: `AuditSink` (in-memory + Postgres), `AuditConfig`, `createAuditEmitter`,
+     `compose*Audit` wrappers; `auth()` emits register/login/mfa/logout/etc. events.
+   - ⬜ E2 rate limiting & account lockout.
+   - ⬜ E3 session management (list + remote revoke).
 5. **Workstream C — SSO (OIDC first, then SAML)** → the headline enterprise sale.
 6. **Workstream D — SCIM** → follows SSO (same per-org connection model).
 7. **Workstream E4/E5 + WebAuthn** — RBAC hooks, compliance, passkeys.

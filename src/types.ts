@@ -8,6 +8,7 @@ import {
 } from 'citra';
 import { Cookie, status as statusType, redirect as redirectType } from 'elysia';
 import { ElysiaCustomStatusResponse } from 'elysia/error';
+import type { AuditConfig } from './audit/config';
 import type { CredentialsConfig } from './credentials/config';
 import type { AuthIdentityConflict } from './errors';
 import type { AuthHtmxConfig, AuthHtmxUser } from './htmx/types';
@@ -319,6 +320,10 @@ export type AuthConfig<UserType> = {
 	maxSessions?: number;
 	sessionDurationMs?: number;
 	authSessionStore?: AuthSessionStore<UserType>;
+	/** Append-only audit logging. When present, `auth()` emits structured events
+	 *  (register, login, mfa_*, password_reset, logout, …) from every flow into the
+	 *  `auditStore` and/or `onAuditEvent` hook. SOC 2 prerequisite. */
+	audit?: AuditConfig<UserType>;
 	/** Local email/password (credentials) block. Additive and optional — when present,
 	 *  mounts register / verify-email / login / reset-password routes that produce the
 	 *  same `SessionData<UserType>` as OAuth, transparent to `protectRoute`. */
