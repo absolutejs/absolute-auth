@@ -13,10 +13,10 @@ Current version: `0.25.1`. License CC BY-NC 4.0.
 
 > **Build status (2026-05-25):** F1–F4 + **Workstream A (email/password)** + **Workstream B
 > (MFA)** + **Workstream E1/E2/E3 (audit, lockout, session mgmt)** are DONE on branch
-> `feat/enterprise-auth` — 75 tests green, `build`/`typecheck`/`lint` clean. **Workstream C
-> (SSO) COMPLETE** (OIDC + SAML + discovery + SLO). **Workstream D (SCIM) — Users DONE:**
-> `ScimTokenStore` + `{scimRoute}/Users` (+ ServiceProviderConfig) with per-org bearer auth,
-> mapping hooks, mounted via the `scim` block. Remaining: SCIM Groups, then E4/E5 + WebAuthn. §11.
+> `feat/enterprise-auth` — 77 tests green, `build`/`typecheck`/`lint` clean. **Workstreams C
+> (SSO) + D (SCIM) COMPLETE.** SSO: OIDC + SAML + discovery + SLO. SCIM: `ScimTokenStore` +
+> `{scimRoute}/Users` + `/Groups` + `/ServiceProviderConfig` with per-org bearer auth + mapping
+> hooks, mounted via the `scim` block. Next per §11: **E4/E5 (RBAC, compliance) + WebAuthn**. §11.
 >
 > New Postgres tables/migrations since A: nullable `auth_sessions.authenticated_at_ms`;
 > new tables `auth_mfa_enrollments`, `auth_audit_events`, `auth_lockouts`,
@@ -364,7 +364,10 @@ breaking changes). Each block ships its in-memory store for zero-config dev.
      listScimUsers, onScimUserCreate/Replace/Deactivate).
    - ✅ D3 wired into `auth()` via the `scim` block; exports; 4 tests (token store + full
      create→list→get→patch-deactivate→delete round-trip + 401).
-   - ⏳ Remaining in D: SCIM Groups (`/Groups` + `onScimGroupSync`).
+   - ✅ D4 SCIM Groups: `{scimRoute}/Groups` (POST/GET-list/GET:id/PUT/PATCH/DELETE), PatchOp
+     member add/remove (incl. `members[value eq "id"]`) + displayName; optional group hooks
+     (getScimGroup, listScimGroups, onScimGroupCreate/Replace/Delete) — routes 501 when omitted.
+     (`ScimUserFilter` generalized to `ScimFilter`, shared by Users + Groups). **Workstream D COMPLETE.**
 7. **Workstream E4/E5 + WebAuthn** — RBAC hooks, compliance, passkeys.
 
 Start at **F1 → Workstream A** to make immediate progress in parallel with the onSpark

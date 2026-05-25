@@ -2,10 +2,12 @@ import { generateSecureToken, hashToken } from '../crypto';
 import type { OrganizationId } from '../tenancy';
 import type { RouteString } from '../types';
 import type {
+	ScimFilter,
+	ScimGroup,
+	ScimGroupInput,
 	ScimToken,
 	ScimTokenStore,
 	ScimUser,
-	ScimUserFilter,
 	ScimUserInput
 } from './types';
 
@@ -17,14 +19,37 @@ const BEARER_PREFIX = 'Bearer ';
 // SCIM protocol + per-org bearer-token auth; the consumer owns its user table through these
 // mapping hooks, exactly like the OAuth / credentials / SSO surfaces.
 export type ScimConfig = {
+	// Group hooks are optional — when omitted, the `/Groups` routes respond 501 Not Implemented.
+	getScimGroup?: (context: {
+		id: string;
+		organizationId: OrganizationId;
+	}) => ScimGroup | undefined | Promise<ScimGroup | undefined>;
 	getScimUser: (context: {
 		id: string;
 		organizationId: OrganizationId;
 	}) => ScimUser | undefined | Promise<ScimUser | undefined>;
+	listScimGroups?: (context: {
+		filter?: ScimFilter;
+		organizationId: OrganizationId;
+	}) => ScimGroup[] | Promise<ScimGroup[]>;
 	listScimUsers: (context: {
-		filter?: ScimUserFilter;
+		filter?: ScimFilter;
 		organizationId: OrganizationId;
 	}) => ScimUser[] | Promise<ScimUser[]>;
+	onScimGroupCreate?: (context: {
+		input: ScimGroupInput;
+		organizationId: OrganizationId;
+	}) => ScimGroup | Promise<ScimGroup>;
+	onScimGroupDelete?: (context: {
+		id: string;
+		organizationId: OrganizationId;
+	}) => void | Promise<void>;
+	// PUT (full replace) and PATCH (member add/remove + displayName) both land here.
+	onScimGroupReplace?: (context: {
+		id: string;
+		input: ScimGroupInput;
+		organizationId: OrganizationId;
+	}) => ScimGroup | undefined | Promise<ScimGroup | undefined>;
 	onScimUserCreate: (context: {
 		input: ScimUserInput;
 		organizationId: OrganizationId;

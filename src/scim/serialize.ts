@@ -1,6 +1,13 @@
-import type { ScimUser, ScimUserFilter, ScimUserInput } from './types';
+import type {
+	ScimFilter,
+	ScimGroup,
+	ScimGroupInput,
+	ScimUser,
+	ScimUserInput
+} from './types';
 
 const USER_SCHEMA = 'urn:ietf:params:scim:schemas:core:2.0:User';
+const GROUP_SCHEMA = 'urn:ietf:params:scim:schemas:core:2.0:Group';
 const LIST_SCHEMA = 'urn:ietf:params:scim:api:messages:2.0:ListResponse';
 const ERROR_SCHEMA = 'urn:ietf:params:scim:api:messages:2.0:Error';
 const SPC_SCHEMA =
@@ -157,7 +164,7 @@ export const listResponse = (resources: Record<string, unknown>[]) => ({
 });
 export const parseFilter = (
 	filter: string | undefined
-): ScimUserFilter | undefined => {
+): ScimFilter | undefined => {
 	if (filter === undefined) return undefined;
 	const match = FILTER_PATTERN.exec(filter);
 	const attribute = match?.[1];
@@ -195,3 +202,116 @@ export const serviceProviderConfig = (location: string) => ({
 	schemas: [SPC_SCHEMA],
 	sort: { supported: false }
 });
+
+const REMOVE_MEMBER_PATTERN = /^members\[\s*value\s+eq\s+"([^"]*)"\s*\]$/iu;
+
+const parseMembers = (value: unknown) => {
+	if (!Array.isArray(value)) return [];
+
+	return value.flatMap((entry) => {
+		const memberValue = stringField(entry, 'value');
+		if (memberValue === undefined) return [];
+		const display = stringField(entry, 'display');
+
+		return [
+			display === undefined
+				? { value: memberValue }
+				: { display, value: memberValue }
+		];
+	});
+};
+
+const applyGroupValueObject = (target: ScimGroupInput, value: object) => {
+	const displayName = stringField(value, 'displayName');
+	if (displayName !== undefined) target.displayName = displayName;
+	const members = Reflect.get(value, 'members');
+	if (Array.isArray(members)) target.members = parseMembers(members);
+};
+
+const applyGroupPath = (
+	target: ScimGroupInput,
+	path: string,
+	opName: string,
+	value: unknown
+) => {
+	const removed = REMOVE_MEMBER_PATTERN.exec(path);
+	if (removed !== null) {
+		target.members = target.members.filter(
+			(member) => member.value !== removed[1]
+		);
+
+		return;
+	}
+
+	const key = path.toLowerCase();
+	if (key === 'displayname' && typeof value === 'string') {
+		target.displayName = value;
+	}
+	if (key === 'members' && opName === 'remove') target.members = [];
+	if (key === 'members' && opName !== 'remove') {
+		target.members =
+			opName === 'add'
+				? [...target.members, ...parseMembers(value)]
+				: parseMembers(value);
+	}
+};
+
+const applyGroupOperation = (target: ScimGroupInput, operation: unknown) => {
+	if (typeof operation !== 'object' || operation === null) return;
+	const rawOp = Reflect.get(operation, 'op');
+	const op = typeof rawOp === 'string' ? rawOp.toLowerCase() : 'add';
+	const path = Reflect.get(operation, 'path');
+	const value = Reflect.get(operation, 'value');
+	if (typeof path === 'string') {
+		applyGroupPath(target, path, op, value);
+
+		return;
+	}
+	if (typeof value === 'object' && value !== null) {
+		applyGroupValueObject(target, value);
+	}
+};
+
+// Serialize the package's normalized group into the SCIM 2.0 Group wire format.
+export const applyGroupPatch = (group: ScimGroup, body: unknown) => {
+	const next: ScimGroupInput = {
+		displayName: group.displayName,
+		externalId: group.externalId,
+		members: [...group.members]
+	};
+	const operations =
+		typeof body === 'object' && body !== null
+			? Reflect.get(body, 'Operations')
+			: undefined;
+	if (Array.isArray(operations)) {
+		operations.forEach((operation) => applyGroupOperation(next, operation));
+	}
+
+	return next;
+};
+export const parseGroupInput = (body: unknown): ScimGroupInput | undefined => {
+	const displayName = stringField(body, 'displayName');
+	if (displayName === undefined || displayName.length === 0) return undefined;
+
+	return {
+		displayName,
+		externalId: stringField(body, 'externalId'),
+		members: parseMembers(Reflect.get(Object(body), 'members'))
+	};
+};
+export const toGroupResource = (group: ScimGroup, location: string) => {
+	const resource: Record<string, unknown> = {
+		displayName: group.displayName,
+		id: group.id,
+		members: group.members.map((member) =>
+			member.display === undefined
+				? { value: member.value }
+				: { display: member.display, value: member.value }
+		),
+		meta: { location, resourceType: 'Group' },
+		schemas: [GROUP_SCHEMA]
+	};
+	if (group.externalId !== undefined) resource.externalId = group.externalId;
+
+	return resource;
+};

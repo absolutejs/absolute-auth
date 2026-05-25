@@ -7,8 +7,10 @@ import {
 } from '../src/scim/config';
 import { createInMemoryScimTokenStore } from '../src/scim/inMemoryScimTokenStore';
 import type {
+	ScimFilter,
+	ScimGroup,
+	ScimGroupInput,
 	ScimUser,
-	ScimUserFilter,
 	ScimUserInput
 } from '../src/scim/types';
 
@@ -21,7 +23,10 @@ const HTTP_OK = 200;
 const HTTP_CREATED = 201;
 const HTTP_NO_CONTENT = 204;
 const HTTP_UNAUTHORIZED = 401;
+const HTTP_NOT_IMPLEMENTED = 501;
 const SCIM_CONTENT_TYPE = 'application/scim+json';
+const GROUP_SCHEMA = 'urn:ietf:params:scim:schemas:core:2.0:Group';
+const PATCH_OP_SCHEMA = 'urn:ietf:params:scim:api:messages:2.0:PatchOp';
 
 const users = new Map<string, ScimUser>();
 
@@ -29,7 +34,7 @@ const getScimUser = (context: { id: string; organizationId: string }) =>
 	users.get(context.id);
 
 const listScimUsers = (context: {
-	filter?: ScimUserFilter;
+	filter?: ScimFilter;
 	organizationId: string;
 }) => {
 	const all = Array.from(users.values());
@@ -37,6 +42,39 @@ const listScimUsers = (context: {
 	const { attribute, value } = context.filter;
 
 	return all.filter((user) => Reflect.get(user, attribute) === value);
+};
+
+const groups = new Map<string, ScimGroup>();
+
+const getScimGroup = (context: { id: string; organizationId: string }) =>
+	groups.get(context.id);
+
+const listScimGroups = () => Array.from(groups.values());
+
+const onScimGroupCreate = (context: {
+	input: ScimGroupInput;
+	organizationId: string;
+}) => {
+	const group: ScimGroup = { ...context.input, id: crypto.randomUUID() };
+	groups.set(group.id, group);
+
+	return group;
+};
+
+const onScimGroupDelete = (context: { id: string; organizationId: string }) => {
+	groups.delete(context.id);
+};
+
+const onScimGroupReplace = (context: {
+	id: string;
+	input: ScimGroupInput;
+	organizationId: string;
+}) => {
+	if (!groups.has(context.id)) return undefined;
+	const group: ScimGroup = { ...context.input, id: context.id };
+	groups.set(context.id, group);
+
+	return group;
 };
 
 const onScimUserCreate = (context: {
@@ -72,7 +110,7 @@ const scimTokenStore = createInMemoryScimTokenStore();
 const { token: scimToken } = await createScimToken(scimTokenStore, 'acme');
 const authHeader = `Bearer ${scimToken}`;
 
-const scim: ScimConfig = {
+const usersOnlyScim: ScimConfig = {
 	getScimUser,
 	listScimUsers,
 	onScimUserCreate,
@@ -81,7 +119,20 @@ const scim: ScimConfig = {
 	scimTokenStore
 };
 
+const scim: ScimConfig = {
+	...usersOnlyScim,
+	getScimGroup,
+	listScimGroups,
+	onScimGroupCreate,
+	onScimGroupDelete,
+	onScimGroupReplace
+};
+
 const app = await auth<TestUser>({ providersConfiguration: {}, scim });
+const appNoGroups = await auth<TestUser>({
+	providersConfiguration: {},
+	scim: usersOnlyScim
+});
 
 const createBody = JSON.stringify({
 	active: true,
@@ -195,5 +246,82 @@ describe('SCIM 2.0 Users', () => {
 		expect(Reflect.get(await response.json(), 'patch')).toEqual({
 			supported: true
 		});
+	});
+});
+
+describe('SCIM 2.0 Groups', () => {
+	beforeEach(() => {
+		groups.clear();
+	});
+
+	test('501s when group provisioning is not configured', async () => {
+		const response = await appNoGroups.handle(
+			new Request('http://localhost/scim/v2/Groups', {
+				body: JSON.stringify({
+					displayName: 'Eng',
+					members: [],
+					schemas: [GROUP_SCHEMA]
+				}),
+				headers: {
+					authorization: authHeader,
+					'content-type': SCIM_CONTENT_TYPE
+				},
+				method: 'POST'
+			})
+		);
+
+		expect(response.status).toBe(HTTP_NOT_IMPLEMENTED);
+	});
+
+	test('create -> patch members -> delete round-trips', async () => {
+		const created = await app.handle(
+			new Request('http://localhost/scim/v2/Groups', {
+				body: JSON.stringify({
+					displayName: 'Engineering',
+					members: [],
+					schemas: [GROUP_SCHEMA]
+				}),
+				headers: {
+					authorization: authHeader,
+					'content-type': SCIM_CONTENT_TYPE
+				},
+				method: 'POST'
+			})
+		);
+		expect(created.status).toBe(HTTP_CREATED);
+		const groupId = Reflect.get(await created.json(), 'id');
+		expect(typeof groupId).toBe('string');
+
+		const patched = await app.handle(
+			new Request(`http://localhost/scim/v2/Groups/${groupId}`, {
+				body: JSON.stringify({
+					Operations: [
+						{
+							op: 'add',
+							path: 'members',
+							value: [{ value: 'user-1' }]
+						}
+					],
+					schemas: [PATCH_OP_SCHEMA]
+				}),
+				headers: {
+					authorization: authHeader,
+					'content-type': SCIM_CONTENT_TYPE
+				},
+				method: 'PATCH'
+			})
+		);
+		expect(patched.status).toBe(HTTP_OK);
+		const members = Reflect.get(await patched.json(), 'members');
+		expect(Array.isArray(members) ? members.length : 0).toBe(1);
+
+		const removed = await app.handle(
+			new Request(`http://localhost/scim/v2/Groups/${groupId}`, {
+				headers: { authorization: authHeader },
+				method: 'DELETE'
+			})
+		);
+		expect(removed.status).toBe(HTTP_NO_CONTENT);
+		expect(groups.size).toBe(0);
 	});
 });

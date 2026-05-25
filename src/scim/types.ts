@@ -42,8 +42,29 @@ export type ScimUserInput = {
 	userName: string;
 };
 
-// The common SCIM list filter Okta/Azure send, e.g. `userName eq "alice@acme.com"`.
-export type ScimUserFilter = {
+export type ScimGroupMember = {
+	display?: string;
+	value: string;
+};
+
+// The package's normalized view of a SCIM Group (membership keyed by the user's SCIM id).
+export type ScimGroup = {
+	displayName: string;
+	externalId?: string;
+	id: string;
+	members: ScimGroupMember[];
+};
+
+// A SCIM Group to create or replace — `ScimGroup` without the server-assigned `id`.
+export type ScimGroupInput = {
+	displayName: string;
+	externalId?: string;
+	members: ScimGroupMember[];
+};
+
+// The common SCIM list filter Okta/Azure send, e.g. `userName eq "alice@acme.com"` or
+// `displayName eq "Engineering"`.
+export type ScimFilter = {
 	attribute: string;
 	value: string;
 };
