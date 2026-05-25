@@ -30,8 +30,8 @@
 	},
 	"dependencies": {
 		"@absolutejs/linked-providers": "0.0.2",
-		"citra": "0.25.11",
 		"@neondatabase/serverless": "1.0.0",
+		"citra": "^0.28.0",
 		"drizzle-orm": "0.41.0"
 	},
 	"devDependencies": {

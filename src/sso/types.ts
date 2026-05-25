@@ -14,6 +14,7 @@ export type OidcConnectionConfig = {
 	clientId: string;
 	clientSecret: string;
 	issuer: string;
+	redirectUri: string;
 	scopes: string[];
 };
 

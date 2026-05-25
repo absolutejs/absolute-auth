@@ -44,10 +44,12 @@ const toOidcConfig = (value: object): OidcConnectionConfig | undefined => {
 	const clientId = Reflect.get(value, 'clientId');
 	const clientSecret = Reflect.get(value, 'clientSecret');
 	const issuer = Reflect.get(value, 'issuer');
+	const redirectUri = Reflect.get(value, 'redirectUri');
 	if (
 		typeof clientId !== 'string' ||
 		typeof clientSecret !== 'string' ||
-		typeof issuer !== 'string'
+		typeof issuer !== 'string' ||
+		typeof redirectUri !== 'string'
 	) {
 		return undefined;
 	}
@@ -56,6 +58,7 @@ const toOidcConfig = (value: object): OidcConnectionConfig | undefined => {
 		clientId,
 		clientSecret,
 		issuer,
+		redirectUri,
 		scopes: toStringArray(Reflect.get(value, 'scopes'))
 	};
 };
@@ -179,12 +182,9 @@ export const createPostgresSsoConnectionStore = (
 	},
 	saveConnection: async (connection) => {
 		const values = toValues(connection);
-		await db
-			.insert(ssoConnectionsTable)
-			.values(values)
-			.onConflictDoUpdate({
-				set: values,
-				target: ssoConnectionsTable.connection_id
-			});
+		await db.insert(ssoConnectionsTable).values(values).onConflictDoUpdate({
+			set: values,
+			target: ssoConnectionsTable.connection_id
+		});
 	}
 });

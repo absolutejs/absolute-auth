@@ -27,6 +27,7 @@ import { signout } from './routes/signout';
 import { userStatus } from './routes/userStatus';
 import { sessionCleanup } from './session/cleanup';
 import type { AuthSessionStore } from './session/types';
+import { oidcSsoRoutes } from './sso/oidcRoutes';
 import { AuthConfig, ClientProviders } from './types';
 
 export const auth = async <UserType>({
@@ -47,6 +48,7 @@ export const auth = async <UserType>({
 	mfa,
 	lockout,
 	sessions,
+	sso,
 	htmx,
 	resolveAuthIntent,
 	onAuthorizeSuccess,
@@ -187,6 +189,11 @@ export const auth = async <UserType>({
 				? sessionRoutes<UserType>({ ...sessions, authSessionStore })
 				: new Elysia()
 		)
+		.use(
+			sso
+				? oidcSsoRoutes<UserType>({ ...sso, authSessionStore })
+				: new Elysia()
+		)
 		.use(protectRoutePlugin<UserType>({ authSessionStore }))
 		.use(stepUpPlugin<UserType>({ authSessionStore }))
 		.use(
@@ -225,10 +232,7 @@ export { protectRoutePlugin } from './routes/protectRoute';
 export { sessionRoutes } from './routes/sessions';
 export { stepUpPlugin } from './routes/stepUp';
 export * from './session/sessionsConfig';
-export {
-	listUserSessions,
-	revokeUserSessions
-} from './session/userSessions';
+export { listUserSessions, revokeUserSessions } from './session/userSessions';
 export type { UserSession } from './session/userSessions';
 export { sessionCleanup } from './session/cleanup';
 export { createAuthHtmxRoutes } from './htmx/routes';
@@ -338,6 +342,8 @@ export {
 	createPostgresAuditSink
 } from './audit/postgresAuditStore';
 export * from './sso/types';
+export * from './sso/config';
+export { oidcSsoRoutes } from './sso/oidcRoutes';
 export { createInMemorySsoConnectionStore } from './sso/inMemorySsoConnectionStore';
 export {
 	createNeonSsoConnectionStore,

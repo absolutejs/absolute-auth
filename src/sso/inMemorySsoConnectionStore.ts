@@ -33,13 +33,15 @@ export const createInMemorySsoConnectionStore = (): SSOConnectionStore => {
 		listConnectionsByOrganization: async (organizationId) =>
 			Array.from(connections.values())
 				.filter(
-					(connection) =>
-						connection.organizationId === organizationId
+					(connection) => connection.organizationId === organizationId
 				)
 				.sort((left, right) => right.updatedAt - left.updatedAt)
 				.map(cloneConnection),
 		saveConnection: async (connection) => {
-			connections.set(connection.connectionId, cloneConnection(connection));
+			connections.set(
+				connection.connectionId,
+				cloneConnection(connection)
+			);
 		}
 	};
 };

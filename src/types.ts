@@ -16,6 +16,7 @@ import type { LockoutConfig } from './lockout/config';
 import type { MfaConfig } from './mfa/config';
 import type { SessionsConfig } from './session/sessionsConfig';
 import type { AuthSessionStore } from './session/types';
+import type { SSOConfig } from './sso/config';
 
 export type AuthIntent = 'login' | 'link_identity' | 'link_connector';
 
@@ -341,6 +342,11 @@ export type AuthConfig<UserType> = {
 	 *  sessions) and `DELETE /auth/sessions/:id` (remote revoke). Requires an
 	 *  `authSessionStore` that can enumerate sessions. */
 	sessions?: SessionsConfig<UserType>;
+	/** Per-organization enterprise SSO (the WorkOS-style model). When present, mounts
+	 *  `GET {ssoRoute}/oidc/:organizationId/authorize` + `.../callback`, resolves the org's
+	 *  OIDC connection from `ssoConnectionStore`, verifies the id_token in-house against the
+	 *  issuer's JWKS, and mints the same `SessionData<UserType>` as every other flow. */
+	sso?: SSOConfig<UserType>;
 	/** Enable the built-in HTMX fragment routes (login, identities, connectors,
 	 *  account, signout, delete-account). Supply provider display data + the
 	 *  identity/connector data actions; the package owns the route wiring and

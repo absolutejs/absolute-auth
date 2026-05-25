@@ -1,9 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { createInMemorySsoConnectionStore } from '../src/sso/inMemorySsoConnectionStore';
-import type {
-	OidcConnection,
-	SamlConnection
-} from '../src/sso/types';
+import type { OidcConnection, SamlConnection } from '../src/sso/types';
 
 const oidcConnection = (
 	overrides: Partial<OidcConnection> = {}
@@ -12,6 +9,7 @@ const oidcConnection = (
 		clientId: 'client-1',
 		clientSecret: 'secret-1',
 		issuer: 'https://idp.example.com',
+		redirectUri: 'https://app.example.com/sso/oidc/org-1/callback',
 		scopes: ['openid', 'email', 'profile']
 	},
 	connectionId: 'conn-oidc-1',
@@ -52,6 +50,7 @@ describe('in-memory SSO connection store', () => {
 			clientId: 'client-1',
 			clientSecret: 'secret-1',
 			issuer: 'https://idp.example.com',
+			redirectUri: 'https://app.example.com/sso/oidc/org-1/callback',
 			scopes: ['openid', 'email', 'profile']
 		});
 	});
@@ -62,8 +61,7 @@ describe('in-memory SSO connection store', () => {
 		await store.saveConnection(oidcConnection());
 		await store.saveConnection(samlConnection());
 
-		const anyConnection =
-			await store.getConnectionByOrganization('org-1');
+		const anyConnection = await store.getConnectionByOrganization('org-1');
 		const samlOnly = await store.getConnectionByOrganization(
 			'org-1',
 			'saml'
@@ -82,9 +80,9 @@ describe('in-memory SSO connection store', () => {
 			await store.getConnectionByOrganization('org-1', 'oidc')
 		).toBeUndefined();
 		// ...but it is still listed for admin management.
-		expect(
-			await store.listConnectionsByOrganization('org-1')
-		).toHaveLength(1);
+		expect(await store.listConnectionsByOrganization('org-1')).toHaveLength(
+			1
+		);
 	});
 
 	test('lists an organization newest-first', async () => {

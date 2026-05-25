@@ -13,9 +13,9 @@ Current version: `0.25.1`. License CC BY-NC 4.0.
 
 > **Build status (2026-05-25):** F1–F4 + **Workstream A (email/password)** + **Workstream B
 > (MFA)** + **Workstream E1/E2/E3 (audit, lockout, session mgmt)** are DONE on branch
-> `feat/enterprise-auth` — 63 tests green, `build`/`typecheck`/`lint` clean. **Workstream C
-> (SSO) is in progress:** C1 `SSOConnectionStore` done; enterprise OIDC (C2) next, then SAML
-> (C3). See §11 for the live checklist.
+> `feat/enterprise-auth` — 65 tests green, `build`/`typecheck`/`lint` clean. **Workstream C
+> (SSO) in progress:** C1 `SSOConnectionStore` + C2 enterprise OIDC DONE (citra 0.28.0 adds
+> the discovery/JWKS client; `auth()` mounts `/sso/oidc/:org/*`). SAML (C3) next. §11 checklist.
 >
 > New Postgres tables/migrations since A: nullable `auth_sessions.authenticated_at_ms`;
 > new tables `auth_mfa_enrollments`, `auth_audit_events`, `auth_lockouts`,
@@ -339,8 +339,12 @@ breaking changes). Each block ships its in-memory store for zero-config dev.
    - ✅ C1 `SSOConnectionStore` (in-memory + Postgres + Neon) — per-org OIDC/SAML config
      keyed by `organizationId` (`auth_sso_connections`, type-specific config in a jsonb
      column); enabled-only resolution for sign-in + full list for admin. 6 tests.
-   - ⏳ C2 enterprise OIDC: discovery + PKCE + in-house JWKS verify + `/sso/oidc/:org/*`.
-   - ⏳ C3 SAML 2.0 behind `SamlAdapter`; C4 wire into `auth()` + domain→org routing.
+   - ✅ C2 enterprise OIDC: extended **citra** (`createOIDCClient` + in-house JWKS verify,
+     RS256/ES256 via WebCrypto, published **citra 0.28.0**); `src/sso/oidcRoutes.ts` mounts
+     `GET {ssoRoute}/oidc/:organizationId/authorize` + `.../callback` (discovery + PKCE S256 +
+     id_token verify + `promoteToSession`); `SSOConfig` (`getSsoUser` hook) wired into `auth()`.
+     OidcConnectionConfig gained `redirectUri`. citra: 7 verify tests; auth: 2 route tests.
+   - ⏳ C3 SAML 2.0 behind `SamlAdapter`. (C4 OIDC wiring done; domain→org routing still TODO.)
 6. **Workstream D — SCIM** → follows SSO (same per-org connection model).
 7. **Workstream E4/E5 + WebAuthn** — RBAC hooks, compliance, passkeys.
 
