@@ -300,7 +300,7 @@ breaking changes). Each block ships its in-memory store for zero-config dev.
 2. 🚧 **Workstream A — email/password** → unblocks onSpark `AU2` + backlog P33/P40.
    - ✅ `CredentialStore` (in-memory + Postgres), `passwordPolicy.ts` (+ HIBP).
    - ✅ `register` + `emailVerification` routes (+ `credentials/config.ts` surface).
-   - ⬜ `login` (MFA seam) + `passwordReset` routes.
+   - ✅ `login` (MFA seam) + `passwordReset` routes.
    - ⬜ Wire `credentials` block into `auth()`, exports, round-trip integration test.
 3. **Workstream B — MFA (TOTP + backup codes)** → unblocks onSpark `AU3` / backlog P34.
 4. **Workstream E1/E2/E3 — audit, lockout, session mgmt** (cheap, high enterprise
