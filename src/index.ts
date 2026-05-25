@@ -432,6 +432,8 @@ export { consumeBackupCode, generateBackupCodes } from './mfa/backupCodes';
 export { createMfaGate } from './mfa/gate';
 export { mfaChallenge } from './mfa/challenge';
 export { mfaRoutes } from './mfa/routes';
+export { rotateMfaEncryptionKey } from './mfa/rotation';
+export type { MfaKeyRotationResult } from './mfa/rotation';
 export { mfaTotpRoutes } from './mfa/totp';
 export { decryptTotpSecret, encryptTotpSecret } from './mfa/secret';
 export { createInMemoryMfaStore } from './mfa/inMemoryMfaStore';

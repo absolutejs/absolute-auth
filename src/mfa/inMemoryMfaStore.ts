@@ -14,6 +14,8 @@ export const createInMemoryMfaStore = (): MFAStore => {
 
 			return enrollment ? cloneEnrollment(enrollment) : undefined;
 		},
+		listEnrollments: async () =>
+			Array.from(enrollments.values()).map(cloneEnrollment),
 		removeEnrollment: async (userId) => {
 			enrollments.delete(userId);
 		},

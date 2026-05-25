@@ -14,6 +14,9 @@ export type MfaEnrollment = {
 
 export type MFAStore = {
 	getEnrollment: (userId: string) => Promise<MfaEnrollment | undefined>;
+	// Enumerate every enrollment — used by key rotation (`rotateMfaEncryptionKey`)
+	// to sweep all stored TOTP secrets.
+	listEnrollments: () => Promise<MfaEnrollment[]>;
 	removeEnrollment: (userId: string) => Promise<void>;
 	saveEnrollment: (enrollment: MfaEnrollment) => Promise<void>;
 };

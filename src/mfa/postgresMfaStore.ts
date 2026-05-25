@@ -50,6 +50,11 @@ export const createPostgresMfaStore = (db: AnyPgDatabase): MFAStore => ({
 
 		return row ? toEnrollment(row) : undefined;
 	},
+	listEnrollments: async () => {
+		const rows = await db.select().from(mfaEnrollmentsTable);
+
+		return rows.map(toEnrollment);
+	},
 	removeEnrollment: async (userId) => {
 		await db
 			.delete(mfaEnrollmentsTable)
