@@ -562,6 +562,14 @@ export {
 	knownDevicesTable,
 	loginHistoryTable
 } from './adaptive/postgresStores';
+export * from './fga/config';
+export * from './fga/types';
+export { createInMemoryWarrantStore, warrantKey } from './fga/inMemoryStores';
+export {
+	createNeonWarrantStore,
+	createPostgresWarrantStore,
+	warrantsTable
+} from './fga/postgresStores';
 export { ssoDiscoveryRoute } from './sso/discoveryRoute';
 export { oidcSsoRoutes } from './sso/oidcRoutes';
 export { samlSsoRoutes } from './sso/samlRoutes';

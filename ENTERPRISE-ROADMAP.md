@@ -63,7 +63,7 @@ access/id tokens verified via hosted JWKS (`api.workos.com/sso/jwks/<clientId>`)
 passkeys/MFA/SSO blocks.
 **Size:** big — the platform-defining one.
 
-## #5 — Fine-grained authorization (their FGA) ☐ — LAST
+## #5 — Fine-grained authorization (their FGA) ☑ (shipped) — was LAST
 **WorkOS:** **FGA** — Zanzibar-style ReBAC: resource types + schema language, **warrants**
 (relationship tuples), **Check** + **Query** APIs, inheritance rules, roles embedded in
 access tokens, "millions of checks/sec," pitched as the authz layer for AI agents.
