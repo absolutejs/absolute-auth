@@ -8,6 +8,7 @@ import {
 } from 'citra';
 import { Cookie, status as statusType, redirect as redirectType } from 'elysia';
 import { ElysiaCustomStatusResponse } from 'elysia/error';
+import type { CredentialsConfig } from './credentials/config';
 import type { AuthIdentityConflict } from './errors';
 import type { AuthHtmxConfig, AuthHtmxUser } from './htmx/types';
 import type { AuthSessionStore } from './session/types';
@@ -311,6 +312,10 @@ export type AuthConfig<UserType> = {
 	maxSessions?: number;
 	sessionDurationMs?: number;
 	authSessionStore?: AuthSessionStore<UserType>;
+	/** Local email/password (credentials) block. Additive and optional — when present,
+	 *  mounts register / verify-email / login / reset-password routes that produce the
+	 *  same `SessionData<UserType>` as OAuth, transparent to `protectRoute`. */
+	credentials?: CredentialsConfig<UserType>;
 	/** Enable the built-in HTMX fragment routes (login, identities, connectors,
 	 *  account, signout, delete-account). Supply provider display data + the
 	 *  identity/connector data actions; the package owns the route wiring and

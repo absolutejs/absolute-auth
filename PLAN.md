@@ -11,8 +11,9 @@ way, on the grain the package already has.
 
 Current version: `0.25.1`. License CC BY-NC 4.0.
 
-> **Build status (2026-05-24):** F1–F4 foundations + Workstream A stores/policy are DONE on
-> branch `feat/enterprise-auth` (tests green). See §11 for the live checklist.
+> **Build status (2026-05-24):** F1–F4 foundations + **Workstream A (email/password) are
+> DONE** on branch `feat/enterprise-auth` — 33 tests green, `build`/`typecheck`/`lint` clean.
+> Next up: Workstream B (MFA). See §11 for the live checklist.
 >
 > **Layout note:** `src/` is now organized into **feature folders** (`routes/`, `session/`,
 > `credentials/`, `stores/`, …), not flat. The composed entry function is `auth<UserType>()`
@@ -297,11 +298,11 @@ breaking changes). Each block ships its in-memory store for zero-config dev.
    - ✅ F2 `src/crypto.ts` (password/tokens/TOTP/AES-GCM; RFC 6238 vectors verified).
    - ✅ F3 `src/tenancy.ts` (`OrganizationId` + `WithOrganization`).
    - ✅ F4 `src/stores/postgres.ts` (`AnyPgDatabase` + `createNeonDatabase`).
-2. 🚧 **Workstream A — email/password** → unblocks onSpark `AU2` + backlog P33/P40.
+2. ✅ **Workstream A — email/password** → unblocks onSpark `AU2` + backlog P33/P40 — DONE.
    - ✅ `CredentialStore` (in-memory + Postgres), `passwordPolicy.ts` (+ HIBP).
    - ✅ `register` + `emailVerification` routes (+ `credentials/config.ts` surface).
    - ✅ `login` (MFA seam) + `passwordReset` routes.
-   - ⬜ Wire `credentials` block into `auth()`, exports, round-trip integration test.
+   - ✅ Wired `credentials` into `auth()`, exports, full round-trip + `protectRoute` test.
 3. **Workstream B — MFA (TOTP + backup codes)** → unblocks onSpark `AU3` / backlog P34.
 4. **Workstream E1/E2/E3 — audit, lockout, session mgmt** (cheap, high enterprise
    signal; E1 is a SOC 2 prerequisite).

@@ -1,5 +1,6 @@
 import { createOAuth2Client } from 'citra';
 import { Elysia } from 'elysia';
+import { credentialRoutes } from './credentials/routes';
 import { createAuthHtmxRoutes } from './htmx/routes';
 import type { AuthHtmxConfig, AuthHtmxUser } from './htmx/types';
 import { buildClientProviders } from './providers/clients';
@@ -28,6 +29,7 @@ export const auth = async <UserType>({
 	maxSessions,
 	sessionDurationMs,
 	authSessionStore,
+	credentials,
 	htmx,
 	resolveAuthIntent,
 	onAuthorizeSuccess,
@@ -110,6 +112,11 @@ export const auth = async <UserType>({
 				onProfileSuccess,
 				profileRoute
 			})
+		)
+		.use(
+			credentials
+				? credentialRoutes<UserType>({ ...credentials, authSessionStore })
+				: new Elysia()
 		)
 		.use(protectRoutePlugin<UserType>({ authSessionStore }))
 		.use(
@@ -197,3 +204,24 @@ export {
 	isRevocableProviderOption,
 	isRevocableOAuth2Client
 } from 'citra';
+
+export * from './crypto';
+export * from './tenancy';
+export * from './credentials/config';
+export * from './credentials/passwordPolicy';
+export * from './credentials/types';
+export { credentialRoutes } from './credentials/routes';
+export { credentialsEmailVerification } from './credentials/emailVerification';
+export { credentialsLogin } from './credentials/login';
+export { credentialsPasswordReset } from './credentials/passwordReset';
+export { credentialsRegister } from './credentials/register';
+export { createInMemoryCredentialStore } from './credentials/inMemoryCredentialStore';
+export {
+	createNeonCredentialStore,
+	createPostgresCredentialStore,
+	credentialResetTokensTable,
+	credentialsTable,
+	credentialVerificationTokensTable
+} from './credentials/postgresCredentialStore';
+export { createNeonDatabase } from './stores/postgres';
+export type { AnyPgDatabase } from './stores/postgres';
