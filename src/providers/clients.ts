@@ -1,9 +1,7 @@
 import {
 	CredentialsFor,
-	NonEmptyArray,
 	OAuth2Client,
 	ProviderOption,
-	ProvidersMap,
 	isValidProviderOption
 } from 'citra';
 import {
@@ -21,107 +19,27 @@ const isProviderClientConfig = <Provider extends ProviderOption>(
 ): value is OAuth2ProviderClientConfiguration<Provider> =>
 	isRecord(value) && 'credentials' in value;
 
-export const normalizeProvidersConfiguration = (
-	providersConfiguration: OAuth2ConfigurationOptions
-): Record<
-	ProviderOption,
-	Record<string, OAuth2ProviderClientConfiguration<ProviderOption>>
-> => {
-	const normalized = {} as Record<
-		ProviderOption,
-		Record<string, OAuth2ProviderClientConfiguration<ProviderOption>>
-	>;
-
-	for (const [providerName, providerConfig] of Object.entries(
-		providersConfiguration
-	)) {
-		if (!isValidProviderOption(providerName) || !providerConfig) continue;
-
-		if (isProviderClientConfig(providerConfig)) {
-			normalized[providerName] = {
-				'': providerConfig as OAuth2ProviderClientConfiguration<ProviderOption>
-			};
-			continue;
-		}
-
-		if (
-			!isRecord(providerConfig) ||
-			Object.keys(providerConfig).length === 0
-		) {
-			throw new Error(
-				`Invalid provider configuration for ${providerName}`
-			);
-		}
-
-		const clientEntries = Object.fromEntries(
-			Object.entries(providerConfig).map(([clientName, clientConfig]) => {
-				if (!isProviderClientConfig(clientConfig)) {
-					throw new Error(
-						`Invalid client configuration for ${providerName}.${clientName}`
-					);
-				}
-
-				return [
-					clientName,
-					clientConfig as OAuth2ProviderClientConfiguration<ProviderOption>
-				];
-			})
-		) as Record<string, OAuth2ProviderClientConfiguration<ProviderOption>>;
-
-		normalized[providerName] = clientEntries;
-	}
-
-	return normalized;
-};
-
-export const resolveProviderClientConfiguration = ({
-	clientName,
-	providerName,
-	providersConfiguration
-}: {
-	providerName: ProviderOption;
-	clientName?: string;
-	providersConfiguration: OAuth2ConfigurationOptions;
-}) => {
-	const normalized = normalizeProvidersConfiguration(providersConfiguration);
-	const clients = normalized[providerName];
-	if (!clients) {
-		return { error: 'Client provider not found' as const };
-	}
-
-	const keys = Object.keys(clients);
-	if (keys.length === 1 && keys[0] === '') {
-		return { config: clients[''] };
-	}
-
-	const requestedClient = clientName?.trim();
-	if (!requestedClient) {
-		return { error: 'Client variant is required' as const };
-	}
-
-	const config = clients[requestedClient];
-	if (!config) {
-		return { error: 'Client variant not found' as const };
-	}
-
-	return { config };
-};
-
 export const buildClientProviders = async (
 	providersConfiguration: OAuth2ConfigurationOptions,
 	createOAuth2ClientFn: <P extends ProviderOption>(
 		providerName: P,
 		config: CredentialsFor<P>
 	) => Promise<OAuth2Client<P>>
-): Promise<Record<string, ClientProviderGroup>> => {
+) => {
 	const normalized = normalizeProvidersConfiguration(providersConfiguration);
 	const groups = await Promise.all(
 		Object.entries(normalized).map(async ([providerName, clients]) => {
+			if (!isValidProviderOption(providerName)) {
+				throw new Error(
+					`Invalid provider configuration for ${providerName}`
+				);
+			}
+
 			const entries = await Promise.all(
 				Object.entries(clients).map(
 					async ([clientName, providerConfig]) => {
 						const providerInstance = await createOAuth2ClientFn(
-							providerName as ProviderOption,
+							providerName,
 							providerConfig.credentials
 						);
 
@@ -154,7 +72,59 @@ export const buildClientProviders = async (
 
 	return Object.fromEntries(groups);
 };
+const normalizeClientConfig = (
+	providerName: string,
+	clientName: string,
+	clientConfig: unknown
+) => {
+	if (!isProviderClientConfig(clientConfig)) {
+		throw new Error(
+			`Invalid client configuration for ${providerName}.${clientName}`
+		);
+	}
 
+	return [clientName, clientConfig] as const;
+};
+
+const normalizeProviderClients = (
+	providerName: string,
+	providerConfig: NonNullable<OAuth2ConfigurationOptions[ProviderOption]>
+) => {
+	if (isProviderClientConfig(providerConfig)) {
+		return { '': providerConfig };
+	}
+
+	if (!isRecord(providerConfig) || Object.keys(providerConfig).length === 0) {
+		throw new Error(`Invalid provider configuration for ${providerName}`);
+	}
+
+	return Object.fromEntries(
+		Object.entries(providerConfig).map(([clientName, clientConfig]) =>
+			normalizeClientConfig(providerName, clientName, clientConfig)
+		)
+	);
+};
+
+export const normalizeProvidersConfiguration = (
+	providersConfiguration: OAuth2ConfigurationOptions
+) => {
+	const entries = Object.entries(providersConfiguration).flatMap(
+		([providerName, providerConfig]) => {
+			if (!isValidProviderOption(providerName) || !providerConfig) {
+				return [];
+			}
+
+			return [
+				[
+					providerName,
+					normalizeProviderClients(providerName, providerConfig)
+				] as const
+			];
+		}
+	);
+
+	return Object.fromEntries(entries);
+};
 export const resolveClientProviderEntry = ({
 	clientName,
 	clientProviders,
@@ -193,4 +163,36 @@ export const resolveClientProviderEntry = ({
 	}
 
 	return { entry };
+};
+export const resolveProviderClientConfiguration = ({
+	clientName,
+	providerName,
+	providersConfiguration
+}: {
+	providerName: ProviderOption;
+	clientName?: string;
+	providersConfiguration: OAuth2ConfigurationOptions;
+}) => {
+	const normalized = normalizeProvidersConfiguration(providersConfiguration);
+	const clients = normalized[providerName];
+	if (!clients) {
+		return { error: 'Client provider not found' as const };
+	}
+
+	const keys = Object.keys(clients);
+	if (keys.length === 1 && keys[0] === '') {
+		return { config: clients[''] };
+	}
+
+	const requestedClient = clientName?.trim();
+	if (!requestedClient) {
+		return { error: 'Client variant is required' as const };
+	}
+
+	const config = clients[requestedClient];
+	if (!config) {
+		return { error: 'Client variant not found' as const };
+	}
+
+	return { config };
 };

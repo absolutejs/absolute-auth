@@ -9,61 +9,126 @@ import type {
 } from '../types';
 import type { AuthSessionStore } from './types';
 
-const collectSessionEntries = <UserType>(
-	session: SessionRecord<UserType>
-): [UserSessionId, SessionData<UserType>][] => {
-	const entries: [UserSessionId, SessionData<UserType>][] = [];
-	for (const [key, value] of Object.entries(session)) {
-		if (!isUserSessionId(key)) continue;
-		entries.push([key, value]);
-	}
-
-	return entries;
-};
+const collectSessionEntries = <UserType>(session: SessionRecord<UserType>) =>
+	Object.entries(session).filter(
+		(entry): entry is [UserSessionId, SessionData<UserType>] =>
+			isUserSessionId(entry[0])
+	);
 
 const collectUnregisteredEntries = (
 	unregisteredSession: UnregisteredSessionRecord
-): [UserSessionId, UnregisteredSessionData][] => {
-	const entries: [UserSessionId, UnregisteredSessionData][] = [];
-	for (const [key, value] of Object.entries(unregisteredSession)) {
-		if (!isUserSessionId(key)) continue;
-		entries.push([key, value]);
+) =>
+	Object.entries(unregisteredSession).filter(
+		(entry): entry is [UserSessionId, UnregisteredSessionData] =>
+			isUserSessionId(entry[0])
+	);
+
+const removeStaleIds = (
+	initialIds: Set<UserSessionId>,
+	nextIds: Set<UserSessionId>,
+	remove: (id: UserSessionId) => Promise<void> | void
+) =>
+	Promise.all(
+		[...initialIds]
+			.filter((initialId) => !nextIds.has(initialId))
+			.map((initialId) => remove(initialId))
+	);
+
+export const createSessionCompatibilityLayer = async <UserType>({
+	authSessionStore,
+	userSessionId
+}: {
+	authSessionStore?: AuthSessionStore<UserType>;
+	userSessionId?: UserSessionId;
+}): Promise<{
+	session: SessionRecord<UserType>;
+	unregisteredSession: UnregisteredSessionRecord;
+	persist: () => Promise<void>;
+}> => {
+	const session: SessionRecord<UserType> = {};
+	const unregisteredSession: UnregisteredSessionRecord = {};
+
+	if (!authSessionStore) {
+		return {
+			session,
+			unregisteredSession,
+			persist: async () => undefined
+		};
 	}
 
-	return entries;
-};
+	const initialSessionIds = new Set<UserSessionId>();
+	const initialUnregisteredIds = new Set<UserSessionId>();
 
-export const loadSessionFromSource = async <UserType>({
+	const currentSession = userSessionId
+		? await authSessionStore.getSession(userSessionId)
+		: undefined;
+	if (userSessionId && currentSession) {
+		session[userSessionId] = currentSession;
+		initialSessionIds.add(userSessionId);
+	}
+
+	const currentUnregistered = userSessionId
+		? await authSessionStore.getUnregisteredSession(userSessionId)
+		: undefined;
+	if (userSessionId && currentUnregistered) {
+		unregisteredSession[userSessionId] = currentUnregistered;
+		initialUnregisteredIds.add(userSessionId);
+	}
+
+	const persist = async () => {
+		const sessionEntries = collectSessionEntries(session);
+		const nextSessionIds = new Set(sessionEntries.map(([key]) => key));
+		await Promise.all(
+			sessionEntries.map(([key, value]) =>
+				authSessionStore.setSession(key, value)
+			)
+		);
+		await removeStaleIds(initialSessionIds, nextSessionIds, (initialId) =>
+			authSessionStore.removeSession(initialId)
+		);
+
+		const unregisteredEntries =
+			collectUnregisteredEntries(unregisteredSession);
+		const nextUnregisteredIds = new Set(
+			unregisteredEntries.map(([key]) => key)
+		);
+		await Promise.all(
+			unregisteredEntries.map(([key, value]) =>
+				authSessionStore.setUnregisteredSession(key, value)
+			)
+		);
+		await removeStaleIds(
+			initialUnregisteredIds,
+			nextUnregisteredIds,
+			(initialId) => authSessionStore.removeUnregisteredSession(initialId)
+		);
+	};
+
+	return {
+		persist,
+		session,
+		unregisteredSession
+	};
+};
+const removeSessionFromSource = async <UserType>({
 	authSessionStore,
 	session,
-	userSessionId,
-	removeExpired = true
+	userSessionId
 }: {
 	authSessionStore?: AuthSessionStore<UserType>;
 	session?: SessionRecord<UserType>;
-	userSessionId?: UserSessionId;
-	removeExpired?: boolean;
-}): Promise<SessionData<UserType> | undefined> => {
-	if (!userSessionId) return undefined;
+	userSessionId: UserSessionId;
+}) => {
+	if (authSessionStore) {
+		await authSessionStore.removeSession(userSessionId);
 
-	const userSession = authSessionStore
-		? await authSessionStore.getSession(userSessionId)
-		: session?.[userSessionId];
-	if (!userSession) return undefined;
-
-	if (removeExpired && userSession.expiresAt < Date.now()) {
-		if (authSessionStore) {
-			await authSessionStore.removeSession(userSessionId);
-		} else if (session) {
-			delete session[userSessionId];
-		}
-
-		return undefined;
+		return;
 	}
 
-	return userSession;
+	if (session) {
+		delete session[userSessionId];
+	}
 };
-
 export const getStatusFromSource = async <UserType>({
 	authSessionStore,
 	session,
@@ -99,76 +164,33 @@ export const getStatusFromSource = async <UserType>({
 		user: userSession?.user ?? null
 	};
 };
-
-export const createSessionCompatibilityLayer = async <UserType>({
+export const loadSessionFromSource = async <UserType>({
 	authSessionStore,
-	userSessionId
+	session,
+	userSessionId,
+	removeExpired = true
 }: {
 	authSessionStore?: AuthSessionStore<UserType>;
+	session?: SessionRecord<UserType>;
 	userSessionId?: UserSessionId;
-}): Promise<{
-	session: SessionRecord<UserType>;
-	unregisteredSession: UnregisteredSessionRecord;
-	persist: () => Promise<void>;
-}> => {
-	const session: SessionRecord<UserType> = {};
-	const unregisteredSession: UnregisteredSessionRecord = {};
+	removeExpired?: boolean;
+}) => {
+	if (!userSessionId) return undefined;
 
-	if (!authSessionStore) {
-		return {
+	const userSession = authSessionStore
+		? await authSessionStore.getSession(userSessionId)
+		: session?.[userSessionId];
+	if (!userSession) return undefined;
+
+	if (removeExpired && userSession.expiresAt < Date.now()) {
+		await removeSessionFromSource({
+			authSessionStore,
 			session,
-			unregisteredSession,
-			persist: async () => {}
-		};
+			userSessionId
+		});
+
+		return undefined;
 	}
 
-	const initialSessionIds = new Set<UserSessionId>();
-	const initialUnregisteredIds = new Set<UserSessionId>();
-
-	if (userSessionId) {
-		const currentSession = await authSessionStore.getSession(userSessionId);
-		if (currentSession) {
-			session[userSessionId] = currentSession;
-			initialSessionIds.add(userSessionId);
-		}
-
-		const currentUnregistered =
-			await authSessionStore.getUnregisteredSession(userSessionId);
-		if (currentUnregistered) {
-			unregisteredSession[userSessionId] = currentUnregistered;
-			initialUnregisteredIds.add(userSessionId);
-		}
-	}
-
-	return {
-		session,
-		unregisteredSession,
-		persist: async () => {
-			const nextSessionIds = new Set<UserSessionId>();
-			for (const [key, value] of collectSessionEntries(session)) {
-				nextSessionIds.add(key);
-				await authSessionStore.setSession(key, value);
-			}
-
-			for (const initialId of initialSessionIds) {
-				if (!nextSessionIds.has(initialId)) {
-					await authSessionStore.removeSession(initialId);
-				}
-			}
-
-			const nextUnregisteredIds = new Set<UserSessionId>();
-			for (const [key, value] of collectUnregisteredEntries(
-				unregisteredSession
-			)) {
-				nextUnregisteredIds.add(key);
-				await authSessionStore.setUnregisteredSession(key, value);
-			}
-
-			for (const initialId of initialUnregisteredIds) {
-				if (!nextUnregisteredIds.has(initialId)) {
-					await authSessionStore.removeUnregisteredSession(initialId);
-				}
-			}
-		}
-	};
+	return userSession;
 };

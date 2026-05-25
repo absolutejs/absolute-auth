@@ -11,6 +11,25 @@ type SignOutProps<UserType> = {
 	onSignOut: OnSignOut<UserType>;
 };
 
+const runSignOut = async <UserType>(
+	onSignOut: OnSignOut<UserType>,
+	args: Parameters<NonNullable<OnSignOut<UserType>>>[0]
+) => {
+	try {
+		await onSignOut?.(args);
+
+		return true;
+	} catch (err) {
+		console.error('[signout] Sign out operation failed:', {
+			authProvider: args.authProvider,
+			error: err instanceof Error ? err.message : err,
+			stack: err instanceof Error ? err.stack : undefined
+		});
+
+		return false;
+	}
+};
+
 export const signout = <UserType>({
 	authSessionStore,
 	signoutRoute = '/oauth2/signout',
@@ -44,19 +63,12 @@ export const signout = <UserType>({
 			const currentSession = signoutSession[user_session_id.value];
 
 			if (currentSession !== undefined) {
-				try {
-					await onSignOut?.({
-						authProvider: auth_provider.value,
-						session: signoutSession,
-						userSessionId: user_session_id.value
-					});
-				} catch (err) {
-					console.error('[signout] Sign out operation failed:', {
-						authProvider: auth_provider.value,
-						error: err instanceof Error ? err.message : err,
-						stack: err instanceof Error ? err.stack : undefined
-					});
-
+				const signedOut = await runSignOut(onSignOut, {
+					authProvider: auth_provider.value,
+					session: signoutSession,
+					userSessionId: user_session_id.value
+				});
+				if (!signedOut) {
 					return status(
 						'Internal Server Error',
 						'Sign out operation failed'

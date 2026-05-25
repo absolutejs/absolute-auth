@@ -55,7 +55,7 @@ export const protectRoutePlugin = <UserType>({
 							);
 						}
 
-						return await handleAuth(user);
+						return handleAuth(user);
 					})
 			})
 		)

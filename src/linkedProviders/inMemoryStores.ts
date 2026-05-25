@@ -44,30 +44,34 @@ export const createInMemoryLinkedProviderStores = (
 	const grantStore: LinkedProviderGrantStore = {
 		getGrant: async (id) => {
 			const grant = grants.get(id);
+
 			return grant ? cloneGrant(grant) : undefined;
 		},
 		listGrantsByOwner: async (ownerRef) =>
 			[...grants.values()]
 				.filter((grant) => grant.ownerRef === ownerRef)
 				.map(cloneGrant),
-		saveGrant: async (grant) => {
-			grants.set(grant.id, cloneGrant(grant));
-		},
 		removeGrant: async (id) => {
 			grants.delete(id);
-			for (const [bindingId, binding] of bindings.entries()) {
-				if (binding.grantId === id) {
-					bindings.delete(bindingId);
-				}
-			}
+			[...bindings.entries()]
+				.filter(([, binding]) => binding.grantId === id)
+				.forEach(([bindingId]) => bindings.delete(bindingId));
+		},
+		saveGrant: async (grant) => {
+			grants.set(grant.id, cloneGrant(grant));
 		}
 	};
 
 	const bindingStore: LinkedProviderBindingStore = {
 		getBinding: async (id) => {
 			const binding = bindings.get(id);
+
 			return binding ? cloneBinding(binding) : undefined;
 		},
+		listBindingsByGrant: async (grantId) =>
+			[...bindings.values()]
+				.filter((binding) => binding.grantId === grantId)
+				.map(cloneBinding),
 		listBindingsByOwner: async (ownerRef) =>
 			[...bindings.values()]
 				.filter(
@@ -75,17 +79,13 @@ export const createInMemoryLinkedProviderStores = (
 						grants.get(binding.grantId)?.ownerRef === ownerRef
 				)
 				.map(cloneBinding),
-		listBindingsByGrant: async (grantId) =>
-			[...bindings.values()]
-				.filter((binding) => binding.grantId === grantId)
-				.map(cloneBinding),
-		saveBinding: async (binding) => {
-			bindings.set(binding.id, cloneBinding(binding));
-		},
 		removeBinding: async (id) => {
 			bindings.delete(id);
+		},
+		saveBinding: async (binding) => {
+			bindings.set(binding.id, cloneBinding(binding));
 		}
 	};
 
-	return { grantStore, bindingStore };
+	return { bindingStore, grantStore };
 };

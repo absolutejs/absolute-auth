@@ -1,3 +1,4 @@
+import { isUserSessionId } from '../typeGuards';
 import type {
 	SessionData,
 	UnregisteredSessionData,
@@ -20,53 +21,60 @@ const cloneUnregisteredSessionData = (
 	value: UnregisteredSessionData
 ): UnregisteredSessionData => ({
 	...value,
-	userIdentity: value.userIdentity ? { ...value.userIdentity } : undefined,
 	sessionInformation: value.sessionInformation
 		? { ...value.sessionInformation }
-		: undefined
+		: undefined,
+	userIdentity: value.userIdentity ? { ...value.userIdentity } : undefined
 });
 
 export const createInMemoryAuthSessionStore = <UserType>(
 	input: CreateInMemoryAuthSessionStoreOptions<UserType> = {}
 ): AuthSessionStore<UserType> => {
 	const sessions = new Map<UserSessionId, SessionData<UserType>>(
-		Object.entries(input.sessions ?? {}).map(([id, value]) => [
-			id as UserSessionId,
-			cloneSessionData(value)
-		])
+		Object.entries(input.sessions ?? {})
+			.filter((entry): entry is [UserSessionId, SessionData<UserType>] =>
+				isUserSessionId(entry[0])
+			)
+			.map(([id, value]) => [id, cloneSessionData(value)])
 	);
 	const unregisteredSessions = new Map<
 		UserSessionId,
 		UnregisteredSessionData
 	>(
-		Object.entries(input.unregisteredSessions ?? {}).map(([id, value]) => [
-			id as UserSessionId,
-			cloneUnregisteredSessionData(value)
-		])
+		Object.entries(input.unregisteredSessions ?? {})
+			.filter(
+				(entry): entry is [UserSessionId, UnregisteredSessionData] =>
+					isUserSessionId(entry[0])
+			)
+			.map(([id, value]) => [id, cloneUnregisteredSessionData(value)])
 	);
 
 	return {
 		getSession: async (id) => {
 			const session = sessions.get(id);
+
 			return session ? cloneSessionData(session) : undefined;
-		},
-		setSession: async (id, value) => {
-			sessions.set(id, cloneSessionData(value));
-		},
-		removeSession: async (id) => {
-			sessions.delete(id);
 		},
 		getUnregisteredSession: async (id) => {
 			const session = unregisteredSessions.get(id);
+
 			return session ? cloneUnregisteredSessionData(session) : undefined;
 		},
-		setUnregisteredSession: async (id, value) => {
-			unregisteredSessions.set(id, cloneUnregisteredSessionData(value));
+		listSessionIds: async () => [...sessions.keys()],
+		listUnregisteredSessionIds: async () => [
+			...unregisteredSessions.keys()
+		],
+		removeSession: async (id) => {
+			sessions.delete(id);
 		},
 		removeUnregisteredSession: async (id) => {
 			unregisteredSessions.delete(id);
 		},
-		listSessionIds: async () => [...sessions.keys()],
-		listUnregisteredSessionIds: async () => [...unregisteredSessions.keys()]
+		setSession: async (id, value) => {
+			sessions.set(id, cloneSessionData(value));
+		},
+		setUnregisteredSession: async (id, value) => {
+			unregisteredSessions.set(id, cloneUnregisteredSessionData(value));
+		}
 	};
 };

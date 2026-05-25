@@ -184,30 +184,41 @@ export const callback = <UserType>({
 				userSessionId
 			} as const;
 
-			let response;
-			try {
-				response =
-					authIntent === 'link_identity' && onLinkIdentity
-						? await onLinkIdentity(callbackContext)
-						: authIntent === 'link_connector' && onLinkConnector
-							? await onLinkConnector(callbackContext)
-							: await onCallbackSuccess?.(callbackContext);
-			} catch (err) {
+			const dispatchSuccess = () => {
+				if (authIntent === 'link_identity' && onLinkIdentity) {
+					return onLinkIdentity(callbackContext);
+				}
+
+				if (authIntent === 'link_connector' && onLinkConnector) {
+					return onLinkConnector(callbackContext);
+				}
+
+				return onCallbackSuccess?.(callbackContext);
+			};
+
+			const handleDispatchError = (err: unknown) => {
 				if (
-					authIntent === 'link_identity' &&
-					err instanceof AuthIdentityConflictError &&
-					onLinkIdentityConflict
+					authIntent !== 'link_identity' ||
+					!(err instanceof AuthIdentityConflictError) ||
+					!onLinkIdentityConflict
 				) {
-					response = await onLinkIdentityConflict({
-						...callbackContext,
-						conflict: {
-							...err.conflict,
-							intent: authIntent
-						}
-					});
-				} else {
 					throw err;
 				}
+
+				return onLinkIdentityConflict({
+					...callbackContext,
+					conflict: {
+						...err.conflict,
+						intent: authIntent
+					}
+				});
+			};
+
+			let response;
+			try {
+				response = await dispatchSuccess();
+			} catch (err) {
+				response = await handleDispatchError(err);
 			}
 
 			if (authSessionStore) {

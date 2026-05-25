@@ -218,13 +218,20 @@ const loadStoreSessions = async <UserType>(
 	const sessionIds = await authSessionStore.listSessionIds?.();
 	if (!sessionIds) return null;
 
-	const entries: [UserSessionId, SessionData<UserType>][] = [];
-	for (const sessionId of sessionIds) {
-		const session = await authSessionStore.getSession(sessionId);
-		if (session) entries.push([sessionId, session]);
-	}
+	const loaded = await Promise.all(
+		sessionIds.map(
+			async (sessionId) =>
+				[
+					sessionId,
+					await authSessionStore.getSession(sessionId)
+				] as const
+		)
+	);
 
-	return entries;
+	return loaded.filter(
+		(entry): entry is [UserSessionId, SessionData<UserType>] =>
+			entry[1] !== undefined
+	);
 };
 
 const loadStoreUnregisteredSessions = async <UserType>(
@@ -233,14 +240,31 @@ const loadStoreUnregisteredSessions = async <UserType>(
 	const sessionIds = await authSessionStore.listUnregisteredSessionIds?.();
 	if (!sessionIds) return null;
 
-	const entries: [UserSessionId, UnregisteredSessionData][] = [];
-	for (const sessionId of sessionIds) {
-		const session =
-			await authSessionStore.getUnregisteredSession(sessionId);
-		if (session) entries.push([sessionId, session]);
-	}
+	const loaded = await Promise.all(
+		sessionIds.map(
+			async (sessionId) =>
+				[
+					sessionId,
+					await authSessionStore.getUnregisteredSession(sessionId)
+				] as const
+		)
+	);
 
-	return entries;
+	return loaded.filter(
+		(entry): entry is [UserSessionId, UnregisteredSessionData] =>
+			entry[1] !== undefined
+	);
+};
+
+const selectOverflow = <Entry extends [UserSessionId, { expiresAt: number }]>(
+	remainingEntries: Entry[],
+	maxSessions: number
+) => {
+	if (remainingEntries.length <= maxSessions) return [];
+
+	return [...remainingEntries]
+		.sort(([, left], [, right]) => left.expiresAt - right.expiresAt)
+		.slice(0, remainingEntries.length - maxSessions);
 };
 
 const performStoreCleanup = async <UserType>({
@@ -272,9 +296,11 @@ const performStoreCleanup = async <UserType>({
 
 		return false;
 	});
-	for (const sessionId of removedSessions.keys()) {
-		await authSessionStore.removeSession(sessionId);
-	}
+	await Promise.all(
+		[...removedSessions.keys()].map((sessionId) =>
+			authSessionStore.removeSession(sessionId)
+		)
+	);
 
 	const remainingUnregistered = unregisteredEntries.filter(
 		([sessionId, session]) => {
@@ -284,29 +310,32 @@ const performStoreCleanup = async <UserType>({
 			return false;
 		}
 	);
-	for (const sessionId of removedUnregisteredSessions.keys()) {
-		await authSessionStore.removeUnregisteredSession(sessionId);
-	}
+	await Promise.all(
+		[...removedUnregisteredSessions.keys()].map((sessionId) =>
+			authSessionStore.removeUnregisteredSession(sessionId)
+		)
+	);
 
-	if (remainingSessions.length > maxSessions) {
-		const overflow = [...remainingSessions]
-			.sort(([, left], [, right]) => left.expiresAt - right.expiresAt)
-			.slice(0, remainingSessions.length - maxSessions);
-		for (const [sessionId, session] of overflow) {
+	const sessionOverflow = selectOverflow(remainingSessions, maxSessions);
+	await Promise.all(
+		sessionOverflow.map(([sessionId, session]) => {
 			removedSessions.set(sessionId, session);
-			await authSessionStore.removeSession(sessionId);
-		}
-	}
 
-	if (remainingUnregistered.length > maxSessions) {
-		const overflow = [...remainingUnregistered]
-			.sort(([, left], [, right]) => left.expiresAt - right.expiresAt)
-			.slice(0, remainingUnregistered.length - maxSessions);
-		for (const [sessionId, session] of overflow) {
+			return authSessionStore.removeSession(sessionId);
+		})
+	);
+
+	const unregisteredOverflow = selectOverflow(
+		remainingUnregistered,
+		maxSessions
+	);
+	await Promise.all(
+		unregisteredOverflow.map(([sessionId, session]) => {
 			removedUnregisteredSessions.set(sessionId, session);
-			await authSessionStore.removeUnregisteredSession(sessionId);
-		}
-	}
+
+			return authSessionStore.removeUnregisteredSession(sessionId);
+		})
+	);
 
 	try {
 		await onSessionCleanup?.({

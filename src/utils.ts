@@ -20,74 +20,35 @@ import {
 	UserSessionId
 } from './types';
 
-export const resolveOAuthTokenExpiresAt = (
-	tokenResponse: OAuth2TokenResponse,
-	now = Date.now()
+export const defineAuthConfig = <UserType>(
+	configuration: AuthConfig<UserType>
+) => configuration;
+export const defineAuthHtmxConfig = (htmxConfig: AuthHtmxConfig) => htmxConfig;
+export const defineProvidersConfiguration = (
+	providersConfiguration: OAuth2ConfigurationOptions
+) => providersConfiguration;
+export const getStatus = async <UserType>(
+	session: SessionRecord<UserType>,
+	user_session_id: Cookie<UserSessionId | undefined>
 ) => {
-	const expiresIn = Reflect.get(tokenResponse as object, 'expires_in');
-	const expiresInSeconds =
-		typeof expiresIn === 'number'
-			? expiresIn
-			: typeof expiresIn === 'string' && expiresIn.trim().length > 0
-				? Number(expiresIn)
-				: Number.NaN;
-
-	if (!Number.isFinite(expiresInSeconds) || expiresInSeconds <= 0) {
-		return undefined;
+	if (user_session_id === undefined) {
+		return {
+			error: {
+				code: 'Bad Request',
+				message: 'Cookies are missing'
+			} as const,
+			user: null
+		};
 	}
 
-	return now + expiresInSeconds * 1000;
-};
-
-export const resolveOAuthAuthorization = async ({
-	authProvider,
-	providerInstance,
-	tokenResponse,
-	now = Date.now()
-}: {
-	authProvider: ProviderOption;
-	providerInstance: OAuth2Client<ProviderOption>;
-	tokenResponse: OAuth2TokenResponse;
-	now?: number;
-}): Promise<ResolvedOAuthAuthorization> => {
-	let userIdentity;
-	let accessToken = tokenResponse.access_token;
-	let refreshToken = tokenResponse.refresh_token;
-
-	if (tokenResponse.id_token) {
-		userIdentity = normalizeProviderIdentity({
-			identity: decodeJWT(tokenResponse.id_token),
-			providerConfiguration: providers[authProvider],
-			source: 'idToken'
-		});
-	} else if (authProvider === 'withings') {
-		// @ts-expect-error TODO: Withings is its own case edit the validate response to accept this case
-		userIdentity = { userid: tokenResponse.body.userid };
-		// @ts-expect-error TODO: Withings is its own case edit the validate response to accept this case
-		accessToken = tokenResponse.body.access_token;
-		// @ts-expect-error TODO: Withings is its own case edit the validate response to accept this case
-		refreshToken = tokenResponse.body.refresh_token;
-	} else {
-		userIdentity = normalizeProviderIdentity({
-			identity: await providerInstance.fetchUserProfile(
-				tokenResponse.access_token
-			),
-			providerConfiguration: providers[authProvider],
-			source: 'profile'
-		});
-	}
-
-	const tokenType = Reflect.get(tokenResponse as object, 'token_type');
+	const userSession = validateSession({ session, user_session_id });
+	const user = userSession?.user ?? null;
 
 	return {
-		accessToken,
-		expiresAt: resolveOAuthTokenExpiresAt(tokenResponse, now),
-		refreshToken,
-		tokenType: typeof tokenType === 'string' ? tokenType : undefined,
-		userIdentity
+		error: null,
+		user
 	};
 };
-
 export const instantiateUserSession = async <UserType>({
 	authProvider,
 	session,
@@ -157,39 +118,78 @@ export const instantiateUserSession = async <UserType>({
 
 	return response;
 };
+export const resolveOAuthAuthorization = async ({
+	authProvider,
+	providerInstance,
+	tokenResponse,
+	now = Date.now()
+}: {
+	authProvider: ProviderOption;
+	providerInstance: OAuth2Client<ProviderOption>;
+	tokenResponse: OAuth2TokenResponse;
+	now?: number;
+}): Promise<ResolvedOAuthAuthorization> => {
+	let userIdentity;
+	let accessToken = tokenResponse.access_token;
+	let refreshToken = tokenResponse.refresh_token;
 
-export const defineAuthConfig = <UserType>(
-	configuration: AuthConfig<UserType>
-) => configuration;
-
-export const defineAuthHtmxConfig = (htmxConfig: AuthHtmxConfig) =>
-	htmxConfig;
-
-export const defineProvidersConfiguration = (
-	providersConfiguration: OAuth2ConfigurationOptions
-) => providersConfiguration;
-
-export const getStatus = async <UserType>(
-	session: SessionRecord<UserType>,
-	user_session_id: Cookie<UserSessionId | undefined>
-) => {
-	if (user_session_id === undefined) {
-		return {
-			error: {
-				code: 'Bad Request',
-				message: 'Cookies are missing'
-			} as const,
-			user: null
-		};
+	if (tokenResponse.id_token) {
+		userIdentity = normalizeProviderIdentity({
+			identity: decodeJWT(tokenResponse.id_token),
+			providerConfiguration: providers[authProvider],
+			source: 'idToken'
+		});
+	} else if (authProvider === 'withings') {
+		// @ts-expect-error TODO: Withings is its own case edit the validate response to accept this case
+		userIdentity = { userid: tokenResponse.body.userid };
+		// @ts-expect-error TODO: Withings is its own case edit the validate response to accept this case
+		accessToken = tokenResponse.body.access_token;
+		// @ts-expect-error TODO: Withings is its own case edit the validate response to accept this case
+		refreshToken = tokenResponse.body.refresh_token;
+	} else {
+		userIdentity = normalizeProviderIdentity({
+			identity: await providerInstance.fetchUserProfile(
+				tokenResponse.access_token
+			),
+			providerConfiguration: providers[authProvider],
+			source: 'profile'
+		});
 	}
 
-	const userSession = validateSession({ session, user_session_id });
-	const user = userSession?.user ?? null;
+	const tokenType: unknown = Reflect.get(tokenResponse, 'token_type');
 
 	return {
-		error: null,
-		user
+		accessToken,
+		expiresAt: resolveOAuthTokenExpiresAt(tokenResponse, now),
+		refreshToken,
+		tokenType: typeof tokenType === 'string' ? tokenType : undefined,
+		userIdentity
 	};
+};
+const parseExpiresInSeconds = (expiresIn: unknown) => {
+	if (typeof expiresIn === 'number') {
+		return expiresIn;
+	}
+
+	if (typeof expiresIn === 'string' && expiresIn.trim().length > 0) {
+		return Number(expiresIn);
+	}
+
+	return Number.NaN;
+};
+
+export const resolveOAuthTokenExpiresAt = (
+	tokenResponse: OAuth2TokenResponse,
+	now = Date.now()
+) => {
+	const expiresIn: unknown = Reflect.get(tokenResponse, 'expires_in');
+	const expiresInSeconds = parseExpiresInSeconds(expiresIn);
+
+	if (!Number.isFinite(expiresInSeconds) || expiresInSeconds <= 0) {
+		return undefined;
+	}
+
+	return now + expiresInSeconds * 1000;
 };
 
 type ValidateSessionProps<

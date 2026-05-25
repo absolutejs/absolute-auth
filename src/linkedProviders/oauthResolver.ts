@@ -1,5 +1,6 @@
 import type {
 	LinkedProviderBindingStore,
+	LinkedProviderGrant,
 	LinkedProviderGrantStore
 } from '@absolutejs/linked-providers';
 import {
@@ -26,14 +27,20 @@ const getGrantedScopes = (scopeValue: unknown, fallbackScopes: string[]) => {
 	return [...new Set(fallbackScopes.filter(Boolean))];
 };
 
+const parseExpiresInSeconds = (expiresIn: unknown) => {
+	if (typeof expiresIn === 'number') {
+		return expiresIn;
+	}
+
+	if (typeof expiresIn === 'string' && expiresIn.trim().length > 0) {
+		return Number(expiresIn);
+	}
+
+	return Number.NaN;
+};
+
 const getExpiresAt = (tokenResponse: Record<string, unknown>) => {
-	const expiresIn = tokenResponse.expires_in;
-	const expiresInSeconds =
-		typeof expiresIn === 'number'
-			? expiresIn
-			: typeof expiresIn === 'string' && expiresIn.trim().length > 0
-				? Number(expiresIn)
-				: Number.NaN;
+	const expiresInSeconds = parseExpiresInSeconds(tokenResponse.expires_in);
 
 	if (!Number.isFinite(expiresInSeconds) || expiresInSeconds <= 0) {
 		return undefined;
@@ -42,46 +49,45 @@ const getExpiresAt = (tokenResponse: Record<string, unknown>) => {
 	return Date.now() + expiresInSeconds * 1000;
 };
 
+const buildClientEntry = (
+	providerName: string,
+	providersConfiguration: OAuth2ConfigurationOptions
+) => {
+	if (!isValidProviderOption(providerName)) {
+		return null;
+	}
+
+	const resolvedProviderClientConfiguration =
+		resolveProviderClientConfiguration({
+			providerName,
+			providersConfiguration
+		});
+	if (
+		'error' in resolvedProviderClientConfiguration ||
+		!resolvedProviderClientConfiguration.config
+	) {
+		return null;
+	}
+
+	return createOAuth2Client(
+		providerName,
+		resolvedProviderClientConfiguration.config.credentials
+	).then((providerInstance) => [providerName, providerInstance] as const);
+};
+
 export const createOAuthLinkedProviderCredentialResolver = async ({
 	bindingStore,
 	grantStore,
 	now,
 	providersConfiguration
 }: CreateOAuthLinkedProviderCredentialResolverOptions) => {
-	const clientEntries: Array<
-		Promise<[string, Awaited<ReturnType<typeof createOAuth2Client>>]>
-	> = [];
+	const clientEntries = Object.keys(providersConfiguration)
+		.map((providerName) =>
+			buildClientEntry(providerName, providersConfiguration)
+		)
+		.filter((entry) => entry !== null);
 
-	for (const [providerName, providerConfig] of Object.entries(
-		providersConfiguration
-	)) {
-		if (!isValidProviderOption(providerName)) {
-			continue;
-		}
-
-		const resolvedProviderClientConfiguration =
-			resolveProviderClientConfiguration({
-				providerName,
-				providersConfiguration
-			});
-		if (
-			'error' in resolvedProviderClientConfiguration ||
-			!resolvedProviderClientConfiguration.config
-		) {
-			continue;
-		}
-
-		clientEntries.push(
-			createOAuth2Client(
-				providerName,
-				resolvedProviderClientConfiguration.config.credentials
-			).then(
-				(providerInstance) => [providerName, providerInstance] as const
-			)
-		);
-	}
-
-	const clients = new Map(await Promise.all(clientEntries));
+	await Promise.all(clientEntries);
 
 	return createLinkedProviderCredentialResolver({
 		bindingStore,
@@ -138,22 +144,17 @@ export const createOAuthLinkedProviderCredentialResolver = async ({
 			);
 			const refreshedAt = Date.now();
 			const grantedScopes = getGrantedScopes(
-				Reflect.get(tokenResponse as object, 'scope'),
+				Reflect.get(tokenResponse, 'scope'),
 				grant.grantedScopes
 			);
-			const tokenType = Reflect.get(
-				tokenResponse as object,
-				'token_type'
-			);
-			const refreshedGrant = {
+			const tokenType = Reflect.get(tokenResponse, 'token_type');
+			const refreshedGrant: LinkedProviderGrant = {
 				...grant,
 				accessTokenCiphertext: tokenResponse.access_token,
-				expiresAt: getExpiresAt(
-					tokenResponse as Record<string, unknown>
-				),
+				expiresAt: getExpiresAt(tokenResponse),
 				grantedScopes,
-				lastRefreshError: undefined,
 				lastRefreshedAt: refreshedAt,
+				lastRefreshError: undefined,
 				refreshTokenCiphertext:
 					tokenResponse.refresh_token ?? grant.refreshTokenCiphertext,
 				status: 'active' as const,

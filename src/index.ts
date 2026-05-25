@@ -118,7 +118,9 @@ export const auth = async <UserType>({
 			// re-derive the bound inside an unconstrained generic body.
 			htmx
 				? createAuthHtmxRoutes<UserType & AuthHtmxUser>({
+						// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- sound at the public API; TS can't re-derive the bound in this unconstrained generic body
 						...(htmx as AuthHtmxConfig),
+						// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- sound at the public API; TS can't re-derive the bound in this unconstrained generic body
 						authSessionStore: authSessionStore as
 							| AuthSessionStore<UserType & AuthHtmxUser>
 							| undefined

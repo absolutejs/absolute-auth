@@ -170,9 +170,9 @@ export const authorize = ({
 				);
 
 				await onAuthorizeSuccess?.({
-					authorizationUrl: authorizationURL,
 					authClient: clientName,
 					authIntent,
+					authorizationUrl: authorizationURL,
 					authProvider: provider
 				});
 

@@ -104,12 +104,10 @@ export const refresh = <UserType>({
 				userSession.refreshToken =
 					tokenResponse.refresh_token ?? userSession.refreshToken;
 
-				if (authSessionStore) {
-					await authSessionStore.setSession(
-						user_session_id.value,
-						userSession
-					);
-				}
+				await authSessionStore?.setSession(
+					user_session_id.value,
+					userSession
+				);
 
 				await onRefreshSuccess?.({
 					authClient: clientName,

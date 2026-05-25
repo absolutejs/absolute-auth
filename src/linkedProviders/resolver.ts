@@ -54,6 +54,7 @@ const getEffectiveScopes = (
 	}
 
 	const bindingScopeSet = new Set(binding.availableScopes);
+
 	return uniqueStrings(
 		grant.grantedScopes.filter((scope) => bindingScopeSet.has(scope))
 	);
@@ -77,6 +78,7 @@ const needsRefresh = (
 ) => {
 	if (!lease) return true;
 	if (lease.expiresAt === undefined) return false;
+
 	return lease.expiresAt <= now + (minValidityMs ?? 0);
 };
 
@@ -108,23 +110,23 @@ const buildResolvedCredential = (
 	grant: LinkedProviderGrant,
 	binding: LinkedProviderBinding
 ): ResolvedLinkedProviderCredential => ({
-	bindingId: binding.id,
-	grantId: grant.id,
-	ownerRef: grant.ownerRef,
-	connectorProvider: binding.connectorProvider,
-	providerFamily: grant.providerFamily,
 	authProviderKey: grant.authProviderKey,
+	bindingId: binding.id,
+	capabilities: binding.capabilities ? [...binding.capabilities] : undefined,
+	connectorProvider: binding.connectorProvider,
+	email: binding.email,
 	externalAccountId: binding.externalAccountId,
 	externalAccountType: binding.externalAccountType,
-	scopes: getEffectiveScopes(grant, binding),
-	capabilities: binding.capabilities ? [...binding.capabilities] : undefined,
+	grantId: grant.id,
 	label: binding.label,
-	username: binding.username,
-	email: binding.email,
 	metadata: {
 		...(grant.metadata ?? {}),
 		...(binding.metadata ?? {})
-	}
+	},
+	ownerRef: grant.ownerRef,
+	providerFamily: grant.providerFamily,
+	scopes: getEffectiveScopes(grant, binding),
+	username: binding.username
 });
 
 const annotateFailureMetadata = (
@@ -142,6 +144,73 @@ const annotateFailureMetadata = (
 const sortNewestFirst = <T extends { updatedAt: number }>(items: T[]) =>
 	[...items].sort((left, right) => right.updatedAt - left.updatedAt);
 
+const resolveGrantFailureStatus = (
+	grant: LinkedProviderGrant,
+	report: LinkedProviderCredentialFailureReport
+) => {
+	if (report.code === 'unauthorized' || report.code === 'revoked') {
+		return 'revoked';
+	}
+
+	return grant.status;
+};
+
+const resolveBindingFailureStatus = (
+	binding: LinkedProviderBinding,
+	report: LinkedProviderCredentialFailureReport
+) => {
+	if (report.code === 'unauthorized' || report.code === 'revoked') {
+		return 'disconnected';
+	}
+
+	if (report.code === 'insufficient_scope') {
+		return 'restricted';
+	}
+
+	return binding.status;
+};
+
+const buildNextGrant = (
+	grant: LinkedProviderGrant,
+	report: LinkedProviderCredentialFailureReport,
+	currentTime: number
+): LinkedProviderGrant => ({
+	...grant,
+	lastRefreshError: report.message ?? report.code,
+	metadata: annotateFailureMetadata(grant.metadata, report, currentTime),
+	status: resolveGrantFailureStatus(grant, report),
+	updatedAt: currentTime
+});
+
+const buildNextBinding = (
+	binding: LinkedProviderBinding,
+	report: LinkedProviderCredentialFailureReport,
+	currentTime: number
+): LinkedProviderBinding => ({
+	...binding,
+	metadata: annotateFailureMetadata(binding.metadata, report, currentTime),
+	status: resolveBindingFailureStatus(binding, report),
+	updatedAt: currentTime
+});
+
+const resolveBindingCredential = async (
+	grantStore: LinkedProviderGrantStore,
+	binding: LinkedProviderBinding,
+	input: ResolveLinkedProviderCredentialInput
+) => {
+	const grant = await grantStore.getGrant(binding.grantId);
+	if (!grant || grant.ownerRef !== input.ownerRef || !isGrantUsable(grant)) {
+		return null;
+	}
+
+	const effectiveScopes = getEffectiveScopes(grant, binding);
+	if (!hasRequiredScopes(effectiveScopes, input.requiredScopes)) {
+		return null;
+	}
+
+	return buildResolvedCredential(grant, binding);
+};
+
 export const createLinkedProviderCredentialResolver = ({
 	grantStore,
 	bindingStore,
@@ -150,48 +219,6 @@ export const createLinkedProviderCredentialResolver = ({
 	now = () => Date.now(),
 	onReportFailure
 }: CreateLinkedProviderCredentialResolverOptions): LinkedProviderCredentialResolver => ({
-	listBindings: async ({ ownerRef, connectorProvider, status }) =>
-		sortNewestFirst(
-			await bindingStore.listBindingsByOwner(ownerRef)
-		).filter(
-			(binding) =>
-				(connectorProvider === undefined ||
-					binding.connectorProvider === connectorProvider) &&
-				(status === undefined || binding.status === status)
-		),
-	resolveCredential: async (input: ResolveLinkedProviderCredentialInput) => {
-		const bindings = sortNewestFirst(
-			await bindingStore.listBindingsByOwner(input.ownerRef)
-		).filter(
-			(binding) =>
-				binding.connectorProvider === input.connectorProvider &&
-				isBindingUsable(binding) &&
-				(input.bindingId === undefined ||
-					binding.id === input.bindingId) &&
-				(input.externalAccountId === undefined ||
-					binding.externalAccountId === input.externalAccountId)
-		);
-
-		for (const binding of bindings) {
-			const grant = await grantStore.getGrant(binding.grantId);
-			if (
-				!grant ||
-				grant.ownerRef !== input.ownerRef ||
-				!isGrantUsable(grant)
-			) {
-				continue;
-			}
-
-			const effectiveScopes = getEffectiveScopes(grant, binding);
-			if (!hasRequiredScopes(effectiveScopes, input.requiredScopes)) {
-				continue;
-			}
-
-			return buildResolvedCredential(grant, binding);
-		}
-
-		return null;
-	},
 	getAccessToken: async (credential, input) => {
 		const binding = await bindingStore.getBinding(credential.bindingId);
 		if (!binding || !isBindingUsable(binding)) {
@@ -226,7 +253,7 @@ export const createLinkedProviderCredentialResolver = ({
 			}
 
 			await grantStore.saveGrant(refreshed.grant);
-			lease = refreshed.lease;
+			({ lease } = refreshed);
 		}
 
 		if (!lease) {
@@ -237,57 +264,70 @@ export const createLinkedProviderCredentialResolver = ({
 
 		ensureLeaseScopes(lease, requiredScopes);
 		ensureLeaseValidity(lease, currentTime, input?.minValidityMs);
+
 		return lease;
 	},
+	listBindings: async ({ ownerRef, connectorProvider, status }) =>
+		sortNewestFirst(
+			await bindingStore.listBindingsByOwner(ownerRef)
+		).filter(
+			(binding) =>
+				(connectorProvider === undefined ||
+					binding.connectorProvider === connectorProvider) &&
+				(status === undefined || binding.status === status)
+		),
 	reportFailure: async (credential, report) => {
 		const currentTime = now();
 		const grant = await grantStore.getGrant(credential.grantId);
 		const binding = await bindingStore.getBinding(credential.bindingId);
 
 		if (grant) {
-			const nextGrant: LinkedProviderGrant = {
-				...grant,
-				updatedAt: currentTime,
-				lastRefreshError: report.message ?? report.code,
-				metadata: annotateFailureMetadata(
-					grant.metadata,
-					report,
-					currentTime
-				)
-			};
-
-			if (report.code === 'unauthorized' || report.code === 'revoked') {
-				nextGrant.status = 'revoked';
-			}
-
-			await grantStore.saveGrant(nextGrant);
+			await grantStore.saveGrant(
+				buildNextGrant(grant, report, currentTime)
+			);
 		}
 
 		if (binding) {
-			const nextBinding: LinkedProviderBinding = {
-				...binding,
-				updatedAt: currentTime,
-				metadata: annotateFailureMetadata(
-					binding.metadata,
-					report,
-					currentTime
-				)
-			};
-
-			if (report.code === 'unauthorized' || report.code === 'revoked') {
-				nextBinding.status = 'disconnected';
-			} else if (report.code === 'insufficient_scope') {
-				nextBinding.status = 'restricted';
-			}
-
-			await bindingStore.saveBinding(nextBinding);
+			await bindingStore.saveBinding(
+				buildNextBinding(binding, report, currentTime)
+			);
 		}
 
 		await onReportFailure?.({
+			binding: binding ?? undefined,
 			credential,
-			report,
 			grant: grant ?? undefined,
-			binding: binding ?? undefined
+			report
 		});
+	},
+	resolveCredential: async (input: ResolveLinkedProviderCredentialInput) => {
+		const bindings = sortNewestFirst(
+			await bindingStore.listBindingsByOwner(input.ownerRef)
+		).filter(
+			(binding) =>
+				binding.connectorProvider === input.connectorProvider &&
+				isBindingUsable(binding) &&
+				(input.bindingId === undefined ||
+					binding.id === input.bindingId) &&
+				(input.externalAccountId === undefined ||
+					binding.externalAccountId === input.externalAccountId)
+		);
+
+		for (const binding of bindings) {
+			// Sequential by design: bindings are sorted newest-first and the
+			// first usable credential wins, so we must stop at the first match
+			// rather than fetch every grant in parallel.
+			// eslint-disable-next-line no-await-in-loop
+			const credential = await resolveBindingCredential(
+				grantStore,
+				binding,
+				input
+			);
+			if (credential) {
+				return credential;
+			}
+		}
+
+		return null;
 	}
 });

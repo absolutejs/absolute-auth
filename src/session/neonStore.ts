@@ -2,6 +2,7 @@ import { neon } from '@neondatabase/serverless';
 import { eq } from 'drizzle-orm';
 import { drizzle, NeonHttpDatabase } from 'drizzle-orm/neon-http';
 import {
+	type AnyPgTable,
 	bigint,
 	jsonb,
 	pgTable,
@@ -9,44 +10,41 @@ import {
 	timestamp,
 	varchar
 } from 'drizzle-orm/pg-core';
-import type {
-	SessionData,
-	UnregisteredSessionData,
-	UserSessionId
-} from '../types';
+import { isUserSessionId } from '../typeGuards';
+import type { SessionData, UnregisteredSessionData } from '../types';
 import type { AuthSessionStore } from './types';
 
 export const authSessionsTable = pgTable('auth_sessions', {
-	id: varchar('id', { length: 255 }).primaryKey(),
 	access_token: text('access_token').notNull(),
-	refresh_token: text('refresh_token'),
-	expires_at_ms: bigint('expires_at_ms', { mode: 'number' }).notNull(),
-	user_json: jsonb('user_json').$type<Record<string, unknown>>().notNull(),
 	created_at: timestamp('created_at').notNull().defaultNow(),
-	updated_at: timestamp('updated_at').notNull().defaultNow()
+	expires_at_ms: bigint('expires_at_ms', { mode: 'number' }).notNull(),
+	id: varchar('id', { length: 255 }).primaryKey(),
+	refresh_token: text('refresh_token'),
+	updated_at: timestamp('updated_at').notNull().defaultNow(),
+	user_json: jsonb('user_json').$type<Record<string, unknown>>().notNull()
 });
 
 export const authUnregisteredSessionsTable = pgTable(
 	'auth_unregistered_sessions',
 	{
-		id: varchar('id', { length: 255 }).primaryKey(),
 		access_token: text('access_token'),
-		refresh_token: text('refresh_token'),
+		created_at: timestamp('created_at').notNull().defaultNow(),
 		expires_at_ms: bigint('expires_at_ms', { mode: 'number' }).notNull(),
-		user_identity_json:
-			jsonb('user_identity_json').$type<Record<string, unknown>>(),
+		id: varchar('id', { length: 255 }).primaryKey(),
+		refresh_token: text('refresh_token'),
 		session_information_json: jsonb('session_information_json').$type<
 			Record<string, unknown>
 		>(),
-		created_at: timestamp('created_at').notNull().defaultNow(),
-		updated_at: timestamp('updated_at').notNull().defaultNow()
+		updated_at: timestamp('updated_at').notNull().defaultNow(),
+		user_identity_json:
+			jsonb('user_identity_json').$type<Record<string, unknown>>()
 	}
 );
 
 export const authSessionSchema = {
 	authSessions: authSessionsTable,
 	authUnregisteredSessions: authUnregisteredSessionsTable
-};
+} satisfies Record<string, AnyPgTable>;
 
 export type AuthSessionSchema = typeof authSessionSchema;
 
@@ -54,8 +52,9 @@ type AuthSessionRow = typeof authSessionsTable.$inferSelect;
 type AuthUnregisteredSessionRow =
 	typeof authUnregisteredSessionsTable.$inferSelect;
 
-const cloneUser = <UserType>(value: UserType): UserType => {
+const cloneUser = <UserType>(value: UserType) => {
 	if (value === null || value === undefined) return value;
+
 	return structuredClone(value);
 };
 
@@ -68,6 +67,7 @@ const toSessionData = <UserType>(
 	accessToken: row.access_token,
 	expiresAt: row.expires_at_ms,
 	refreshToken: row.refresh_token ?? undefined,
+	// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- deserialization boundary: user_json was persisted from UserType, so reading it back as UserType is sound
 	user: cloneUser(row.user_json as UserType)
 });
 
@@ -99,36 +99,6 @@ export const createNeonAuthSessionStore = <UserType>(
 
 			return row ? toSessionData<UserType>(row) : undefined;
 		},
-		setSession: async (id, value) => {
-			await db
-				.insert(authSessionsTable)
-				.values({
-					id,
-					access_token: value.accessToken,
-					refresh_token: value.refreshToken ?? null,
-					expires_at_ms: value.expiresAt,
-					user_json: (value.user ?? {}) as Record<string, unknown>,
-					updated_at: new Date()
-				})
-				.onConflictDoUpdate({
-					target: authSessionsTable.id,
-					set: {
-						access_token: value.accessToken,
-						refresh_token: value.refreshToken ?? null,
-						expires_at_ms: value.expiresAt,
-						user_json: (value.user ?? {}) as Record<
-							string,
-							unknown
-						>,
-						updated_at: new Date()
-					}
-				});
-		},
-		removeSession: async (id) => {
-			await db
-				.delete(authSessionsTable)
-				.where(eq(authSessionsTable.id, id));
-		},
 		getUnregisteredSession: async (id) => {
 			const [row] = await db
 				.select()
@@ -138,47 +108,76 @@ export const createNeonAuthSessionStore = <UserType>(
 
 			return row ? toUnregisteredSessionData(row) : undefined;
 		},
-		setUnregisteredSession: async (id, value) => {
+		listSessionIds: async () => {
+			const rows = await db
+				.select({ id: authSessionsTable.id })
+				.from(authSessionsTable);
+
+			return rows.map((row) => row.id).filter(isUserSessionId);
+		},
+		listUnregisteredSessionIds: async () => {
+			const rows = await db
+				.select({ id: authUnregisteredSessionsTable.id })
+				.from(authUnregisteredSessionsTable);
+
+			return rows.map((row) => row.id).filter(isUserSessionId);
+		},
+		removeSession: async (id) => {
 			await db
-				.insert(authUnregisteredSessionsTable)
-				.values({
-					id,
-					access_token: value.accessToken ?? null,
-					refresh_token: value.refreshToken ?? null,
-					expires_at_ms: value.expiresAt,
-					user_identity_json: value.userIdentity ?? null,
-					session_information_json: value.sessionInformation ?? null,
-					updated_at: new Date()
-				})
-				.onConflictDoUpdate({
-					target: authUnregisteredSessionsTable.id,
-					set: {
-						access_token: value.accessToken ?? null,
-						refresh_token: value.refreshToken ?? null,
-						expires_at_ms: value.expiresAt,
-						user_identity_json: value.userIdentity ?? null,
-						session_information_json:
-							value.sessionInformation ?? null,
-						updated_at: new Date()
-					}
-				});
+				.delete(authSessionsTable)
+				.where(eq(authSessionsTable.id, id));
 		},
 		removeUnregisteredSession: async (id) => {
 			await db
 				.delete(authUnregisteredSessionsTable)
 				.where(eq(authUnregisteredSessionsTable.id, id));
 		},
-		listSessionIds: async () => {
-			const rows = await db
-				.select({ id: authSessionsTable.id })
-				.from(authSessionsTable);
-			return rows.map((row) => row.id as UserSessionId);
+		setSession: async (id, value) => {
+			await db
+				.insert(authSessionsTable)
+				.values({
+					access_token: value.accessToken,
+					expires_at_ms: value.expiresAt,
+					id,
+					refresh_token: value.refreshToken ?? null,
+					updated_at: new Date(),
+					user_json: value.user ?? {}
+				})
+				.onConflictDoUpdate({
+					set: {
+						access_token: value.accessToken,
+						expires_at_ms: value.expiresAt,
+						refresh_token: value.refreshToken ?? null,
+						updated_at: new Date(),
+						user_json: value.user ?? {}
+					},
+					target: authSessionsTable.id
+				});
 		},
-		listUnregisteredSessionIds: async () => {
-			const rows = await db
-				.select({ id: authUnregisteredSessionsTable.id })
-				.from(authUnregisteredSessionsTable);
-			return rows.map((row) => row.id as UserSessionId);
+		setUnregisteredSession: async (id, value) => {
+			await db
+				.insert(authUnregisteredSessionsTable)
+				.values({
+					access_token: value.accessToken ?? null,
+					expires_at_ms: value.expiresAt,
+					id,
+					refresh_token: value.refreshToken ?? null,
+					session_information_json: value.sessionInformation ?? null,
+					updated_at: new Date(),
+					user_identity_json: value.userIdentity ?? null
+				})
+				.onConflictDoUpdate({
+					set: {
+						access_token: value.accessToken ?? null,
+						expires_at_ms: value.expiresAt,
+						refresh_token: value.refreshToken ?? null,
+						session_information_json:
+							value.sessionInformation ?? null,
+						updated_at: new Date(),
+						user_identity_json: value.userIdentity ?? null
+					},
+					target: authUnregisteredSessionsTable.id
+				});
 		}
 	};
 };
