@@ -9,7 +9,19 @@ way, on the grain the package already has.
 > `~/onspark/absolutejs/dealroom/MIGRATION_PLAN.md`. onSpark is the first consumer;
 > build to its needs, ship to the ecosystem.
 
-Current version: `0.25.1`. License CC BY-NC 4.0.
+Current version: `0.25.1` (stable) / `0.26.0-beta.3` (beta). License CC BY-NC 4.0.
+
+> **WorkOS-parity additions (2026-05-25, post-plan — on `main`, 112 tests green):** beyond the
+> original plan, four WorkOS-style feature blocks landed to close the gap with hosted auth
+> platforms. All additive/optional, same store + hook + audit conventions.
+> - **`organizations`** — first-class tenancy: Organization + membership + email invitations
+>   (`src/organizations/`, 3 Postgres tables). Turns the bare `organizationId` into a real model.
+> - **`roles`** — org-scoped role definitions + `createMembershipPermissionResolver` that makes
+>   the E4 `authorization.hasPermission` hook turnkey from membership roles (`src/roles/`).
+> - **`passwordless`** — magic links + email/SMS OTP login (`src/passwordless/`), each mounted
+>   only when its send hook is set; both mint the standard session.
+> - **`webhooks`** — Standard-Webhooks-signed outbound delivery of every auth event
+>   (`src/webhooks/`); configuring it forwards the whole audit taxonomy to your endpoints.
 
 > **Build status (2026-05-25):** F1–F4 + **Workstream A (email/password)** + **Workstream B
 > (MFA)** + **Workstream E (E1 audit, E2 lockout, E3 session mgmt, E4 RBAC, E5 compliance)** +
