@@ -496,6 +496,20 @@ export {
 	createPostgresApiClientStore,
 	createPostgresApiKeyStore
 } from './apikeys/postgresStores';
+export * from './adaptive/config';
+export * from './adaptive/types';
+export {
+	createInMemoryKnownDeviceStore,
+	createInMemoryLoginHistoryStore
+} from './adaptive/inMemoryStores';
+export {
+	createNeonKnownDeviceStore,
+	createNeonLoginHistoryStore,
+	createPostgresKnownDeviceStore,
+	createPostgresLoginHistoryStore,
+	knownDevicesTable,
+	loginHistoryTable
+} from './adaptive/postgresStores';
 export { ssoDiscoveryRoute } from './sso/discoveryRoute';
 export { oidcSsoRoutes } from './sso/oidcRoutes';
 export { samlSsoRoutes } from './sso/samlRoutes';
