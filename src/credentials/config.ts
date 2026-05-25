@@ -37,8 +37,10 @@ export type CredentialsConfig<UserType> = {
 	) => Promise<UserType | null | undefined> | UserType | null | undefined;
 	isMfaRequired?: (user: UserType) => boolean | Promise<boolean>;
 	loginRoute?: RouteString;
+	// `identity` carries the normalized email plus any extra register-body fields
+	// (e.g. given_name) the consumer's signup form sends — read them off `identity`.
 	onCreateCredentialUser: (
-		identity: CredentialIdentity
+		identity: CredentialIdentity & Record<string, unknown>
 	) => Promise<Response | StatusReturn | UserType> | Response | StatusReturn | UserType;
 	onCredentialsLoginError?: (context: {
 		email: string;

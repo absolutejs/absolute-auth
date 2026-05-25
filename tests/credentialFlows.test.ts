@@ -240,4 +240,30 @@ describe('registration session behavior', () => {
 		});
 		expect(allowed.status).toBe(200);
 	});
+
+	test('passes extra signup fields through to onCreateCredentialUser', async () => {
+		let captured: Record<string, unknown> | undefined;
+		const config: CredentialsConfig<TestUser> = {
+			credentialStore: createInMemoryCredentialStore(),
+			passwordPolicy: { minLength: 8 },
+			getUserByEmail: async () => null,
+			onCreateCredentialUser: (identity) => {
+				captured = identity;
+
+				return { email: identity.email, sub: 'user:extra' };
+			},
+			onSendEmail: () => undefined
+		};
+		const app = new Elysia().use(credentialsRegister(config));
+
+		await postJson(app, '/auth/register', {
+			email: 'extra@example.com',
+			family_name: 'Lovelace',
+			given_name: 'Ada',
+			password: 'supersecret'
+		});
+
+		expect(captured?.given_name).toBe('Ada');
+		expect(captured?.family_name).toBe('Lovelace');
+	});
 });

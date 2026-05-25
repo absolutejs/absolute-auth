@@ -27,7 +27,7 @@ export const credentialsRegister = <UserType>({
 	new Elysia().use(sessionStore<UserType>()).post(
 		registerRoute,
 		async ({
-			body: { email, password },
+			body: { email, password, ...extraFields },
 			cookie: { user_session_id },
 			status,
 			store: { session }
@@ -52,6 +52,7 @@ export const credentialsRegister = <UserType>({
 			}
 
 			const created = await onCreateCredentialUser({
+				...extraFields,
 				email: normalizedEmail
 			});
 			if (created instanceof Response || isStatusResponse(created)) {
@@ -104,7 +105,12 @@ export const credentialsRegister = <UserType>({
 			return status('Created', { status: 'authenticated' });
 		},
 		{
-			body: t.Object({ email: t.String(), password: t.String() }),
+			// `additionalProperties` lets extra signup fields (e.g. given_name)
+			// flow through to onCreateCredentialUser for profile capture.
+			body: t.Object(
+				{ email: t.String(), password: t.String() },
+				{ additionalProperties: true }
+			),
 			cookie: t.Cookie({ user_session_id: userSessionIdTypebox })
 		}
 	);
