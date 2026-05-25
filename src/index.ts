@@ -458,6 +458,7 @@ export {
 export type { AuditChainResult, AuditIntegrity } from './audit/integrity';
 export { createSiemLogStream } from './audit/siem';
 export type { SiemEndpoint, SiemFormat } from './audit/siem';
+export * from './abuse/config';
 export * from './authorization/config';
 export { protectPermissionPlugin } from './authorization/protectPermission';
 export * from './compliance/config';

@@ -39,7 +39,7 @@ Datadog/Splunk/S3/GCS/HTTP, retention tiers — *not* tamper-evident.
 prove logs weren't altered; we can).
 **Size:** small–medium.
 
-## #4 — Bot/abuse protection (their "Radar") ☐
+## #4 — Bot/abuse protection (their "Radar") ☑ (shipped)
 **WorkOS:** **Radar** — proprietary 20+ signal device fingerprinting, bot detection
 (classifies AI agents vs crawlers), credential-stuffing/brute-force, impossible travel —
 **hosted-only** (AuthKit forms). ([docs](https://workos.com/docs/authkit/radar))
