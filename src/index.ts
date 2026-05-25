@@ -332,6 +332,10 @@ export { AuthIdentityConflictError } from './errors';
 export { sessionStore } from './session/state';
 export { createInMemoryAuthSessionStore } from './session/inMemoryStore';
 export { createNeonAuthSessionStore } from './session/neonStore';
+export {
+	createRedisAuthSessionStore,
+	type RedisSessionClient
+} from './session/redisStore';
 export { createLinkedProviderCredentialResolver } from './linkedProviders/resolver';
 export { createOAuthLinkedProviderCredentialResolver } from './linkedProviders/oauthResolver';
 export {
