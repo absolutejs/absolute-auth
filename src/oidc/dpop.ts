@@ -73,7 +73,11 @@ export const verifyDpopProof = async ({
 	}
 
 	const jti = typeof payload.jti === 'string' ? payload.jti : undefined;
-	if (jti !== undefined && isUsedJti !== undefined && (await isUsedJti(jti))) {
+	if (
+		jti !== undefined &&
+		isUsedJti !== undefined &&
+		(await isUsedJti(jti))
+	) {
 		return undefined;
 	}
 

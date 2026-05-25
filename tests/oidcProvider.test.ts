@@ -193,9 +193,7 @@ describe('OIDC provider', () => {
 	test('discovery + jwks describe the provider', async () => {
 		const discovery = await (
 			await app.handle(
-				new Request(
-					'http://localhost/.well-known/openid-configuration'
-				)
+				new Request('http://localhost/.well-known/openid-configuration')
 			)
 		).json();
 		expect(discovery.issuer).toBe(ISSUER);
@@ -223,7 +221,11 @@ describe('OIDC provider', () => {
 		const publicJwk = await crypto.subtle.exportKey('jwk', pair.publicKey);
 		const segment = (value: unknown) =>
 			Buffer.from(JSON.stringify(value)).toString('base64url');
-		const header = segment({ alg: 'ES256', jwk: publicJwk, typ: 'dpop+jwt' });
+		const header = segment({
+			alg: 'ES256',
+			jwk: publicJwk,
+			typ: 'dpop+jwt'
+		});
 		const payload = segment({
 			htm: 'POST',
 			htu: `${ISSUER}/oauth2/token`,
@@ -258,6 +260,8 @@ describe('OIDC provider', () => {
 			await app.handle(new Request('http://localhost/oauth2/jwks'))
 		).json();
 		const accessToken = await verifyJwt(tokens.access_token, jwks.keys[0]);
-		expect(accessToken?.payload.cnf.jkt).toBe(await jwkThumbprint(publicJwk));
+		expect(accessToken?.payload.cnf.jkt).toBe(
+			await jwkThumbprint(publicJwk)
+		);
 	});
 });

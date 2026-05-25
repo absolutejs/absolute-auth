@@ -13,8 +13,9 @@ const ES256 = { hash: 'SHA-256', name: 'ECDSA' } as const;
 const KEY_PARAMS = { name: 'ECDSA', namedCurve: 'P-256' } as const;
 
 const toBase64Url = (bytes: ArrayBuffer | Uint8Array) =>
-	Buffer.from(bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes))
-		.toString('base64url');
+	Buffer.from(
+		bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes)
+	).toString('base64url');
 
 const fromBase64Url = (value: string) =>
 	new Uint8Array(Buffer.from(value, 'base64url'));
@@ -65,7 +66,11 @@ export const signJwt = async (
 		['sign']
 	);
 	const input = `${encodeSegment({ alg: 'ES256', kid: signing.kid, typ: 'JWT' })}.${encodeSegment(payload)}`;
-	const signature = await crypto.subtle.sign(ES256, key, ENCODER.encode(input));
+	const signature = await crypto.subtle.sign(
+		ES256,
+		key,
+		ENCODER.encode(input)
+	);
 
 	return `${input}.${toBase64Url(signature)}`;
 };

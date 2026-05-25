@@ -29,7 +29,10 @@ type TokenSet = Awaited<ReturnType<typeof issueTokenSet>>;
 
 const jsonResponse = (value: unknown, status: number) =>
 	new Response(JSON.stringify(value), {
-		headers: { 'cache-control': 'no-store', 'content-type': 'application/json' },
+		headers: {
+			'cache-control': 'no-store',
+			'content-type': 'application/json'
+		},
 		status
 	});
 
@@ -108,8 +111,11 @@ export const oidcProviderRoutes = <UserType>(
 		body: Record<string, string | undefined>,
 		dpop: string | undefined
 	) => {
-		const { code, code_verifier: codeVerifier, redirect_uri: redirectUri } =
-			body;
+		const {
+			code,
+			code_verifier: codeVerifier,
+			redirect_uri: redirectUri
+		} = body;
 		if (
 			code === undefined ||
 			codeVerifier === undefined ||
@@ -132,7 +138,11 @@ export const oidcProviderRoutes = <UserType>(
 		const dpopResult =
 			dpop === undefined
 				? undefined
-				: await verifyDpopProof({ htm: 'POST', htu: tokenUrl, proof: dpop });
+				: await verifyDpopProof({
+						htm: 'POST',
+						htu: tokenUrl,
+						proof: dpop
+					});
 		if (dpop !== undefined && dpopResult === undefined) {
 			return oauthError(HTTP_BAD_REQUEST, 'invalid_dpop_proof');
 		}
@@ -278,7 +288,9 @@ export const oidcProviderRoutes = <UserType>(
 						? client.scopes
 						: scope
 								.split(' ')
-								.filter((entry) => client.scopes.includes(entry));
+								.filter((entry) =>
+									client.scopes.includes(entry)
+								);
 				const granted =
 					getGrantedScopes === undefined
 						? requested
@@ -290,7 +302,8 @@ export const oidcProviderRoutes = <UserType>(
 								requestedScopes: requested,
 								user: userSession.user
 							});
-				if (granted === undefined) return errorRedirect('access_denied');
+				if (granted === undefined)
+					return errorRedirect('access_denied');
 
 				const code = generateSecureToken(TOKEN_BYTES);
 				await authorizationCodeStore.saveCode({

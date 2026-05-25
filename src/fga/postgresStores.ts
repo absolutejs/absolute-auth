@@ -29,9 +29,13 @@ const toWarrant = (row: WarrantRow): Warrant => ({
 
 export const createNeonWarrantStore = (databaseUrl: string) =>
 	createPostgresWarrantStore(createNeonDatabase(databaseUrl));
-export const createPostgresWarrantStore = (db: AnyPgDatabase): WarrantStore => ({
+export const createPostgresWarrantStore = (
+	db: AnyPgDatabase
+): WarrantStore => ({
 	deleteWarrant: async (warrant) => {
-		await db.delete(warrantsTable).where(eq(warrantsTable.id, warrantKey(warrant)));
+		await db
+			.delete(warrantsTable)
+			.where(eq(warrantsTable.id, warrantKey(warrant)));
 	},
 	listForResource: async (resourceType, resourceId, relation) => {
 		const rows = await db

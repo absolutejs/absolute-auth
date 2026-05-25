@@ -9,7 +9,10 @@ const schema: FgaSchema = {
 	document: {
 		editor: {
 			kind: 'union',
-			rules: [{ kind: 'self' }, { kind: 'computedUserset', relation: 'owner' }]
+			rules: [
+				{ kind: 'self' },
+				{ kind: 'computedUserset', relation: 'owner' }
+			]
 		},
 		owner: { kind: 'self' },
 		parent: { kind: 'self' },
@@ -18,7 +21,11 @@ const schema: FgaSchema = {
 			rules: [
 				{ kind: 'self' },
 				{ kind: 'computedUserset', relation: 'editor' },
-				{ kind: 'tupleToUserset', relation: 'viewer', viaRelation: 'parent' }
+				{
+					kind: 'tupleToUserset',
+					relation: 'viewer',
+					viaRelation: 'parent'
+				}
 			]
 		}
 	},
@@ -32,7 +39,10 @@ const user = (subjectId: string) => ({
 });
 
 describe('fine-grained authorization', () => {
-	let config: FgaConfig = { schema, warrantStore: createInMemoryWarrantStore() };
+	let config: FgaConfig = {
+		schema,
+		warrantStore: createInMemoryWarrantStore()
+	};
 
 	beforeEach(async () => {
 		config = { schema, warrantStore: createInMemoryWarrantStore() };
@@ -126,6 +136,8 @@ describe('fine-grained authorization', () => {
 		});
 		expect(await engine.check(query)).toBe(false);
 		// alice loses viewer too (it inherited from owner)
-		expect(await engine.check({ ...query, relation: 'viewer' })).toBe(false);
+		expect(await engine.check({ ...query, relation: 'viewer' })).toBe(
+			false
+		);
 	});
 });

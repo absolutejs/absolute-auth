@@ -91,7 +91,13 @@ const matchesRule = async (
 		return matchesSelf(context, resourceType, resourceId, relation, depth);
 	}
 	if (rule.kind === 'computedUserset') {
-		return evaluate(context, resourceType, resourceId, rule.relation, depth - 1);
+		return evaluate(
+			context,
+			resourceType,
+			resourceId,
+			rule.relation,
+			depth - 1
+		);
 	}
 	if (rule.kind === 'tupleToUserset') {
 		const links = await context.config.warrantStore.listForResource(

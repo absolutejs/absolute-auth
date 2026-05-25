@@ -26,7 +26,9 @@ export const createInMemoryAuthorizationCodeStore =
 export const createInMemoryOAuthClientStore = (
 	clients: OAuthClient[]
 ): OAuthClientStore => {
-	const registry = new Map(clients.map((client) => [client.clientId, client]));
+	const registry = new Map(
+		clients.map((client) => [client.clientId, client])
+	);
 
 	return {
 		findClient: async (clientId) => registry.get(clientId)
