@@ -210,6 +210,7 @@ export const oidcSsoRoutes = <UserType>({
 								? claims.email
 								: undefined,
 						organizationId,
+						protocol: 'oidc',
 						sub: claims.sub,
 						tokenResponse
 					};

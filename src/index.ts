@@ -28,6 +28,7 @@ import { userStatus } from './routes/userStatus';
 import { sessionCleanup } from './session/cleanup';
 import type { AuthSessionStore } from './session/types';
 import { oidcSsoRoutes } from './sso/oidcRoutes';
+import { samlSsoRoutes } from './sso/samlRoutes';
 import { AuthConfig, ClientProviders } from './types';
 
 export const auth = async <UserType>({
@@ -194,6 +195,15 @@ export const auth = async <UserType>({
 				? oidcSsoRoutes<UserType>({ ...sso, authSessionStore })
 				: new Elysia()
 		)
+		.use(
+			sso && sso.samlAdapter
+				? samlSsoRoutes<UserType>({
+						...sso,
+						authSessionStore,
+						samlAdapter: sso.samlAdapter
+					})
+				: new Elysia()
+		)
 		.use(protectRoutePlugin<UserType>({ authSessionStore }))
 		.use(stepUpPlugin<UserType>({ authSessionStore }))
 		.use(
@@ -344,6 +354,7 @@ export {
 export * from './sso/types';
 export * from './sso/config';
 export { oidcSsoRoutes } from './sso/oidcRoutes';
+export { samlSsoRoutes } from './sso/samlRoutes';
 export { createInMemorySsoConnectionStore } from './sso/inMemorySsoConnectionStore';
 export {
 	createNeonSsoConnectionStore,
