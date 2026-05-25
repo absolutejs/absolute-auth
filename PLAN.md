@@ -12,12 +12,13 @@ way, on the grain the package already has.
 Current version: `0.25.1`. License CC BY-NC 4.0.
 
 > **Build status (2026-05-25):** F1–F4 + **Workstream A (email/password)** + **Workstream B
-> (MFA)** + **Workstream E1/E2/E3 (audit, lockout, session mgmt)** are DONE on branch
-> `feat/enterprise-auth` — 80 tests green, `build`/`typecheck`/`lint` clean. **Workstreams C
-> (SSO) + D (SCIM) COMPLETE.** SSO: OIDC + SAML + discovery + full signed SP/IdP-initiated SLO.
-> SCIM: `ScimTokenStore` +
-> `{scimRoute}/Users` + `/Groups` + `/ServiceProviderConfig` with per-org bearer auth + mapping
-> hooks, mounted via the `scim` block. Next per §11: **E4/E5 (RBAC, compliance) + WebAuthn**. §11.
+> (MFA)** + **Workstream E (E1 audit, E2 lockout, E3 session mgmt, E4 RBAC, E5 compliance)** are
+> DONE on branch `feat/enterprise-auth` — 90 tests green, `build`/`typecheck`/`lint` clean.
+> **Workstreams C (SSO) + D (SCIM) + E (hardening) COMPLETE.** SSO: OIDC + SAML + discovery + full
+> signed SP/IdP-initiated SLO. SCIM: `ScimTokenStore` + `{scimRoute}/Users` + `/Groups` +
+> `/ServiceProviderConfig` with per-org bearer auth + mapping hooks, mounted via the `scim` block.
+> E4: `protectPermission` derive (delegates to `hasPermission` hook). E5: GDPR export/erasure
+> routes + audit PII redaction + AES-GCM field cipher. Next per §11: **WebAuthn/passkeys**.
 >
 > New Postgres tables/migrations since A: nullable `auth_sessions.authenticated_at_ms`;
 > new tables `auth_mfa_enrollments`, `auth_audit_events`, `auth_lockouts`,
@@ -265,13 +266,19 @@ The "anything else enterprise expects" tail. Each is small and orthogonal.
   password-reset / password-change to revoke all of a user's other sessions** — this
   needs the user→sessions index E3 introduces (today it is delegated to the
   `onPasswordReset` hook; see the TODO in `credentials/passwordReset.ts`).
-- **E4 · Org / tenancy & RBAC hooks** (`src/authorization.ts`): build on F3; add a
-  `protectPermission(check)` derive alongside `protectRoute`, delegating the actual
-  role/permission decision to a consumer hook (`hasPermission(user, perm, orgId)`).
-  Package stays schema-agnostic.
-- **E5 · Compliance helpers** (`src/compliance.ts`): GDPR data export/delete hooks,
-  token/secret encryption-at-rest (F2 AES-GCM) wired into every store, configurable
-  PII redaction in audit events.
+- ✅ **E4 · Org / tenancy & RBAC hooks** (`src/authorization/`): `protectPermissionPlugin`
+  exposes a `protectPermission(check, handler)` derive alongside `protectRoute`/`requireRecentAuth`,
+  delegating the role/permission decision to the consumer's `hasPermission({ user, permission,
+  organizationId })` hook. 401 when unauthenticated, 403 when denied (denials emit an
+  `authorization_denied` audit event). Mounted only when `AuthConfig.authorization` is supplied;
+  the package stays schema-agnostic about roles/permissions.
+- ✅ **E5 · Compliance helpers** (`src/compliance/`): GDPR/CCPA self-service — `GET
+  {complianceRoute=/auth/account}/export` (right to access, returns consumer-gathered JSON) and
+  `DELETE {complianceRoute}` (right to erasure — runs `deleteUserData`, revokes every session the
+  user holds via `revokeUserSessions`, clears the cookie; emits `data_exported`/`account_deleted`).
+  Configurable PII redaction wired into the audit emitter via `AuditConfig.redact` +
+  `createAuditRedactor({ dropFields, hashFields, redactIp })` (drop or pseudonymize-by-hash).
+  `createSecretCipher(key)` binds the F2 AES-GCM key so stores can encrypt fields at rest.
 
 **Acceptance:** lockout trips and recovers; a user can list and revoke their own
 sessions; audit events fire for all flows; `protectPermission` gates a route.
@@ -291,8 +298,10 @@ const auth = await absoluteAuth<User>({
   sso:         { ssoConnectionStore, samlAdapter, getOrganizationByEmailDomain,
                  onSsoCallbackSuccess },
   scim:        { scimTokenStore, onScimUserCreate, onScimUserDeactivate },
-  audit:       { auditStore },                                // or onAuditEvent
+  audit:       { auditStore, redact: createAuditRedactor({ hashFields: ['email'] }) },
   lockout:     { maxAttempts, window, backoff },
+  authorization: { hasPermission },                          // E4 — RBAC, schema-agnostic
+  compliance:  { exportUserData, deleteUserData, getUserId }, // E5 — GDPR access/erasure
 });
 ```
 Every block is optional; existing OAuth-only consumers are unaffected (additive, no
@@ -328,7 +337,7 @@ breaking changes). Each block ships its in-memory store for zero-config dev.
    - ✅ B4 `/auth/mfa/challenge` promotes the parked session; `createMfaGate` auto-wired
      into `credentials.isMfaRequired` by `auth()`; full enroll→login→challenge test.
    - ✅ B5 step-up: `authenticatedAt` on `SessionData` + `stepUpPlugin` (`requireRecentAuth`).
-4. ✅ **Workstream E1/E2/E3 — audit, lockout, session mgmt** — DONE (E1 = SOC 2 prereq).
+4. ✅ **Workstream E — enterprise hardening** — DONE (E1 = SOC 2 prereq).
    - ✅ E1 audit: `AuditSink` (in-memory + Postgres), `AuditConfig`, `createAuditEmitter`,
      `compose*Audit` wrappers; `auth()` emits register/login/mfa/logout/etc. events.
    - ✅ E2 lockout: `LockoutStore` (in-memory + Postgres) + `createLockoutGuard`
@@ -337,6 +346,11 @@ breaking changes). Each block ships its in-memory store for zero-config dev.
    - ✅ E3 sessions: `GET /auth/sessions` + `DELETE /auth/sessions/:id` (own sessions),
      `listUserSessions`/`revokeUserSessions` helpers (the latter for password-reset
      revocation via the `onPasswordReset` hook). TODO: device/UA/IP metadata + idle timeout.
+   - ✅ E4 RBAC: `protectPermissionPlugin` → `protectPermission(check, handler)` derive,
+     delegating to the consumer's `hasPermission` hook; 401/403 + `authorization_denied` audit.
+   - ✅ E5 compliance: GDPR export/erasure routes (`/auth/account/export` + `DELETE
+     /auth/account`), `AuditConfig.redact` + `createAuditRedactor` PII redaction, `createSecretCipher`
+     (F2 AES-GCM field encryption at rest). 10 tests (authorization.test.ts + compliance.test.ts).
 5. **Workstream C — SSO (OIDC first, then SAML)** → the headline enterprise sale.
    - ✅ C1 `SSOConnectionStore` (in-memory + Postgres + Neon) — per-org OIDC/SAML config
      keyed by `organizationId` (`auth_sso_connections`, type-specific config in a jsonb
@@ -380,7 +394,9 @@ breaking changes). Each block ships its in-memory store for zero-config dev.
      member add/remove (incl. `members[value eq "id"]`) + displayName; optional group hooks
      (getScimGroup, listScimGroups, onScimGroupCreate/Replace/Delete) — routes 501 when omitted.
      (`ScimUserFilter` generalized to `ScimFilter`, shared by Users + Groups). **Workstream D COMPLETE.**
-7. **Workstream E4/E5 + WebAuthn** — RBAC hooks, compliance, passkeys.
+7. ✅ **Workstream E4/E5** — RBAC hooks + compliance helpers DONE (see Workstream E above).
+   Remaining headline item: **WebAuthn/passkeys** (`@simplewebauthn/server` behind a dep-light
+   adapter, same pattern as `SamlAdapter`/`RedisLike`).
 
 Start at **F1 → Workstream A** to make immediate progress in parallel with the onSpark
 voice work; A is also the highest-leverage piece for the dealroom auth migration.

@@ -6,13 +6,17 @@ export type AuditConfig<UserType> = {
 	getUserId?: (user: UserType) => string;
 	// Additional consumer sink (forward to a SIEM, etc.) fired alongside `auditStore`.
 	onAuditEvent?: (event: AuditEvent) => void | Promise<void>;
+	// Optional PII redaction applied to every event before it reaches any sink (E5). See
+	// `createAuditRedactor` for a configurable drop/hash redactor.
+	redact?: (event: AuditEvent) => AuditEvent | Promise<AuditEvent>;
 };
 
 export type AuditEmitter = (event: AuditEvent) => Promise<void>;
 
 export const createAuditEmitter =
-	<UserType>({ auditStore, onAuditEvent }: AuditConfig<UserType>) =>
+	<UserType>({ auditStore, onAuditEvent, redact }: AuditConfig<UserType>) =>
 	async (event: AuditEvent) => {
-		await auditStore?.append(event);
-		await onAuditEvent?.(event);
+		const finalEvent = redact ? await redact(event) : event;
+		await auditStore?.append(finalEvent);
+		await onAuditEvent?.(finalEvent);
 	};

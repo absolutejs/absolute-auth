@@ -9,6 +9,8 @@ import {
 import { Cookie, status as statusType, redirect as redirectType } from 'elysia';
 import { ElysiaCustomStatusResponse } from 'elysia/error';
 import type { AuditConfig } from './audit/config';
+import type { AuthorizationConfig } from './authorization/config';
+import type { ComplianceConfig } from './compliance/config';
 import type { CredentialsConfig } from './credentials/config';
 import type { AuthIdentityConflict } from './errors';
 import type { AuthHtmxConfig, AuthHtmxUser } from './htmx/types';
@@ -360,6 +362,14 @@ export type AuthConfig<UserType> = {
 	 *  mounts `{scimRoute}/Users` (+ `/ServiceProviderConfig`) with per-org bearer-token auth via
 	 *  `scimTokenStore`, and maps SCIM resources to the consumer's user store through hooks. */
 	scim?: ScimConfig;
+	/** Role-based / attribute-based access control (E4). When present, `auth()` exposes a
+	 *  `protectPermission(check, handler)` derive (alongside `protectRoute`) that delegates the
+	 *  decision to your `hasPermission` hook — the package stays schema-agnostic about roles. */
+	authorization?: AuthorizationConfig<UserType>;
+	/** GDPR/CCPA self-service compliance (E5). When present, mounts `GET {complianceRoute}/export`
+	 *  (right to access) and `DELETE {complianceRoute}` (right to erasure — runs your delete hook,
+	 *  revokes the user's sessions, clears the cookie). Pair with `audit.redact` for PII redaction. */
+	compliance?: ComplianceConfig<UserType>;
 	/** Enable the built-in HTMX fragment routes (login, identities, connectors,
 	 *  account, signout, delete-account). Supply provider display data + the
 	 *  identity/connector data actions; the package owns the route wiring and

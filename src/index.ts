@@ -8,6 +8,8 @@ import {
 	composeRevocationAudit,
 	composeSignOutAudit
 } from './audit/wrap';
+import { protectPermissionPlugin } from './authorization/protectPermission';
+import { complianceRoutes } from './compliance/routes';
 import { credentialRoutes } from './credentials/routes';
 import { createAuthHtmxRoutes } from './htmx/routes';
 import { createLockoutGuard } from './lockout/config';
@@ -53,6 +55,8 @@ export const auth = async <UserType>({
 	sessions,
 	sso,
 	scim,
+	authorization,
+	compliance,
 	htmx,
 	resolveAuthIntent,
 	onAuthorizeSuccess,
@@ -218,8 +222,26 @@ export const auth = async <UserType>({
 				: new Elysia()
 		)
 		.use(scim ? scimRoutes(scim) : new Elysia())
+		.use(
+			compliance
+				? complianceRoutes<UserType>({
+						...compliance,
+						authSessionStore,
+						emit: auditEmit
+					})
+				: new Elysia()
+		)
 		.use(protectRoutePlugin<UserType>({ authSessionStore }))
 		.use(stepUpPlugin<UserType>({ authSessionStore }))
+		.use(
+			authorization
+				? protectPermissionPlugin<UserType>({
+						...authorization,
+						authSessionStore,
+						emit: auditEmit
+					})
+				: new Elysia()
+		)
 		.use(
 			// `htmx` is gated to `UserType extends AuthHtmxUser` at the public
 			// API (AuthConfig), so this bridge is sound — TS just can't
@@ -349,6 +371,13 @@ export {
 
 export * from './audit/config';
 export * from './audit/types';
+export * from './authorization/config';
+export { protectPermissionPlugin } from './authorization/protectPermission';
+export * from './compliance/config';
+export { complianceRoutes } from './compliance/routes';
+export { createAuditRedactor } from './compliance/redaction';
+export { createSecretCipher } from './compliance/cipher';
+export type { SecretCipher } from './compliance/cipher';
 export * from './lockout/config';
 export * from './lockout/types';
 export { createInMemoryLockoutStore } from './lockout/inMemoryLockoutStore';
