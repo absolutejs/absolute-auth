@@ -17,6 +17,7 @@ import { createMfaGate } from './mfa/gate';
 import { mfaRoutes } from './mfa/routes';
 import { organizationRoutes } from './organizations/routes';
 import { passwordlessRoutes } from './passwordless/routes';
+import { portalRoutes } from './portal/routes';
 import { roleRoutes } from './roles/routes';
 import type { AuthHtmxConfig, AuthHtmxUser } from './htmx/types';
 import { buildClientProviders } from './providers/clients';
@@ -63,6 +64,7 @@ export const auth = async <UserType>({
 	scim,
 	organizations,
 	roles,
+	portal,
 	authorization,
 	compliance,
 	webauthn,
@@ -272,6 +274,9 @@ export const auth = async <UserType>({
 						emit: auditEmit
 					})
 				: new Elysia()
+		)
+		.use(
+			portal ? portalRoutes({ ...portal, emit: auditEmit }) : new Elysia()
 		)
 		.use(
 			webauthn
@@ -528,3 +533,13 @@ export * from './webhooks/config';
 export * from './webhooks/types';
 export { createWebhookDispatcher } from './webhooks/dispatcher';
 export { signWebhook, verifyWebhookSignature } from './webhooks/sign';
+export * from './portal/config';
+export * from './portal/types';
+export { createSetupSession, resolveSetupSession } from './portal/operations';
+export { portalRoutes } from './portal/routes';
+export { createInMemorySetupSessionStore } from './portal/inMemorySetupSessionStore';
+export {
+	createNeonSetupSessionStore,
+	createPostgresSetupSessionStore,
+	setupSessionsTable
+} from './portal/postgresSetupSessionStore';
