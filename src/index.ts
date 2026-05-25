@@ -2,6 +2,8 @@ import { createOAuth2Client } from 'citra';
 import { Elysia } from 'elysia';
 import { credentialRoutes } from './credentials/routes';
 import { createAuthHtmxRoutes } from './htmx/routes';
+import { createMfaGate } from './mfa/gate';
+import { mfaRoutes } from './mfa/routes';
 import type { AuthHtmxConfig, AuthHtmxUser } from './htmx/types';
 import { buildClientProviders } from './providers/clients';
 import { authorize } from './routes/authorize';
@@ -30,6 +32,7 @@ export const auth = async <UserType>({
 	sessionDurationMs,
 	authSessionStore,
 	credentials,
+	mfa,
 	htmx,
 	resolveAuthIntent,
 	onAuthorizeSuccess,
@@ -53,6 +56,17 @@ export const auth = async <UserType>({
 		providersConfiguration,
 		createOAuth2Client
 	);
+
+	// When both blocks are configured, default the login MFA gate to the MFAStore
+	// enrollment check unless the consumer supplied their own.
+	const credentialsConfig = credentials
+		? {
+				...credentials,
+				isMfaRequired:
+					credentials.isMfaRequired ??
+					(mfa ? createMfaGate(mfa) : undefined)
+			}
+		: undefined;
 
 	return new Elysia()
 		.use(
@@ -114,9 +128,15 @@ export const auth = async <UserType>({
 			})
 		)
 		.use(
-			credentials
-				? credentialRoutes<UserType>({ ...credentials, authSessionStore })
+			credentialsConfig
+				? credentialRoutes<UserType>({
+						...credentialsConfig,
+						authSessionStore
+					})
 				: new Elysia()
+		)
+		.use(
+			mfa ? mfaRoutes<UserType>({ ...mfa, authSessionStore }) : new Elysia()
 		)
 		.use(protectRoutePlugin<UserType>({ authSessionStore }))
 		.use(
@@ -225,3 +245,18 @@ export {
 } from './credentials/postgresCredentialStore';
 export { createNeonDatabase } from './stores/postgres';
 export type { AnyPgDatabase } from './stores/postgres';
+
+export * from './mfa/config';
+export * from './mfa/types';
+export { consumeBackupCode, generateBackupCodes } from './mfa/backupCodes';
+export { createMfaGate } from './mfa/gate';
+export { mfaChallenge } from './mfa/challenge';
+export { mfaRoutes } from './mfa/routes';
+export { mfaTotpRoutes } from './mfa/totp';
+export { decryptTotpSecret, encryptTotpSecret } from './mfa/secret';
+export { createInMemoryMfaStore } from './mfa/inMemoryMfaStore';
+export {
+	createNeonMfaStore,
+	createPostgresMfaStore,
+	mfaEnrollmentsTable
+} from './mfa/postgresMfaStore';

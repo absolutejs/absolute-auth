@@ -2,20 +2,13 @@ import { Elysia, t } from 'elysia';
 import { MILLISECONDS_IN_AN_HOUR } from '../constants';
 import { verifyPassword } from '../crypto';
 import { createSessionCompatibilityLayer } from '../session/access';
-import { promoteToSession } from '../session/promote';
+import { persistWhen, promoteToSession } from '../session/promote';
 import { sessionStore } from '../session/state';
 import { userSessionIdTypebox } from '../typebox';
 import {
 	type CredentialRouteProps,
 	DEFAULT_CREDENTIAL_SESSION_TTL_MS
 } from './config';
-
-const persistWhen = async (
-	shouldPersist: boolean,
-	persist: () => Promise<void>
-) => {
-	if (shouldPersist) await persist();
-};
 
 export const credentialsLogin = <UserType>({
 	authSessionStore,

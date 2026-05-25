@@ -11,6 +11,7 @@ import { ElysiaCustomStatusResponse } from 'elysia/error';
 import type { CredentialsConfig } from './credentials/config';
 import type { AuthIdentityConflict } from './errors';
 import type { AuthHtmxConfig, AuthHtmxUser } from './htmx/types';
+import type { MfaConfig } from './mfa/config';
 import type { AuthSessionStore } from './session/types';
 
 export type AuthIntent = 'login' | 'link_identity' | 'link_connector';
@@ -319,6 +320,10 @@ export type AuthConfig<UserType> = {
 	 *  mounts register / verify-email / login / reset-password routes that produce the
 	 *  same `SessionData<UserType>` as OAuth, transparent to `protectRoute`. */
 	credentials?: CredentialsConfig<UserType>;
+	/** Multi-factor auth (TOTP + backup codes). When present alongside `credentials`,
+	 *  `auth()` auto-wires the login MFA gate, mounts the enroll/challenge routes, and
+	 *  promotes the parked session once a factor is verified. */
+	mfa?: MfaConfig<UserType>;
 	/** Enable the built-in HTMX fragment routes (login, identities, connectors,
 	 *  account, signout, delete-account). Supply provider display data + the
 	 *  identity/connector data actions; the package owns the route wiring and

@@ -3,6 +3,13 @@ import type { SessionRecord, UserSessionId } from '../types';
 import { createSessionCompatibilityLayer } from './access';
 import type { AuthSessionStore } from './types';
 
+export const persistWhen = async (
+	shouldPersist: boolean,
+	persist: () => Promise<void>
+) => {
+	if (shouldPersist) await persist();
+};
+
 type PromoteToSessionProps<UserType> = {
 	authSessionStore?: AuthSessionStore<UserType>;
 	cookie: Cookie<UserSessionId | undefined>;
