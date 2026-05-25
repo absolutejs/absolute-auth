@@ -1,9 +1,11 @@
 import { Elysia, t } from 'elysia';
+import { createSessionCompatibilityLayer } from '../session/access';
 import { clearSession, promoteToSession } from '../session/promote';
 import { sessionStore } from '../session/state';
 import type { AuthSessionStore } from '../session/types';
+import { isNonEmptyString } from '../typeGuards';
 import { userSessionIdTypebox } from '../typebox';
-import type { RouteString } from '../types';
+import type { RouteString, SessionRecord, UserSessionId } from '../types';
 import {
 	DEFAULT_SSO_ROUTE,
 	DEFAULT_SSO_SESSION_TTL_MS,
@@ -35,6 +37,16 @@ const refererPath = (referer: string | undefined) => {
 	}
 };
 
+// Run an adapter call, returning either its value or the thrown error — keeps the SLO route
+// flat (no nested try/catch) so the validation branches stay within the max-depth budget.
+const settle = async <Value>(work: Value | Promise<Value>) => {
+	try {
+		return { value: await work };
+	} catch (error) {
+		return { error };
+	}
+};
+
 export const samlSsoRoutes = <UserType>({
 	authSessionStore,
 	getSsoUser,
@@ -49,9 +61,29 @@ export const samlSsoRoutes = <UserType>({
 	const acsRoute: RouteString = `${ssoRoute}/saml/:organizationId/acs`;
 	const metadataRoute: RouteString = `${ssoRoute}/saml/:organizationId/metadata`;
 	const logoutRoute: RouteString = `${ssoRoute}/saml/:organizationId/logout`;
+	const sloRoute: RouteString = `${ssoRoute}/saml/:organizationId/slo`;
 
 	const acsUrlFor = (requestUrl: string, organizationId: string) =>
 		`${new URL(requestUrl).origin}${ssoRoute}/saml/${organizationId}/acs`;
+	const sloUrlFor = (requestUrl: string, organizationId: string) =>
+		`${new URL(requestUrl).origin}${ssoRoute}/saml/${organizationId}/slo`;
+
+	// Read the SP-initiated SLO context stored on the session at the ACS, before it is cleared.
+	const readSamlLogout = async (
+		userSessionId: UserSessionId | undefined,
+		inMemorySession: SessionRecord<UserType>
+	) => {
+		if (userSessionId === undefined) return undefined;
+		const compatibilityLayer = await createSessionCompatibilityLayer({
+			authSessionStore,
+			userSessionId
+		});
+		const target = authSessionStore
+			? compatibilityLayer.session
+			: inMemorySession;
+
+		return target[userSessionId]?.samlLogout;
+	};
 
 	return new Elysia()
 		.use(sessionStore<UserType>())
@@ -131,6 +163,11 @@ export const samlSsoRoutes = <UserType>({
 						authSessionStore,
 						cookie: user_session_id,
 						inMemorySession: session,
+						samlLogout: {
+							connectionId: connection.connectionId,
+							nameId: profile.nameId,
+							sessionIndex: profile.sessionIndex
+						},
 						sessionDurationMs,
 						user
 					});
@@ -189,12 +226,15 @@ export const samlSsoRoutes = <UserType>({
 		)
 		.get(
 			logoutRoute,
-			// Single Logout: always clear the local session, then bounce to the IdP's SLO
-			// endpoint (if the connection declares one) so the IdP can end its own session.
+			// SP-initiated Single Logout: capture the SLO context, clear the local session, then
+			// send a *signed* LogoutRequest (NameID + SessionIndex) to the IdP so it ends its own
+			// session and redirects the browser back to `/slo` with a LogoutResponse. Falls back to
+			// a plain redirect when the adapter or connection can't do signed SLO.
 			async ({
 				cookie: { user_session_id },
 				params: { organizationId },
 				redirect,
+				request,
 				store: { session }
 			}) => {
 				const connection =
@@ -202,15 +242,38 @@ export const samlSsoRoutes = <UserType>({
 						organizationId,
 						'saml'
 					);
+				const idpSloUrl =
+					connection?.type === 'saml'
+						? connection.config.idpSloUrl
+						: undefined;
+				const logoutContext = await readSamlLogout(
+					user_session_id.value,
+					session
+				);
 				await clearSession({
 					authSessionStore,
 					cookie: user_session_id,
 					inMemorySession: session
 				});
-				const idpSloUrl =
-					connection?.type === 'saml'
-						? connection.config.idpSloUrl
-						: undefined;
+
+				const buildLogoutRequest = samlAdapter.createLogoutRequestUrl;
+				if (
+					connection?.type === 'saml' &&
+					idpSloUrl !== undefined &&
+					buildLogoutRequest !== undefined &&
+					logoutContext !== undefined &&
+					logoutContext.connectionId === connection.connectionId
+				) {
+					const url = await buildLogoutRequest({
+						connection,
+						nameId: logoutContext.nameId,
+						relayState: '/',
+						sessionIndex: logoutContext.sessionIndex,
+						sloUrl: sloUrlFor(request.url, organizationId)
+					});
+
+					return redirect(url);
+				}
 
 				return redirect(idpSloUrl ?? '/');
 			},
@@ -219,6 +282,120 @@ export const samlSsoRoutes = <UserType>({
 					user_session_id: t.Optional(userSessionIdTypebox)
 				}),
 				params: t.Object({ organizationId: t.String() })
+			}
+		)
+		.get(
+			sloRoute,
+			// The SLO endpoint: handles the IdP's LogoutResponse (completing an SP-initiated
+			// logout) and IdP-initiated LogoutRequests (front-channel, via the user's browser).
+			async ({
+				cookie: { user_session_id },
+				params: { organizationId },
+				query: { RelayState, SAMLRequest, SAMLResponse },
+				redirect,
+				request,
+				status,
+				store: { session }
+			}) => {
+				const connection =
+					await ssoConnectionStore.getConnectionByOrganization(
+						organizationId,
+						'saml'
+					);
+				if (connection === undefined || connection.type !== 'saml') {
+					return status(
+						'Not Found',
+						'No SAML connection is configured for this organization'
+					);
+				}
+				const sloUrl = sloUrlFor(request.url, organizationId);
+
+				if (isNonEmptyString(SAMLResponse)) {
+					const responseSettled = await settle(
+						samlAdapter.validateLogoutResponse?.({
+							connection,
+							relayState: RelayState,
+							samlResponse: SAMLResponse,
+							sloUrl
+						}) ?? Promise.resolve()
+					);
+					if (!('error' in responseSettled)) {
+						return redirect(toLocalPath(RelayState));
+					}
+					await onSsoCallbackError?.({
+						error: responseSettled.error,
+						organizationId
+					});
+
+					return status(
+						'Internal Server Error',
+						'SAML logout failed'
+					);
+				}
+
+				if (!isNonEmptyString(SAMLRequest)) {
+					return status(
+						'Bad Request',
+						'Missing SAMLRequest or SAMLResponse'
+					);
+				}
+				const validateRequest = samlAdapter.validateLogoutRequest;
+				if (validateRequest === undefined) {
+					return status(
+						'Not Implemented',
+						'SAML Single Logout is not configured'
+					);
+				}
+
+				const requestSettled = await settle(
+					validateRequest({
+						connection,
+						relayState: RelayState,
+						samlRequest: SAMLRequest,
+						sloUrl
+					})
+				);
+				if ('error' in requestSettled) {
+					await onSsoCallbackError?.({
+						error: requestSettled.error,
+						organizationId
+					});
+
+					return status('Bad Request', 'Invalid SAML LogoutRequest');
+				}
+
+				await clearSession({
+					authSessionStore,
+					cookie: user_session_id,
+					inMemorySession: session
+				});
+
+				const info = requestSettled.value;
+				const buildLogoutResponse = samlAdapter.createLogoutResponseUrl;
+				if (buildLogoutResponse !== undefined) {
+					const url = await buildLogoutResponse({
+						connection,
+						inResponseTo: info.requestId,
+						nameId: info.nameId,
+						relayState: info.relayState ?? RelayState,
+						sloUrl
+					});
+
+					return redirect(url);
+				}
+
+				return redirect(toLocalPath(info.relayState ?? RelayState));
+			},
+			{
+				cookie: t.Cookie({
+					user_session_id: t.Optional(userSessionIdTypebox)
+				}),
+				params: t.Object({ organizationId: t.String() }),
+				query: t.Object({
+					RelayState: t.Optional(t.String()),
+					SAMLRequest: t.Optional(t.String()),
+					SAMLResponse: t.Optional(t.String())
+				})
 			}
 		);
 };

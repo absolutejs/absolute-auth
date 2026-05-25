@@ -1,5 +1,5 @@
 import type { Cookie } from 'elysia';
-import type { SessionRecord, UserSessionId } from '../types';
+import type { SessionData, SessionRecord, UserSessionId } from '../types';
 import { createSessionCompatibilityLayer } from './access';
 import type { AuthSessionStore } from './types';
 
@@ -51,18 +51,20 @@ type PromoteToSessionProps<UserType> = {
 	authSessionStore?: AuthSessionStore<UserType>;
 	cookie: Cookie<UserSessionId | undefined>;
 	inMemorySession: SessionRecord<UserType>;
+	samlLogout?: SessionData<UserType>['samlLogout'];
 	sessionDurationMs: number;
 	user: UserType;
 };
 
-// Creates a registered session for a non-OAuth (credential / MFA-promoted) user and
+// Creates a registered session for a non-OAuth (credential / MFA-promoted / SSO) user and
 // rotates the session cookie. Deliberately omits `accessToken` — these sessions are not
-// backed by an OAuth provider token. Shared by credential register/login and the MFA
-// challenge route.
+// backed by an OAuth provider token. Shared by credential register/login, the MFA challenge
+// route, and the SSO callbacks. `samlLogout` carries the SAML SP-initiated SLO context.
 export const promoteToSession = async <UserType>({
 	authSessionStore,
 	cookie,
 	inMemorySession,
+	samlLogout,
 	sessionDurationMs,
 	user
 }: PromoteToSessionProps<UserType>) => {
@@ -75,11 +77,13 @@ export const promoteToSession = async <UserType>({
 		: inMemorySession;
 	const userSessionId = crypto.randomUUID();
 
-	targetSession[userSessionId] = {
+	const data: SessionData<UserType> = {
 		authenticatedAt: Date.now(),
 		expiresAt: Date.now() + sessionDurationMs,
 		user
 	};
+	if (samlLogout !== undefined) data.samlLogout = samlLogout;
+	targetSession[userSessionId] = data;
 	cookie.set({
 		httpOnly: true,
 		sameSite: 'lax',

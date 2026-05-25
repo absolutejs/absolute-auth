@@ -38,19 +38,74 @@ type SamlMetadataRequest = {
 	connection: SamlConnection;
 };
 
+type SamlLogoutRequest = {
+	connection: SamlConnection;
+	nameId: string;
+	relayState?: string;
+	sessionIndex?: string;
+	sloUrl: string;
+};
+
+type SamlLogoutResponseRequest = {
+	connection: SamlConnection;
+	relayState?: string;
+	samlResponse: string;
+	sloUrl: string;
+};
+
+type SamlIdpLogoutRequest = {
+	connection: SamlConnection;
+	relayState?: string;
+	samlRequest: string;
+	sloUrl: string;
+};
+
+type SamlLogoutResponseAck = {
+	connection: SamlConnection;
+	inResponseTo?: string;
+	nameId?: string;
+	relayState?: string;
+	sloUrl: string;
+};
+
+// What the adapter extracts from a validated IdP-initiated LogoutRequest.
+export type SamlLogoutInfo = {
+	nameId?: string;
+	relayState?: string;
+	requestId?: string;
+	sessionIndex?: string;
+};
+
 // SAML signature validation and XML handling are a security footgun, so the package never
 // bundles a SAML library: the consumer supplies an adapter wrapping a vetted dependency
 // (e.g. `@node-saml/node-saml`). The package owns the route wiring, cookies, and session
-// minting; the adapter owns the XML/crypto. `acsUrl` is the package-derived Assertion
-// Consumer Service URL for the connection's `/acs` route.
+// minting; the adapter owns the XML/crypto. `acsUrl` / `sloUrl` are the package-derived
+// Assertion Consumer Service / Single Logout URLs for the connection's routes. The SLO
+// methods are optional — when omitted, `/saml/:org/logout` falls back to a local signout.
 export type SamlAdapter = {
 	createAuthorizationUrl: (
 		request: SamlAuthorizeRequest
+	) => Promise<string> | string;
+	// SP-initiated: build the signed LogoutRequest redirect to the IdP's SLO endpoint.
+	createLogoutRequestUrl?: (
+		request: SamlLogoutRequest
+	) => Promise<string> | string;
+	// Build a signed LogoutResponse redirect (the SP's reply to an IdP-initiated request).
+	createLogoutResponseUrl?: (
+		request: SamlLogoutResponseAck
 	) => Promise<string> | string;
 	getServiceProviderMetadata: (
 		request: SamlMetadataRequest
 	) => Promise<string> | string;
 	validateAssertion: (request: SamlAssertionRequest) => Promise<SamlProfile>;
+	// Validate an IdP-initiated LogoutRequest and extract NameID / SessionIndex / id.
+	validateLogoutRequest?: (
+		request: SamlIdpLogoutRequest
+	) => Promise<SamlLogoutInfo> | SamlLogoutInfo;
+	// Validate the IdP's LogoutResponse to our SP-initiated LogoutRequest (throws if invalid).
+	validateLogoutResponse?: (
+		request: SamlLogoutResponseRequest
+	) => Promise<void> | void;
 };
 
 type SsoIdentityBase = {

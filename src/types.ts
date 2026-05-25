@@ -50,6 +50,14 @@ export type SessionData<UserType> = {
 	/** When the session was last established by an actual authentication (login, OAuth
 	 *  callback, or MFA challenge — NOT a token refresh). Drives step-up `requireRecentAuth`. */
 	authenticatedAt?: number;
+	/** SAML SP-initiated Single Logout context, captured at the SAML ACS. Lets
+	 *  `{ssoRoute}/saml/:org/logout` build a signed LogoutRequest (the IdP needs the original
+	 *  NameID + SessionIndex) for the connection the session was created from. */
+	samlLogout?: {
+		connectionId: string;
+		nameId: string;
+		sessionIndex?: string;
+	};
 };
 
 export type SessionRecord<UserType> = Record<

@@ -13,8 +13,9 @@ Current version: `0.25.1`. License CC BY-NC 4.0.
 
 > **Build status (2026-05-25):** F1–F4 + **Workstream A (email/password)** + **Workstream B
 > (MFA)** + **Workstream E1/E2/E3 (audit, lockout, session mgmt)** are DONE on branch
-> `feat/enterprise-auth` — 77 tests green, `build`/`typecheck`/`lint` clean. **Workstreams C
-> (SSO) + D (SCIM) COMPLETE.** SSO: OIDC + SAML + discovery + SLO. SCIM: `ScimTokenStore` +
+> `feat/enterprise-auth` — 80 tests green, `build`/`typecheck`/`lint` clean. **Workstreams C
+> (SSO) + D (SCIM) COMPLETE.** SSO: OIDC + SAML + discovery + full signed SP/IdP-initiated SLO.
+> SCIM: `ScimTokenStore` +
 > `{scimRoute}/Users` + `/Groups` + `/ServiceProviderConfig` with per-org bearer auth + mapping
 > hooks, mounted via the `scim` block. Next per §11: **E4/E5 (RBAC, compliance) + WebAuthn**. §11.
 >
@@ -352,9 +353,20 @@ breaking changes). Each block ships its in-memory store for zero-config dev.
      OIDC|SAML discriminated union (`protocol`). Mounts only when `sso.samlAdapter` supplied.
      4 route tests (fake adapter). C4 wiring done for both protocols.
    - ✅ Closed out C: home-realm discovery (`getOrganizationByEmailDomain` →
-     `GET {ssoRoute}/authorize?email=`), SAML SLO (`GET .../saml/:org/logout` clears the session
-     via shared `clearSession` + bounces to the IdP SLO URL), and a full IdP-mocked OIDC
-     authorize→callback E2E (signed id_token verified against a mock JWKS). **Workstream C COMPLETE.**
+     `GET {ssoRoute}/authorize?email=`) and a full IdP-mocked OIDC authorize→callback E2E
+     (signed id_token verified against a mock JWKS). **Workstream C COMPLETE.**
+   - ✅ Full robust SAML Single Logout (replaces the earlier best-effort redirect). The ACS now
+     stashes `samlLogout` (connectionId + NameID + SessionIndex) on the session via
+     `promoteToSession`. `GET .../saml/:org/logout` reads that context, clears the local session,
+     then asks the adapter to build a **signed LogoutRequest** (NameID + SessionIndex) and
+     redirects to the IdP SLO endpoint — falling back to a plain redirect only when the adapter or
+     connection can't sign. New `GET .../saml/:org/slo` front-channel endpoint handles both the
+     IdP's `SAMLResponse` (completing SP-initiated logout) and IdP-initiated `SAMLRequest`
+     (validate → `clearSession` → signed `LogoutResponse` back). `SamlAdapter` gains four optional
+     SLO methods (`createLogoutRequestUrl`, `createLogoutResponseUrl`, `validateLogoutRequest`,
+     `validateLogoutResponse`); all stay dependency-light (consumer's vetted XML-DSig lib). 3 SLO
+     route tests (fake adapter): SP-initiated signed request, LogoutResponse completion,
+     IdP-initiated request. Open-redirect-safe RelayState (local paths only).
 6. **Workstream D — SCIM** → follows SSO (same per-org connection model).
    - ✅ D1 `ScimTokenStore` (in-memory + Postgres + Neon, `auth_scim_tokens`) — per-org bearer
      tokens, hashed; `createScimToken` (plaintext once) + `resolveScimOrganization` (bearer→org).

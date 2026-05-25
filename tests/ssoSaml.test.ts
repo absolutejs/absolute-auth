@@ -27,11 +27,27 @@ const samlConnection: SamlConnection = {
 	updatedAt: 1
 };
 
+let capturedLogout: { nameId: string; sessionIndex?: string } | undefined;
+
 const fakeSamlAdapter: SamlAdapter = {
 	createAuthorizationUrl: ({ connection, relayState }) =>
 		`${connection.config.idpSsoUrl}?SAMLRequest=req&RelayState=${encodeURIComponent(
 			relayState ?? '/'
 		)}`,
+	createLogoutRequestUrl: ({
+		connection,
+		nameId,
+		relayState,
+		sessionIndex
+	}) => {
+		capturedLogout = { nameId, sessionIndex };
+
+		return `${connection.config.idpSloUrl ?? ''}?SAMLRequest=logout&RelayState=${encodeURIComponent(
+			relayState ?? '/'
+		)}`;
+	},
+	createLogoutResponseUrl: ({ connection }) =>
+		`${connection.config.idpSloUrl ?? ''}?SAMLResponse=ok`,
 	getServiceProviderMetadata: ({ acsUrl }) =>
 		`<EntityDescriptor><ACS>${acsUrl}</ACS></EntityDescriptor>`,
 	validateAssertion: () =>
@@ -40,7 +56,20 @@ const fakeSamlAdapter: SamlAdapter = {
 			email: 'sam@acme.test',
 			nameId: 'saml-user-1',
 			sessionIndex: 'idx-1'
-		})
+		}),
+	validateLogoutRequest: () =>
+		Promise.resolve({
+			nameId: 'saml-user-1',
+			relayState: '/',
+			requestId: 'req-1',
+			sessionIndex: 'idx-1'
+		}),
+	validateLogoutResponse: () => Promise.resolve()
+};
+
+const sloConnection: SamlConnection = {
+	...samlConnection,
+	config: { ...samlConnection.config, idpSloUrl: 'https://idp.test/slo' }
 };
 
 const buildAuth = (
@@ -164,6 +193,96 @@ describe('SAML SSO routes', () => {
 
 		expect(response.status).toBe(HTTP_FOUND);
 		expect(response.headers.get('location')).toBe('https://idp.test/slo');
+		expect(response.headers.getSetCookie().join(';')).toContain(
+			'user_session_id'
+		);
+	});
+});
+
+describe('SAML Single Logout (signed)', () => {
+	const sessionCookie = (response: Response) =>
+		response.headers
+			.getSetCookie()
+			.find((cookie) => cookie.startsWith('user_session_id='))
+			?.split(';')[0] ?? '';
+
+	const buildSloApp = async () => {
+		const ssoConnectionStore = createInMemorySsoConnectionStore();
+		await ssoConnectionStore.saveConnection(sloConnection);
+
+		return auth<TestUser>({
+			providersConfiguration: {},
+			sso: {
+				getSsoUser: resolveUser,
+				samlAdapter: fakeSamlAdapter,
+				ssoConnectionStore
+			}
+		});
+	};
+
+	test('SP-initiated logout sends a signed LogoutRequest with the session NameID', async () => {
+		capturedLogout = undefined;
+		const app = await buildSloApp();
+
+		const acs = await app.handle(
+			new Request('http://localhost/sso/saml/acme/acs', {
+				body: 'SAMLResponse=abc&RelayState=%2F',
+				headers: {
+					'content-type': 'application/x-www-form-urlencoded'
+				},
+				method: 'POST',
+				redirect: 'manual'
+			})
+		);
+		const cookie = sessionCookie(acs);
+		expect(cookie.length).toBeGreaterThan(0);
+
+		const logout = await app.handle(
+			new Request('http://localhost/sso/saml/acme/logout', {
+				headers: { cookie },
+				redirect: 'manual'
+			})
+		);
+
+		expect(logout.status).toBe(HTTP_FOUND);
+		const location = logout.headers.get('location') ?? '';
+		expect(location).toContain('https://idp.test/slo');
+		expect(location).toContain('SAMLRequest=logout');
+		expect(capturedLogout?.nameId).toBe('saml-user-1');
+		expect(capturedLogout?.sessionIndex).toBe('idx-1');
+	});
+
+	test('the SLO endpoint validates the IdP LogoutResponse', async () => {
+		const app = await buildSloApp();
+
+		const response = await app.handle(
+			new Request(
+				'http://localhost/sso/saml/acme/slo?SAMLResponse=ok&RelayState=%2Fbye',
+				{ redirect: 'manual' }
+			)
+		);
+
+		expect(response.status).toBe(HTTP_FOUND);
+		expect(response.headers.get('location')).toBe('/bye');
+	});
+
+	test('an IdP-initiated LogoutRequest clears the session and replies', async () => {
+		const app = await buildSloApp();
+
+		const response = await app.handle(
+			new Request(
+				'http://localhost/sso/saml/acme/slo?SAMLRequest=logout',
+				{
+					headers: {
+						cookie: 'user_session_id=22222222-2222-2222-2222-222222222222'
+					},
+					redirect: 'manual'
+				}
+			)
+		);
+
+		expect(response.status).toBe(HTTP_FOUND);
+		expect(response.headers.get('location')).toContain('SAMLResponse=ok');
 		expect(response.headers.getSetCookie().join(';')).toContain(
 			'user_session_id'
 		);
