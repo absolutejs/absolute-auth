@@ -18,6 +18,7 @@ export type AuditEventType =
 	| 'oauth_login'
 	| 'organization_created'
 	| 'password_reset'
+	| 'passwordless_login'
 	| 'register'
 	| 'role_assigned'
 	| 'scim_provision'

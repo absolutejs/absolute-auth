@@ -17,6 +17,7 @@ import type { AuthHtmxConfig, AuthHtmxUser } from './htmx/types';
 import type { LockoutConfig } from './lockout/config';
 import type { MfaConfig } from './mfa/config';
 import type { OrganizationsConfig } from './organizations/config';
+import type { PasswordlessConfig } from './passwordless/config';
 import type { RolesConfig } from './roles/config';
 import type { ScimConfig } from './scim/config';
 import type { SessionsConfig } from './session/sessionsConfig';
@@ -345,6 +346,11 @@ export type AuthConfig<UserType> = {
 	 *  mounts register / verify-email / login / reset-password routes that produce the
 	 *  same `SessionData<UserType>` as OAuth, transparent to `protectRoute`. */
 	credentials?: CredentialsConfig<UserType>;
+	/** Passwordless login: magic links + email/SMS OTP. When present, mounts the magic-link flow
+	 *  (if `onSendMagicLink` is set) and/or the OTP flow (if `onSendOtp` is set) under
+	 *  `{passwordlessRoute}`; each verify route resolves the email to a user and mints the same
+	 *  `SessionData<UserType>` as every other flow. */
+	passwordless?: PasswordlessConfig<UserType>;
 	/** Multi-factor auth (TOTP + backup codes). When present alongside `credentials`,
 	 *  `auth()` auto-wires the login MFA gate, mounts the enroll/challenge routes, and
 	 *  promotes the parked session once a factor is verified. */

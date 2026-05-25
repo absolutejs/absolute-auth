@@ -16,6 +16,7 @@ import { createLockoutGuard } from './lockout/config';
 import { createMfaGate } from './mfa/gate';
 import { mfaRoutes } from './mfa/routes';
 import { organizationRoutes } from './organizations/routes';
+import { passwordlessRoutes } from './passwordless/routes';
 import { roleRoutes } from './roles/routes';
 import type { AuthHtmxConfig, AuthHtmxUser } from './htmx/types';
 import { buildClientProviders } from './providers/clients';
@@ -54,6 +55,7 @@ export const auth = async <UserType>({
 	audit,
 	credentials,
 	mfa,
+	passwordless,
 	lockout,
 	sessions,
 	sso,
@@ -196,6 +198,15 @@ export const auth = async <UserType>({
 		.use(
 			auditedMfa
 				? mfaRoutes<UserType>({ ...auditedMfa, authSessionStore })
+				: new Elysia()
+		)
+		.use(
+			passwordless
+				? passwordlessRoutes<UserType>({
+						...passwordless,
+						authSessionStore,
+						emit: auditEmit
+					})
 				: new Elysia()
 		)
 		.use(
@@ -488,3 +499,12 @@ export {
 	createPostgresRoleStore,
 	rolesTable
 } from './roles/postgresRoleStore';
+export * from './passwordless/config';
+export * from './passwordless/types';
+export { passwordlessRoutes } from './passwordless/routes';
+export { createInMemoryPasswordlessTokenStore } from './passwordless/inMemoryPasswordlessTokenStore';
+export {
+	createNeonPasswordlessTokenStore,
+	createPostgresPasswordlessTokenStore,
+	passwordlessTokensTable
+} from './passwordless/postgresPasswordlessTokenStore';
