@@ -12,9 +12,13 @@ way, on the grain the package already has.
 Current version: `0.25.1`. License CC BY-NC 4.0.
 
 > **Build status (2026-05-24):** F1–F4 + **Workstream A (email/password)** + **Workstream B
-> MFA core (TOTP enroll + challenge + backup codes, B1–B4)** are DONE on branch
-> `feat/enterprise-auth` — 45 tests green, `build`/`typecheck`/`lint` clean. Remaining in B:
-> step-up (B5). See §11 for the live checklist.
+> (MFA: TOTP enroll + challenge + backup codes + step-up)** are DONE on branch
+> `feat/enterprise-auth` — 48 tests green, `build`/`typecheck`/`lint` clean. Next up:
+> Workstream E1/E2/E3 (audit, lockout, session mgmt). See §11 for the live checklist.
+>
+> New migrations since A: `auth_sessions` gains a nullable `authenticated_at_ms` column
+> (`ALTER TABLE auth_sessions ADD COLUMN authenticated_at_ms bigint`); create the
+> `auth_mfa_enrollments` table.
 >
 > **Design defaults:** registration **auto-logs-in** by default (`requireEmailVerification:
 > true` switches to verify-first: no session on register, login blocked until verified).
@@ -314,13 +318,13 @@ breaking changes). Each block ships its in-memory store for zero-config dev.
    - ✅ `register` + `emailVerification` routes (+ `credentials/config.ts` surface).
    - ✅ `login` (MFA seam) + `passwordReset` routes.
    - ✅ Wired `credentials` into `auth()`, exports, full round-trip + `protectRoute` test.
-3. 🚧 **Workstream B — MFA (TOTP + backup codes)** → unblocks onSpark `AU3` / backlog P34.
+3. ✅ **Workstream B — MFA (TOTP + backup codes)** → unblocks onSpark `AU3` / backlog P34 — DONE.
    - ✅ B1 `promoteToSession` moved to shared `src/session/promote.ts`.
    - ✅ B2 `MFAStore` (in-memory + Postgres) — encrypted TOTP secret, hashed backup codes.
    - ✅ B3 TOTP enroll (`/auth/mfa/totp/setup`+`/verify`) + single-use backup codes.
    - ✅ B4 `/auth/mfa/challenge` promotes the parked session; `createMfaGate` auto-wired
      into `credentials.isMfaRequired` by `auth()`; full enroll→login→challenge test.
-   - ⬜ B5 step-up (`requireRecentAuth`) — needs `authenticatedAt` on `SessionData`.
+   - ✅ B5 step-up: `authenticatedAt` on `SessionData` + `stepUpPlugin` (`requireRecentAuth`).
 4. **Workstream E1/E2/E3 — audit, lockout, session mgmt** (cheap, high enterprise
    signal; E1 is a SOC 2 prerequisite).
 5. **Workstream C — SSO (OIDC first, then SAML)** → the headline enterprise sale.

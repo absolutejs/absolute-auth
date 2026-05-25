@@ -89,6 +89,7 @@ export const instantiateUserSession = async <UserType>({
 
 		session[userSessionId] = {
 			accessToken,
+			authenticatedAt: Date.now(),
 			expiresAt: Date.now() + sessionDurationMs,
 			refreshToken,
 			user

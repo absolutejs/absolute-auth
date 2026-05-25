@@ -12,6 +12,7 @@ import { profile } from './routes/profile';
 import { protectRoutePlugin } from './routes/protectRoute';
 import { refresh } from './routes/refresh';
 import { revoke } from './routes/revoke';
+import { stepUpPlugin } from './routes/stepUp';
 import { signout } from './routes/signout';
 import { userStatus } from './routes/userStatus';
 import { sessionCleanup } from './session/cleanup';
@@ -139,6 +140,7 @@ export const auth = async <UserType>({
 			mfa ? mfaRoutes<UserType>({ ...mfa, authSessionStore }) : new Elysia()
 		)
 		.use(protectRoutePlugin<UserType>({ authSessionStore }))
+		.use(stepUpPlugin<UserType>({ authSessionStore }))
 		.use(
 			// `htmx` is gated to `UserType extends AuthHtmxUser` at the public
 			// API (AuthConfig), so this bridge is sound — TS just can't
@@ -172,6 +174,7 @@ export {
 } from './linkedProviders/neonStores';
 export { createInMemoryLinkedProviderStores } from './linkedProviders/inMemoryStores';
 export { protectRoutePlugin } from './routes/protectRoute';
+export { stepUpPlugin } from './routes/stepUp';
 export { sessionCleanup } from './session/cleanup';
 export { createAuthHtmxRoutes } from './htmx/routes';
 export { resolveAuthHtmxRenderers } from './htmx/renderers';

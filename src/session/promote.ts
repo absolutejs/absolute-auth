@@ -39,6 +39,7 @@ export const promoteToSession = async <UserType>({
 	const userSessionId = crypto.randomUUID();
 
 	targetSession[userSessionId] = {
+		authenticatedAt: Date.now(),
 		expiresAt: Date.now() + sessionDurationMs,
 		user
 	};

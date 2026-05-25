@@ -16,6 +16,7 @@ import type { AuthSessionStore } from './types';
 
 export const authSessionsTable = pgTable('auth_sessions', {
 	access_token: text('access_token'),
+	authenticated_at_ms: bigint('authenticated_at_ms', { mode: 'number' }),
 	created_at: timestamp('created_at').notNull().defaultNow(),
 	expires_at_ms: bigint('expires_at_ms', { mode: 'number' }).notNull(),
 	id: varchar('id', { length: 255 }).primaryKey(),
@@ -65,6 +66,7 @@ const toSessionData = <UserType>(
 	row: AuthSessionRow
 ): SessionData<UserType> => ({
 	accessToken: row.access_token ?? undefined,
+	authenticatedAt: row.authenticated_at_ms ?? undefined,
 	expiresAt: row.expires_at_ms,
 	refreshToken: row.refresh_token ?? undefined,
 	// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- deserialization boundary: user_json was persisted from UserType, so reading it back as UserType is sound
@@ -137,6 +139,7 @@ export const createNeonAuthSessionStore = <UserType>(
 				.insert(authSessionsTable)
 				.values({
 					access_token: value.accessToken ?? null,
+					authenticated_at_ms: value.authenticatedAt ?? null,
 					expires_at_ms: value.expiresAt,
 					id,
 					refresh_token: value.refreshToken ?? null,
@@ -146,6 +149,7 @@ export const createNeonAuthSessionStore = <UserType>(
 				.onConflictDoUpdate({
 					set: {
 						access_token: value.accessToken ?? null,
+						authenticated_at_ms: value.authenticatedAt ?? null,
 						expires_at_ms: value.expiresAt,
 						refresh_token: value.refreshToken ?? null,
 						updated_at: new Date(),

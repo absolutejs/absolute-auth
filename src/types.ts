@@ -42,6 +42,9 @@ export type SessionData<UserType> = {
 	accessToken?: string;
 	refreshToken?: string;
 	expiresAt: number;
+	/** When the session was last established by an actual authentication (login, OAuth
+	 *  callback, or MFA challenge — NOT a token refresh). Drives step-up `requireRecentAuth`. */
+	authenticatedAt?: number;
 };
 
 export type SessionRecord<UserType> = Record<

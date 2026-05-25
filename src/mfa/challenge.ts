@@ -87,6 +87,7 @@ export const mfaChallenge = <UserType>({
 			delete challengeUnregistered[pendingId];
 			const userSessionId = crypto.randomUUID();
 			challengeSession[userSessionId] = {
+				authenticatedAt: Date.now(),
 				expiresAt: Date.now() + sessionDurationMs,
 				user
 			};
