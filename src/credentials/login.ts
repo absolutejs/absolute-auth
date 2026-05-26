@@ -9,9 +9,11 @@ import {
 	type CredentialRouteProps,
 	DEFAULT_CREDENTIAL_SESSION_TTL_MS
 } from './config';
+import { isPasswordCompromised } from './passwordPolicy';
 
 export const credentialsLogin = <UserType>({
 	authSessionStore,
+	checkBreachesOnLogin,
 	credentialStore,
 	getUserByEmail,
 	isMfaRequired,
@@ -100,6 +102,12 @@ export const credentialsLogin = <UserType>({
 				return status('OK', { status: 'mfa_required' });
 			}
 
+			// Login-time breach check: never block (the user is already verified),
+			// just flag so the consumer can prompt a reset on next screen.
+			const passwordCompromised = checkBreachesOnLogin
+				? await isPasswordCompromised(password)
+				: false;
+
 			const userSessionId = await promoteToSession({
 				authSessionStore,
 				cookie: user_session_id,
@@ -109,7 +117,7 @@ export const credentialsLogin = <UserType>({
 			});
 			await onCredentialsLoginSuccess?.({ user, userSessionId });
 
-			return status('OK', { status: 'authenticated' });
+			return status('OK', { passwordCompromised, status: 'authenticated' });
 		},
 		{
 			body: t.Object({ email: t.String(), password: t.String() }),

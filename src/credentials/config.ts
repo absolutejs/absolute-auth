@@ -28,6 +28,10 @@ export type CredentialEmailMessage = {
 // owns only password hashes + tokens via `credentialStore`. Every block is additive and
 // routes are overridable, matching the existing OAuth config surface.
 export type CredentialsConfig<UserType> = {
+	// When true, a successful login also checks the password against HIBP; if it
+	// has since appeared in a breach the session is still issued but the response
+	// carries `passwordCompromised: true` so the consumer can force a reset.
+	checkBreachesOnLogin?: boolean;
 	credentialStore: CredentialStore;
 	getUserByEmail: (
 		email: string

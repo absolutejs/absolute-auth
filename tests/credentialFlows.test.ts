@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'bun:test';
+import { describe, expect, spyOn, test } from 'bun:test';
 import { Elysia } from 'elysia';
 import type {
 	CredentialEmailMessage,
@@ -140,6 +140,27 @@ describe('credential login', () => {
 		});
 
 		expect(response.status).toBe(401);
+	});
+
+	test('flags a compromised password at login when enabled', async () => {
+		const { app } = buildHarness({ checkBreachesOnLogin: true });
+		await registerUser(app, 'breached@example.com', 'password');
+
+		// SHA-1("password") = 5BAA61E4C9B93F3F0682250B6CF8331B7EE68FD8
+		const spy = spyOn(globalThis, 'fetch').mockResolvedValue(
+			new Response('1E4C9B93F3F0682250B6CF8331B7EE68FD8:42')
+		);
+		const response = await postJson(app, '/auth/login', {
+			email: 'breached@example.com',
+			password: 'password'
+		});
+		spy.mockRestore();
+
+		expect(response.status).toBe(200);
+		expect(await response.json()).toMatchObject({
+			passwordCompromised: true,
+			status: 'authenticated'
+		});
 	});
 
 	test('returns mfa_required when a factor is enrolled', async () => {
