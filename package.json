@@ -15,6 +15,7 @@
 		"test": "bun test",
 		"format": "absolute prettier --write",
 		"lint": "absolute eslint",
+		"prepublishOnly": "bun run build",
 		"typecheck": "absolute typecheck",
 		"release": "bun run format && bun run build && bun publish"
 	},
