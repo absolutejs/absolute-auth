@@ -63,6 +63,68 @@ describe('tamper-evident audit', () => {
 
 		expect((await verifyAuditChain(events, 'wrong')).ok).toBe(false);
 	});
+
+	test('two writers interleaved into one sink each verify (sharded)', async () => {
+		const { events, sink } = captureSink();
+		const writerA = createTamperEvidentSink({
+			secret: 'k',
+			sink,
+			writerId: 'a'
+		});
+		const writerB = createTamperEvidentSink({
+			secret: 'k',
+			sink,
+			writerId: 'b'
+		});
+
+		// Interleave appends — the failure mode that broke a single global chain.
+		await writerA.append({ at: 1, type: 'register', userId: 'u1' });
+		await writerB.append({ at: 2, type: 'oauth_login', userId: 'u2' });
+		await writerA.append({ at: 3, type: 'credentials_login', userId: 'u1' });
+		await writerB.append({ at: 4, type: 'logout', userId: 'u2' });
+
+		expect(await verifyAuditChain(events, 'k')).toEqual({ ok: true });
+	});
+
+	test('sharded: tampering one writer event is still detected', async () => {
+		const { events, sink } = captureSink();
+		const writerA = createTamperEvidentSink({
+			secret: 'k',
+			sink,
+			writerId: 'a'
+		});
+		const writerB = createTamperEvidentSink({
+			secret: 'k',
+			sink,
+			writerId: 'b'
+		});
+		await writerA.append({ at: 1, type: 'register', userId: 'u1' });
+		await writerB.append({ at: 2, type: 'oauth_login', userId: 'u2' });
+		await writerA.append({ at: 3, type: 'mfa_challenge', userId: 'u1' });
+
+		const target = events.find((event) => event.type === 'oauth_login');
+		if (target) target.type = 'logout';
+
+		expect((await verifyAuditChain(events, 'k')).ok).toBe(false);
+	});
+
+	test('a stable writerId resumes its chain across instances', async () => {
+		const { events, sink } = captureSink();
+		// First "instance" writes one event, then a fresh instance with the same
+		// writerId resumes the chain (seeded from the store).
+		await createTamperEvidentSink({
+			secret: 'k',
+			sink,
+			writerId: 'svc'
+		}).append({ at: 1, type: 'register', userId: 'u1' });
+		await createTamperEvidentSink({
+			secret: 'k',
+			sink,
+			writerId: 'svc'
+		}).append({ at: 2, type: 'credentials_login', userId: 'u1' });
+
+		expect(await verifyAuditChain(events, 'k')).toEqual({ ok: true });
+	});
 });
 
 describe('SIEM log stream', () => {

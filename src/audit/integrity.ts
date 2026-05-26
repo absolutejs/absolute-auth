@@ -7,17 +7,26 @@ import type { AuditEvent, AuditSink } from './types';
 // `metadata.__integrity`, so it round-trips through any existing sink (the Postgres sink's
 // jsonb column) with no schema change. `verifyAuditChain` then detects any modified, removed,
 // or reordered event.
+//
+// Sharding: one chain per WRITER (`writerId`). A single in-process chain can't span
+// concurrent writers or restarts, so each writer gets its own chain — default is a random id
+// per process, so every instance / redeploy is self-contained and never forks another
+// writer's chain. `verifyAuditChain` groups by `writerId` and verifies each sub-chain
+// independently. Pass a stable `writerId` (single-writer only) to resume one continuous chain
+// across restarts (seeded from the store; supply `loadWriterHead` for an exact, scan-free seed).
 
 const INTEGRITY_KEY = '__integrity';
 const GENESIS = '';
 const HEX_RADIX = 16;
 const HEX_PAD = 2;
+const DEFAULT_SEED_SCAN_LIMIT = 1000;
 
 const encoder = new TextEncoder();
 
 export type AuditIntegrity = {
 	hash: string;
 	previousHash: string;
+	writerId?: string;
 };
 
 export type AuditChainResult = {
@@ -87,22 +96,51 @@ const brokenAt = (index: number) => {
 	return result;
 };
 
-// Wrap any AuditSink so every appended event is hash-chained. The previous hash is seeded
-// lazily from the sink's most recent event (so the chain survives restarts). Assumes a
-// single append writer per sink; for multi-writer setups, shard one chained sink per writer.
+// Wrap any AuditSink so every appended event is hash-chained, one chain per `writerId`.
+// Default: a fresh random id per process, so concurrent instances and redeploys each own a
+// self-contained chain that never forks another writer's. Pass a stable `writerId`
+// (single-writer only) to resume one continuous chain across restarts — seeded by scanning
+// the store for that writer's latest event, or via `loadWriterHead` for a scan-free seed.
 export const createTamperEvidentSink = ({
+	loadWriterHead,
 	secret,
-	sink
+	seedScanLimit = DEFAULT_SEED_SCAN_LIMIT,
+	sink,
+	writerId
 }: {
+	loadWriterHead?: (
+		writerId: string
+	) => Promise<string | undefined> | string | undefined;
 	secret?: string;
+	seedScanLimit?: number;
 	sink: AuditSink;
+	writerId?: string;
 }): AuditSink => {
+	const chainWriterId = writerId ?? crypto.randomUUID();
+	const isResuming = writerId !== undefined;
 	let lastHash: string | undefined;
+	let seeded = false;
 
 	const seed = async () => {
-		if (lastHash !== undefined) return;
-		const [recent] = (await sink.list?.({ limit: 1 })) ?? [];
-		lastHash = recent ? (readIntegrity(recent)?.hash ?? GENESIS) : GENESIS;
+		if (seeded) return;
+		seeded = true;
+		// A fresh per-process writer provably has no prior events — start at genesis without
+		// scanning. Only a stable, provided writerId needs to resume its existing chain.
+		if (!isResuming) {
+			lastHash = GENESIS;
+
+			return;
+		}
+		if (loadWriterHead) {
+			lastHash = (await loadWriterHead(chainWriterId)) ?? GENESIS;
+
+			return;
+		}
+		const recent = (await sink.list?.({ limit: seedScanLimit })) ?? [];
+		const head = recent.find(
+			(event) => readIntegrity(event)?.writerId === chainWriterId
+		);
+		lastHash = head ? (readIntegrity(head)?.hash ?? GENESIS) : GENESIS;
 	};
 
 	return {
@@ -112,7 +150,11 @@ export const createTamperEvidentSink = ({
 			const previousHash = lastHash ?? GENESIS;
 			const hash = await hashAuditEvent(event, previousHash, secret);
 			lastHash = hash;
-			const integrity: AuditIntegrity = { hash, previousHash };
+			const integrity: AuditIntegrity = {
+				hash,
+				previousHash,
+				writerId: chainWriterId
+			};
 			await sink.append({
 				...event,
 				metadata: { ...event.metadata, [INTEGRITY_KEY]: integrity }
@@ -137,17 +179,21 @@ export const hashAuditEvent = async (
 		: hmacSha256Hex(secret, message);
 };
 
-// Verify a hash-chained log. Pass events oldest-first. Returns ok, or the index of the first
-// event whose link is missing, altered, or out of order.
+// Verify a hash-chained log. Pass events oldest-first. Each writer's sub-chain is verified
+// independently (grouped by `__integrity.writerId`, in the order given); events without a
+// writerId share one chain — identical to the original single-writer check. Returns ok, or
+// the input-array index of the first event whose link is missing, altered, or out of order.
 export const verifyAuditChain = async (
 	events: AuditEvent[],
 	secret?: string
 ) => {
-	let previousHash = GENESIS;
+	const heads = new Map<string, string>();
 	for (let index = 0; index < events.length; index += 1) {
 		const event = events[index];
 		if (event === undefined) return brokenAt(index);
 		const integrity = readIntegrity(event);
+		const chain = integrity?.writerId ?? GENESIS;
+		const previousHash = heads.get(chain) ?? GENESIS;
 		// eslint-disable-next-line no-await-in-loop -- chain verification is inherently sequential
 		const expected = await hashAuditEvent(event, previousHash, secret);
 		if (
@@ -157,7 +203,7 @@ export const verifyAuditChain = async (
 		) {
 			return brokenAt(index);
 		}
-		previousHash = integrity.hash;
+		heads.set(chain, integrity.hash);
 	}
 	const valid: AuditChainResult = { ok: true };
 
