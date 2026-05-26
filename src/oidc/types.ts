@@ -18,6 +18,9 @@ export type OAuthClient = {
 	// OIDC RP-initiated logout — the redirect targets allowed in `post_logout_redirect_uri`.
 	postLogoutRedirectUris?: string[];
 	redirectUris: string[];
+	// FAPI-style hardening: when true, `/authorize` rejects requests that didn't go through
+	// `/oauth2/par` first. Off by default — opt-in per client.
+	requirePushedAuthorizationRequests?: boolean;
 	scopes: string[];
 };
 
@@ -32,6 +35,28 @@ export type ClientAssertionJtiStore = {
 		jti: string,
 		expiresAt: number
 	) => Promise<boolean>;
+};
+
+// A Pushed Authorization Request (RFC 9126). The RP POSTs the full authorize params to
+// `/oauth2/par`; we store them under an opaque `request_uri` (90s TTL) and the RP redirects
+// the user to `/authorize?client_id=...&request_uri=...`. Closes the URL-shoving attack
+// surface — request params never traverse the user's browser.
+export type PushedAuthorizationRequest = {
+	clientId: string;
+	createdAt: number;
+	expiresAt: number;
+	// Stored param bag — exactly what the RP POSTed (minus client auth fields). Whatever
+	// `/authorize` would have read from the query string, we replay from here. Typed as
+	// Record<string, string> because URL-encoded form bodies are flat strings.
+	params: Record<string, string>;
+	requestUriHash: string;
+};
+
+export type PushedAuthorizationRequestStore = {
+	consumeRequest: (
+		requestUriHash: string
+	) => Promise<PushedAuthorizationRequest | undefined>;
+	saveRequest: (request: PushedAuthorizationRequest) => Promise<void>;
 };
 
 export type OAuthClientStore = {

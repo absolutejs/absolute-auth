@@ -12,7 +12,9 @@ import type {
 	OAuthClient,
 	OAuthClientStore,
 	OidcRefreshToken,
-	OidcRefreshTokenStore
+	OidcRefreshTokenStore,
+	PushedAuthorizationRequest,
+	PushedAuthorizationRequestStore
 } from './types';
 
 const DEFAULT_LIST_LIMIT = 100;
@@ -182,6 +184,25 @@ export const createInMemoryOidcRefreshTokenStore =
 			},
 			saveToken: async (token) => {
 				tokens.set(token.tokenHash, { ...token });
+			}
+		};
+	};
+export const createInMemoryPushedAuthorizationRequestStore =
+	(): PushedAuthorizationRequestStore => {
+		const requests = new Map<string, PushedAuthorizationRequest>();
+
+		return {
+			consumeRequest: async (requestUriHash) => {
+				const record = requests.get(requestUriHash);
+				if (record === undefined) return undefined;
+				requests.delete(requestUriHash);
+				// Expired entries are GC'd on read so the Map doesn't grow without bound.
+				if (record.expiresAt < Date.now()) return undefined;
+
+				return record;
+			},
+			saveRequest: async (request) => {
+				requests.set(request.requestUriHash, { ...request });
 			}
 		};
 	};

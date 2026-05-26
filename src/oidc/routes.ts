@@ -32,6 +32,11 @@ import {
 	verifyIdTokenHint
 } from './logout';
 import {
+	consumePushedRequest,
+	pushAuthorizationRequest,
+	REQUEST_URI_PREFIX
+} from './par';
+import {
 	deleteRegisteredClient,
 	getRegisteredClient,
 	registerClient,
@@ -118,6 +123,7 @@ export const oidcProviderRoutes = <UserType>(
 	const deviceAuthorizationRoute: RouteString = `${oidcRoute}/device_authorization`;
 	const deviceApproveRoute: RouteString = `${oidcRoute}/device/decision`;
 	const endSessionRoute: RouteString = `${oidcRoute}/end_session`;
+	const parRoute: RouteString = `${oidcRoute}/par`;
 	const registrationRoute: RouteString = `${oidcRoute}/register`;
 	const registrationBaseUrl = `${issuer}${registrationRoute}`;
 	const tokenUrl = `${issuer}${oidcRoute}/token`;
@@ -400,6 +406,10 @@ export const oidcProviderRoutes = <UserType>(
 	if (config.clientRegistrationTokenStore !== undefined) {
 		discovery.registration_endpoint = registrationBaseUrl;
 	}
+	if (config.pushedAuthorizationRequestStore !== undefined) {
+		discovery.pushed_authorization_request_endpoint = `${issuer}${parRoute}`;
+		discovery.require_pushed_authorization_requests_supported = true;
+	}
 
 	const handleEndSession = async ({
 		cookie,
@@ -481,6 +491,38 @@ export const oidcProviderRoutes = <UserType>(
 		.get(
 			authorizeRoute,
 			async ({ cookie: { user_session_id }, query, request, store }) => {
+				// If the caller pushed the request first (RFC 9126), look up the stashed
+				// params + use those — `client_id` may still be in the query, but every
+				// other authorize param comes from the PAR record.
+				let effectiveQuery: Record<string, string | undefined> = query;
+				if (
+					query.request_uri !== undefined &&
+					config.pushedAuthorizationRequestStore !== undefined &&
+					query.client_id !== undefined
+				) {
+					const pushed = await consumePushedRequest({
+						clientId: query.client_id,
+						requestUri: query.request_uri,
+						store: config.pushedAuthorizationRequestStore
+					});
+					if (pushed === undefined) {
+						return jsonResponse(
+							{ error: 'invalid_request_uri' },
+							HTTP_BAD_REQUEST
+						);
+					}
+					effectiveQuery = pushed;
+				} else if (
+					query.request_uri !== undefined &&
+					query.request_uri.startsWith(REQUEST_URI_PREFIX)
+				) {
+					// Caller passed a request_uri shape but PAR isn't configured.
+					return jsonResponse(
+						{ error: 'invalid_request_uri' },
+						HTTP_BAD_REQUEST
+					);
+				}
+
 				const {
 					client_id: clientId,
 					code_challenge: codeChallenge,
@@ -490,7 +532,7 @@ export const oidcProviderRoutes = <UserType>(
 					response_type: responseType,
 					scope,
 					state
-				} = query;
+				} = effectiveQuery;
 
 				const client =
 					clientId === undefined
@@ -513,6 +555,16 @@ export const oidcProviderRoutes = <UserType>(
 
 					return redirectTo(`${redirectUri}?${params.toString()}`);
 				};
+				// FAPI hardening: clients that opted into PAR-only can't sneak in via a
+				// plain /authorize call — must have come through the PAR path above (which
+				// rewrites effectiveQuery from the stored bag, so we detect it by checking
+				// whether the original query carried `request_uri`).
+				if (
+					client.requirePushedAuthorizationRequests === true &&
+					query.request_uri === undefined
+				) {
+					return errorRedirect('invalid_request');
+				}
 				if (responseType !== 'code') {
 					return errorRedirect('unsupported_response_type');
 				}
@@ -585,11 +637,14 @@ export const oidcProviderRoutes = <UserType>(
 					user_session_id: t.Optional(userSessionIdTypebox)
 				}),
 				query: t.Object({
+					acr_values: t.Optional(t.String()),
+					claims: t.Optional(t.String()),
 					client_id: t.Optional(t.String()),
 					code_challenge: t.Optional(t.String()),
 					code_challenge_method: t.Optional(t.String()),
 					nonce: t.Optional(t.String()),
 					redirect_uri: t.Optional(t.String()),
+					request_uri: t.Optional(t.String()),
 					response_type: t.Optional(t.String()),
 					scope: t.Optional(t.String()),
 					state: t.Optional(t.String())
@@ -650,6 +705,79 @@ export const oidcProviderRoutes = <UserType>(
 					scope: t.Optional(t.String()),
 					subject_token: t.Optional(t.String()),
 					subject_token_type: t.Optional(t.String())
+				})
+			}
+		)
+		// RFC 9126 — Pushed Authorization Request. The RP POSTs the full authorize
+		// param set, authenticated like the token endpoint. We stash under a 90s
+		// opaque request_uri (urn:ietf:params:oauth:request_uri:<token>); /authorize
+		// replays it. The point: request params never traverse the user-agent.
+		.post(
+			parRoute,
+			async ({ body, headers }) => {
+				if (config.pushedAuthorizationRequestStore === undefined) {
+					return oauthError(
+						HTTP_NOT_IMPLEMENTED,
+						'unsupported_response_type'
+					);
+				}
+				const basic = readBasicAuth(headers.authorization);
+				const client = await authenticateTokenClient({
+					basicClientId: basic.clientId,
+					basicClientSecret: basic.clientSecret,
+					bodyClientAssertion: body.client_assertion,
+					bodyClientAssertionType: body.client_assertion_type,
+					bodyClientId: body.client_id,
+					bodyClientSecret: body.client_secret
+				});
+				if (client === undefined) {
+					return oauthError(HTTP_UNAUTHORIZED, 'invalid_client');
+				}
+				// Strip Optional `undefined`s + client auth fields so the persisted
+				// param bag is a clean `Record<string, string>` (jsonb-friendly + matches
+				// what /authorize will look up).
+				const isAuthField = (key: string) =>
+					key === 'client_assertion' ||
+					key === 'client_assertion_type' ||
+					key === 'client_secret';
+				const params: Record<string, string> = Object.fromEntries(
+					Object.entries(body).filter(
+						(entry): entry is [string, string] =>
+							typeof entry[1] === 'string' && !isAuthField(entry[0])
+					)
+				);
+				const result = await pushAuthorizationRequest({
+					client,
+					params,
+					store: config.pushedAuthorizationRequestStore,
+					ttlMs: config.pushedAuthorizationRequestTtlMs
+				});
+
+				return jsonResponse(
+					result.body,
+					result.ok ? HTTP_OK : result.status
+				);
+			},
+			{
+				body: t.Object({
+					acr_values: t.Optional(t.String()),
+					audience: t.Optional(t.String()),
+					claims: t.Optional(t.String()),
+					client_assertion: t.Optional(t.String()),
+					client_assertion_type: t.Optional(t.String()),
+					client_id: t.Optional(t.String()),
+					client_secret: t.Optional(t.String()),
+					code_challenge: t.Optional(t.String()),
+					code_challenge_method: t.Optional(t.String()),
+					nonce: t.Optional(t.String()),
+					redirect_uri: t.Optional(t.String()),
+					resource: t.Optional(t.String()),
+					response_type: t.Optional(t.String()),
+					scope: t.Optional(t.String()),
+					state: t.Optional(t.String())
+				}),
+				headers: t.Object({
+					authorization: t.Optional(t.String())
 				})
 			}
 		)

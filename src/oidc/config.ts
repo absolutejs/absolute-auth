@@ -15,7 +15,8 @@ import type {
 	InitialAccessTokenStore,
 	LogoutDeliveryStore,
 	OAuthClientStore,
-	OidcRefreshTokenStore
+	OidcRefreshTokenStore,
+	PushedAuthorizationRequestStore
 } from './types';
 
 export const DEFAULT_OIDC_ROUTE: RouteString = '/oauth2';
@@ -89,6 +90,11 @@ export type OidcProviderConfig<UserType> = {
 	// the client store. Without it, every well-formed registration is accepted (subject
 	// to the `initialAccessTokenStore` gate if configured).
 	onClientRegistration?: OnClientRegistration;
+	// Optional — when set, the Pushed Authorization Request endpoint (RFC 9126) is mounted
+	// at `/oauth2/par` + `/authorize` accepts `request_uri`. Clients that opt into
+	// `requirePushedAuthorizationRequests` must use PAR. Without this store, PAR is off.
+	pushedAuthorizationRequestStore?: PushedAuthorizationRequestStore;
+	pushedAuthorizationRequestTtlMs?: number;
 	refreshTokenStore: OidcRefreshTokenStore;
 	refreshTokenTtlMs?: number;
 	signingKey: SigningKey;

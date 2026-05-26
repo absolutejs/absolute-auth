@@ -16,7 +16,9 @@ import type {
 	OAuthClient,
 	OAuthClientStore,
 	OidcRefreshToken,
-	OidcRefreshTokenStore
+	OidcRefreshTokenStore,
+	PushedAuthorizationRequest,
+	PushedAuthorizationRequestStore
 } from './types';
 
 const URL_LENGTH = 2048;
@@ -109,6 +111,21 @@ export const oauthLogoutDeliveriesTable = pgTable(
 		last_status: bigint('last_status', { mode: 'number' }),
 		logout_token: text('logout_token').notNull(),
 		user_id: varchar('user_id', { length: ID_LENGTH }).notNull()
+	}
+);
+
+export const oauthPushedAuthorizationRequestsTable = pgTable(
+	'auth_oauth_pushed_authorization_requests',
+	{
+		client_id: varchar('client_id', { length: ID_LENGTH }).notNull(),
+		created_at_ms: bigint('created_at_ms', { mode: 'number' }).notNull(),
+		expires_at_ms: bigint('expires_at_ms', { mode: 'number' }).notNull(),
+		params_json: jsonb('params_json')
+			.$type<Record<string, string>>()
+			.notNull(),
+		request_uri_hash: varchar('request_uri_hash', {
+			length: ID_LENGTH
+		}).primaryKey()
 	}
 );
 
@@ -236,6 +253,8 @@ export const createNeonOAuthClientStore = (databaseUrl: string) =>
 	createPostgresOAuthClientStore(createNeonDatabase(databaseUrl));
 export const createNeonOidcRefreshTokenStore = (databaseUrl: string) =>
 	createPostgresOidcRefreshTokenStore(createNeonDatabase(databaseUrl));
+export const createNeonPushedAuthorizationRequestStore = (databaseUrl: string) =>
+	createPostgresPushedAuthorizationRequestStore(createNeonDatabase(databaseUrl));
 export const createPostgresAuthorizationCodeStore = (
 	db: AnyPgDatabase
 ): AuthorizationCodeStore => ({
@@ -499,5 +518,50 @@ export const createPostgresOidcRefreshTokenStore = (
 	},
 	saveToken: async (token) => {
 		await db.insert(oauthRefreshTokensTable).values(toRefreshValues(token));
+	}
+});
+export const createPostgresPushedAuthorizationRequestStore = (
+	db: AnyPgDatabase
+): PushedAuthorizationRequestStore => ({
+	consumeRequest: async (requestUriHash) => {
+		const [row] = await db
+			.delete(oauthPushedAuthorizationRequestsTable)
+			.where(
+				eq(
+					oauthPushedAuthorizationRequestsTable.request_uri_hash,
+					requestUriHash
+				)
+			)
+			.returning();
+		if (!row) return undefined;
+		// Lazy GC of expired rows from prior writes — keeps the table thin without a
+		// dedicated cron. Same call returns undefined if THIS request was already expired.
+		await db
+			.delete(oauthPushedAuthorizationRequestsTable)
+			.where(
+				lt(
+					oauthPushedAuthorizationRequestsTable.expires_at_ms,
+					Date.now()
+				)
+			);
+		if (row.expires_at_ms < Date.now()) return undefined;
+		const request: PushedAuthorizationRequest = {
+			clientId: row.client_id,
+			createdAt: row.created_at_ms,
+			expiresAt: row.expires_at_ms,
+			params: row.params_json,
+			requestUriHash: row.request_uri_hash
+		};
+
+		return request;
+	},
+	saveRequest: async (request) => {
+		await db.insert(oauthPushedAuthorizationRequestsTable).values({
+			client_id: request.clientId,
+			created_at_ms: request.createdAt,
+			expires_at_ms: request.expiresAt,
+			params_json: request.params,
+			request_uri_hash: request.requestUriHash
+		});
 	}
 });
