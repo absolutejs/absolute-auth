@@ -31,12 +31,20 @@ import {
 	resolvePostLogoutRedirect,
 	verifyIdTokenHint
 } from './logout';
+import {
+	deleteRegisteredClient,
+	getRegisteredClient,
+	registerClient,
+	updateRegisteredClient
+} from './registration';
 import type { OAuthClient } from './types';
 
 const HTTP_OK = 200;
+const HTTP_NO_CONTENT = 204;
+const HTTP_FOUND = 302;
 const HTTP_BAD_REQUEST = 400;
 const HTTP_UNAUTHORIZED = 401;
-const HTTP_FOUND = 302;
+const HTTP_NOT_IMPLEMENTED = 501;
 const CODE_TTL_MINUTES = 10;
 const CODE_TTL_MS = MILLISECONDS_IN_A_MINUTE * CODE_TTL_MINUTES;
 const TOKEN_BYTES = 32;
@@ -110,6 +118,8 @@ export const oidcProviderRoutes = <UserType>(
 	const deviceAuthorizationRoute: RouteString = `${oidcRoute}/device_authorization`;
 	const deviceApproveRoute: RouteString = `${oidcRoute}/device/decision`;
 	const endSessionRoute: RouteString = `${oidcRoute}/end_session`;
+	const registrationRoute: RouteString = `${oidcRoute}/register`;
+	const registrationBaseUrl = `${issuer}${registrationRoute}`;
 	const tokenUrl = `${issuer}${oidcRoute}/token`;
 
 	const authenticateClient = async (
@@ -386,6 +396,9 @@ export const oidcProviderRoutes = <UserType>(
 	};
 	if (config.deviceAuthorizationStore) {
 		discovery.device_authorization_endpoint = `${issuer}${deviceAuthorizationRoute}`;
+	}
+	if (config.clientRegistrationTokenStore !== undefined) {
+		discovery.registration_endpoint = registrationBaseUrl;
 	}
 
 	const handleEndSession = async ({
@@ -861,6 +874,141 @@ export const oidcProviderRoutes = <UserType>(
 				cookie: t.Cookie({
 					user_session_id: t.Optional(userSessionIdTypebox)
 				})
+			}
+		)
+		// RFC 7591 — Dynamic Client Registration. The route is mounted unconditionally,
+		// but returns 501 when the registration token store isn't configured — that way
+		// /.well-known/openid-configuration's discovery flag stays the source of truth on
+		// whether DCR is on at this deployment.
+		.post(
+			registrationRoute,
+			async ({ body, headers }) => {
+				if (config.clientRegistrationTokenStore === undefined) {
+					return jsonResponse(
+						{ error: 'unsupported_response_type' },
+						HTTP_NOT_IMPLEMENTED
+					);
+				}
+				const presented = headers.authorization?.startsWith('Bearer ')
+					? headers.authorization.slice('Bearer '.length).trim()
+					: undefined;
+				const result = await registerClient({
+					clientStore,
+					initialAccessTokenStore: config.initialAccessTokenStore,
+					metadata: body,
+					onClientRegistration: config.onClientRegistration,
+					presentedInitialAccessToken: presented,
+					registrationBaseUrl,
+					registrationTokenStore: config.clientRegistrationTokenStore
+				});
+
+				return jsonResponse(
+					result.body,
+					result.ok ? HTTP_OK : result.status
+				);
+			},
+			{
+				body: t.Object({
+					backchannel_logout_uri: t.Optional(t.String()),
+					client_name: t.Optional(t.String()),
+					jwks: t.Optional(t.Any()),
+					jwks_uri: t.Optional(t.String()),
+					post_logout_redirect_uris: t.Optional(t.Array(t.String())),
+					redirect_uris: t.Optional(t.Array(t.String())),
+					scope: t.Optional(t.String())
+				}),
+				headers: t.Object({
+					authorization: t.Optional(t.String())
+				})
+			}
+		)
+		.get(
+			`${registrationRoute}/:clientId`,
+			async ({ headers, params: { clientId } }) => {
+				if (config.clientRegistrationTokenStore === undefined) {
+					return jsonResponse(
+						{ error: 'unsupported_response_type' },
+						HTTP_NOT_IMPLEMENTED
+					);
+				}
+				const result = await getRegisteredClient({
+					authorization: headers.authorization,
+					clientId,
+					clientStore,
+					registrationTokenStore: config.clientRegistrationTokenStore
+				});
+
+				return jsonResponse(result.body, result.status);
+			},
+			{
+				headers: t.Object({
+					authorization: t.Optional(t.String())
+				}),
+				params: t.Object({ clientId: t.String() })
+			}
+		)
+		.put(
+			`${registrationRoute}/:clientId`,
+			async ({ body, headers, params: { clientId } }) => {
+				if (config.clientRegistrationTokenStore === undefined) {
+					return jsonResponse(
+						{ error: 'unsupported_response_type' },
+						HTTP_NOT_IMPLEMENTED
+					);
+				}
+				const result = await updateRegisteredClient({
+					authorization: headers.authorization,
+					clientId,
+					clientStore,
+					metadata: body,
+					onClientRegistration: config.onClientRegistration,
+					registrationTokenStore: config.clientRegistrationTokenStore
+				});
+
+				return jsonResponse(result.body, result.status);
+			},
+			{
+				body: t.Object({
+					backchannel_logout_uri: t.Optional(t.String()),
+					client_name: t.Optional(t.String()),
+					jwks: t.Optional(t.Any()),
+					jwks_uri: t.Optional(t.String()),
+					post_logout_redirect_uris: t.Optional(t.Array(t.String())),
+					redirect_uris: t.Optional(t.Array(t.String())),
+					scope: t.Optional(t.String())
+				}),
+				headers: t.Object({
+					authorization: t.Optional(t.String())
+				}),
+				params: t.Object({ clientId: t.String() })
+			}
+		)
+		.delete(
+			`${registrationRoute}/:clientId`,
+			async ({ headers, params: { clientId } }) => {
+				if (config.clientRegistrationTokenStore === undefined) {
+					return jsonResponse(
+						{ error: 'unsupported_response_type' },
+						HTTP_NOT_IMPLEMENTED
+					);
+				}
+				const result = await deleteRegisteredClient({
+					authorization: headers.authorization,
+					clientId,
+					clientStore,
+					registrationTokenStore: config.clientRegistrationTokenStore
+				});
+				if (result.status === HTTP_NO_CONTENT) {
+					return new Response(null, { status: HTTP_NO_CONTENT });
+				}
+
+				return jsonResponse(result.body, result.status);
+			},
+			{
+				headers: t.Object({
+					authorization: t.Optional(t.String())
+				}),
+				params: t.Object({ clientId: t.String() })
 			}
 		)
 		.get(jwksRoute, () => ({ keys: [toPublicJwk(signingKey)] }))

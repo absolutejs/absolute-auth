@@ -6,10 +6,13 @@ import {
 import { generateSecureToken, hashToken } from '../crypto';
 import type { RouteString } from '../types';
 import { signJwt, verifyJwt, type SigningKey } from './keys';
+import type { OnClientRegistration } from './registration';
 import type {
 	AuthorizationCodeStore,
 	ClientAssertionJtiStore,
+	ClientRegistrationTokenStore,
 	DeviceAuthorizationStore,
+	InitialAccessTokenStore,
 	LogoutDeliveryStore,
 	OAuthClientStore,
 	OidcRefreshTokenStore
@@ -36,6 +39,10 @@ export type OidcProviderConfig<UserType> = {
 	// protection. Without it, JWT-bearer client assertions still verify, but a leaked
 	// assertion within its `exp` window can replay. Strongly recommended for production.
 	clientAssertionJtiStore?: ClientAssertionJtiStore;
+	// Optional — enables Dynamic Client Registration (RFC 7591/7592) at /oauth2/register
+	// when paired with `clientStore.saveClient`/`updateClient`/`deleteClient`. Each issued
+	// management token is persisted here (hashed) and rotates on every PUT.
+	clientRegistrationTokenStore?: ClientRegistrationTokenStore;
 	clientStore: OAuthClientStore;
 	// Optional — enables the RFC 8628 device-authorization flow. When set, `/device_authorization`
 	// + the `urn:ietf:params:oauth:grant-type:device_code` token grant are mounted, and
@@ -68,12 +75,20 @@ export type OidcProviderConfig<UserType> = {
 	issuer: string;
 	// Where to send an unauthenticated authorize request (your login page). The original
 	// authorize URL is appended as `?return_to=`.
+	// Optional — when set, the DCR endpoint requires a valid `initial_access_token` in
+	// the Authorization header before a new client can register. Lets operators run a
+	// closed federation (only pre-issued tokens can register) without disabling DCR.
+	initialAccessTokenStore?: InitialAccessTokenStore;
 	loginUrl?: string;
 	// OIDC RP-initiated + back-channel logout. When set, `/oauth2/end_session` is mounted
 	// and clients with `backchannelLogoutUri` receive signed `logout_token` POSTs on
 	// session end. Failed pushes are persisted here as a DLQ for inspection/replay.
 	logoutDeliveryStore?: LogoutDeliveryStore;
 	oidcRoute?: RouteString;
+	// Optional policy hook — allow / deny / transform DCR metadata before it lands in
+	// the client store. Without it, every well-formed registration is accepted (subject
+	// to the `initialAccessTokenStore` gate if configured).
+	onClientRegistration?: OnClientRegistration;
 	refreshTokenStore: OidcRefreshTokenStore;
 	refreshTokenTtlMs?: number;
 	signingKey: SigningKey;

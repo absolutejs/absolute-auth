@@ -562,7 +562,9 @@ export {
 export {
 	createInMemoryAuthorizationCodeStore,
 	createInMemoryClientAssertionJtiStore,
+	createInMemoryClientRegistrationTokenStore,
 	createInMemoryDeviceAuthorizationStore,
+	createInMemoryInitialAccessTokenStore,
 	createInMemoryLogoutDeliveryStore,
 	createInMemoryOAuthClientStore,
 	createInMemoryOidcRefreshTokenStore
@@ -576,23 +578,39 @@ export {
 export {
 	createNeonAuthorizationCodeStore,
 	createNeonClientAssertionJtiStore,
+	createNeonClientRegistrationTokenStore,
 	createNeonDeviceAuthorizationStore,
+	createNeonInitialAccessTokenStore,
 	createNeonLogoutDeliveryStore,
 	createNeonOAuthClientStore,
 	createNeonOidcRefreshTokenStore,
 	createPostgresAuthorizationCodeStore,
 	createPostgresClientAssertionJtiStore,
+	createPostgresClientRegistrationTokenStore,
 	createPostgresDeviceAuthorizationStore,
+	createPostgresInitialAccessTokenStore,
 	createPostgresLogoutDeliveryStore,
 	createPostgresOAuthClientStore,
 	createPostgresOidcRefreshTokenStore,
 	oauthClientAssertionJtisTable,
+	oauthClientRegistrationTokensTable,
 	oauthClientsTable,
 	oauthCodesTable,
 	oauthDeviceAuthorizationsTable,
+	oauthInitialAccessTokensTable,
 	oauthLogoutDeliveriesTable,
 	oauthRefreshTokensTable
 } from './oidc/postgresStores';
+export {
+	deleteRegisteredClient,
+	getRegisteredClient,
+	registerClient,
+	updateRegisteredClient,
+	type ClientRegistrationDecision,
+	type ClientRegistrationMetadata,
+	type OnClientRegistration,
+	type RegisterClientResult
+} from './oidc/registration';
 export * from './adaptive/config';
 export * from './adaptive/fingerprint';
 export * from './adaptive/types';

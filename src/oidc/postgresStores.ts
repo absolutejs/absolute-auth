@@ -5,9 +5,12 @@ import type {
 	AuthorizationCode,
 	AuthorizationCodeStore,
 	ClientAssertionJtiStore,
+	ClientRegistrationToken,
+	ClientRegistrationTokenStore,
 	DeviceAuthorization,
 	DeviceAuthorizationStatus,
 	DeviceAuthorizationStore,
+	InitialAccessTokenStore,
 	LogoutDelivery,
 	LogoutDeliveryStore,
 	OAuthClient,
@@ -30,6 +33,15 @@ export const oauthClientAssertionJtisTable = pgTable(
 		}).primaryKey(),
 		expires_at_ms: bigint('expires_at_ms', { mode: 'number' }).notNull(),
 		jti: varchar('jti', { length: ID_LENGTH }).notNull()
+	}
+);
+
+export const oauthClientRegistrationTokensTable = pgTable(
+	'auth_oauth_client_registration_tokens',
+	{
+		client_id: varchar('client_id', { length: ID_LENGTH }).notNull(),
+		created_at_ms: bigint('created_at_ms', { mode: 'number' }).notNull(),
+		token_hash: varchar('token_hash', { length: ID_LENGTH }).primaryKey()
 	}
 );
 
@@ -75,6 +87,13 @@ export const oauthDeviceAuthorizationsTable = pgTable(
 		status: varchar('status', { length: 16 }).notNull(),
 		user_code: varchar('user_code', { length: 16 }).notNull().unique(),
 		user_sub: varchar('user_sub', { length: ID_LENGTH })
+	}
+);
+
+export const oauthInitialAccessTokensTable = pgTable(
+	'auth_oauth_initial_access_tokens',
+	{
+		token_hash: varchar('token_hash', { length: ID_LENGTH }).primaryKey()
 	}
 );
 
@@ -205,8 +224,12 @@ export const createNeonAuthorizationCodeStore = (databaseUrl: string) =>
 	createPostgresAuthorizationCodeStore(createNeonDatabase(databaseUrl));
 export const createNeonClientAssertionJtiStore = (databaseUrl: string) =>
 	createPostgresClientAssertionJtiStore(createNeonDatabase(databaseUrl));
+export const createNeonClientRegistrationTokenStore = (databaseUrl: string) =>
+	createPostgresClientRegistrationTokenStore(createNeonDatabase(databaseUrl));
 export const createNeonDeviceAuthorizationStore = (databaseUrl: string) =>
 	createPostgresDeviceAuthorizationStore(createNeonDatabase(databaseUrl));
+export const createNeonInitialAccessTokenStore = (databaseUrl: string) =>
+	createPostgresInitialAccessTokenStore(createNeonDatabase(databaseUrl));
 export const createNeonLogoutDeliveryStore = (databaseUrl: string) =>
 	createPostgresLogoutDeliveryStore(createNeonDatabase(databaseUrl));
 export const createNeonOAuthClientStore = (databaseUrl: string) =>
@@ -251,6 +274,43 @@ export const createPostgresClientAssertionJtiStore = (
 			// PK collision = we've seen this jti for this client before = replay.
 			return false;
 		}
+	}
+});
+export const createPostgresClientRegistrationTokenStore = (
+	db: AnyPgDatabase
+): ClientRegistrationTokenStore => ({
+	deleteByClientId: async (clientId) => {
+		await db
+			.delete(oauthClientRegistrationTokensTable)
+			.where(eq(oauthClientRegistrationTokensTable.client_id, clientId));
+	},
+	findByTokenHash: async (tokenHash) => {
+		const [row] = await db
+			.select()
+			.from(oauthClientRegistrationTokensTable)
+			.where(eq(oauthClientRegistrationTokensTable.token_hash, tokenHash))
+			.limit(1);
+		if (!row) return undefined;
+		const token: ClientRegistrationToken = {
+			clientId: row.client_id,
+			createdAt: row.created_at_ms,
+			tokenHash: row.token_hash
+		};
+
+		return token;
+	},
+	saveToken: async (token) => {
+		// One reg token per client — drop any prior token before saving.
+		await db
+			.delete(oauthClientRegistrationTokensTable)
+			.where(
+				eq(oauthClientRegistrationTokensTable.client_id, token.clientId)
+			);
+		await db.insert(oauthClientRegistrationTokensTable).values({
+			client_id: token.clientId,
+			created_at_ms: token.createdAt,
+			token_hash: token.tokenHash
+		});
 	}
 });
 export const createPostgresDeviceAuthorizationStore = (
@@ -314,6 +374,18 @@ export const createPostgresDeviceAuthorizationStore = (
 			);
 	}
 });
+export const createPostgresInitialAccessTokenStore = (
+	db: AnyPgDatabase
+): InitialAccessTokenStore => ({
+	consumeToken: async (tokenHash) => {
+		const deleted = await db
+			.delete(oauthInitialAccessTokensTable)
+			.where(eq(oauthInitialAccessTokensTable.token_hash, tokenHash))
+			.returning({ token_hash: oauthInitialAccessTokensTable.token_hash });
+
+		return deleted.length > 0;
+	}
+});
 export const createPostgresLogoutDeliveryStore = (
 	db: AnyPgDatabase
 ): LogoutDeliveryStore => ({
@@ -345,9 +417,29 @@ export const createPostgresLogoutDeliveryStore = (
 			.where(eq(oauthLogoutDeliveriesTable.id, deliveryId));
 	}
 });
+// Maps an OAuthClient domain object to the row shape (used by saveClient + updateClient).
+const toClientValues = (
+	client: OAuthClient
+): typeof oauthClientsTable.$inferInsert => ({
+	backchannel_logout_uri: client.backchannelLogoutUri ?? null,
+	client_id: client.clientId,
+	hashed_secret: client.hashedSecret ?? null,
+	jwks_json: client.jwks ?? null,
+	jwks_uri: client.jwksUri ?? null,
+	name: client.name,
+	post_logout_redirect_uris: client.postLogoutRedirectUris ?? null,
+	redirect_uris: client.redirectUris,
+	scopes: client.scopes
+});
+
 export const createPostgresOAuthClientStore = (
 	db: AnyPgDatabase
 ): OAuthClientStore => ({
+	deleteClient: async (clientId) => {
+		await db
+			.delete(oauthClientsTable)
+			.where(eq(oauthClientsTable.client_id, clientId));
+	},
 	findClient: async (clientId) => {
 		const [row] = await db
 			.select()
@@ -356,6 +448,15 @@ export const createPostgresOAuthClientStore = (
 			.limit(1);
 
 		return row ? toClient(row) : undefined;
+	},
+	saveClient: async (client) => {
+		await db.insert(oauthClientsTable).values(toClientValues(client));
+	},
+	updateClient: async (clientId, client) => {
+		await db
+			.update(oauthClientsTable)
+			.set(toClientValues(client))
+			.where(eq(oauthClientsTable.client_id, clientId));
 	}
 });
 export const createPostgresOidcRefreshTokenStore = (

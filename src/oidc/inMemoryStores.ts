@@ -2,8 +2,11 @@ import type {
 	AuthorizationCode,
 	AuthorizationCodeStore,
 	ClientAssertionJtiStore,
+	ClientRegistrationToken,
+	ClientRegistrationTokenStore,
 	DeviceAuthorization,
 	DeviceAuthorizationStore,
+	InitialAccessTokenStore,
 	LogoutDelivery,
 	LogoutDeliveryStore,
 	OAuthClient,
@@ -49,6 +52,26 @@ export const createInMemoryClientAssertionJtiStore =
 			}
 		};
 	};
+export const createInMemoryClientRegistrationTokenStore =
+	(): ClientRegistrationTokenStore => {
+		const byHash = new Map<string, ClientRegistrationToken>();
+
+		return {
+			deleteByClientId: async (clientId) => {
+				for (const [hash, token] of byHash) {
+					if (token.clientId === clientId) byHash.delete(hash);
+				}
+			},
+			findByTokenHash: async (tokenHash) => byHash.get(tokenHash),
+			saveToken: async (token) => {
+				// One reg token per client — replace any prior token on rotation.
+				for (const [hash, existing] of byHash) {
+					if (existing.clientId === token.clientId) byHash.delete(hash);
+				}
+				byHash.set(token.tokenHash, { ...token });
+			}
+		};
+	};
 export const createInMemoryDeviceAuthorizationStore =
 	(): DeviceAuthorizationStore => {
 		const byDeviceCode = new Map<string, DeviceAuthorization>();
@@ -78,6 +101,20 @@ export const createInMemoryDeviceAuthorizationStore =
 			}
 		};
 	};
+export const createInMemoryInitialAccessTokenStore = (
+	initialHashes: string[] = []
+): InitialAccessTokenStore => {
+	const remaining = new Set(initialHashes);
+
+	return {
+		consumeToken: async (tokenHash) => {
+			if (!remaining.has(tokenHash)) return false;
+			remaining.delete(tokenHash);
+
+			return true;
+		}
+	};
+};
 export const createInMemoryLogoutDeliveryStore =
 	(): LogoutDeliveryStore => {
 		const failures = new Map<string, LogoutDelivery>();
@@ -103,7 +140,16 @@ export const createInMemoryOAuthClientStore = (
 	);
 
 	return {
-		findClient: async (clientId) => registry.get(clientId)
+		deleteClient: async (clientId) => {
+			registry.delete(clientId);
+		},
+		findClient: async (clientId) => registry.get(clientId),
+		saveClient: async (client) => {
+			registry.set(client.clientId, { ...client });
+		},
+		updateClient: async (clientId, client) => {
+			registry.set(clientId, { ...client });
+		}
 	};
 };
 export const createInMemoryOidcRefreshTokenStore =

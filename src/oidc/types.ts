@@ -35,7 +35,37 @@ export type ClientAssertionJtiStore = {
 };
 
 export type OAuthClientStore = {
+	// Optional — only needed when Dynamic Client Registration (RFC 7591/7592) is enabled.
+	// Without these, DCR returns 501 unsupported, and the existing static-client model
+	// (pre-registered via findClient) continues to work unchanged.
+	deleteClient?: (clientId: string) => Promise<void>;
 	findClient: (clientId: string) => Promise<OAuthClient | undefined>;
+	saveClient?: (client: OAuthClient) => Promise<void>;
+	updateClient?: (clientId: string, client: OAuthClient) => Promise<void>;
+};
+
+// The credential a Dynamic Client Registration client uses to manage its own registration
+// (RFC 7592). Issued at registration time, hashed at rest, rotatable on update. One per client.
+export type ClientRegistrationToken = {
+	clientId: string;
+	createdAt: number;
+	tokenHash: string;
+};
+
+export type ClientRegistrationTokenStore = {
+	deleteByClientId: (clientId: string) => Promise<void>;
+	findByTokenHash: (
+		tokenHash: string
+	) => Promise<ClientRegistrationToken | undefined>;
+	saveToken: (token: ClientRegistrationToken) => Promise<void>;
+};
+
+// Optional gate on Dynamic Client Registration — when configured, the POST /oauth2/register
+// caller must present a valid `initial_access_token` in the Authorization header. Lets
+// operators run a closed federation (only pre-issued tokens can register clients) without
+// requiring open public DCR. Tokens are opaque + consumed on use.
+export type InitialAccessTokenStore = {
+	consumeToken: (tokenHash: string) => Promise<boolean>;
 };
 
 // A short-lived, single-use authorization code (PKCE- and optionally DPoP-bound).
