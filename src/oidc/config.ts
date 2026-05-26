@@ -26,6 +26,14 @@ export type OidcProviderConfig<UserType> = {
 	accessTokenTtlMs?: number;
 	authorizationCodeStore: AuthorizationCodeStore;
 	clientStore: OAuthClientStore;
+	// Extra ACCESS token claims (per-token, after grants/exchange). Reserved keys (iss/sub/
+	// aud/exp/iat/jti/client_id/scope/token_use/act/cnf) cannot be overridden.
+	getAccessTokenClaims?: (context: {
+		audience?: string;
+		clientId: string;
+		scopes: string[];
+		sub: string;
+	}) => Record<string, unknown> | Promise<Record<string, unknown>>;
 	// Extra id_token claims for a user (email, name, …).
 	getClaims?: (user: UserType) => Record<string, unknown>;
 	// Consent hook: narrow the requested scopes to what the user has granted (you own the
@@ -58,14 +66,31 @@ const narrowScopes = (available: string[], requested?: string[]) =>
 		? available
 		: requested.filter((scope) => available.includes(scope));
 
+const RESERVED_ACCESS_CLAIMS = new Set([
+	'act',
+	'aud',
+	'client_id',
+	'cnf',
+	'exp',
+	'iat',
+	'iss',
+	'jti',
+	'scope',
+	'sub',
+	'token_use'
+]);
+
 // Access-token claims, shared by the standard grants and token exchange. `audience` (RFC 8707
 // resource indicator) overrides the default `aud`; `act` records a delegation chain (RFC
-// 8693); `cnf.jkt` binds the token to a DPoP key.
+// 8693); `cnf.jkt` binds the token to a DPoP key. `extraClaims` is the consumer-supplied
+// addition from `getAccessTokenClaims` — reserved keys are stripped before merging so the
+// hook can't accidentally rewrite the token's identity / lifetime / binding.
 const buildAccessClaims = ({
 	act,
 	audience,
 	clientId,
 	dpopJkt,
+	extraClaims,
 	issuer,
 	now,
 	scopes,
@@ -76,13 +101,23 @@ const buildAccessClaims = ({
 	audience?: string;
 	clientId: string;
 	dpopJkt?: string;
+	extraClaims?: Record<string, unknown>;
 	issuer: string;
 	now: number;
 	scopes: string[];
 	sub: string;
 	ttl: number;
 }) => {
+	const safeExtra =
+		extraClaims === undefined
+			? {}
+			: Object.fromEntries(
+					Object.entries(extraClaims).filter(
+						([key]) => !RESERVED_ACCESS_CLAIMS.has(key)
+					)
+				);
 	const claims: Record<string, unknown> = {
+		...safeExtra,
 		aud: audience ?? clientId,
 		client_id: clientId,
 		exp: nowSeconds(now + ttl),
@@ -142,6 +177,12 @@ export const exchangeToken = async <UserType>({
 	}
 	const scopes = narrowScopes(available, requestedScopes);
 	const ttl = config.accessTokenTtlMs ?? DEFAULT_ACCESS_TOKEN_TTL_MS;
+	const extraClaims = await config.getAccessTokenClaims?.({
+		audience,
+		clientId: actorClientId,
+		scopes,
+		sub: payload.sub
+	});
 
 	return {
 		accessToken: await signJwt(
@@ -150,6 +191,7 @@ export const exchangeToken = async <UserType>({
 				audience,
 				clientId: actorClientId,
 				dpopJkt,
+				extraClaims,
 				issuer: config.issuer,
 				now,
 				scopes,
@@ -188,10 +230,16 @@ export const issueTokenSet = async <UserType>({
 	const accessTtl = config.accessTokenTtlMs ?? DEFAULT_ACCESS_TOKEN_TTL_MS;
 	const idTtl = config.idTokenTtlMs ?? DEFAULT_ID_TOKEN_TTL_MS;
 	const refreshTtl = config.refreshTokenTtlMs ?? DEFAULT_REFRESH_TOKEN_TTL_MS;
+	const accessExtra = await config.getAccessTokenClaims?.({
+		clientId,
+		scopes,
+		sub
+	});
 
 	const accessPayload = buildAccessClaims({
 		clientId,
 		dpopJkt,
+		extraClaims: accessExtra,
 		issuer: config.issuer,
 		now,
 		scopes,

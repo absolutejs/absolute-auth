@@ -4,7 +4,9 @@ import { createInMemoryCredentialStore } from '../src/credentials/inMemoryCreden
 import { auth } from '../src/index';
 import type { OrganizationInvitationMessage } from '../src/organizations/config';
 import { createInMemoryOrganizationStore } from '../src/organizations/inMemoryOrganizationStore';
+import { autoAssignOrgsByEmail } from '../src/organizations/operations';
 import { createInMemoryAuthSessionStore } from '../src/session/inMemoryStore';
+import type { OrganizationId } from '../src/tenancy';
 
 type TestUser = {
 	email: string;
@@ -222,5 +224,68 @@ describe('organizations', () => {
 			inviteeCookie
 		);
 		expect(accepted.status).toBe(HTTP_BAD_REQUEST);
+	});
+});
+
+describe('autoAssignOrgsByEmail', () => {
+	test('adds the user to every org their domain maps to (idempotent)', async () => {
+		const organizationStore = createInMemoryOrganizationStore();
+		const acmeId = 'org_acme' as OrganizationId;
+		const otherId = 'org_other' as OrganizationId;
+		const now = Date.now();
+		await organizationStore.saveOrganization({
+			createdAt: now,
+			name: 'Acme',
+			organizationId: acmeId,
+			updatedAt: now
+		});
+		await organizationStore.saveOrganization({
+			createdAt: now,
+			name: 'Other',
+			organizationId: otherId,
+			updatedAt: now
+		});
+
+		const domains: Record<string, OrganizationId[]> = {
+			'acme.com': [acmeId],
+			'other.com': [otherId]
+		};
+		const getOrgsForDomain = (domain: string) => domains[domain] ?? [];
+
+		const first = await autoAssignOrgsByEmail({
+			email: 'alice@ACME.com',
+			getOrgsForDomain,
+			organizationStore,
+			roles: ['member'],
+			userId: 'user-alice'
+		});
+		expect(first).toEqual([acmeId]);
+
+		// Second call is idempotent — already a member, no duplicate added.
+		const second = await autoAssignOrgsByEmail({
+			email: 'alice@acme.com',
+			getOrgsForDomain,
+			organizationStore,
+			userId: 'user-alice'
+		});
+		expect(second).toEqual([]);
+
+		// Different domain → assigned to a different org.
+		const third = await autoAssignOrgsByEmail({
+			email: 'bob@other.com',
+			getOrgsForDomain,
+			organizationStore,
+			userId: 'user-bob'
+		});
+		expect(third).toEqual([otherId]);
+
+		// Unmapped domain → no assignment, no error.
+		const fourth = await autoAssignOrgsByEmail({
+			email: 'eve@unknown.org',
+			getOrgsForDomain,
+			organizationStore,
+			userId: 'user-eve'
+		});
+		expect(fourth).toEqual([]);
 	});
 });

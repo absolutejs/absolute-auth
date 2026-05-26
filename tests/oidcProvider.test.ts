@@ -18,7 +18,14 @@ const ISSUER = 'https://idp.example';
 const REDIRECT_URI = 'https://app.example/callback';
 const VERIFIER = 'pkce-verifier-0123456789-abcdefghij-0123456789';
 
-const buildApp = async () => {
+type ClaimsHook = (context: {
+	audience?: string;
+	clientId: string;
+	scopes: string[];
+	sub: string;
+}) => Record<string, unknown> | Promise<Record<string, unknown>>;
+
+const buildApp = async (extras: { getAccessTokenClaims?: ClaimsHook } = {}) => {
 	const authSessionStore = createInMemoryAuthSessionStore<TestUser>();
 	const signingKey = await generateSigningKey();
 	const app = await auth<TestUser>({
@@ -33,6 +40,7 @@ const buildApp = async () => {
 					scopes: ['openid', 'profile']
 				}
 			]),
+			getAccessTokenClaims: extras.getAccessTokenClaims,
 			getClaims: (user) => ({ email: user.email }),
 			getUserId: (user) => user.sub,
 			issuer: ISSUER,
@@ -132,6 +140,44 @@ describe('OIDC provider', () => {
 
 		const accessToken = await verifyJwt(tokens.access_token, jwks.keys[0]);
 		expect(accessToken?.payload.scope).toBe('openid profile');
+	});
+
+	test('getAccessTokenClaims merges custom claims; reserved claims are protected', async () => {
+		const customApp = await buildApp({
+			// try to also smuggle in `sub` (reserved) — must be ignored
+			getAccessTokenClaims: ({ sub }) => ({
+				email: 'alice@acme.test',
+				org_id: 'org_acme',
+				sub: 'NOT-THE-REAL-SUB',
+				tenant_tier: 'enterprise',
+				viewed_sub: sub
+			})
+		});
+
+		const challenge = await hashToken(VERIFIER);
+		const code = codeFromRedirect(
+			await authorize(customApp, challenge, `user_session_id=${SESSION_ID}`)
+		);
+		const tokens = await (
+			await token(customApp, {
+				client_id: 'app1',
+				code,
+				code_verifier: VERIFIER,
+				grant_type: 'authorization_code',
+				redirect_uri: REDIRECT_URI
+			})
+		).json();
+		const jwks = await (
+			await customApp.handle(new Request('http://localhost/oauth2/jwks'))
+		).json();
+		const accessToken = await verifyJwt(tokens.access_token, jwks.keys[0]);
+
+		expect(accessToken?.payload.email).toBe('alice@acme.test');
+		expect(accessToken?.payload.org_id).toBe('org_acme');
+		expect(accessToken?.payload.tenant_tier).toBe('enterprise');
+		expect(accessToken?.payload.viewed_sub).toBe('user-alice');
+		// Reserved claims wins protection: sub stays the real user, not the smuggled value.
+		expect(accessToken?.payload.sub).toBe('user-alice');
 	});
 
 	test('rejects a wrong PKCE verifier', async () => {

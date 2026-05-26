@@ -334,8 +334,17 @@ export const auth = async <UserType>({
 		);
 };
 
+export * from './actions';
 export * from './types';
 export * from './typebox';
+export * from './vault/config';
+export * from './vault/types';
+export { createInMemoryVaultStore } from './vault/inMemoryVaultStore';
+export {
+	createNeonVaultStore,
+	createPostgresVaultStore,
+	vaultEntriesTable
+} from './vault/postgresVaultStore';
 export type { AuthSessionStore } from './session/types';
 export { isAuthIntent, isUserSessionId, isValidUser } from './typeGuards';
 export { AuthIdentityConflictError } from './errors';

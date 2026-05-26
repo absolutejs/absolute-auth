@@ -44,6 +44,54 @@ export const acceptInvitation = async ({
 
 	return membership;
 };
+
+// JIT / domain-based org assignment. Call from your OAuth/credential-register success hook (or
+// SSO callback) to auto-add the new user to every org their email domain maps to — the WorkOS
+// "domain verification" pattern. Idempotent (skips orgs the user already belongs to). Returns
+// the orgs they were newly added to.
+export const autoAssignOrgsByEmail = async ({
+	email,
+	getOrgsForDomain,
+	organizationStore,
+	roles = [],
+	userId
+}: {
+	email: string;
+	getOrgsForDomain: (
+		domain: string
+	) => Promise<OrganizationId[]> | OrganizationId[];
+	organizationStore: OrganizationStore;
+	roles?: string[];
+	userId: string;
+}) => {
+	if (!email.includes('@')) return [];
+	const domain = email.slice(email.lastIndexOf('@') + 1).toLowerCase();
+	if (domain === '') return [];
+
+	const orgIds = await getOrgsForDomain(domain);
+	const now = Date.now();
+	const assigned: OrganizationId[] = [];
+	for (const organizationId of orgIds) {
+		// eslint-disable-next-line no-await-in-loop -- per-org membership upsert is sequential by design
+		const existing = await organizationStore.getMembership(
+			organizationId,
+			userId
+		);
+		if (existing !== undefined) continue;
+		// eslint-disable-next-line no-await-in-loop -- per-org membership upsert is sequential by design
+		await organizationStore.saveMembership({
+			createdAt: now,
+			organizationId,
+			roles,
+			status: 'active',
+			updatedAt: now,
+			userId
+		});
+		assigned.push(organizationId);
+	}
+
+	return assigned;
+};
 export const createOrganization = async ({
 	metadata,
 	name,
