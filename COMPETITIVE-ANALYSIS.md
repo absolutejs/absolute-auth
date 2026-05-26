@@ -35,7 +35,7 @@ Legend: ✅ full · ◐ partial / hook-only / BYO · ✖ none · — N/A for a l
 | Self-hosted JWKS / own your keys | ✅ | ✖ | ✖ | ✖ | ✅ | ✅ |
 | Admin impersonation | ✅ | ✅ | ✅ | ◐ | ✖ | ◐ |
 | Adaptive / risk-based auth | ✅ | ✅ | ✅ | ✅ | ✖ | ◐ |
-| Bot/abuse protection | ◐ | ✅ (Radar) | ✅ | ✅ | ✖ | ◐ |
+| Bot/abuse protection | ✅ | ✅ (Radar) | ✅ | ✅ | ✖ | ◐ |
 | **Device fingerprinting (proprietary-grade)** | ◐ | ✅ | ✅ | ✅ | ✖ | ◐ |
 | Account linking | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | GDPR export / erasure | ✅ | ◐ | ✅ | ◐ | ◐ | ✖ |
@@ -90,7 +90,9 @@ Legend: ✅ full · ◐ partial / hook-only / BYO · ✖ none · — N/A for a l
 - **OIDC provider → AI-agent auth** (token exchange + resource indicators + MCP discovery) — ✅ SHIPPED (beta.5), see gap #1.
 - **Adaptive auth → weighted risk scoring** — ✅ SHIPPED (beta.9). `scoreRisk` adds Auth0-style per-signal weights + score thresholds alongside the rule engine, plus `proxy` + `off_hours` signals (consumer-fed `isProxy`/`localHour`).
 - **FGA → schema-language parser + reverse `listObjects`** — ✅ SHIPPED (beta.9). `listObjects` ("what can this subject access?") + `parseSchema` (OpenFGA-style DSL → FgaSchema). A check-results cache for throughput is still open.
-- **Default device fingerprint** — ✅ SHIPPED (beta.9). `fingerprintDevice(signals)` hashes client signals into a stable `deviceId` (better default than UA-only). CAPTCHA provider adapters (Turnstile/reCAPTCHA/hCaptcha) for the abuse guard are still open.
+- **Default device fingerprint** — ✅ SHIPPED (beta.9). `fingerprintDevice(signals)` hashes client signals into a stable `deviceId` (better default than UA-only).
+- **CAPTCHA provider adapters** — ✅ SHIPPED (beta.10). `verifyTurnstile` / `verifyRecaptcha` (v3 minScore) / `verifyHcaptcha` plug into the abuse guard's `verifyCaptcha`. Bot/abuse row → ✅ (data-network fingerprinting remains the ◐, a non-goal for a self-hosted lib).
+- **FGA check cache** — ✅ SHIPPED (beta.10). `createInMemoryCheckCache` (TTL + max-entries) memoizes `check`; writes clear it. A shared/Redis cache for multi-instance is the remaining extension.
 - **Audit → retention + CSV export** — ✅ SHIPPED (beta.9). `exportAuditCsv` + `AuditSink.prune` (retention window). Tiered/rotation policies are still open.
 
 ## Honest non-goals (don't chase)
