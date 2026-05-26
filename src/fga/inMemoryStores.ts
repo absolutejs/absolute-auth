@@ -15,6 +15,13 @@ export const createInMemoryWarrantStore = (): WarrantStore => {
 					warrant.resourceId === resourceId &&
 					warrant.relation === relation
 			),
+		listResourceIds: async (resourceType) => [
+			...new Set(
+				[...warrants.values()]
+					.filter((warrant) => warrant.resourceType === resourceType)
+					.map((warrant) => warrant.resourceId)
+			)
+		],
 		saveWarrant: async (warrant) => {
 			warrants.set(warrantKey(warrant), { ...warrant });
 		}

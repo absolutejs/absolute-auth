@@ -51,6 +51,14 @@ export const createPostgresWarrantStore = (
 
 		return rows.map(toWarrant);
 	},
+	listResourceIds: async (resourceType) => {
+		const rows = await db
+			.selectDistinct({ resourceId: warrantsTable.resource_id })
+			.from(warrantsTable)
+			.where(eq(warrantsTable.resource_type, resourceType));
+
+		return rows.map((row) => row.resourceId);
+	},
 	saveWarrant: async (warrant) => {
 		await db
 			.insert(warrantsTable)

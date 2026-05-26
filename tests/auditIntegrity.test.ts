@@ -1,8 +1,10 @@
 import { describe, expect, mock, test } from 'bun:test';
+import { exportAuditCsv } from '../src/audit/export';
 import {
 	createTamperEvidentSink,
 	verifyAuditChain
 } from '../src/audit/integrity';
+import { createInMemoryAuditSink } from '../src/audit/inMemoryAuditStore';
 import { createSiemLogStream } from '../src/audit/siem';
 import type { AuditEvent, AuditSink } from '../src/audit/types';
 
@@ -163,6 +165,38 @@ describe('SIEM log stream', () => {
 		const datadog = calls.find((call) => call.url === 'https://dd.example');
 		expect(JSON.parse(datadog?.body ?? '{}').ddsource).toBe(
 			'absolutejs-auth'
+		);
+	});
+});
+
+describe('audit retention + CSV export', () => {
+	test('prune removes events older than the cutoff', async () => {
+		const sink = createInMemoryAuditSink();
+		await sink.append({ at: 1000, type: 'register', userId: 'u1' });
+		await sink.append({ at: 2000, type: 'credentials_login', userId: 'u1' });
+		await sink.append({ at: 3000, type: 'logout', userId: 'u1' });
+
+		const removed = await sink.prune?.(2000);
+		expect(removed).toBe(1); // only at:1000 is < 2000
+
+		const remaining = (await sink.list?.()) ?? [];
+		expect(remaining.map((event) => event.at).sort()).toEqual([2000, 3000]);
+	});
+
+	test('exportAuditCsv renders a header + a plain row', () => {
+		const csv = exportAuditCsv([{ at: 0, type: 'register', userId: 'u1' }]);
+		const lines = csv.split('\n');
+		expect(lines[0]).toBe('at,type,userId,ip,organizationId,metadata');
+		expect(lines[1]).toBe('1970-01-01T00:00:00.000Z,register,u1,,,');
+	});
+
+	test('exportAuditCsv quotes + escapes fields with commas/quotes', () => {
+		const csv = exportAuditCsv([
+			{ at: 0, metadata: { note: 'a,b' }, type: 'register' }
+		]);
+		// metadata JSON has a comma + quotes -> wrapped, inner quotes doubled
+		expect(csv.split('\n')[1]).toBe(
+			'1970-01-01T00:00:00.000Z,register,,,,"{""note"":""a,b""}"'
 		);
 	});
 });

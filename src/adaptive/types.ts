@@ -3,10 +3,13 @@
 export type RiskAction = 'allow' | 'deny' | 'step_up';
 
 // The built-in rules. Each maps to a `RiskAction` (overridable per deployment).
+// `off_hours` and `proxy` only fire when the context supplies `localHour` / `isProxy`.
 export type RiskSignal =
 	| 'impossible_travel'
 	| 'new_country'
 	| 'new_device'
+	| 'off_hours'
+	| 'proxy'
 	| 'velocity';
 
 // A geo position the consumer resolves from the request IP. The package bundles
@@ -18,11 +21,15 @@ export type GeoPoint = {
 	longitude?: number;
 };
 
-// The context of one authentication attempt to assess.
+// The context of one authentication attempt to assess. `isProxy` (from your edge / an IP
+// intelligence lookup) drives the `proxy` signal; `localHour` (0–23 in the user's timezone,
+// which you compute) drives the `off_hours` signal.
 export type RiskContext = {
 	deviceId: string;
 	geo?: GeoPoint;
 	ipAddress?: string;
+	isProxy?: boolean;
+	localHour?: number;
 	now?: number;
 	userId: string;
 };
@@ -37,6 +44,21 @@ export type RiskReason = {
 export type RiskAssessment = {
 	action: RiskAction;
 	reasons: RiskReason[];
+};
+
+// Weighted-scoring mode: each fired signal contributes its weight; the summed score maps to
+// an action via thresholds. An alternative to the per-rule actions of `assessRisk`.
+export type RiskWeights = Partial<Record<RiskSignal, number>>;
+
+export type RiskThresholds = {
+	deny: number;
+	stepUp: number;
+};
+
+export type WeightedRiskAssessment = {
+	action: RiskAction;
+	reasons: RiskReason[];
+	score: number;
 };
 
 // A device seen for a user. `trusted` (set after a successful step-up — the

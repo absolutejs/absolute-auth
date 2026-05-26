@@ -10,7 +10,10 @@ import type {
 	RiskAssessment,
 	RiskContext,
 	RiskReason,
-	RiskSignal
+	RiskSignal,
+	RiskThresholds,
+	RiskWeights,
+	WeightedRiskAssessment
 } from './types';
 
 const DEFAULT_HISTORY_LIMIT = 50;
@@ -34,8 +37,28 @@ const DEFAULT_RULE_ACTIONS: Record<RiskSignal, RiskAction> = {
 	impossible_travel: 'deny',
 	new_country: 'step_up',
 	new_device: 'step_up',
+	// off_hours/proxy only fire when the context supplies localHour/isProxy, so these defaults
+	// are inert until you opt in by passing those fields.
+	off_hours: 'allow',
+	proxy: 'step_up',
 	velocity: 'deny'
 };
+
+// Weighted-scoring defaults: tuned so any single high-signal (impossible_travel/velocity)
+// reaches deny, two medium signals reach step-up. Override per deployment.
+const DEFAULT_RISK_WEIGHTS: Record<RiskSignal, number> = {
+	impossible_travel: 80,
+	new_country: 25,
+	new_device: 20,
+	off_hours: 10,
+	proxy: 30,
+	velocity: 80
+};
+
+const DEFAULT_OFF_HOURS_START = 0;
+const DEFAULT_OFF_HOURS_END = 6;
+const DEFAULT_DENY_SCORE = 80;
+const DEFAULT_STEP_UP_SCORE = 40;
 
 // The opinionated risk engine. Pass the two stores and (optionally) override any
 // rule's action or threshold. The package owns the rules + geo math; you own geo
@@ -48,6 +71,8 @@ export type AdaptiveConfig = {
 	knownDeviceStore: KnownDeviceStore;
 	loginHistoryStore: LoginHistoryStore;
 	maxTravelKmh?: number;
+	// The local-hour window (user timezone) that counts as off-hours; default 0–6.
+	offHours?: { end: number; start: number };
 	rules?: Partial<Record<RiskSignal, RiskAction>>;
 	velocityMaxAttempts?: number;
 	velocityWindowMs?: number;
@@ -89,36 +114,49 @@ const mostSevere = (reasons: RiskReason[]) =>
 		'allow'
 	);
 
-// Evaluate the built-in rules against an attempt and return the overall action
-// (the most severe rule that fired) plus every reason.
-export const assessRisk = async (
-	config: AdaptiveConfig,
-	context: RiskContext
-): Promise<RiskAssessment> => {
+const isWithinOffHours = (
+	hour: number,
+	range: { end: number; start: number } | undefined
+) => {
+	const start = range?.start ?? DEFAULT_OFF_HOURS_START;
+	const end = range?.end ?? DEFAULT_OFF_HOURS_END;
+	if (start <= end) return hour >= start && hour < end;
+
+	return hour >= start || hour < end;
+};
+
+const actionForScore = (score: number, thresholds: RiskThresholds) => {
+	const deny: RiskAction = 'deny';
+	const stepUp: RiskAction = 'step_up';
+	const allow: RiskAction = 'allow';
+	if (score >= thresholds.deny) return deny;
+	if (score >= thresholds.stepUp) return stepUp;
+
+	return allow;
+};
+
+// The shared detection pass: which signals fired for this attempt. `assessRisk` (per-rule
+// actions) and `scoreRisk` (weighted) both build on it. off_hours/proxy fire only when the
+// context supplies localHour/isProxy.
+const detectSignals = async (config: AdaptiveConfig, context: RiskContext) => {
 	const {
 		historyLimit = DEFAULT_HISTORY_LIMIT,
 		knownDeviceStore,
 		loginHistoryStore,
 		maxTravelKmh = DEFAULT_MAX_TRAVEL_KMH,
-		rules,
+		offHours,
 		velocityMaxAttempts = DEFAULT_VELOCITY_MAX_ATTEMPTS,
 		velocityWindowMs = DEFAULT_VELOCITY_WINDOW_MS
 	} = config;
 	const now = context.now ?? Date.now();
-	const actions: Record<RiskSignal, RiskAction> = {
-		...DEFAULT_RULE_ACTIONS,
-		...rules
-	};
-	const reasons: RiskReason[] = [];
+	const fired: RiskSignal[] = [];
 
 	const [device, history] = await Promise.all([
 		knownDeviceStore.findDevice(context.userId, context.deviceId),
 		loginHistoryStore.listRecent(context.userId, historyLimit)
 	]);
 
-	if (device === undefined || !device.trusted) {
-		reasons.push({ action: actions.new_device, signal: 'new_device' });
-	}
+	if (device === undefined || !device.trusted) fired.push('new_device');
 
 	const country = context.geo?.country;
 	if (
@@ -126,7 +164,7 @@ export const assessRisk = async (
 		history.length > 0 &&
 		!history.some((attempt) => attempt.country === country)
 	) {
-		reasons.push({ action: actions.new_country, signal: 'new_country' });
+		fired.push('new_country');
 	}
 
 	const [previous] = history;
@@ -149,25 +187,52 @@ export const assessRisk = async (
 		hours > 0 &&
 		traveledKm / hours > maxTravelKmh
 	) {
-		reasons.push({
-			action: actions.impossible_travel,
-			signal: 'impossible_travel'
-		});
+		fired.push('impossible_travel');
 	}
 
 	const recentCount = history.filter(
 		(attempt) => now - attempt.timestamp <= velocityWindowMs
 	).length;
-	if (recentCount >= velocityMaxAttempts) {
-		reasons.push({ action: actions.velocity, signal: 'velocity' });
+	if (recentCount >= velocityMaxAttempts) fired.push('velocity');
+
+	if (context.isProxy === true) fired.push('proxy');
+	if (
+		context.localHour !== undefined &&
+		isWithinOffHours(context.localHour, offHours)
+	) {
+		fired.push('off_hours');
 	}
+
+	return fired;
+};
+
+// Evaluate the built-in rules against an attempt and return the overall action
+// (the most severe rule that fired) plus every reason.
+export const assessRisk = async (
+	config: AdaptiveConfig,
+	context: RiskContext
+): Promise<RiskAssessment> => {
+	const actions: Record<RiskSignal, RiskAction> = {
+		...DEFAULT_RULE_ACTIONS,
+		...config.rules
+	};
+	const fired = await detectSignals(config, context);
+	const reasons: RiskReason[] = fired.map((signal) => ({
+		action: actions[signal],
+		signal
+	}));
 
 	return { action: mostSevere(reasons), reasons };
 };
+
 export const createRiskEngine = (config: AdaptiveConfig) => ({
 	assessRisk: (context: RiskContext) => assessRisk(config, context),
 	recordAttempt: (context: RiskContext & { outcome: RiskAction }) =>
 		recordLoginAttempt(config, context),
+	scoreRisk: (
+		context: RiskContext,
+		options?: { thresholds?: RiskThresholds; weights?: RiskWeights }
+	) => scoreRisk({ ...config, ...options }, context),
 	trustDevice: (userId: string, deviceId: string, label?: string) =>
 		trustDevice(config, userId, deviceId, label)
 });
@@ -199,6 +264,32 @@ export const recordLoginAttempt = async (
 		timestamp: now,
 		userId: context.userId
 	});
+};
+// Weighted alternative to assessRisk: each fired signal adds its weight; the summed score
+// maps to an action via thresholds (Auth0-style configurable scoring). Pass `weights` /
+// `thresholds` to override the defaults.
+export const scoreRisk = async (
+	config: AdaptiveConfig & {
+		thresholds?: RiskThresholds;
+		weights?: RiskWeights;
+	},
+	context: RiskContext
+): Promise<WeightedRiskAssessment> => {
+	const weights: Record<RiskSignal, number> = {
+		...DEFAULT_RISK_WEIGHTS,
+		...config.weights
+	};
+	const defaultThresholds: RiskThresholds = {
+		deny: DEFAULT_DENY_SCORE,
+		stepUp: DEFAULT_STEP_UP_SCORE
+	};
+	const thresholds = config.thresholds ?? defaultThresholds;
+	const fired = await detectSignals(config, context);
+	const score = fired.reduce((sum, signal) => sum + weights[signal], 0);
+	const action = actionForScore(score, thresholds);
+	const reasons: RiskReason[] = fired.map((signal) => ({ action, signal }));
+
+	return { action, reasons, score };
 };
 export const trustDevice = async (
 	config: AdaptiveConfig,

@@ -21,6 +21,13 @@ export type Subject = {
 	subjectType: string;
 };
 
+export type ObjectQuery = {
+	relation: string;
+	resourceType: string;
+	subjectId: string;
+	subjectType: string;
+};
+
 type EvalContext = {
 	config: FgaConfig;
 	subjectId: string;
@@ -292,6 +299,7 @@ const expandRule = async (
 export const createFgaEngine = (config: FgaConfig) => ({
 	check: (query: CheckQuery) => check(config, query),
 	deleteWarrant: (warrant: Warrant) => deleteWarrant(config, warrant),
+	listObjects: (query: ObjectQuery) => listObjects(config, query),
 	listSubjects: (query: {
 		relation: string;
 		resourceId: string;
@@ -302,6 +310,29 @@ export const createFgaEngine = (config: FgaConfig) => ({
 
 export const deleteWarrant = (config: FgaConfig, warrant: Warrant) =>
 	config.warrantStore.deleteWarrant(warrant);
+
+// Reverse query: which resources of `resourceType` does the subject have `relation` on? v1
+// enumerates the candidate resource ids from the warrant store and `check`s each (correct for
+// any schema — every reachable resource appears as a resource in some warrant; for very high
+// object counts add a reverse index). Returns the matching resource ids.
+export const listObjects = async (config: FgaConfig, query: ObjectQuery) => {
+	const candidates = await config.warrantStore.listResourceIds(
+		query.resourceType
+	);
+	const allowed = await Promise.all(
+		candidates.map((resourceId) =>
+			check(config, {
+				relation: query.relation,
+				resourceId,
+				resourceType: query.resourceType,
+				subjectId: query.subjectId,
+				subjectType: query.subjectType
+			})
+		)
+	);
+
+	return candidates.filter((_resourceId, index) => allowed[index] === true);
+};
 
 // Query API: list the user subjects that have `relation` on the resource (expanding rules).
 export const listSubjects = async (

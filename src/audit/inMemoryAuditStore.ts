@@ -20,6 +20,14 @@ export const createInMemoryAuditSink = (): AuditSink => {
 					: ordered.slice(0, filter.limit);
 
 			return limited.map((event) => ({ ...event }));
+		},
+		prune: async (before) => {
+			const kept = events.filter((event) => event.at >= before);
+			const removed = events.length - kept.length;
+			events.length = 0;
+			events.push(...kept);
+
+			return removed;
 		}
 	};
 };

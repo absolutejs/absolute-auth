@@ -145,6 +145,7 @@ export const createTamperEvidentSink = ({
 
 	return {
 		list: sink.list,
+		prune: sink.prune,
 		append: async (event) => {
 			await seed();
 			const previousHash = lastHash ?? GENESIS;

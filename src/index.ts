@@ -495,6 +495,7 @@ export {
 } from './lockout/postgresLockoutStore';
 export { createRedisLockoutStore } from './lockout/redisLockoutStore';
 export type { RedisLike } from './stores/redis';
+export { exportAuditCsv } from './audit/export';
 export { createInMemoryAuditSink } from './audit/inMemoryAuditStore';
 export {
 	auditEventsTable,
@@ -561,6 +562,7 @@ export {
 	oauthRefreshTokensTable
 } from './oidc/postgresStores';
 export * from './adaptive/config';
+export * from './adaptive/fingerprint';
 export * from './adaptive/types';
 export {
 	createInMemoryKnownDeviceStore,
@@ -575,6 +577,7 @@ export {
 	loginHistoryTable
 } from './adaptive/postgresStores';
 export * from './fga/config';
+export * from './fga/schema';
 export * from './fga/types';
 export { createInMemoryWarrantStore, warrantKey } from './fga/inMemoryStores';
 export {

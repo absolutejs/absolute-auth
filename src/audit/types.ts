@@ -49,8 +49,12 @@ export type AuditEventFilter = {
 };
 
 // Append-only sink for auth events. `list` is optional (in-memory + Neon provide it);
-// an exporter / SIEM forwarder only needs `append`.
+// an exporter / SIEM forwarder only needs `append`. `prune` (also optional) enforces a
+// retention window by deleting events older than a cutoff and returning the count removed —
+// note this necessarily drops the tamper-evidence of the pruned rows (the chain can only be
+// verified forward of the oldest retained event per writer).
 export type AuditSink = {
 	append: (event: AuditEvent) => Promise<void>;
 	list?: (filter?: AuditEventFilter) => Promise<AuditEvent[]>;
+	prune?: (before: number) => Promise<number>;
 };

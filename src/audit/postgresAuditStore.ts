@@ -1,4 +1,4 @@
-import { desc, eq } from 'drizzle-orm';
+import { desc, eq, lt } from 'drizzle-orm';
 import { bigint, jsonb, pgTable, varchar } from 'drizzle-orm/pg-core';
 import { type AnyPgDatabase, createNeonDatabase } from '../stores/postgres';
 import type { AuditEvent, AuditEventType, AuditSink } from './types';
@@ -57,5 +57,13 @@ export const createPostgresAuditSink = (db: AnyPgDatabase): AuditSink => ({
 			.limit(filter?.limit ?? DEFAULT_AUDIT_LIMIT);
 
 		return rows.map(toEvent);
+	},
+	prune: async (before) => {
+		const deleted = await db
+			.delete(auditEventsTable)
+			.where(lt(auditEventsTable.at_ms, before))
+			.returning({ id: auditEventsTable.id });
+
+		return deleted.length;
 	}
 });

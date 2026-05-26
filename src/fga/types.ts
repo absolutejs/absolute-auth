@@ -23,6 +23,9 @@ export type WarrantStore = {
 		resourceId: string,
 		relation: string
 	) => Promise<Warrant[]>;
+	// Distinct resource ids of a type across all warrants — the candidate set `listObjects`
+	// filters with `check` (any resource the subject can reach appears here as a resource).
+	listResourceIds: (resourceType: string) => Promise<string[]>;
 	saveWarrant: (warrant: Warrant) => Promise<void>;
 };
 
