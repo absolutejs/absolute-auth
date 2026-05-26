@@ -1,9 +1,10 @@
-import { and, desc, eq, gt } from 'drizzle-orm';
+import { and, desc, eq, gt, lt } from 'drizzle-orm';
 import { bigint, jsonb, pgTable, text, varchar } from 'drizzle-orm/pg-core';
 import { type AnyPgDatabase, createNeonDatabase } from '../stores/postgres';
 import type {
 	AuthorizationCode,
 	AuthorizationCodeStore,
+	ClientAssertionJtiStore,
 	DeviceAuthorization,
 	DeviceAuthorizationStatus,
 	DeviceAuthorizationStore,
@@ -20,12 +21,26 @@ const DEFAULT_LIST_LIMIT = 100;
 
 const ID_LENGTH = 255;
 
+export const oauthClientAssertionJtisTable = pgTable(
+	'auth_oauth_client_assertion_jtis',
+	{
+		client_id: varchar('client_id', { length: ID_LENGTH }).notNull(),
+		composite_key: varchar('composite_key', {
+			length: ID_LENGTH
+		}).primaryKey(),
+		expires_at_ms: bigint('expires_at_ms', { mode: 'number' }).notNull(),
+		jti: varchar('jti', { length: ID_LENGTH }).notNull()
+	}
+);
+
 export const oauthClientsTable = pgTable('auth_oauth_clients', {
 	backchannel_logout_uri: varchar('backchannel_logout_uri', {
 		length: URL_LENGTH
 	}),
 	client_id: varchar('client_id', { length: ID_LENGTH }).primaryKey(),
 	hashed_secret: varchar('hashed_secret', { length: ID_LENGTH }),
+	jwks_json: jsonb('jwks_json').$type<JsonWebKey[]>(),
+	jwks_uri: varchar('jwks_uri', { length: URL_LENGTH }),
 	name: varchar('name', { length: ID_LENGTH }).notNull(),
 	post_logout_redirect_uris: text('post_logout_redirect_uris').array(),
 	redirect_uris: text('redirect_uris').array().notNull(),
@@ -99,6 +114,8 @@ const toClient = (row: ClientRow): OAuthClient => ({
 	backchannelLogoutUri: row.backchannel_logout_uri ?? undefined,
 	clientId: row.client_id,
 	hashedSecret: row.hashed_secret ?? undefined,
+	jwks: row.jwks_json ?? undefined,
+	jwksUri: row.jwks_uri ?? undefined,
 	name: row.name,
 	postLogoutRedirectUris: row.post_logout_redirect_uris ?? undefined,
 	redirectUris: row.redirect_uris,
@@ -186,6 +203,8 @@ const toRefreshValues = (
 
 export const createNeonAuthorizationCodeStore = (databaseUrl: string) =>
 	createPostgresAuthorizationCodeStore(createNeonDatabase(databaseUrl));
+export const createNeonClientAssertionJtiStore = (databaseUrl: string) =>
+	createPostgresClientAssertionJtiStore(createNeonDatabase(databaseUrl));
 export const createNeonDeviceAuthorizationStore = (databaseUrl: string) =>
 	createPostgresDeviceAuthorizationStore(createNeonDatabase(databaseUrl));
 export const createNeonLogoutDeliveryStore = (databaseUrl: string) =>
@@ -207,6 +226,31 @@ export const createPostgresAuthorizationCodeStore = (
 	},
 	saveCode: async (code) => {
 		await db.insert(oauthCodesTable).values(toCodeValues(code));
+	}
+});
+export const createPostgresClientAssertionJtiStore = (
+	db: AnyPgDatabase
+): ClientAssertionJtiStore => ({
+	recordIfFresh: async (clientId, jti, expiresAt) => {
+		// Lazy GC of expired entries on each call. Bounded by the assertion `exp` window
+		// (~5 min), so this stays cheap even at high call volume.
+		await db
+			.delete(oauthClientAssertionJtisTable)
+			.where(lt(oauthClientAssertionJtisTable.expires_at_ms, Date.now()));
+		const compositeKey = `${clientId}|${jti}`;
+		try {
+			await db.insert(oauthClientAssertionJtisTable).values({
+				client_id: clientId,
+				composite_key: compositeKey,
+				expires_at_ms: expiresAt,
+				jti
+			});
+
+			return true;
+		} catch {
+			// PK collision = we've seen this jti for this client before = replay.
+			return false;
+		}
 	}
 });
 export const createPostgresDeviceAuthorizationStore = (

@@ -1,6 +1,7 @@
 import type {
 	AuthorizationCode,
 	AuthorizationCodeStore,
+	ClientAssertionJtiStore,
 	DeviceAuthorization,
 	DeviceAuthorizationStore,
 	LogoutDelivery,
@@ -26,6 +27,25 @@ export const createInMemoryAuthorizationCodeStore =
 			},
 			saveCode: async (code) => {
 				codes.set(code.codeHash, { ...code });
+			}
+		};
+	};
+export const createInMemoryClientAssertionJtiStore =
+	(): ClientAssertionJtiStore => {
+		const seen = new Map<string, number>();
+
+		return {
+			recordIfFresh: async (clientId, jti, expiresAt) => {
+				const now = Date.now();
+				// Lazy GC: skim expired keys so the Map doesn't grow without bound.
+				for (const [key, expiry] of seen) {
+					if (expiry < now) seen.delete(key);
+				}
+				const composite = `${clientId}|${jti}`;
+				if (seen.has(composite)) return false;
+				seen.set(composite, expiresAt);
+
+				return true;
 			}
 		};
 	};

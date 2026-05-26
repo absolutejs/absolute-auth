@@ -8,6 +8,7 @@ import type { RouteString } from '../types';
 import { signJwt, verifyJwt, type SigningKey } from './keys';
 import type {
 	AuthorizationCodeStore,
+	ClientAssertionJtiStore,
 	DeviceAuthorizationStore,
 	LogoutDeliveryStore,
 	OAuthClientStore,
@@ -31,6 +32,10 @@ const DEFAULT_REFRESH_TOKEN_TTL_MS = MILLISECONDS_IN_A_DAY * REFRESH_TTL_DAYS;
 export type OidcProviderConfig<UserType> = {
 	accessTokenTtlMs?: number;
 	authorizationCodeStore: AuthorizationCodeStore;
+	// Optional — enables `private_key_jwt` client auth (RFC 7521/7523) with `jti` replay
+	// protection. Without it, JWT-bearer client assertions still verify, but a leaked
+	// assertion within its `exp` window can replay. Strongly recommended for production.
+	clientAssertionJtiStore?: ClientAssertionJtiStore;
 	clientStore: OAuthClientStore;
 	// Optional — enables the RFC 8628 device-authorization flow. When set, `/device_authorization`
 	// + the `urn:ietf:params:oauth:grant-type:device_code` token grant are mounted, and

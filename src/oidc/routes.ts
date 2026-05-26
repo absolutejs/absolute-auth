@@ -20,6 +20,10 @@ import {
 	verifyPkce,
 	type OidcProviderConfig
 } from './config';
+import {
+	CLIENT_ASSERTION_TYPE,
+	verifyClientAssertion
+} from './clientAuth';
 import { verifyDpopProof } from './dpop';
 import { toPublicJwk } from './keys';
 import {
@@ -122,6 +126,43 @@ export const oidcProviderRoutes = <UserType>(
 		);
 
 		return matches ? client : undefined;
+	};
+
+	// Token-endpoint client auth router. Tries `private_key_jwt` (RFC 7521/7523) first
+	// when the client presented a `client_assertion`; falls back to the classic
+	// `client_secret_basic` / `client_secret_post` path. Returns the verified client or
+	// `undefined`; the caller turns that into `invalid_client` (401).
+	const authenticateTokenClient = async ({
+		basicClientId,
+		basicClientSecret,
+		bodyClientAssertion,
+		bodyClientAssertionType,
+		bodyClientId,
+		bodyClientSecret
+	}: {
+		basicClientId: string | undefined;
+		basicClientSecret: string | undefined;
+		bodyClientAssertion: string | undefined;
+		bodyClientAssertionType: string | undefined;
+		bodyClientId: string | undefined;
+		bodyClientSecret: string | undefined;
+	}) => {
+		if (
+			bodyClientAssertion !== undefined &&
+			bodyClientAssertionType === CLIENT_ASSERTION_TYPE
+		) {
+			return verifyClientAssertion({
+				assertion: bodyClientAssertion,
+				expectedAudience: tokenUrl,
+				jtiStore: config.clientAssertionJtiStore,
+				resolveClient: clientStore.findClient
+			});
+		}
+		const clientId = bodyClientId ?? basicClientId;
+		const clientSecret = bodyClientSecret ?? basicClientSecret;
+		if (clientId === undefined) return undefined;
+
+		return authenticateClient(clientId, clientSecret);
 	};
 
 	const grantAuthorizationCode = async (
@@ -338,8 +379,10 @@ export const oidcProviderRoutes = <UserType>(
 		token_endpoint_auth_methods_supported: [
 			'client_secret_basic',
 			'client_secret_post',
-			'none'
-		]
+			'none',
+			'private_key_jwt'
+		],
+		token_endpoint_auth_signing_alg_values_supported: ['ES256']
 	};
 	if (config.deviceAuthorizationStore) {
 		discovery.device_authorization_endpoint = `${issuer}${deviceAuthorizationRoute}`;
@@ -544,12 +587,14 @@ export const oidcProviderRoutes = <UserType>(
 			tokenRoute,
 			async ({ body, headers }) => {
 				const basic = readBasicAuth(headers.authorization);
-				const clientId = basic.clientId ?? body.client_id;
-				const clientSecret = basic.clientSecret ?? body.client_secret;
-				if (clientId === undefined) {
-					return oauthError(HTTP_UNAUTHORIZED, 'invalid_client');
-				}
-				const client = await authenticateClient(clientId, clientSecret);
+				const client = await authenticateTokenClient({
+					basicClientId: basic.clientId,
+					basicClientSecret: basic.clientSecret,
+					bodyClientAssertion: body.client_assertion,
+					bodyClientAssertionType: body.client_assertion_type,
+					bodyClientId: body.client_id,
+					bodyClientSecret: body.client_secret
+				});
 				if (client === undefined) {
 					return oauthError(HTTP_UNAUTHORIZED, 'invalid_client');
 				}
@@ -578,6 +623,8 @@ export const oidcProviderRoutes = <UserType>(
 			{
 				body: t.Object({
 					audience: t.Optional(t.String()),
+					client_assertion: t.Optional(t.String()),
+					client_assertion_type: t.Optional(t.String()),
 					client_id: t.Optional(t.String()),
 					client_secret: t.Optional(t.String()),
 					code: t.Optional(t.String()),

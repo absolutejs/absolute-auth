@@ -6,11 +6,32 @@ export type OAuthClient = {
 	clientId: string;
 	// SHA-256 hash of the client secret. Omitted for public (PKCE-only) clients.
 	hashedSecret?: string;
+	// Inline JWKS for `private_key_jwt` client auth (RFC 7521/7523). The client signs a
+	// `client_assertion` JWT with their private key; we verify it against one of these
+	// public keys. Either this or `jwksUri` (or both) authenticates the client without
+	// shared secrets — the form Microsoft Entra / Apple Business / FAPI expect.
+	jwks?: JsonWebKey[];
+	// URL we fetch + cache the client's JWKS from for `private_key_jwt`. Refreshed on
+	// kid miss; consumers control cache TTL via the OidcProviderConfig.
+	jwksUri?: string;
 	name: string;
 	// OIDC RP-initiated logout — the redirect targets allowed in `post_logout_redirect_uri`.
 	postLogoutRedirectUris?: string[];
 	redirectUris: string[];
 	scopes: string[];
+};
+
+// One-use `jti` ledger for `client_assertion` JWTs — RFC 7523 §3 requires us to reject
+// replays within the assertion's validity window. Entries are short-lived (~5 min by
+// default; bounded by the assertion `exp`); a cleanup pass can prune expired ones.
+export type ClientAssertionJtiStore = {
+	// Returns true if this is the first time we've seen this (clientId, jti) pair AND
+	// records it; false if we've seen it before (replay).
+	recordIfFresh: (
+		clientId: string,
+		jti: string,
+		expiresAt: number
+	) => Promise<boolean>;
 };
 
 export type OAuthClientStore = {
