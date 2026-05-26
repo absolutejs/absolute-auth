@@ -29,9 +29,26 @@ export const credentialsLogin = <UserType>({
 		async ({
 			body: { email, password },
 			cookie: { user_session_id },
+			request,
 			status,
 			store: { session, unregisteredSession }
 		}) => {
+			// Build the loose request-context bag we expose to `isMfaRequired` so
+			// the consumer can adapt the gate per-request (e.g. plug in `scoreRisk`).
+			const headerBag: Record<string, string | undefined> = {};
+			request.headers.forEach((value, key) => {
+				headerBag[key] = value;
+			});
+			const mfaContext: {
+				headers: Record<string, string | undefined>;
+				ip?: string;
+			} = {
+				headers: headerBag,
+				ip:
+					headerBag['cf-connecting-ip'] ??
+					headerBag['x-forwarded-for']?.split(',')[0]?.trim() ??
+					undefined
+			};
 			const normalizedEmail = email.trim().toLowerCase();
 			const lockState = lockoutGuard
 				? await lockoutGuard.check(normalizedEmail)
@@ -72,9 +89,9 @@ export const credentialsLogin = <UserType>({
 				return status('Forbidden', { status: 'email_not_verified' });
 			}
 
-			// MFA seam: when a factor is enrolled, keep an unregistered session and
-			// defer promotion to the (Workstream B) challenge route.
-			if (await isMfaRequired?.(user)) {
+			// MFA seam: when a factor is enrolled OR adaptive risk says so, keep an
+			// unregistered session and defer promotion to the (Workstream B) challenge route.
+			if (await isMfaRequired?.(user, mfaContext)) {
 				const compatibilityLayer =
 					await createSessionCompatibilityLayer({
 						authSessionStore,

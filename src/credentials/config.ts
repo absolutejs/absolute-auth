@@ -36,7 +36,16 @@ export type CredentialsConfig<UserType> = {
 	getUserByEmail: (
 		email: string
 	) => Promise<UserType | null | undefined> | UserType | null | undefined;
-	isMfaRequired?: (user: UserType) => boolean | Promise<boolean>;
+	// Decide whether this user must complete an MFA challenge before the session is
+	// promoted. Receives request context (IP, UA, Cloudflare headers, etc.) so the
+	// consumer can adapt the gate to the request — e.g. always require MFA when
+	// `scoreRisk(...)` says the login is unusual, while letting trusted devices skip.
+	// Original `(user) => boolean` signatures keep working unchanged because the new
+	// `context` is the optional second positional argument.
+	isMfaRequired?: (
+		user: UserType,
+		context?: { headers: Record<string, string | undefined>; ip?: string }
+	) => boolean | Promise<boolean>;
 	loginRoute?: RouteString;
 	// `identity` carries the normalized email plus any extra register-body fields
 	// (e.g. given_name) the consumer's signup form sends — read them off `identity`.
