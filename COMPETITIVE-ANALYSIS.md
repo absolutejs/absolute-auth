@@ -49,7 +49,8 @@ Legend: ✅ full · ◐ partial / hook-only / BYO · ✖ none · — N/A for a l
 | Secrets Vault (encrypted blob storage) | ✅ | ✅ (Vault) | ◐ | ◐ | ✖ | ✖ |
 | Custom JWT claims on issued tokens | ✅ | ✅ | ✅ (Actions) | ✅ | ✅ | ◐ |
 | JIT / domain-based org assignment | ✅ | ✅ (HRD) | ✅ | ✅ | ◐ | ◐ |
-| Hosted UI / drop-in components | ◐ (HTMX) | ✅ (AuthKit) | ✅ (Universal Login) | ✅ | ✅ (Kratos UI) | ◐ |
+| Hosted UI / drop-in components | — by design | ✅ (AuthKit) | ✅ (Universal Login) | ✅ | ✅ (Kratos UI) | ◐ |
+| UI integration primitives (client + hooks/composables) | ✅ | ◐ | ✅ | ✅ | ◐ | ✅ |
 | Per-MAU / per-check pricing | none | yes | yes | yes | none (OSS) | none (OSS) |
 | Vendor SOC 2 / hosted infra | — | ✅ | ✅ | ✅ | — | — |
 
@@ -101,11 +102,17 @@ Legend: ✅ full · ◐ partial / hook-only / BYO · ✖ none · — N/A for a l
 - **Managed Vault block** — ✅ SHIPPED (beta.11). `createVault` (put/get/list/delete encrypted blobs per owner) on top of `createSecretCipher`, in-mem + Neon stores, `rotateVaultKey` mirrors the MFA-key rotation.
 - **OIDC custom claims** — ✅ SHIPPED (beta.11). `getAccessTokenClaims` hook merges consumer claims into the access token; reserved keys protected.
 - **JIT / domain-based org assignment** — ✅ SHIPPED (beta.11). `autoAssignOrgsByEmail` idempotently joins a new user to every org their email domain maps to.
+- **UI primitives (client + React hooks)** — ✅ SHIPPED (beta.12). `createAuthClient` (framework-agnostic SDK over every endpoint, `{data, error}`, configurable routes) + a `./react` sub-export with thin hooks (`useSignIn`, `useSignUp`, `useSignOut`, `useMfaChallenge`, `useMagicLink`, `usePasswordReset`, `useSessions`). Components are explicitly NOT shipped — primitives + composables let consumers build whatever they want with their own forms/styling (HTMX is the special case because `hx-*` IS the abstraction). Vue/Solid/Svelte composables wrap the same client next.
 
 ## Honest non-goals (don't chase)
 Hosted infrastructure, vendor SOC 2, and a global device-fingerprint data network are
 properties of a SaaS, not a self-hosted library. We enable consumers to be compliant and
-to own their data; we don't replace a vendor's hosted ops.
+to own their data; we don't replace a vendor's hosted ops. A **drop-in component library**
+is also a deliberate non-goal — components bake opinionated UX decisions; we ship
+**primitives** (the client SDK + framework hooks/composables, plus HTMX as the special
+case where `hx-*` IS the abstraction) so consumers compose whatever forms/styling they
+want. AuthKit/Universal Login/Clerk are the SaaS hosted-login shape; the consumer-owned
+shape is hooks + a thin client.
 
 ## Sources
 WorkOS [FGA](https://workos.com/docs/fga) · [Radar](https://workos.com/docs/authkit/radar) ·
