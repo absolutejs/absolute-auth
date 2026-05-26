@@ -582,6 +582,12 @@ export {
 	REQUEST_URI_PREFIX
 } from './oidc/par';
 export {
+	fetchUserInfo,
+	readUserInfoBearer,
+	userInfoChallengeHeader
+} from './oidc/userinfo';
+export type { UserInfoResult } from './oidc/userinfo';
+export {
 	fanOutBackchannelLogout,
 	mintLogoutToken,
 	resolvePostLogoutRedirect,

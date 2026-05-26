@@ -79,6 +79,12 @@ export type OidcProviderConfig<UserType> = {
 	}) => string[] | undefined | Promise<string[] | undefined>;
 	// The stable subject id for a user (goes in `sub`).
 	getUserId: (user: UserType) => string;
+	// OIDC `/userinfo` claims for an authenticated access token, keyed by `sub`. Without
+	// this hook, /userinfo returns just `{sub}` (spec-compliant minimum). Wire it to your
+	// user store so RPs can fetch fresh profile data without parsing the id_token.
+	getUserInfo?: (
+		sub: string
+	) => Promise<Record<string, unknown> | undefined>;
 	idTokenTtlMs?: number;
 	// The issuer URL, e.g. https://app.example.com (also the `iss` claim).
 	issuer: string;

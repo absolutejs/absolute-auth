@@ -42,6 +42,11 @@ import {
 	REQUEST_URI_PREFIX
 } from './par';
 import {
+	fetchUserInfo,
+	readUserInfoBearer,
+	userInfoChallengeHeader
+} from './userinfo';
+import {
 	deleteRegisteredClient,
 	getRegisteredClient,
 	registerClient,
@@ -130,6 +135,7 @@ export const oidcProviderRoutes = <UserType>(
 	const endSessionRoute: RouteString = `${oidcRoute}/end_session`;
 	const parRoute: RouteString = `${oidcRoute}/par`;
 	const registrationRoute: RouteString = `${oidcRoute}/register`;
+	const userinfoRoute: RouteString = `${oidcRoute}/userinfo`;
 	const registrationBaseUrl = `${issuer}${registrationRoute}`;
 	const tokenUrl = `${issuer}${oidcRoute}/token`;
 
@@ -441,7 +447,8 @@ export const oidcProviderRoutes = <UserType>(
 			'none',
 			'private_key_jwt'
 		],
-		token_endpoint_auth_signing_alg_values_supported: ['ES256']
+		token_endpoint_auth_signing_alg_values_supported: ['ES256'],
+		userinfo_endpoint: `${issuer}${userinfoRoute}`
 	};
 	if (config.deviceAuthorizationStore) {
 		discovery.device_authorization_endpoint = `${issuer}${deviceAuthorizationRoute}`;
@@ -629,7 +636,60 @@ export const oidcProviderRoutes = <UserType>(
 					session: store.session,
 					userSessionId: user_session_id.value
 				});
-				if (userSession === undefined) {
+
+				// OIDC `prompt`/`max_age`/`id_token_hint` re-auth handling.
+				// - prompt=none: never show login — caller can only get the response if
+				//   already authenticated AND no other re-auth signal fires.
+				// - prompt=login (or =consent): force a fresh authentication even if a
+				//   session exists.
+				// - max_age=N: if the current session was authenticated more than N
+				//   seconds ago, treat as needing re-auth.
+				// - id_token_hint: if the hint decodes to a different `sub` than the
+				//   current session's user, treat as needing re-auth.
+				const promptValues =
+					effectiveQuery.prompt === undefined
+						? []
+						: effectiveQuery.prompt.split(' ');
+				const wantsSilent = promptValues.includes('none');
+				const wantsLogin =
+					promptValues.includes('login') ||
+					promptValues.includes('consent');
+				const maxAge =
+					effectiveQuery.max_age === undefined
+						? undefined
+						: Number(effectiveQuery.max_age);
+				const sessionStaleByMaxAge =
+					userSession !== undefined &&
+					maxAge !== undefined &&
+					!Number.isNaN(maxAge) &&
+					maxAge >= 0 &&
+					(userSession.authenticatedAt ?? 0) <
+						Date.now() - maxAge * 1000;
+				const hintSub =
+					effectiveQuery.id_token_hint === undefined
+						? undefined
+						: (
+								await verifyIdTokenHint({
+									config,
+									idTokenHint: effectiveQuery.id_token_hint
+								})
+							)?.sub;
+				const hintMismatch =
+					userSession !== undefined &&
+					hintSub !== undefined &&
+					hintSub !== getUserId(userSession.user);
+				const needsReauth =
+					wantsLogin || sessionStaleByMaxAge || hintMismatch;
+
+				if (userSession === undefined || needsReauth) {
+					if (wantsSilent) {
+						return errorRedirect(
+							userSession === undefined
+								? 'login_required'
+								: 'interaction_required'
+						);
+					}
+
 					return loginUrl === undefined
 						? jsonResponse(
 								{ error: 'login_required' },
@@ -715,7 +775,10 @@ export const oidcProviderRoutes = <UserType>(
 					client_id: t.Optional(t.String()),
 					code_challenge: t.Optional(t.String()),
 					code_challenge_method: t.Optional(t.String()),
+					id_token_hint: t.Optional(t.String()),
+					max_age: t.Optional(t.String()),
 					nonce: t.Optional(t.String()),
+					prompt: t.Optional(t.String()),
 					redirect_uri: t.Optional(t.String()),
 					request_uri: t.Optional(t.String()),
 					response_type: t.Optional(t.String()),
@@ -1212,6 +1275,62 @@ export const oidcProviderRoutes = <UserType>(
 					authorization: t.Optional(t.String())
 				}),
 				params: t.Object({ clientId: t.String() })
+			}
+		)
+		// OIDC `/userinfo`. RP presents Bearer access token; we verify (our sig + exp),
+		// optionally enrich via `getUserInfo(sub)` hook, return JSON. Always returns at
+		// least `{sub}`. WWW-Authenticate on errors per RFC 6750.
+		.get(
+			userinfoRoute,
+			async ({ headers }) => {
+				const token = readUserInfoBearer(headers.authorization);
+				const result = await fetchUserInfo({ config, token });
+				if (!result.ok) {
+					return new Response(JSON.stringify(result.body), {
+						headers: {
+							'content-type': 'application/json',
+							'www-authenticate': userInfoChallengeHeader(result.error)
+						},
+						status: HTTP_UNAUTHORIZED
+					});
+				}
+
+				return jsonResponse(result.body, HTTP_OK);
+			},
+			{
+				headers: t.Object({
+					authorization: t.Optional(t.String())
+				})
+			}
+		)
+		.post(
+			userinfoRoute,
+			async ({ headers, body }) => {
+				// Per spec, /userinfo accepts the token in the Authorization header OR
+				// the `access_token` form field. The form-field path lets RPs that can't
+				// set custom headers (rare today) still use it.
+				const token =
+					readUserInfoBearer(headers.authorization) ?? body.access_token;
+				const result = await fetchUserInfo({ config, token });
+				if (!result.ok) {
+					return new Response(JSON.stringify(result.body), {
+						headers: {
+							'content-type': 'application/json',
+							'www-authenticate': userInfoChallengeHeader(result.error)
+						},
+						status: HTTP_UNAUTHORIZED
+					});
+				}
+
+				return jsonResponse(result.body, HTTP_OK);
+			},
+			{
+				body: t.Object({
+					access_token: t.Optional(t.String())
+				}),
+				headers: t.Object({
+					authorization: t.Optional(t.String())
+				})
 			}
 		)
 		.get(jwksRoute, () => ({ keys: [toPublicJwk(signingKey)] }))
