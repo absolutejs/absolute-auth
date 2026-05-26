@@ -9,6 +9,7 @@ import { signJwt, verifyJwt, type SigningKey } from './keys';
 import type {
 	AuthorizationCodeStore,
 	DeviceAuthorizationStore,
+	LogoutDeliveryStore,
 	OAuthClientStore,
 	OidcRefreshTokenStore
 } from './types';
@@ -63,6 +64,10 @@ export type OidcProviderConfig<UserType> = {
 	// Where to send an unauthenticated authorize request (your login page). The original
 	// authorize URL is appended as `?return_to=`.
 	loginUrl?: string;
+	// OIDC RP-initiated + back-channel logout. When set, `/oauth2/end_session` is mounted
+	// and clients with `backchannelLogoutUri` receive signed `logout_token` POSTs on
+	// session end. Failed pushes are persisted here as a DLQ for inspection/replay.
+	logoutDeliveryStore?: LogoutDeliveryStore;
 	oidcRoute?: RouteString;
 	refreshTokenStore: OidcRefreshTokenStore;
 	refreshTokenTtlMs?: number;

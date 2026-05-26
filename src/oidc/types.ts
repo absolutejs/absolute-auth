@@ -1,9 +1,14 @@
 // A registered relying party — the apps that "Sign in with <yourapp>".
 export type OAuthClient = {
+	// OIDC back-channel logout endpoint. When present, this client receives signed
+	// `logout_token` POSTs whenever a user with active refresh tokens for it signs out.
+	backchannelLogoutUri?: string;
 	clientId: string;
 	// SHA-256 hash of the client secret. Omitted for public (PKCE-only) clients.
 	hashedSecret?: string;
 	name: string;
+	// OIDC RP-initiated logout — the redirect targets allowed in `post_logout_redirect_uri`.
+	postLogoutRedirectUris?: string[];
 	redirectUris: string[];
 	scopes: string[];
 };
@@ -51,6 +56,9 @@ export type OidcRefreshTokenStore = {
 	deleteForUser: (userId: string) => Promise<void>;
 	// Non-consuming lookup — only used by the introspection endpoint (RFC 7662).
 	getToken: (tokenHash: string) => Promise<OidcRefreshToken | undefined>;
+	// Distinct client ids holding non-expired refresh tokens for the user. Used by
+	// OIDC back-channel logout to know which RPs to push a `logout_token` to.
+	listClientIdsForUser: (userId: string) => Promise<string[]>;
 	saveToken: (token: OidcRefreshToken) => Promise<void>;
 };
 
@@ -70,6 +78,27 @@ export type DeviceAuthorization = {
 	status: DeviceAuthorizationStatus;
 	userCode: string;
 	userSub?: string;
+};
+
+// A back-channel `logout_token` delivery the dispatcher gave up on (network error or
+// non-2xx from the RP). Persisted to the optional `LogoutDeliveryStore` so consumers can
+// inspect (alerting), replay, or `removeFailure(id)` once handled.
+export type LogoutDelivery = {
+	attempts: number;
+	clientId: string;
+	createdAt: number;
+	endpointUrl: string;
+	id: string;
+	lastError?: string;
+	lastStatus?: number;
+	logoutToken: string;
+	userId: string;
+};
+
+export type LogoutDeliveryStore = {
+	listFailed: (limit?: number) => Promise<LogoutDelivery[]>;
+	recordFailure: (delivery: LogoutDelivery) => Promise<void>;
+	removeFailure: (deliveryId: string) => Promise<void>;
 };
 
 export type DeviceAuthorizationStore = {

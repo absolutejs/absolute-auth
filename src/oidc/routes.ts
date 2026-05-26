@@ -2,6 +2,7 @@ import { Elysia, t } from 'elysia';
 import { MILLISECONDS_IN_A_MINUTE } from '../constants';
 import { constantTimeEqual, generateSecureToken, hashToken } from '../crypto';
 import { loadSessionFromSource } from '../session/access';
+import { clearSession } from '../session/promote';
 import { sessionStore } from '../session/state';
 import type { AuthSessionStore } from '../session/types';
 import type { RouteString } from '../types';
@@ -21,6 +22,11 @@ import {
 } from './config';
 import { verifyDpopProof } from './dpop';
 import { toPublicJwk } from './keys';
+import {
+	fanOutBackchannelLogout,
+	resolvePostLogoutRedirect,
+	verifyIdTokenHint
+} from './logout';
 import type { OAuthClient } from './types';
 
 const HTTP_OK = 200;
@@ -99,6 +105,7 @@ export const oidcProviderRoutes = <UserType>(
 	const revokeRoute: RouteString = `${oidcRoute}/revoke`;
 	const deviceAuthorizationRoute: RouteString = `${oidcRoute}/device_authorization`;
 	const deviceApproveRoute: RouteString = `${oidcRoute}/device/decision`;
+	const endSessionRoute: RouteString = `${oidcRoute}/end_session`;
 	const tokenUrl = `${issuer}${oidcRoute}/token`;
 
 	const authenticateClient = async (
@@ -312,10 +319,13 @@ export const oidcProviderRoutes = <UserType>(
 		grantTypes.push('urn:ietf:params:oauth:grant-type:device_code');
 	}
 
-	const discovery: Record<string, string | string[]> = {
+	const discovery: Record<string, boolean | string | string[]> = {
 		authorization_endpoint: `${issuer}${authorizeRoute}`,
+		backchannel_logout_session_supported: false,
+		backchannel_logout_supported: true,
 		code_challenge_methods_supported: ['S256'],
 		dpop_signing_alg_values_supported: ['ES256'],
+		end_session_endpoint: `${issuer}${endSessionRoute}`,
 		grant_types_supported: grantTypes,
 		id_token_signing_alg_values_supported: ['ES256'],
 		introspection_endpoint: `${issuer}${introspectRoute}`,
@@ -334,6 +344,81 @@ export const oidcProviderRoutes = <UserType>(
 	if (config.deviceAuthorizationStore) {
 		discovery.device_authorization_endpoint = `${issuer}${deviceAuthorizationRoute}`;
 	}
+
+	const handleEndSession = async ({
+		cookie,
+		inMemorySession,
+		query
+	}: {
+		cookie: Parameters<typeof clearSession<UserType>>[0]['cookie'];
+		inMemorySession: Parameters<
+			typeof clearSession<UserType>
+		>[0]['inMemorySession'];
+		query: {
+			client_id?: string;
+			id_token_hint?: string;
+			post_logout_redirect_uri?: string;
+			state?: string;
+		};
+	}) => {
+		// Resolve the initiating RP from id_token_hint (preferred) or client_id. The
+		// hint also gives us the user `sub` we need for back-channel fan-out.
+		const hint =
+			query.id_token_hint === undefined
+				? undefined
+				: await verifyIdTokenHint({
+						config,
+						idTokenHint: query.id_token_hint
+					});
+		const clientId = hint?.audClientId ?? query.client_id;
+		const client =
+			clientId === undefined
+				? undefined
+				: await config.clientStore.findClient(clientId);
+		// Best-effort: pull the logged-in user's sub from the session as a fallback
+		// when no id_token_hint was supplied, so we can still fan out back-channel
+		// pushes for the active session.
+		const userSession = await loadSessionFromSource({
+			authSessionStore,
+			session: inMemorySession,
+			userSessionId: cookie.value
+		});
+		const resolvedSub =
+			hint?.sub ??
+			(userSession === undefined
+				? undefined
+				: getUserId(userSession.user));
+
+		await clearSession({
+			authSessionStore,
+			cookie,
+			inMemorySession
+		});
+
+		if (resolvedSub !== undefined) {
+			await fanOutBackchannelLogout({
+				config,
+				skipClientId: clientId,
+				userId: resolvedSub
+			});
+		}
+
+		const redirectUri =
+			client === undefined
+				? undefined
+				: resolvePostLogoutRedirect({
+						client,
+						requestedUri: query.post_logout_redirect_uri
+					});
+		if (redirectUri === undefined) {
+			return jsonResponse({ ok: true }, HTTP_OK);
+		}
+
+		const url = new URL(redirectUri);
+		if (query.state !== undefined) url.searchParams.set('state', query.state);
+
+		return redirectTo(url.toString());
+	};
 
 	return new Elysia()
 		.use(sessionStore<UserType>())
@@ -671,6 +756,60 @@ export const oidcProviderRoutes = <UserType>(
 						t.Union([t.Literal('approve'), t.Literal('deny')])
 					),
 					user_code: t.String()
+				}),
+				cookie: t.Cookie({
+					user_session_id: t.Optional(userSessionIdTypebox)
+				})
+			}
+		)
+		// OIDC RP-initiated logout (Session Management 1.0). The RP redirects the user
+		// here with `id_token_hint` (which we verify was signed by us) + an optional
+		// `post_logout_redirect_uri` (must be in the client's allow-list). We clear the
+		// user's session + fan out back-channel `logout_token` POSTs to every OTHER RP
+		// with active refresh tokens for this user + a registered backchannel URI. Spec
+		// allows GET + POST; we support both.
+		.get(
+			endSessionRoute,
+			async ({
+				cookie: { user_session_id },
+				query,
+				store
+			}) =>
+				handleEndSession({
+					cookie: user_session_id,
+					inMemorySession: store.session,
+					query
+				}),
+			{
+				cookie: t.Cookie({
+					user_session_id: t.Optional(userSessionIdTypebox)
+				}),
+				query: t.Object({
+					client_id: t.Optional(t.String()),
+					id_token_hint: t.Optional(t.String()),
+					post_logout_redirect_uri: t.Optional(t.String()),
+					state: t.Optional(t.String())
+				})
+			}
+		)
+		.post(
+			endSessionRoute,
+			async ({
+				body,
+				cookie: { user_session_id },
+				store
+			}) =>
+				handleEndSession({
+					cookie: user_session_id,
+					inMemorySession: store.session,
+					query: body
+				}),
+			{
+				body: t.Object({
+					client_id: t.Optional(t.String()),
+					id_token_hint: t.Optional(t.String()),
+					post_logout_redirect_uri: t.Optional(t.String()),
+					state: t.Optional(t.String())
 				}),
 				cookie: t.Cookie({
 					user_session_id: t.Optional(userSessionIdTypebox)

@@ -3,11 +3,15 @@ import type {
 	AuthorizationCodeStore,
 	DeviceAuthorization,
 	DeviceAuthorizationStore,
+	LogoutDelivery,
+	LogoutDeliveryStore,
 	OAuthClient,
 	OAuthClientStore,
 	OidcRefreshToken,
 	OidcRefreshTokenStore
 } from './types';
+
+const DEFAULT_LIST_LIMIT = 100;
 
 export const createInMemoryAuthorizationCodeStore =
 	(): AuthorizationCodeStore => {
@@ -54,6 +58,23 @@ export const createInMemoryDeviceAuthorizationStore =
 			}
 		};
 	};
+export const createInMemoryLogoutDeliveryStore =
+	(): LogoutDeliveryStore => {
+		const failures = new Map<string, LogoutDelivery>();
+
+		return {
+			listFailed: async (limit = DEFAULT_LIST_LIMIT) =>
+				Array.from(failures.values())
+					.sort((left, right) => right.createdAt - left.createdAt)
+					.slice(0, limit),
+			recordFailure: async (delivery) => {
+				failures.set(delivery.id, delivery);
+			},
+			removeFailure: async (deliveryId) => {
+				failures.delete(deliveryId);
+			}
+		};
+	};
 export const createInMemoryOAuthClientStore = (
 	clients: OAuthClient[]
 ): OAuthClientStore => {
@@ -82,6 +103,17 @@ export const createInMemoryOidcRefreshTokenStore =
 				}
 			},
 			getToken: async (tokenHash) => tokens.get(tokenHash),
+			listClientIdsForUser: async (userId) => {
+				const now = Date.now();
+				const active = Array.from(tokens.values()).filter(
+					(token) =>
+						token.userId === userId && token.expiresAt > now
+				);
+
+				return Array.from(
+					new Set(active.map((token) => token.clientId))
+				);
+			},
 			saveToken: async (token) => {
 				tokens.set(token.tokenHash, { ...token });
 			}

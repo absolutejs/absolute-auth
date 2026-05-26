@@ -558,21 +558,31 @@ export type { DpopResult } from './oidc/dpop';
 export {
 	createInMemoryAuthorizationCodeStore,
 	createInMemoryDeviceAuthorizationStore,
+	createInMemoryLogoutDeliveryStore,
 	createInMemoryOAuthClientStore,
 	createInMemoryOidcRefreshTokenStore
 } from './oidc/inMemoryStores';
 export {
+	fanOutBackchannelLogout,
+	mintLogoutToken,
+	resolvePostLogoutRedirect,
+	verifyIdTokenHint
+} from './oidc/logout';
+export {
 	createNeonAuthorizationCodeStore,
 	createNeonDeviceAuthorizationStore,
+	createNeonLogoutDeliveryStore,
 	createNeonOAuthClientStore,
 	createNeonOidcRefreshTokenStore,
 	createPostgresAuthorizationCodeStore,
 	createPostgresDeviceAuthorizationStore,
+	createPostgresLogoutDeliveryStore,
 	createPostgresOAuthClientStore,
 	createPostgresOidcRefreshTokenStore,
 	oauthClientsTable,
 	oauthCodesTable,
 	oauthDeviceAuthorizationsTable,
+	oauthLogoutDeliveriesTable,
 	oauthRefreshTokensTable
 } from './oidc/postgresStores';
 export * from './adaptive/config';
