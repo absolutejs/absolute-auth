@@ -442,6 +442,21 @@ export * from './tenancy';
 export * from './credentials/config';
 export * from './credentials/passwordPolicy';
 export * from './credentials/emailValidation';
+export {
+	importUser,
+	importUsers,
+	rehashCredentialPassword
+} from './credentials/import';
+export type {
+	ImportUserResult,
+	ImportUsersOptions,
+	ImportableUser
+} from './credentials/import';
+export {
+	isLegacyHash,
+	verifyAuth0Pbkdf2,
+	verifyCognitoSha256
+} from './credentials/legacyHashers';
 export * from './credentials/types';
 export { credentialRoutes } from './credentials/routes';
 export { credentialsEmailVerification } from './credentials/emailVerification';

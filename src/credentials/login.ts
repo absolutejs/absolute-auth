@@ -1,6 +1,8 @@
 import { Elysia, t } from 'elysia';
 import { MILLISECONDS_IN_AN_HOUR } from '../constants';
 import { verifyPassword } from '../crypto';
+import { rehashCredentialPassword } from './import';
+import { isLegacyHash } from './legacyHashers';
 import { createSessionCompatibilityLayer } from '../session/access';
 import { persistWhen, promoteToSession } from '../session/promote';
 import { sessionStore } from '../session/state';
@@ -21,6 +23,8 @@ export const credentialsLogin = <UserType>({
 	loginRoute = '/auth/login',
 	onCredentialsLoginError,
 	onCredentialsLoginSuccess,
+	passwordVerifier,
+	rehashOnLogin = false,
 	requireEmailVerification = false,
 	sessionDurationMs = DEFAULT_CREDENTIAL_SESSION_TTL_MS
 }: CredentialRouteProps<UserType>) =>
@@ -68,9 +72,14 @@ export const credentialsLogin = <UserType>({
 			const credential =
 				await credentialStore.getCredentialByEmail(normalizedEmail);
 			const user = await getUserByEmail(normalizedEmail);
-			const passwordValid = credential
-				? await verifyPassword(password, credential.passwordHash)
-				: false;
+			// `passwordVerifier` overrides the default Bun verify when configured —
+			// the consumer routes to legacy-hash verifiers (Auth0 PBKDF2, Cognito
+			// SHA-256, etc.) and still falls back to Bun for argon2id+bcrypt.
+			const verifyHash = passwordVerifier ?? verifyPassword;
+			const passwordValid =
+				credential === undefined
+					? false
+					: await verifyHash(password, credential.passwordHash);
 
 			// One generic failure (message + status) to avoid account enumeration.
 			if (
@@ -89,6 +98,18 @@ export const credentialsLogin = <UserType>({
 			}
 
 			await lockoutGuard?.recordSuccess(normalizedEmail);
+
+			// Migration upgrade path: imported users that came in with a non-native
+			// hash (Auth0 PBKDF2, Cognito SHA-256, custom scrypt, etc.) get their
+			// password re-hashed with Argon2id on first successful login, so the next
+			// login uses the package's native verify path.
+			if (rehashOnLogin && isLegacyHash(credential.passwordHash)) {
+				await rehashCredentialPassword({
+					credentialStore,
+					current: credential,
+					plainPassword: password
+				});
+			}
 
 			if (requireEmailVerification && !credential.emailVerified) {
 				return status('Forbidden', { status: 'email_not_verified' });

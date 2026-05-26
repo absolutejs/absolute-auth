@@ -46,6 +46,19 @@ export type CredentialsConfig<UserType> = {
 		user: UserType,
 		context?: { headers: Record<string, string | undefined>; ip?: string }
 	) => boolean | Promise<boolean>;
+	// Optional custom password verifier — overrides the default `Bun.password.verify`
+	// (which already handles argon2id + bcrypt natively). Wire this when imported
+	// credentials use a non-bcrypt/argon2 algorithm (Auth0 PBKDF2, AWS Cognito
+	// SHA-256, scrypt, …) — see `legacyHashers.ts` for shipped helpers.
+	passwordVerifier?: (
+		plainPassword: string,
+		storedHash: string
+	) => Promise<boolean>;
+	// When true, after a successful login against a stored hash that is NOT native
+	// Argon2id or bcrypt, re-hash the plaintext with Argon2id + save it back to the
+	// credential store. Lets imported users transparently migrate to the native hash
+	// on their next sign-in.
+	rehashOnLogin?: boolean;
 	loginRoute?: RouteString;
 	// `identity` carries the normalized email plus any extra register-body fields
 	// (e.g. given_name) the consumer's signup form sends — read them off `identity`.
