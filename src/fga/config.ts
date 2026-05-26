@@ -1,8 +1,20 @@
 import type { FgaSchema, RelationRule, Warrant, WarrantStore } from './types';
 
 const DEFAULT_MAX_DEPTH = 16;
+const DEFAULT_CACHE_TTL_MS = 5000;
+const DEFAULT_CACHE_MAX_ENTRIES = 10000;
+
+// Optional memoization for `check`. Bounds reads at the cost of TTL-bounded staleness; writes
+// through `writeWarrant`/`deleteWarrant` clear it on the writing instance (other instances see
+// staleness up to ttlMs). Supply your own (e.g. Redis-backed) or use createInMemoryCheckCache.
+export type FgaCache = {
+	clear: () => void;
+	get: (key: string) => boolean | undefined;
+	set: (key: string, value: boolean) => void;
+};
 
 export type FgaConfig = {
+	cache?: FgaCache;
 	maxDepth?: number;
 	schema: FgaSchema;
 	warrantStore: WarrantStore;
@@ -157,9 +169,16 @@ const evaluate = async (
 	);
 };
 
+const cacheKey = (query: CheckQuery) =>
+	`${query.resourceType}:${query.resourceId}#${query.relation}@${query.subjectType}:${query.subjectId}`;
+
 // Check API: does the subject have `relation` on the resource (following the schema's
-// inheritance rules)?
+// inheritance rules)? Memoized when `config.cache` is set.
 export const check = async (config: FgaConfig, query: CheckQuery) => {
+	const key = cacheKey(query);
+	const cached = config.cache?.get(key);
+	if (cached !== undefined) return cached;
+
 	const context: EvalContext = {
 		config,
 		subjectId: query.subjectId,
@@ -167,13 +186,47 @@ export const check = async (config: FgaConfig, query: CheckQuery) => {
 		visited: new Set()
 	};
 
-	return evaluate(
+	const result = await evaluate(
 		context,
 		query.resourceType,
 		query.resourceId,
 		query.relation,
 		config.maxDepth ?? DEFAULT_MAX_DEPTH
 	);
+	config.cache?.set(key, result);
+
+	return result;
+};
+
+// In-memory TTL cache for `check`. ttlMs bounds staleness; maxEntries caps memory (oldest
+// entry evicted first). For multi-instance setups, supply a shared (e.g. Redis) FgaCache.
+export const createInMemoryCheckCache = ({
+	maxEntries = DEFAULT_CACHE_MAX_ENTRIES,
+	ttlMs = DEFAULT_CACHE_TTL_MS
+}: { maxEntries?: number; ttlMs?: number } = {}): FgaCache => {
+	const entries = new Map<string, { expiresAt: number; value: boolean }>();
+
+	return {
+		clear: () => entries.clear(),
+		get: (key) => {
+			const hit = entries.get(key);
+			if (hit === undefined) return undefined;
+			if (hit.expiresAt < Date.now()) {
+				entries.delete(key);
+
+				return undefined;
+			}
+
+			return hit.value;
+		},
+		set: (key, value) => {
+			const [oldest] = entries.keys();
+			if (entries.size >= maxEntries && oldest !== undefined) {
+				entries.delete(oldest);
+			}
+			entries.set(key, { expiresAt: Date.now() + ttlMs, value });
+		}
+	};
 };
 
 const expand = async (
@@ -308,8 +361,10 @@ export const createFgaEngine = (config: FgaConfig) => ({
 	writeWarrant: (warrant: Warrant) => writeWarrant(config, warrant)
 });
 
-export const deleteWarrant = (config: FgaConfig, warrant: Warrant) =>
-	config.warrantStore.deleteWarrant(warrant);
+export const deleteWarrant = async (config: FgaConfig, warrant: Warrant) => {
+	await config.warrantStore.deleteWarrant(warrant);
+	config.cache?.clear();
+};
 
 // Reverse query: which resources of `resourceType` does the subject have `relation` on? v1
 // enumerates the candidate resource ids from the warrant store and `check`s each (correct for
@@ -353,5 +408,7 @@ export const listSubjects = async (
 	return [...found.values()];
 };
 
-export const writeWarrant = (config: FgaConfig, warrant: Warrant) =>
-	config.warrantStore.saveWarrant(warrant);
+export const writeWarrant = async (config: FgaConfig, warrant: Warrant) => {
+	await config.warrantStore.saveWarrant(warrant);
+	config.cache?.clear();
+};

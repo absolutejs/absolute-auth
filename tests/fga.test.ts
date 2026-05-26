@@ -2,8 +2,10 @@ import { beforeEach, describe, expect, test } from 'bun:test';
 import {
 	check,
 	createFgaEngine,
+	createInMemoryCheckCache,
 	listObjects,
-	listSubjects
+	listSubjects,
+	writeWarrant
 } from '../src/fga/config';
 import { createInMemoryWarrantStore } from '../src/fga/inMemoryStores';
 import { parseSchema } from '../src/fga/schema';
@@ -234,5 +236,44 @@ type document
 				subjectType: 'user'
 			})
 		).toBe(true);
+	});
+});
+
+describe('fga check cache', () => {
+	test('memoizes check and clears on writeWarrant', async () => {
+		const cache = createInMemoryCheckCache();
+		const warrantStore = createInMemoryWarrantStore();
+		const config: FgaConfig = {
+			cache,
+			schema: { document: { viewer: { kind: 'self' } } },
+			warrantStore
+		};
+		const query = {
+			relation: 'viewer',
+			resourceId: 'doc1',
+			resourceType: 'document',
+			subjectId: 'alice',
+			subjectType: 'user'
+		};
+
+		expect(await check(config, query)).toBe(false); // caches `false`
+
+		// Write straight to the store (bypassing writeWarrant) — the cache is stale.
+		await warrantStore.saveWarrant({
+			relation: 'viewer',
+			resourceId: 'doc1',
+			resourceType: 'document',
+			...user('alice')
+		});
+		expect(await check(config, query)).toBe(false); // served from cache
+
+		// writeWarrant clears the cache, so the next check re-evaluates.
+		await writeWarrant(config, {
+			relation: 'viewer',
+			resourceId: 'doc2',
+			resourceType: 'document',
+			...user('bob')
+		});
+		expect(await check(config, query)).toBe(true);
 	});
 });
