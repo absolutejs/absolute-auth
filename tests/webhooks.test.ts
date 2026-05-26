@@ -4,6 +4,7 @@ import { createInMemoryCredentialStore } from '../src/credentials/inMemoryCreden
 import { auth } from '../src/index';
 import { createInMemoryAuthSessionStore } from '../src/session/inMemoryStore';
 import { createWebhookDispatcher } from '../src/webhooks/dispatcher';
+import { createInMemoryWebhookDeliveryStore } from '../src/webhooks/inMemoryStore';
 import { signWebhook, verifyWebhookSignature } from '../src/webhooks/sign';
 
 type TestUser = {
@@ -99,6 +100,107 @@ describe('webhook dispatcher', () => {
 		await dispatch({ at: Date.now(), type: 'logout' });
 
 		expect(errors).toHaveLength(1);
+	});
+});
+
+describe('webhook dispatcher — retry + DLQ', () => {
+	test('retries failed deliveries with exponential backoff and succeeds on the 3rd attempt', async () => {
+		const captured: CapturedRequest[] = [];
+		const sleeps: number[] = [];
+		let calls = 0;
+		const dispatch = createWebhookDispatcher({
+			endpoints: [{ secret: SECRET, url: 'https://hooks.test/flaky' }],
+			fetch: async (url, init) => {
+				captured.push({
+					body: init.body,
+					headers: init.headers,
+					url
+				});
+				calls += 1;
+
+				return calls < 3
+					? { ok: false, status: HTTP_SERVER_ERROR }
+					: { ok: true, status: HTTP_OK };
+			},
+			retry: { attempts: 3, initialDelayMs: 10 },
+			sleep: async (ms) => {
+				sleeps.push(ms);
+			}
+		});
+
+		await dispatch({ at: Date.now(), type: 'mfa_challenge_failed' });
+
+		expect(calls).toBe(3);
+		expect(sleeps).toEqual([10, 20]);
+	});
+
+	test('persists permanent failures to the delivery store DLQ', async () => {
+		const store = createInMemoryWebhookDeliveryStore();
+		const errors: unknown[] = [];
+		const dispatch = createWebhookDispatcher({
+			deliveryStore: store,
+			endpoints: [{ secret: SECRET, url: 'https://hooks.test/dead' }],
+			fetch: recordingFetch([], false),
+			onDeliveryError: ({ error }) => {
+				errors.push(error);
+			},
+			retry: { attempts: 2, initialDelayMs: 1 },
+			sleep: async () => undefined
+		});
+
+		await dispatch({ at: Date.now(), type: 'logout', userId: 'u9' });
+
+		expect(errors).toHaveLength(1);
+		const failed = await store.listFailed();
+		expect(failed).toHaveLength(1);
+		expect(failed[0]?.endpointUrl).toBe('https://hooks.test/dead');
+		expect(failed[0]?.attempts).toBe(2);
+		expect(failed[0]?.lastStatus).toBe(HTTP_SERVER_ERROR);
+		expect(failed[0]?.envelope.type).toBe('logout');
+
+		const envelopeId = failed[0]?.envelope.id;
+		expect(envelopeId).toBeDefined();
+		if (envelopeId !== undefined) {
+			await store.removeFailure(envelopeId);
+		}
+		expect(await store.listFailed()).toHaveLength(0);
+	});
+
+	test('per-endpoint events filter skips non-matching event types', async () => {
+		const loginsOnly: CapturedRequest[] = [];
+		const everything: CapturedRequest[] = [];
+		const dispatch = createWebhookDispatcher({
+			endpoints: [
+				{
+					events: ['credentials_login'],
+					secret: SECRET,
+					url: 'https://hooks.test/logins'
+				},
+				{
+					secret: SECRET,
+					url: 'https://hooks.test/all'
+				}
+			],
+			fetch: async (url, init) => {
+				const target = url.endsWith('/logins') ? loginsOnly : everything;
+				target.push({
+					body: init.body,
+					headers: init.headers,
+					url
+				});
+
+				return { ok: true, status: HTTP_OK };
+			}
+		});
+
+		await dispatch({ at: Date.now(), type: 'credentials_login' });
+		await dispatch({ at: Date.now(), type: 'logout' });
+
+		expect(loginsOnly).toHaveLength(1);
+		expect(JSON.parse(loginsOnly[0]?.body ?? '{}').data.type).toBe(
+			'credentials_login'
+		);
+		expect(everything).toHaveLength(2);
 	});
 });
 

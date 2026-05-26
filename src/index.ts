@@ -661,6 +661,12 @@ export {
 export * from './webhooks/config';
 export * from './webhooks/types';
 export { createWebhookDispatcher } from './webhooks/dispatcher';
+export { createInMemoryWebhookDeliveryStore } from './webhooks/inMemoryStore';
+export {
+	createNeonWebhookDeliveryStore,
+	createPostgresWebhookDeliveryStore,
+	webhookDeliveriesTable
+} from './webhooks/postgresStore';
 export { signWebhook, verifyWebhookSignature } from './webhooks/sign';
 export * from './portal/config';
 export * from './portal/types';
