@@ -1,5 +1,5 @@
 {
-	"version": "0.27.0-beta.11",
+	"version": "0.27.0-beta.12",
 	"name": "@absolutejs/auth",
 	"description": "An authorization library for absolutejs",
 	"repository": {
@@ -10,7 +10,7 @@
 	"license": "CC BY-NC 4.0",
 	"author": "Alex Kahn",
 	"scripts": {
-		"build": "rm -rf dist && bun build src/index.ts src/htmx/index.ts --outdir dist --sourcemap --target=bun --external elysia && tsc --emitDeclarationOnly --project tsconfig.json",
+		"build": "rm -rf dist && bun build src/index.ts src/htmx/index.ts src/client/index.ts src/client/react.ts --outdir dist --sourcemap --target=bun --external elysia --external react && tsc --emitDeclarationOnly --project tsconfig.json",
 		"config": "absolute config",
 		"test": "bun test",
 		"format": "absolute prettier --write",
@@ -27,7 +27,13 @@
 	],
 	"types": "./dist/index.d.ts",
 	"peerDependencies": {
-		"elysia": ">= 1.4.26"
+		"elysia": ">= 1.4.26",
+		"react": ">=18 <20"
+	},
+	"peerDependenciesMeta": {
+		"react": {
+			"optional": true
+		}
 	},
 	"dependencies": {
 		"@absolutejs/linked-providers": "0.0.2",
@@ -40,6 +46,7 @@
 		"@eslint/js": "^10.0.1",
 		"@stylistic/eslint-plugin": "^5.10.0",
 		"@types/bun": "1.2.9",
+		"@types/react": "^19.0.0",
 		"@typescript-eslint/parser": "^8.57.2",
 		"elysia": "1.4.26",
 		"eslint": "^10.1.0",
@@ -57,9 +64,17 @@
 			"import": "./dist/index.js",
 			"types": "./dist/index.d.ts"
 		},
+		"./client": {
+			"import": "./dist/client/index.js",
+			"types": "./dist/client/index.d.ts"
+		},
 		"./htmx": {
 			"import": "./dist/htmx/index.js",
 			"types": "./dist/htmx/index.d.ts"
+		},
+		"./react": {
+			"import": "./dist/client/react.js",
+			"types": "./dist/client/react.d.ts"
 		}
 	},
 	"type": "module",
