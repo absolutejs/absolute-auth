@@ -95,6 +95,9 @@ export type InitialAccessTokenStore = {
 
 // A short-lived, single-use authorization code (PKCE- and optionally DPoP-bound).
 export type AuthorizationCode = {
+	// RFC 9470 — ACR value the user satisfied at /authorize time. Propagated as the
+	// `acr` claim in the id_token (and access_token when present).
+	acr?: string;
 	claims?: Record<string, unknown>;
 	clientId: string;
 	codeChallenge: string;
@@ -116,6 +119,9 @@ export type AuthorizationCodeStore = {
 
 // A refresh token — opaque, stored by hash, rotated on every use.
 export type OidcRefreshToken = {
+	// RFC 9470 — ACR satisfied at issuance time. Preserved across refresh so the new
+	// id_token carries the same `acr` claim (the user hasn't re-authenticated since).
+	acr?: string;
 	claims?: Record<string, unknown>;
 	clientId: string;
 	createdAt: number;

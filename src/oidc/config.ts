@@ -35,6 +35,14 @@ const DEFAULT_REFRESH_TOKEN_TTL_MS = MILLISECONDS_IN_A_DAY * REFRESH_TTL_DAYS;
 // passkeys / MFA / SSO for free.
 export type OidcProviderConfig<UserType> = {
 	accessTokenTtlMs?: number;
+	// RFC 9470 — values the IdP can issue + advertise in discovery. Common shapes:
+	// `urn:mace:incommon:iap:silver` (single-factor), `urn:mace:incommon:iap:gold`
+	// (MFA), or custom strings like `phr` / `phrh`. The consumer maps their session
+	// state to one of these via `getAcr`; clients request a specific level via the
+	// authorize `acr_values` query param. When the requested ACR isn't satisfiable
+	// from the session, /authorize redirects with `error=insufficient_user_authentication`
+	// so the RP (or consumer's loginUrl) can drive the user through a step-up.
+	acrValuesSupported?: string[];
 	authorizationCodeStore: AuthorizationCodeStore;
 	// Optional — enables `private_key_jwt` client auth (RFC 7521/7523) with `jti` replay
 	// protection. Without it, JWT-bearer client assertions still verify, but a leaked
@@ -76,6 +84,25 @@ export type OidcProviderConfig<UserType> = {
 	issuer: string;
 	// Where to send an unauthenticated authorize request (your login page). The original
 	// authorize URL is appended as `?return_to=`.
+	// RFC 9449 §8 — DPoP nonce challenges. When set, the token endpoint requires the
+	// DPoP proof to carry a server-issued `nonce` claim; the first DPoP request gets
+	// a 401 with a `DPoP-Nonce` header it can echo back on the retry. The secret is
+	// used to HMAC the current 2-min epoch into a nonce; nonces from the current OR
+	// previous epoch are accepted (so a nonce minted right before a rollover stays
+	// valid for the full window). Without this, DPoP works without nonces (the
+	// default since 0.27 — back-compat).
+	dpopNonce?: {
+		secret: string;
+	};
+	// RFC 9470 — consumer-supplied mapping from the current session to an ACR value.
+	// Returns whatever the consumer believes the user's effective auth level to be
+	// right now (e.g. `urn:mfa` after a successful MFA challenge, `urn:pwd` after a
+	// password-only login). The authorize flow only emits the `acr` claim when this
+	// hook is present.
+	getAcr?: (context: {
+		scopes: string[];
+		user: UserType;
+	}) => string | undefined;
 	// Optional — when set, the DCR endpoint requires a valid `initial_access_token` in
 	// the Authorization header before a new client can register. Lets operators run a
 	// closed federation (only pre-issued tokens can register) without disabling DCR.
@@ -251,6 +278,7 @@ export const exchangeToken = async <UserType>({
 // Mint an access token (JWT), id_token (JWT), and a rotating refresh token for a grant. When
 // `dpopJkt` is set, the access token is bound to it via `cnf.jkt` and typed `DPoP`.
 export const issueTokenSet = async <UserType>({
+	acr,
 	claims,
 	clientId,
 	config,
@@ -260,6 +288,7 @@ export const issueTokenSet = async <UserType>({
 	scopes,
 	sub
 }: {
+	acr?: string;
 	claims?: Record<string, unknown>;
 	clientId: string;
 	config: OidcProviderConfig<UserType>;
@@ -281,7 +310,7 @@ export const issueTokenSet = async <UserType>({
 	const accessPayload = buildAccessClaims({
 		clientId,
 		dpopJkt,
-		extraClaims: accessExtra,
+		extraClaims: { ...accessExtra, ...(acr === undefined ? {} : { acr }) },
 		issuer: config.issuer,
 		now,
 		scopes,
@@ -298,9 +327,11 @@ export const issueTokenSet = async <UserType>({
 		sub
 	};
 	if (nonce !== undefined) idPayload.nonce = nonce;
+	if (acr !== undefined) idPayload.acr = acr;
 
 	const refreshToken = generateSecureToken(TOKEN_BYTES);
 	await config.refreshTokenStore.saveToken({
+		acr,
 		claims,
 		clientId,
 		createdAt: now,

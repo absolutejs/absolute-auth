@@ -553,7 +553,12 @@ export {
 	verifyJwt
 } from './oidc/keys';
 export type { SigningKey } from './oidc/keys';
-export { verifyDpopProof } from './oidc/dpop';
+export {
+	extractDpopNonceClaim,
+	mintDpopNonce,
+	verifyDpopNonce,
+	verifyDpopProof
+} from './oidc/dpop';
 export type { DpopResult } from './oidc/dpop';
 export {
 	CLIENT_ASSERTION_TYPE,

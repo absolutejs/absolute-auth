@@ -62,6 +62,7 @@ export const oauthClientsTable = pgTable('auth_oauth_clients', {
 });
 
 export const oauthCodesTable = pgTable('auth_oauth_codes', {
+	acr: varchar('acr', { length: ID_LENGTH }),
 	claims_json: jsonb('claims_json').$type<Record<string, unknown>>(),
 	client_id: varchar('client_id', { length: ID_LENGTH }).notNull(),
 	code_challenge: varchar('code_challenge', { length: ID_LENGTH }).notNull(),
@@ -130,6 +131,7 @@ export const oauthPushedAuthorizationRequestsTable = pgTable(
 );
 
 export const oauthRefreshTokensTable = pgTable('auth_oauth_refresh_tokens', {
+	acr: varchar('acr', { length: ID_LENGTH }),
 	claims_json: jsonb('claims_json').$type<Record<string, unknown>>(),
 	client_id: varchar('client_id', { length: ID_LENGTH }).notNull(),
 	created_at_ms: bigint('created_at_ms', { mode: 'number' }).notNull(),
@@ -171,6 +173,7 @@ const toLogoutDelivery = (row: LogoutDeliveryRow): LogoutDelivery => ({
 });
 
 const toCode = (row: CodeRow): AuthorizationCode => ({
+	acr: row.acr ?? undefined,
 	claims: row.claims_json ?? undefined,
 	clientId: row.client_id,
 	codeChallenge: row.code_challenge,
@@ -187,6 +190,7 @@ const toCode = (row: CodeRow): AuthorizationCode => ({
 const toCodeValues = (
 	code: AuthorizationCode
 ): typeof oauthCodesTable.$inferInsert => ({
+	acr: code.acr ?? null,
 	claims_json: code.claims ?? null,
 	client_id: code.clientId,
 	code_challenge: code.codeChallenge,
@@ -214,6 +218,7 @@ const toDeviceAuth = (row: DeviceAuthRow): DeviceAuthorization => ({
 });
 
 const toRefresh = (row: RefreshRow): OidcRefreshToken => ({
+	acr: row.acr ?? undefined,
 	claims: row.claims_json ?? undefined,
 	clientId: row.client_id,
 	createdAt: row.created_at_ms,
@@ -227,6 +232,7 @@ const toRefresh = (row: RefreshRow): OidcRefreshToken => ({
 const toRefreshValues = (
 	token: OidcRefreshToken
 ): typeof oauthRefreshTokensTable.$inferInsert => ({
+	acr: token.acr ?? null,
 	claims_json: token.claims ?? null,
 	client_id: token.clientId,
 	created_at_ms: token.createdAt,

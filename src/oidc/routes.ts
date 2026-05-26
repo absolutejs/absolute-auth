@@ -24,7 +24,12 @@ import {
 	CLIENT_ASSERTION_TYPE,
 	verifyClientAssertion
 } from './clientAuth';
-import { verifyDpopProof } from './dpop';
+import {
+	extractDpopNonceClaim,
+	mintDpopNonce,
+	verifyDpopNonce,
+	verifyDpopProof
+} from './dpop';
 import { toPublicJwk } from './keys';
 import {
 	fanOutBackchannelLogout,
@@ -181,6 +186,42 @@ export const oidcProviderRoutes = <UserType>(
 		return authenticateClient(clientId, clientSecret);
 	};
 
+	// RFC 9449 §8 — DPoP nonce challenge. Returns either:
+	//   - `undefined` (no challenge needed; the proof either lacked DPoP entirely OR
+	//     carried a valid nonce OR nonces aren't configured) → caller proceeds.
+	//   - a 401 Response with a fresh `DPoP-Nonce` header + WWW-Authenticate hint →
+	//     caller returns it verbatim; the RP retries with the issued nonce.
+	const dpopNonceChallenge = async (proof: string | undefined) => {
+		if (proof === undefined || config.dpopNonce === undefined) {
+			return undefined;
+		}
+		const presented = extractDpopNonceClaim(proof);
+		if (
+			presented !== undefined &&
+			(await verifyDpopNonce({
+				nonce: presented,
+				secret: config.dpopNonce.secret
+			}))
+		) {
+			return undefined;
+		}
+		const fresh = await mintDpopNonce({
+			secret: config.dpopNonce.secret
+		});
+
+		return new Response(
+			JSON.stringify({ error: 'use_dpop_nonce' }),
+			{
+				headers: {
+					'content-type': 'application/json',
+					'dpop-nonce': fresh,
+					'www-authenticate': 'DPoP error="use_dpop_nonce"'
+				},
+				status: HTTP_UNAUTHORIZED
+			}
+		);
+	};
+
 	const grantAuthorizationCode = async (
 		client: OAuthClient,
 		body: Record<string, string | undefined>,
@@ -224,6 +265,7 @@ export const oidcProviderRoutes = <UserType>(
 
 		return tokenResponse(
 			await issueTokenSet({
+				acr: record.acr,
 				claims: record.claims,
 				clientId: client.clientId,
 				config,
@@ -267,6 +309,7 @@ export const oidcProviderRoutes = <UserType>(
 
 		return tokenResponse(
 			await issueTokenSet({
+				acr: record.acr,
 				claims: record.claims,
 				clientId: client.clientId,
 				config,
@@ -409,6 +452,12 @@ export const oidcProviderRoutes = <UserType>(
 	if (config.pushedAuthorizationRequestStore !== undefined) {
 		discovery.pushed_authorization_request_endpoint = `${issuer}${parRoute}`;
 		discovery.require_pushed_authorization_requests_supported = true;
+	}
+	if (
+		config.acrValuesSupported !== undefined &&
+		config.acrValuesSupported.length > 0
+	) {
+		discovery.acr_values_supported = config.acrValuesSupported;
 	}
 
 	const handleEndSession = async ({
@@ -613,8 +662,32 @@ export const oidcProviderRoutes = <UserType>(
 				if (granted === undefined)
 					return errorRedirect('access_denied');
 
+				// RFC 9470 — if the RP asked for a specific authentication level
+				// (`acr_values`), the user's effective ACR must match one of them.
+				// Otherwise the RP gets `insufficient_user_authentication` so it can
+				// drive a step-up flow.
+				const userAcr = config.getAcr?.({
+					scopes: granted,
+					user: userSession.user
+				});
+				const requestedAcr =
+					effectiveQuery.acr_values === undefined ||
+					effectiveQuery.acr_values.length === 0
+						? undefined
+						: effectiveQuery.acr_values
+								.split(' ')
+								.filter((entry) => entry.length > 0);
+				if (
+					requestedAcr !== undefined &&
+					(userAcr === undefined ||
+						!requestedAcr.includes(userAcr))
+				) {
+					return errorRedirect('insufficient_user_authentication');
+				}
+
 				const code = generateSecureToken(TOKEN_BYTES);
 				await authorizationCodeStore.saveCode({
+					acr: userAcr,
 					claims: getClaims?.(userSession.user),
 					clientId: client.clientId,
 					codeChallenge,
@@ -666,6 +739,8 @@ export const oidcProviderRoutes = <UserType>(
 				if (client === undefined) {
 					return oauthError(HTTP_UNAUTHORIZED, 'invalid_client');
 				}
+				const nonceChallenge = await dpopNonceChallenge(headers.dpop);
+				if (nonceChallenge !== undefined) return nonceChallenge;
 
 				if (body.grant_type === 'authorization_code') {
 					return grantAuthorizationCode(client, body, headers.dpop);
