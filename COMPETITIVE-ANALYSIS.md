@@ -21,7 +21,7 @@ Legend: ✅ full · ◐ partial / hook-only / BYO · ✖ none · — N/A for a l
 | SCIM / directory sync | ✅ | ✅ | ✅ | ✅ | ◐ | ◐ |
 | Organizations / multi-tenancy | ✅ | ✅ | ✅ | ✅ | ◐ | ✅ |
 | RBAC | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Fine-grained authz (ReBAC/Zanzibar) | ✅ v1 | ✅ | ✅ (FGA) | ◐ | ✅ (Keto) | ◐ |
+| Fine-grained authz (ReBAC/Zanzibar) | ✅ | ✅ | ✅ (FGA) | ◐ | ✅ (Keto) | ◐ |
 | Audit logs | ✅ | ✅ | ✅ | ✅ | ◐ | ◐ |
 | **Tamper-evident audit (hash chain)** | ✅ | ✖ | ✖ | ✖ | ✖ | ✖ |
 | SIEM log streaming | ✅ | ✅ | ✅ | ◐ | ◐ | ✖ |
@@ -36,7 +36,7 @@ Legend: ✅ full · ◐ partial / hook-only / BYO · ✖ none · — N/A for a l
 | Admin impersonation | ✅ | ✅ | ✅ | ◐ | ✖ | ◐ |
 | Adaptive / risk-based auth | ✅ | ✅ | ✅ | ✅ | ✖ | ◐ |
 | Bot/abuse protection | ◐ | ✅ (Radar) | ✅ | ✅ | ✖ | ◐ |
-| **Device fingerprinting (proprietary-grade)** | ✖ | ✅ | ✅ | ✅ | ✖ | ◐ |
+| **Device fingerprinting (proprietary-grade)** | ◐ | ✅ | ✅ | ✅ | ✖ | ◐ |
 | Account linking | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | GDPR export / erasure | ✅ | ◐ | ✅ | ◐ | ◐ | ✖ |
 | MFA encryption-key rotation tool | ✅ | — | — | — | — | ✖ |
@@ -65,10 +65,11 @@ Legend: ✅ full · ◐ partial / hook-only / BYO · ✖ none · — N/A for a l
    audience-bound (`resource`/`audience`, RFC 8707) token whose `act` claim records the
    delegation — DPoP-bindable. `mcpProtectedResourceMetadata` emits the MCP/RFC 9728
    discovery doc. `exchangeToken` is exported. Matches Auth0 "Auth for MCP" + Better Auth.
-2. **Device fingerprinting (proprietary-grade).** Stytch (99.99% bot detection), WorkOS
-   Radar, Auth0 all ship data-network fingerprints. We ship the framework + hooks only.
-   Can't match their data, but can: ship a stronger default fingerprint (FP-JS-style
-   signal hashing) + first-class adapters for Stytch/Cloudflare Turnstile/etc.
+2. **Device fingerprinting (proprietary-grade). ◐ IMPROVED (beta.9).** Stytch (99.99% bot
+   detection), WorkOS Radar, Auth0 all ship data-network fingerprints. We now ship a
+   dependency-light default — `fingerprintDevice(signals)` hashes client signals into a stable
+   `deviceId` feeding the adaptive known-device/new_device signal. We still can't match their
+   data network; remaining: first-class adapters for Stytch/Cloudflare Turnstile/etc.
 3. **Multi-session (multiple accounts, switch). ✅ SHIPPED (beta.6).** A session-ring
    toolkit (`addToSessionRing` / `listRingSessions` / `switchActiveSession` /
    `removeFromSessionRing`) over a second cookie; active session stays in `user_session_id`.
@@ -86,11 +87,11 @@ Legend: ✅ full · ◐ partial / hook-only / BYO · ✖ none · — N/A for a l
    (◐ via the HTMX fragments + `@absolutejs/auth/ui`). Optional: a richer prebuilt UI kit.
 
 ## Features to extend (deepen what we have)
-- **OIDC provider → AI-agent auth** (token exchange + resource indicators + MCP discovery) — see gap #1.
-- **Adaptive auth → weighted risk scoring** (Auth0-style configurable signal weights) on top of the current rules; more signals (ASN/proxy, time-of-day).
-- **FGA → schema-language parser + reverse `listObjects`** ("what can this subject access?") + a check-results cache for throughput.
-- **Bot/abuse → default fingerprint + CAPTCHA provider adapters** (Turnstile/reCAPTCHA/hCaptcha out of the box).
-- **Audit → retention/rotation + CSV export helpers** (WorkOS has tiered retention + CSV).
+- **OIDC provider → AI-agent auth** (token exchange + resource indicators + MCP discovery) — ✅ SHIPPED (beta.5), see gap #1.
+- **Adaptive auth → weighted risk scoring** — ✅ SHIPPED (beta.9). `scoreRisk` adds Auth0-style per-signal weights + score thresholds alongside the rule engine, plus `proxy` + `off_hours` signals (consumer-fed `isProxy`/`localHour`).
+- **FGA → schema-language parser + reverse `listObjects`** — ✅ SHIPPED (beta.9). `listObjects` ("what can this subject access?") + `parseSchema` (OpenFGA-style DSL → FgaSchema). A check-results cache for throughput is still open.
+- **Default device fingerprint** — ✅ SHIPPED (beta.9). `fingerprintDevice(signals)` hashes client signals into a stable `deviceId` (better default than UA-only). CAPTCHA provider adapters (Turnstile/reCAPTCHA/hCaptcha) for the abuse guard are still open.
+- **Audit → retention + CSV export** — ✅ SHIPPED (beta.9). `exportAuditCsv` + `AuditSink.prune` (retention window). Tiered/rotation policies are still open.
 
 ## Honest non-goals (don't chase)
 Hosted infrastructure, vendor SOC 2, and a global device-fingerprint data network are
