@@ -45,7 +45,10 @@ Legend: ✅ full · ◐ partial / hook-only / BYO · ✖ none · — N/A for a l
 | **Anonymous / guest → upgrade** | ✅ | ✖ | ◐ | ◐ | ✖ | ✅ |
 | Email deliverability validation | ✅ | ✖ | ◐ | ◐ | ✖ | ✅ |
 | Proactive credential-leak monitoring | ◐ | ✖ | ✅ (Credential Guard) | ◐ | ✖ | ✖ |
-| Extensibility pipeline (Actions/Rules) | ◐ (hooks) | ◐ | ✅ (Actions) | ◐ | ◐ | ✅ (plugins) |
+| Extensibility pipeline (Actions/Rules) | ✅ | ◐ | ✅ (Actions) | ◐ | ◐ | ✅ (plugins) |
+| Secrets Vault (encrypted blob storage) | ✅ | ✅ (Vault) | ◐ | ◐ | ✖ | ✖ |
+| Custom JWT claims on issued tokens | ✅ | ✅ | ✅ (Actions) | ✅ | ✅ | ◐ |
+| JIT / domain-based org assignment | ✅ | ✅ (HRD) | ✅ | ✅ | ◐ | ◐ |
 | Hosted UI / drop-in components | ◐ (HTMX) | ✅ (AuthKit) | ✅ (Universal Login) | ✅ | ✅ (Kratos UI) | ◐ |
 | Per-MAU / per-check pricing | none | yes | yes | yes | none (OSS) | none (OSS) |
 | Vendor SOC 2 / hosted infra | — | ✅ | ✅ | ✅ | — | — |
@@ -94,6 +97,10 @@ Legend: ✅ full · ◐ partial / hook-only / BYO · ✖ none · — N/A for a l
 - **CAPTCHA provider adapters** — ✅ SHIPPED (beta.10). `verifyTurnstile` / `verifyRecaptcha` (v3 minScore) / `verifyHcaptcha` plug into the abuse guard's `verifyCaptcha`. Bot/abuse row → ✅ (data-network fingerprinting remains the ◐, a non-goal for a self-hosted lib).
 - **FGA check cache** — ✅ SHIPPED (beta.10). `createInMemoryCheckCache` (TTL + max-entries) memoizes `check`; writes clear it. A shared/Redis cache for multi-instance is the remaining extension.
 - **Audit → retention + CSV export** — ✅ SHIPPED (beta.9). `exportAuditCsv` + `AuditSink.prune` (retention window). Tiered/rotation policies are still open.
+- **Actions/Rules extensibility pipeline** — ✅ SHIPPED (beta.11). `createActionPipeline` runs ordered actions per event with deny/pass/redirect short-circuiting — Auth0 Actions / Better Auth plugins from raw primitives.
+- **Managed Vault block** — ✅ SHIPPED (beta.11). `createVault` (put/get/list/delete encrypted blobs per owner) on top of `createSecretCipher`, in-mem + Neon stores, `rotateVaultKey` mirrors the MFA-key rotation.
+- **OIDC custom claims** — ✅ SHIPPED (beta.11). `getAccessTokenClaims` hook merges consumer claims into the access token; reserved keys protected.
+- **JIT / domain-based org assignment** — ✅ SHIPPED (beta.11). `autoAssignOrgsByEmail` idempotently joins a new user to every org their email domain maps to.
 
 ## Honest non-goals (don't chase)
 Hosted infrastructure, vendor SOC 2, and a global device-fingerprint data network are
