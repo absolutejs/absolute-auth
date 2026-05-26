@@ -4,6 +4,9 @@ import { type AnyPgDatabase, createNeonDatabase } from '../stores/postgres';
 import type {
 	AuthorizationCode,
 	AuthorizationCodeStore,
+	DeviceAuthorization,
+	DeviceAuthorizationStatus,
+	DeviceAuthorizationStore,
 	OAuthClient,
 	OAuthClientStore,
 	OidcRefreshToken,
@@ -34,6 +37,23 @@ export const oauthCodesTable = pgTable('auth_oauth_codes', {
 	user_id: varchar('user_id', { length: ID_LENGTH }).notNull()
 });
 
+export const oauthDeviceAuthorizationsTable = pgTable(
+	'auth_oauth_device_authorizations',
+	{
+		client_id: varchar('client_id', { length: ID_LENGTH }).notNull(),
+		created_at_ms: bigint('created_at_ms', { mode: 'number' }).notNull(),
+		device_code_hash: varchar('device_code_hash', {
+			length: ID_LENGTH
+		}).primaryKey(),
+		expires_at_ms: bigint('expires_at_ms', { mode: 'number' }).notNull(),
+		interval_seconds: bigint('interval_seconds', { mode: 'number' }).notNull(),
+		scopes: text('scopes').array().notNull(),
+		status: varchar('status', { length: 16 }).notNull(),
+		user_code: varchar('user_code', { length: 16 }).notNull().unique(),
+		user_sub: varchar('user_sub', { length: ID_LENGTH })
+	}
+);
+
 export const oauthRefreshTokensTable = pgTable('auth_oauth_refresh_tokens', {
 	claims_json: jsonb('claims_json').$type<Record<string, unknown>>(),
 	client_id: varchar('client_id', { length: ID_LENGTH }).notNull(),
@@ -47,6 +67,7 @@ export const oauthRefreshTokensTable = pgTable('auth_oauth_refresh_tokens', {
 
 type ClientRow = typeof oauthClientsTable.$inferSelect;
 type CodeRow = typeof oauthCodesTable.$inferSelect;
+type DeviceAuthRow = typeof oauthDeviceAuthorizationsTable.$inferSelect;
 type RefreshRow = typeof oauthRefreshTokensTable.$inferSelect;
 
 const toClient = (row: ClientRow): OAuthClient => ({
@@ -87,6 +108,19 @@ const toCodeValues = (
 	user_id: code.userId
 });
 
+const toDeviceAuth = (row: DeviceAuthRow): DeviceAuthorization => ({
+	clientId: row.client_id,
+	createdAt: row.created_at_ms,
+	deviceCodeHash: row.device_code_hash,
+	expiresAt: row.expires_at_ms,
+	intervalSeconds: row.interval_seconds,
+	scopes: row.scopes,
+	// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- deserialization boundary: status was persisted from DeviceAuthorizationStatus
+	status: row.status as DeviceAuthorizationStatus,
+	userCode: row.user_code,
+	userSub: row.user_sub ?? undefined
+});
+
 const toRefresh = (row: RefreshRow): OidcRefreshToken => ({
 	claims: row.claims_json ?? undefined,
 	clientId: row.client_id,
@@ -113,6 +147,8 @@ const toRefreshValues = (
 
 export const createNeonAuthorizationCodeStore = (databaseUrl: string) =>
 	createPostgresAuthorizationCodeStore(createNeonDatabase(databaseUrl));
+export const createNeonDeviceAuthorizationStore = (databaseUrl: string) =>
+	createPostgresDeviceAuthorizationStore(createNeonDatabase(databaseUrl));
 export const createNeonOAuthClientStore = (databaseUrl: string) =>
 	createPostgresOAuthClientStore(createNeonDatabase(databaseUrl));
 export const createNeonOidcRefreshTokenStore = (databaseUrl: string) =>
@@ -130,6 +166,67 @@ export const createPostgresAuthorizationCodeStore = (
 	},
 	saveCode: async (code) => {
 		await db.insert(oauthCodesTable).values(toCodeValues(code));
+	}
+});
+export const createPostgresDeviceAuthorizationStore = (
+	db: AnyPgDatabase
+): DeviceAuthorizationStore => ({
+	deleteByDeviceCodeHash: async (deviceCodeHash) => {
+		await db
+			.delete(oauthDeviceAuthorizationsTable)
+			.where(
+				eq(
+					oauthDeviceAuthorizationsTable.device_code_hash,
+					deviceCodeHash
+				)
+			);
+	},
+	findByDeviceCodeHash: async (deviceCodeHash) => {
+		const [row] = await db
+			.select()
+			.from(oauthDeviceAuthorizationsTable)
+			.where(
+				eq(
+					oauthDeviceAuthorizationsTable.device_code_hash,
+					deviceCodeHash
+				)
+			)
+			.limit(1);
+
+		return row ? toDeviceAuth(row) : undefined;
+	},
+	findByUserCode: async (userCode) => {
+		const [row] = await db
+			.select()
+			.from(oauthDeviceAuthorizationsTable)
+			.where(eq(oauthDeviceAuthorizationsTable.user_code, userCode))
+			.limit(1);
+
+		return row ? toDeviceAuth(row) : undefined;
+	},
+	saveDeviceAuthorization: async (deviceAuthorization) => {
+		await db.insert(oauthDeviceAuthorizationsTable).values({
+			client_id: deviceAuthorization.clientId,
+			created_at_ms: deviceAuthorization.createdAt,
+			device_code_hash: deviceAuthorization.deviceCodeHash,
+			expires_at_ms: deviceAuthorization.expiresAt,
+			interval_seconds: deviceAuthorization.intervalSeconds,
+			scopes: deviceAuthorization.scopes,
+			status: deviceAuthorization.status,
+			user_code: deviceAuthorization.userCode,
+			user_sub: deviceAuthorization.userSub ?? null
+		});
+	},
+	updateStatus: async (deviceCodeHash, status, userSub) => {
+		await db
+			.update(oauthDeviceAuthorizationsTable)
+			.set({ status, user_sub: userSub ?? null })
+			.where(
+				eq(
+					oauthDeviceAuthorizationsTable.device_code_hash,
+					deviceCodeHash
+				)
+			);
 	}
 });
 export const createPostgresOAuthClientStore = (
@@ -160,6 +257,15 @@ export const createPostgresOidcRefreshTokenStore = (
 		await db
 			.delete(oauthRefreshTokensTable)
 			.where(eq(oauthRefreshTokensTable.user_id, userId));
+	},
+	getToken: async (tokenHash) => {
+		const [row] = await db
+			.select()
+			.from(oauthRefreshTokensTable)
+			.where(eq(oauthRefreshTokensTable.token_hash, tokenHash))
+			.limit(1);
+
+		return row ? toRefresh(row) : undefined;
 	},
 	saveToken: async (token) => {
 		await db.insert(oauthRefreshTokensTable).values(toRefreshValues(token));

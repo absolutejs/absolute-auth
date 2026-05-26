@@ -1,9 +1,14 @@
-import { MILLISECONDS_IN_A_DAY, MILLISECONDS_IN_AN_HOUR } from '../constants';
+import {
+	MILLISECONDS_IN_A_DAY,
+	MILLISECONDS_IN_A_MINUTE,
+	MILLISECONDS_IN_AN_HOUR
+} from '../constants';
 import { generateSecureToken, hashToken } from '../crypto';
 import type { RouteString } from '../types';
 import { signJwt, verifyJwt, type SigningKey } from './keys';
 import type {
 	AuthorizationCodeStore,
+	DeviceAuthorizationStore,
 	OAuthClientStore,
 	OidcRefreshTokenStore
 } from './types';
@@ -26,6 +31,12 @@ export type OidcProviderConfig<UserType> = {
 	accessTokenTtlMs?: number;
 	authorizationCodeStore: AuthorizationCodeStore;
 	clientStore: OAuthClientStore;
+	// Optional — enables the RFC 8628 device-authorization flow. When set, `/device_authorization`
+	// + the `urn:ietf:params:oauth:grant-type:device_code` token grant are mounted, and
+	// `approveDeviceAuthorization` becomes callable from your verification UI.
+	deviceAuthorizationStore?: DeviceAuthorizationStore;
+	deviceCodeTtlMs?: number;
+	devicePollIntervalSeconds?: number;
 	// Extra ACCESS token claims (per-token, after grants/exchange). Reserved keys (iss/sub/
 	// aud/exp/iat/jti/client_id/scope/token_use/act/cnf) cannot be overridden.
 	getAccessTokenClaims?: (context: {
@@ -275,7 +286,8 @@ export const issueTokenSet = async <UserType>({
 		id_token: await signJwt(idPayload, config.signingKey),
 		refresh_token: refreshToken,
 		scope: scopes.join(' '),
-		token_type: dpopJkt === undefined ? 'Bearer' : 'DPoP'
+		token_type:
+			dpopJkt === undefined ? ('Bearer' as const) : ('DPoP' as const)
 	};
 };
 
@@ -298,3 +310,299 @@ export const mcpProtectedResourceMetadata = ({
 // PKCE S256: code_challenge = base64url(sha256(code_verifier)) — exactly what hashToken does.
 export const verifyPkce = async (codeVerifier: string, codeChallenge: string) =>
 	(await hashToken(codeVerifier)) === codeChallenge;
+
+// RFC 7662 token introspection. Returns the active/inactive status + safe-to-share claims.
+// Tries the access-token path first (verify JWT signature + exp) unless the hint says refresh;
+// then the refresh path (lookup by hash without consuming). `active: false` for any unknown,
+// expired, or signature-invalid token — never leaks why.
+export type TokenIntrospection =
+	| { active: false }
+	| {
+			active: true;
+			client_id: string;
+			exp: number;
+			iat: number;
+			scope: string;
+			sub: string;
+			token_type: 'access_token' | 'refresh_token';
+	  };
+
+export type TokenTypeHint = 'access_token' | 'refresh_token';
+
+const inactive: TokenIntrospection = { active: false };
+
+export const introspectToken = async <UserType>({
+	config,
+	hint,
+	now = Date.now(),
+	token
+}: {
+	config: OidcProviderConfig<UserType>;
+	hint?: TokenTypeHint;
+	now?: number;
+	token: string;
+}) => {
+	if (hint !== 'refresh_token') {
+		const verified = await verifyJwt(token, config.signingKey.publicJwk);
+		const payload = verified?.payload;
+		if (
+			payload !== undefined &&
+			typeof payload.sub === 'string' &&
+			typeof payload.exp === 'number' &&
+			payload.exp > nowSeconds(now)
+		) {
+			return {
+				active: true,
+				client_id:
+					typeof payload.client_id === 'string'
+						? payload.client_id
+						: '',
+				exp: payload.exp,
+				iat: typeof payload.iat === 'number' ? payload.iat : 0,
+				scope:
+					typeof payload.scope === 'string' ? payload.scope : '',
+				sub: payload.sub,
+				token_type: 'access_token'
+			} satisfies TokenIntrospection;
+		}
+	}
+	if (hint !== 'access_token') {
+		const refresh = await config.refreshTokenStore.getToken(
+			await hashToken(token)
+		);
+		if (refresh && refresh.expiresAt > now) {
+			return {
+				active: true,
+				client_id: refresh.clientId,
+				exp: nowSeconds(refresh.expiresAt),
+				iat: nowSeconds(refresh.createdAt),
+				scope: refresh.scopes.join(' '),
+				sub: refresh.userId,
+				token_type: 'refresh_token'
+			} satisfies TokenIntrospection;
+		}
+	}
+
+	return inactive;
+};
+
+// RFC 7009 token revocation — refresh tokens only. Access tokens are stateless JWTs and the
+// spec allows the server to return 200 without actually revoking (the wait-for-expiry model);
+// this matches Google's `/revoke` behavior. Returns whether the refresh was found + deleted.
+export const revokeRefreshToken = async <UserType>(
+	config: OidcProviderConfig<UserType>,
+	token: string
+) => {
+	const consumed = await config.refreshTokenStore.consumeToken(
+		await hashToken(token)
+	);
+
+	return consumed !== undefined;
+};
+
+// RFC 8628 device authorization. Devices without a browser (CLI, TVs, IoT) call this to start
+// the flow; the response carries the codes + the URL the user enters on a second-device
+// browser. The verification UI is consumer-built — it calls `approveDeviceAuthorization` once
+// the user has authenticated + confirmed the displayed user_code matches.
+const DEVICE_CODE_BYTES = 32;
+const USER_CODE_HALF_LENGTH = 4;
+const USER_CODE_ALPHABET = 'BCDFGHJKLMNPQRSTVWXZ23456789';
+// 15 minutes — long enough that a user can finish typing on a second device,
+// short enough that an abandoned device flow doesn't linger as an attack window.
+const DEFAULT_DEVICE_CODE_TTL_MINUTES = 15;
+const DEFAULT_DEVICE_CODE_TTL_MS =
+	MILLISECONDS_IN_A_MINUTE * DEFAULT_DEVICE_CODE_TTL_MINUTES;
+const DEFAULT_DEVICE_POLL_INTERVAL_SECONDS = 5;
+
+const generateUserCode = () => {
+	const length = USER_CODE_HALF_LENGTH * 2;
+	const random = crypto.getRandomValues(new Uint8Array(length));
+	let code = '';
+	for (const byte of random) {
+		code += USER_CODE_ALPHABET[byte % USER_CODE_ALPHABET.length];
+	}
+
+	return `${code.slice(0, USER_CODE_HALF_LENGTH)}-${code.slice(USER_CODE_HALF_LENGTH)}`;
+};
+
+export type DeviceAuthorizationResponse = {
+	device_code: string;
+	expires_in: number;
+	interval: number;
+	user_code: string;
+	verification_uri: string;
+	verification_uri_complete: string;
+};
+
+export const issueDeviceAuthorization = async <UserType>({
+	clientId,
+	config,
+	now = Date.now(),
+	requestedScopes
+}: {
+	clientId: string;
+	config: OidcProviderConfig<UserType>;
+	now?: number;
+	requestedScopes: string[];
+}): Promise<DeviceAuthorizationResponse> => {
+	if (!config.deviceAuthorizationStore) {
+		throw new Error(
+			'oidc.deviceAuthorizationStore is not configured — cannot start a device flow'
+		);
+	}
+	const deviceCode = generateSecureToken(DEVICE_CODE_BYTES);
+	const userCode = generateUserCode();
+	const ttl = config.deviceCodeTtlMs ?? DEFAULT_DEVICE_CODE_TTL_MS;
+	const interval =
+		config.devicePollIntervalSeconds ?? DEFAULT_DEVICE_POLL_INTERVAL_SECONDS;
+	await config.deviceAuthorizationStore.saveDeviceAuthorization({
+		clientId,
+		createdAt: now,
+		deviceCodeHash: await hashToken(deviceCode),
+		expiresAt: now + ttl,
+		intervalSeconds: interval,
+		scopes: requestedScopes,
+		status: 'pending',
+		userCode
+	});
+	const verificationUri = `${config.issuer}${config.oidcRoute ?? DEFAULT_OIDC_ROUTE}/device`;
+
+	return {
+		device_code: deviceCode,
+		expires_in: Math.floor(ttl / MS_PER_SECOND),
+		interval,
+		user_code: userCode,
+		verification_uri: verificationUri,
+		verification_uri_complete: `${verificationUri}?user_code=${encodeURIComponent(userCode)}`
+	};
+};
+
+export type DeviceDecisionResult =
+	| {
+			error:
+				| 'already_decided'
+				| 'expired_token'
+				| 'invalid_user_code'
+				| 'not_configured';
+			ok: false;
+	  }
+	| { ok: true };
+
+const decideDeviceAuthorization = async <UserType>(
+	config: OidcProviderConfig<UserType>,
+	userCode: string,
+	approval: { status: 'approved' | 'denied'; userSub?: string }
+): Promise<DeviceDecisionResult> => {
+	if (!config.deviceAuthorizationStore) {
+		return { error: 'not_configured', ok: false };
+	}
+	const record =
+		await config.deviceAuthorizationStore.findByUserCode(userCode);
+	if (!record) return { error: 'invalid_user_code', ok: false };
+	if (record.expiresAt < Date.now()) {
+		return { error: 'expired_token', ok: false };
+	}
+	if (record.status !== 'pending') {
+		return { error: 'already_decided', ok: false };
+	}
+	await config.deviceAuthorizationStore.updateStatus(
+		record.deviceCodeHash,
+		approval.status,
+		approval.userSub
+	);
+
+	return { ok: true };
+};
+
+export const approveDeviceAuthorization = async <UserType>({
+	config,
+	userCode,
+	userSub
+}: {
+	config: OidcProviderConfig<UserType>;
+	userCode: string;
+	userSub: string;
+}) =>
+	decideDeviceAuthorization(config, userCode, {
+		status: 'approved',
+		userSub
+	});
+
+export const denyDeviceAuthorization = async <UserType>({
+	config,
+	userCode
+}: {
+	config: OidcProviderConfig<UserType>;
+	userCode: string;
+}) => decideDeviceAuthorization(config, userCode, { status: 'denied' });
+
+export type DeviceCodeExchangeError =
+	| 'access_denied'
+	| 'authorization_pending'
+	| 'expired_token'
+	| 'invalid_grant'
+	| 'slow_down';
+
+export type DeviceCodeExchangeResult =
+	| {
+			access_token: string;
+			expires_in: number;
+			id_token: string;
+			ok: true;
+			refresh_token: string;
+			scope: string;
+			token_type: 'Bearer' | 'DPoP';
+	  }
+	| { error: DeviceCodeExchangeError; ok: false };
+
+export const exchangeDeviceCode = async <UserType>({
+	clientId,
+	config,
+	deviceCode,
+	dpopJkt,
+	now = Date.now()
+}: {
+	clientId: string;
+	config: OidcProviderConfig<UserType>;
+	deviceCode: string;
+	dpopJkt?: string;
+	now?: number;
+}): Promise<DeviceCodeExchangeResult> => {
+	if (!config.deviceAuthorizationStore) {
+		return { error: 'invalid_grant', ok: false };
+	}
+	const deviceCodeHash = await hashToken(deviceCode);
+	const record =
+		await config.deviceAuthorizationStore.findByDeviceCodeHash(
+			deviceCodeHash
+		);
+	if (!record || record.clientId !== clientId) {
+		return { error: 'invalid_grant', ok: false };
+	}
+	if (record.expiresAt < now) {
+		await config.deviceAuthorizationStore.deleteByDeviceCodeHash(
+			deviceCodeHash
+		);
+
+		return { error: 'expired_token', ok: false };
+	}
+	if (record.status === 'pending') {
+		return { error: 'authorization_pending', ok: false };
+	}
+	if (record.status === 'denied' || record.userSub === undefined) {
+		return { error: 'access_denied', ok: false };
+	}
+
+	// Single-use: drop the record before minting so a replay can't double-issue.
+	await config.deviceAuthorizationStore.deleteByDeviceCodeHash(deviceCodeHash);
+	const tokenSet = await issueTokenSet({
+		clientId,
+		config,
+		dpopJkt,
+		now,
+		scopes: record.scopes,
+		sub: record.userSub
+	});
+
+	return { ...tokenSet, ok: true };
+};

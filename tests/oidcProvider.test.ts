@@ -4,6 +4,7 @@ import { auth } from '../src/index';
 import { generateSigningKey, jwkThumbprint, verifyJwt } from '../src/oidc/keys';
 import {
 	createInMemoryAuthorizationCodeStore,
+	createInMemoryDeviceAuthorizationStore,
 	createInMemoryOAuthClientStore,
 	createInMemoryOidcRefreshTokenStore
 } from '../src/oidc/inMemoryStores';
@@ -25,7 +26,12 @@ type ClaimsHook = (context: {
 	sub: string;
 }) => Record<string, unknown> | Promise<Record<string, unknown>>;
 
-const buildApp = async (extras: { getAccessTokenClaims?: ClaimsHook } = {}) => {
+const buildApp = async (
+	extras: {
+		deviceFlow?: boolean;
+		getAccessTokenClaims?: ClaimsHook;
+	} = {}
+) => {
 	const authSessionStore = createInMemoryAuthSessionStore<TestUser>();
 	const signingKey = await generateSigningKey();
 	const app = await auth<TestUser>({
@@ -40,6 +46,10 @@ const buildApp = async (extras: { getAccessTokenClaims?: ClaimsHook } = {}) => {
 					scopes: ['openid', 'profile']
 				}
 			]),
+			deviceAuthorizationStore:
+				extras.deviceFlow === true
+					? createInMemoryDeviceAuthorizationStore()
+					: undefined,
 			getAccessTokenClaims: extras.getAccessTokenClaims,
 			getClaims: (user) => ({ email: user.email }),
 			getUserId: (user) => user.sub,
@@ -383,5 +393,262 @@ describe('OIDC token exchange (RFC 8693) — AI-agent / MCP delegation', () => {
 			subject_token: 'not.a.real.jwt'
 		});
 		expect(response.status).toBe(400);
+	});
+});
+
+describe('OIDC provider — RFC 7662 introspection', () => {
+	test('returns active: true for a valid access token (JWT)', async () => {
+		const app = await buildApp();
+		const challenge = await hashToken(VERIFIER);
+		const code = codeFromRedirect(
+			await authorize(app, challenge, `user_session_id=${SESSION_ID}`)
+		);
+		const tokens = await (
+			await token(app, {
+				client_id: 'app1',
+				code,
+				code_verifier: VERIFIER,
+				grant_type: 'authorization_code',
+				redirect_uri: REDIRECT_URI
+			})
+		).json();
+
+		const response = await app.handle(
+			new Request('http://localhost/oauth2/introspect', {
+				body: new URLSearchParams({
+					client_id: 'app1',
+					token: tokens.access_token
+				}),
+				method: 'POST'
+			})
+		);
+		expect(response.status).toBe(200);
+		const body = await response.json();
+		expect(body.active).toBe(true);
+		expect(body.sub).toBe('user-alice');
+		expect(body.token_type).toBe('access_token');
+		expect(body.scope).toBe('openid profile');
+	});
+
+	test('returns active: true for a valid refresh token + active: false after revoke', async () => {
+		const app = await buildApp();
+		const challenge = await hashToken(VERIFIER);
+		const code = codeFromRedirect(
+			await authorize(app, challenge, `user_session_id=${SESSION_ID}`)
+		);
+		const tokens = await (
+			await token(app, {
+				client_id: 'app1',
+				code,
+				code_verifier: VERIFIER,
+				grant_type: 'authorization_code',
+				redirect_uri: REDIRECT_URI
+			})
+		).json();
+
+		// Introspect the refresh token.
+		const first = await (
+			await app.handle(
+				new Request('http://localhost/oauth2/introspect', {
+					body: new URLSearchParams({
+						client_id: 'app1',
+						token: tokens.refresh_token,
+						token_type_hint: 'refresh_token'
+					}),
+					method: 'POST'
+				})
+			)
+		).json();
+		expect(first.active).toBe(true);
+		expect(first.token_type).toBe('refresh_token');
+
+		// Revoke (RFC 7009) — refresh token should now be gone.
+		const revoke = await app.handle(
+			new Request('http://localhost/oauth2/revoke', {
+				body: new URLSearchParams({
+					client_id: 'app1',
+					token: tokens.refresh_token,
+					token_type_hint: 'refresh_token'
+				}),
+				method: 'POST'
+			})
+		);
+		expect(revoke.status).toBe(200);
+
+		const second = await (
+			await app.handle(
+				new Request('http://localhost/oauth2/introspect', {
+					body: new URLSearchParams({
+						client_id: 'app1',
+						token: tokens.refresh_token,
+						token_type_hint: 'refresh_token'
+					}),
+					method: 'POST'
+				})
+			)
+		).json();
+		expect(second.active).toBe(false);
+	});
+
+	test('returns active: false for garbage tokens', async () => {
+		const app = await buildApp();
+		const body = await (
+			await app.handle(
+				new Request('http://localhost/oauth2/introspect', {
+					body: new URLSearchParams({
+						client_id: 'app1',
+						token: 'not.a.token'
+					}),
+					method: 'POST'
+				})
+			)
+		).json();
+		expect(body.active).toBe(false);
+	});
+
+	test('rejects unknown clients with 401', async () => {
+		const app = await buildApp();
+		const response = await app.handle(
+			new Request('http://localhost/oauth2/introspect', {
+				body: new URLSearchParams({
+					client_id: 'nope',
+					token: 'whatever'
+				}),
+				method: 'POST'
+			})
+		);
+		expect(response.status).toBe(401);
+	});
+});
+
+describe('OIDC provider — RFC 8628 device authorization', () => {
+	test('end-to-end: device_authorization → approve → exchange device_code', async () => {
+		const app = await buildApp({ deviceFlow: true });
+
+		// 1. Device requests authorization.
+		const auth1 = await app.handle(
+			new Request('http://localhost/oauth2/device_authorization', {
+				body: new URLSearchParams({
+					client_id: 'app1',
+					scope: 'openid profile'
+				}),
+				method: 'POST'
+			})
+		);
+		expect(auth1.status).toBe(200);
+		const grant = await auth1.json();
+		expect(grant.device_code).toBeTruthy();
+		expect(grant.user_code).toMatch(/^[A-Z0-9]{4}-[A-Z0-9]{4}$/);
+		expect(grant.interval).toBeGreaterThan(0);
+
+		// 2. Polling before approval returns authorization_pending.
+		const pending = await token(app, {
+			client_id: 'app1',
+			device_code: grant.device_code,
+			grant_type: 'urn:ietf:params:oauth:grant-type:device_code'
+		});
+		expect(pending.status).toBe(400);
+		expect((await pending.json()).error).toBe('authorization_pending');
+
+		// 3. User approves on the verification UI (which is consumer-built;
+		// here we hit the internal /device/decision endpoint with a session).
+		const approve = await app.handle(
+			new Request('http://localhost/oauth2/device/decision', {
+				body: new URLSearchParams({
+					action: 'approve',
+					user_code: grant.user_code
+				}),
+				headers: { cookie: `user_session_id=${SESSION_ID}` },
+				method: 'POST'
+			})
+		);
+		expect(approve.status).toBe(200);
+
+		// 4. Polling after approval mints a full token set.
+		const granted = await token(app, {
+			client_id: 'app1',
+			device_code: grant.device_code,
+			grant_type: 'urn:ietf:params:oauth:grant-type:device_code'
+		});
+		expect(granted.status).toBe(200);
+		const tokens = await granted.json();
+		expect(tokens.access_token).toBeTruthy();
+		expect(tokens.refresh_token).toBeTruthy();
+		expect(tokens.id_token).toBeTruthy();
+
+		const jwks = await (
+			await app.handle(new Request('http://localhost/oauth2/jwks'))
+		).json();
+		const decoded = await verifyJwt(tokens.access_token, jwks.keys[0]);
+		expect(decoded?.payload.sub).toBe('user-alice');
+
+		// 5. Single-use: a second exchange with the same device_code fails.
+		const replay = await token(app, {
+			client_id: 'app1',
+			device_code: grant.device_code,
+			grant_type: 'urn:ietf:params:oauth:grant-type:device_code'
+		});
+		expect(replay.status).toBe(400);
+		expect((await replay.json()).error).toBe('invalid_grant');
+	});
+
+	test('user denies → access_denied', async () => {
+		const app = await buildApp({ deviceFlow: true });
+		const grant = await (
+			await app.handle(
+				new Request('http://localhost/oauth2/device_authorization', {
+					body: new URLSearchParams({ client_id: 'app1' }),
+					method: 'POST'
+				})
+			)
+		).json();
+		await app.handle(
+			new Request('http://localhost/oauth2/device/decision', {
+				body: new URLSearchParams({
+					action: 'deny',
+					user_code: grant.user_code
+				}),
+				headers: { cookie: `user_session_id=${SESSION_ID}` },
+				method: 'POST'
+			})
+		);
+		const response = await token(app, {
+			client_id: 'app1',
+			device_code: grant.device_code,
+			grant_type: 'urn:ietf:params:oauth:grant-type:device_code'
+		});
+		expect(response.status).toBe(400);
+		expect((await response.json()).error).toBe('access_denied');
+	});
+
+	test('device flow is opt-in — disabled when no store is configured', async () => {
+		const app = await buildApp({ deviceFlow: false });
+		const response = await app.handle(
+			new Request('http://localhost/oauth2/device_authorization', {
+				body: new URLSearchParams({ client_id: 'app1' }),
+				method: 'POST'
+			})
+		);
+		expect(response.status).toBe(400);
+		expect((await response.json()).error).toBe('unsupported_grant_type');
+	});
+
+	test('discovery advertises new endpoints when device flow is enabled', async () => {
+		const app = await buildApp({ deviceFlow: true });
+		const discovery = await (
+			await app.handle(
+				new Request(
+					'http://localhost/.well-known/openid-configuration'
+				)
+			)
+		).json();
+		expect(discovery.introspection_endpoint).toContain('/oauth2/introspect');
+		expect(discovery.revocation_endpoint).toContain('/oauth2/revoke');
+		expect(discovery.device_authorization_endpoint).toContain(
+			'/oauth2/device_authorization'
+		);
+		expect(discovery.grant_types_supported).toContain(
+			'urn:ietf:params:oauth:grant-type:device_code'
+		);
 	});
 });

@@ -557,18 +557,22 @@ export { verifyDpopProof } from './oidc/dpop';
 export type { DpopResult } from './oidc/dpop';
 export {
 	createInMemoryAuthorizationCodeStore,
+	createInMemoryDeviceAuthorizationStore,
 	createInMemoryOAuthClientStore,
 	createInMemoryOidcRefreshTokenStore
 } from './oidc/inMemoryStores';
 export {
 	createNeonAuthorizationCodeStore,
+	createNeonDeviceAuthorizationStore,
 	createNeonOAuthClientStore,
 	createNeonOidcRefreshTokenStore,
 	createPostgresAuthorizationCodeStore,
+	createPostgresDeviceAuthorizationStore,
 	createPostgresOAuthClientStore,
 	createPostgresOidcRefreshTokenStore,
 	oauthClientsTable,
 	oauthCodesTable,
+	oauthDeviceAuthorizationsTable,
 	oauthRefreshTokensTable
 } from './oidc/postgresStores';
 export * from './adaptive/config';

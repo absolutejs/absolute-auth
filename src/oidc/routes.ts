@@ -7,9 +7,15 @@ import type { AuthSessionStore } from '../session/types';
 import type { RouteString } from '../types';
 import { userSessionIdTypebox } from '../typebox';
 import {
+	approveDeviceAuthorization,
 	DEFAULT_OIDC_ROUTE,
+	denyDeviceAuthorization,
+	exchangeDeviceCode,
 	exchangeToken,
+	introspectToken,
+	issueDeviceAuthorization,
 	issueTokenSet,
+	revokeRefreshToken,
 	verifyPkce,
 	type OidcProviderConfig
 } from './config';
@@ -89,6 +95,10 @@ export const oidcProviderRoutes = <UserType>(
 	const authorizeRoute: RouteString = `${oidcRoute}/authorize`;
 	const tokenRoute: RouteString = `${oidcRoute}/token`;
 	const jwksRoute: RouteString = `${oidcRoute}/jwks`;
+	const introspectRoute: RouteString = `${oidcRoute}/introspect`;
+	const revokeRoute: RouteString = `${oidcRoute}/revoke`;
+	const deviceAuthorizationRoute: RouteString = `${oidcRoute}/device_authorization`;
+	const deviceApproveRoute: RouteString = `${oidcRoute}/device/decision`;
 	const tokenUrl = `${issuer}${oidcRoute}/token`;
 
 	const authenticateClient = async (
@@ -249,19 +259,70 @@ export const oidcProviderRoutes = <UserType>(
 		);
 	};
 
+	const grantDeviceCode = async (
+		client: OAuthClient,
+		body: Record<string, string | undefined>,
+		dpop: string | undefined
+	) => {
+		if (config.deviceAuthorizationStore === undefined) {
+			return oauthError(HTTP_BAD_REQUEST, 'unsupported_grant_type');
+		}
+		if (body.device_code === undefined) {
+			return oauthError(HTTP_BAD_REQUEST, 'invalid_request');
+		}
+		const dpopResult =
+			dpop === undefined
+				? undefined
+				: await verifyDpopProof({
+						htm: 'POST',
+						htu: tokenUrl,
+						proof: dpop
+					});
+		if (dpop !== undefined && dpopResult === undefined) {
+			return oauthError(HTTP_BAD_REQUEST, 'invalid_dpop_proof');
+		}
+
+		const result = await exchangeDeviceCode({
+			clientId: client.clientId,
+			config,
+			deviceCode: body.device_code,
+			dpopJkt: dpopResult?.jkt
+		});
+		if (!result.ok) return oauthError(HTTP_BAD_REQUEST, result.error);
+
+		return jsonResponse(
+			{
+				access_token: result.access_token,
+				expires_in: result.expires_in,
+				id_token: result.id_token,
+				refresh_token: result.refresh_token,
+				scope: result.scope,
+				token_type: dpopResult === undefined ? 'Bearer' : 'DPoP'
+			},
+			HTTP_OK
+		);
+	};
+
+	const grantTypes = [
+		'authorization_code',
+		'refresh_token',
+		'urn:ietf:params:oauth:grant-type:token-exchange'
+	];
+	if (config.deviceAuthorizationStore) {
+		grantTypes.push('urn:ietf:params:oauth:grant-type:device_code');
+	}
+
 	const discovery: Record<string, string | string[]> = {
 		authorization_endpoint: `${issuer}${authorizeRoute}`,
 		code_challenge_methods_supported: ['S256'],
 		dpop_signing_alg_values_supported: ['ES256'],
-		grant_types_supported: [
-			'authorization_code',
-			'refresh_token',
-			'urn:ietf:params:oauth:grant-type:token-exchange'
-		],
+		grant_types_supported: grantTypes,
 		id_token_signing_alg_values_supported: ['ES256'],
+		introspection_endpoint: `${issuer}${introspectRoute}`,
 		issuer,
 		jwks_uri: `${issuer}${jwksRoute}`,
 		response_types_supported: ['code'],
+		revocation_endpoint: `${issuer}${revokeRoute}`,
 		subject_types_supported: ['public'],
 		token_endpoint: tokenUrl,
 		token_endpoint_auth_methods_supported: [
@@ -270,6 +331,9 @@ export const oidcProviderRoutes = <UserType>(
 			'none'
 		]
 	};
+	if (config.deviceAuthorizationStore) {
+		discovery.device_authorization_endpoint = `${issuer}${deviceAuthorizationRoute}`;
+	}
 
 	return new Elysia()
 		.use(sessionStore<UserType>())
@@ -417,6 +481,12 @@ export const oidcProviderRoutes = <UserType>(
 				) {
 					return grantTokenExchange(client, body, headers.dpop);
 				}
+				if (
+					body.grant_type ===
+					'urn:ietf:params:oauth:grant-type:device_code'
+				) {
+					return grantDeviceCode(client, body, headers.dpop);
+				}
 
 				return oauthError(HTTP_BAD_REQUEST, 'unsupported_grant_type');
 			},
@@ -427,6 +497,7 @@ export const oidcProviderRoutes = <UserType>(
 					client_secret: t.Optional(t.String()),
 					code: t.Optional(t.String()),
 					code_verifier: t.Optional(t.String()),
+					device_code: t.Optional(t.String()),
 					grant_type: t.Optional(t.String()),
 					redirect_uri: t.Optional(t.String()),
 					refresh_token: t.Optional(t.String()),
@@ -434,6 +505,175 @@ export const oidcProviderRoutes = <UserType>(
 					scope: t.Optional(t.String()),
 					subject_token: t.Optional(t.String()),
 					subject_token_type: t.Optional(t.String())
+				})
+			}
+		)
+		// RFC 7662 — token introspection. Authenticated clients learn whether
+		// a token is active. Tokens we issued ourselves are checked: JWT
+		// access tokens are verified against our signing key + exp; refresh
+		// tokens are looked up by hash. Unknown / expired / wrong-issuer
+		// tokens come back as `{ active: false }` — never an error.
+		.post(
+			introspectRoute,
+			async ({ body, headers }) => {
+				const basic = readBasicAuth(headers.authorization);
+				const clientId = body.client_id ?? basic.clientId;
+				const clientSecret = body.client_secret ?? basic.clientSecret;
+				if (clientId === undefined) {
+					return oauthError(HTTP_UNAUTHORIZED, 'invalid_client');
+				}
+				const client = await authenticateClient(clientId, clientSecret);
+				if (client === undefined) {
+					return oauthError(HTTP_UNAUTHORIZED, 'invalid_client');
+				}
+				const result = await introspectToken({
+					config,
+					hint:
+						body.token_type_hint === 'access_token' ||
+						body.token_type_hint === 'refresh_token'
+							? body.token_type_hint
+							: undefined,
+					now: Date.now(),
+					token: body.token
+				});
+
+				return jsonResponse(result, HTTP_OK);
+			},
+			{
+				body: t.Object({
+					client_id: t.Optional(t.String()),
+					client_secret: t.Optional(t.String()),
+					token: t.String(),
+					token_type_hint: t.Optional(t.String())
+				}),
+				headers: t.Object({
+					authorization: t.Optional(t.String())
+				})
+			}
+		)
+		// RFC 7009 — token revocation. Refresh tokens are deleted from the
+		// store. Access tokens (JWT) are stateless, so the response is 200
+		// OK without action — spec-permitted ("the authorization server
+		// responds with HTTP status code 200 if the token has been revoked
+		// successfully or if the client submitted an invalid token").
+		.post(
+			revokeRoute,
+			async ({ body, headers }) => {
+				const basic = readBasicAuth(headers.authorization);
+				const clientId = body.client_id ?? basic.clientId;
+				const clientSecret = body.client_secret ?? basic.clientSecret;
+				if (clientId === undefined) {
+					return oauthError(HTTP_UNAUTHORIZED, 'invalid_client');
+				}
+				const client = await authenticateClient(clientId, clientSecret);
+				if (client === undefined) {
+					return oauthError(HTTP_UNAUTHORIZED, 'invalid_client');
+				}
+				if (body.token_type_hint !== 'access_token') {
+					await revokeRefreshToken(config, body.token);
+				}
+
+				return new Response(null, { status: HTTP_OK });
+			},
+			{
+				body: t.Object({
+					client_id: t.Optional(t.String()),
+					client_secret: t.Optional(t.String()),
+					token: t.String(),
+					token_type_hint: t.Optional(t.String())
+				}),
+				headers: t.Object({
+					authorization: t.Optional(t.String())
+				})
+			}
+		)
+		// RFC 8628 §3.1 — device authorization request. Clients (CLIs,
+		// smart TVs, IoT) ask for a device_code + user_code pair, then poll
+		// /token while the user approves on a second device.
+		.post(
+			deviceAuthorizationRoute,
+			async ({ body, headers }) => {
+				if (config.deviceAuthorizationStore === undefined) {
+					return oauthError(HTTP_BAD_REQUEST, 'unsupported_grant_type');
+				}
+				const basic = readBasicAuth(headers.authorization);
+				const clientId = body.client_id ?? basic.clientId;
+				const clientSecret = body.client_secret ?? basic.clientSecret;
+				if (clientId === undefined) {
+					return oauthError(HTTP_UNAUTHORIZED, 'invalid_client');
+				}
+				const client = await authenticateClient(clientId, clientSecret);
+				if (client === undefined) {
+					return oauthError(HTTP_UNAUTHORIZED, 'invalid_client');
+				}
+				const requested =
+					body.scope === undefined || body.scope.length === 0
+						? client.scopes
+						: body.scope
+								.split(' ')
+								.filter((entry) => client.scopes.includes(entry));
+				const response = await issueDeviceAuthorization({
+					clientId: client.clientId,
+					config,
+					now: Date.now(),
+					requestedScopes: requested
+				});
+
+				return jsonResponse(response, HTTP_OK);
+			},
+			{
+				body: t.Object({
+					client_id: t.Optional(t.String()),
+					client_secret: t.Optional(t.String()),
+					scope: t.Optional(t.String())
+				}),
+				headers: t.Object({
+					authorization: t.Optional(t.String())
+				})
+			}
+		)
+		// Internal verification endpoint — the consumer-built device-flow
+		// UI POSTs here once the user types their user_code and confirms
+		// (or denies). Requires an authenticated user session. Returns
+		// 200 + { ok: true } or an oauthError describing what went wrong.
+		.post(
+			deviceApproveRoute,
+			async ({ body, cookie: { user_session_id }, store }) => {
+				if (config.deviceAuthorizationStore === undefined) {
+					return oauthError(HTTP_BAD_REQUEST, 'unsupported_grant_type');
+				}
+				const userSession = await loadSessionFromSource({
+					authSessionStore,
+					session: store.session,
+					userSessionId: user_session_id.value
+				});
+				if (userSession === undefined) {
+					return oauthError(HTTP_UNAUTHORIZED, 'login_required');
+				}
+				const result =
+					body.action === 'deny'
+						? await denyDeviceAuthorization({
+								config,
+								userCode: body.user_code
+							})
+						: await approveDeviceAuthorization({
+								config,
+								userCode: body.user_code,
+								userSub: getUserId(userSession.user)
+							});
+				if (!result.ok) return oauthError(HTTP_BAD_REQUEST, result.error);
+
+				return jsonResponse({ ok: true }, HTTP_OK);
+			},
+			{
+				body: t.Object({
+					action: t.Optional(
+						t.Union([t.Literal('approve'), t.Literal('deny')])
+					),
+					user_code: t.String()
+				}),
+				cookie: t.Cookie({
+					user_session_id: t.Optional(userSessionIdTypebox)
 				})
 			}
 		)
