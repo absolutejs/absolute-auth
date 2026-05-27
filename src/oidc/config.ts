@@ -128,6 +128,15 @@ export type OidcProviderConfig<UserType> = {
 	dpopNonce?: {
 		secret: string;
 	};
+	// RFC 8705 — pulls the client's TLS cert out of the request. We don't terminate TLS;
+	// the consumer's reverse proxy (nginx / Envoy / Caddy / AWS ALB) forwards the cert
+	// via header. When omitted, the default reads RFC 9440's `Client-Cert: :<base64>:`
+	// sf-binary format. Return the raw DER bytes; the package handles thumbprint hashing.
+	// Without this hook + at least one client with `tlsCertificateBoundThumbprints`,
+	// `self_signed_tls_client_auth` isn't advertised in discovery.
+	extractTlsClientCert?: (
+		headers: Headers
+	) => Promise<Uint8Array | undefined> | Uint8Array | undefined;
 	// RFC 9470 — consumer-supplied mapping from the current session to an ACR value.
 	// Returns whatever the consumer believes the user's effective auth level to be
 	// right now (e.g. `urn:mfa` after a successful MFA challenge, `urn:pwd` after a
@@ -191,6 +200,7 @@ const RESERVED_ACCESS_CLAIMS = new Set([
 const buildAccessClaims = ({
 	act,
 	audience,
+	clientCertThumbprint,
 	clientId,
 	dpopJkt,
 	extraClaims,
@@ -202,6 +212,7 @@ const buildAccessClaims = ({
 }: {
 	act?: { sub: string };
 	audience?: string;
+	clientCertThumbprint?: string;
 	clientId: string;
 	dpopJkt?: string;
 	extraClaims?: Record<string, unknown>;
@@ -232,7 +243,16 @@ const buildAccessClaims = ({
 		token_use: 'access'
 	};
 	if (act !== undefined) claims.act = act;
-	if (dpopJkt !== undefined) claims.cnf = { jkt: dpopJkt };
+	// `cnf` carries both bindings when present: DPoP (jkt) + RFC 8705 mTLS (x5t#S256).
+	// In practice consumers use one or the other, but the JWT format supports both.
+	if (dpopJkt !== undefined || clientCertThumbprint !== undefined) {
+		const cnf: Record<string, string> = {};
+		if (dpopJkt !== undefined) cnf.jkt = dpopJkt;
+		if (clientCertThumbprint !== undefined) {
+			cnf['x5t#S256'] = clientCertThumbprint;
+		}
+		claims.cnf = cnf;
+	}
 
 	return claims;
 };
@@ -310,10 +330,13 @@ export const exchangeToken = async <UserType>({
 };
 
 // Mint an access token (JWT), id_token (JWT), and a rotating refresh token for a grant. When
-// `dpopJkt` is set, the access token is bound to it via `cnf.jkt` and typed `DPoP`.
+// `dpopJkt` is set, the access token is bound to it via `cnf.jkt` and typed `DPoP`. When
+// `clientCertThumbprint` is set (RFC 8705 mTLS client auth), the access token is bound to
+// `cnf.x5t#S256` and the resource server must verify the inbound TLS client cert matches.
 export const issueTokenSet = async <UserType>({
 	acr,
 	claims,
+	clientCertThumbprint,
 	clientId,
 	config,
 	dpopJkt,
@@ -324,6 +347,7 @@ export const issueTokenSet = async <UserType>({
 }: {
 	acr?: string;
 	claims?: Record<string, unknown>;
+	clientCertThumbprint?: string;
 	clientId: string;
 	config: OidcProviderConfig<UserType>;
 	dpopJkt?: string;
@@ -342,6 +366,7 @@ export const issueTokenSet = async <UserType>({
 	});
 
 	const accessPayload = buildAccessClaims({
+		clientCertThumbprint,
 		clientId,
 		dpopJkt,
 		extraClaims: { ...accessExtra, ...(acr === undefined ? {} : { acr }) },
@@ -872,12 +897,14 @@ export type BackchannelExchangeResult =
 
 export const exchangeBackchannelAuth = async <UserType>({
 	authReqId,
+	clientCertThumbprint,
 	clientId,
 	config,
 	dpopJkt,
 	now = Date.now()
 }: {
 	authReqId: string;
+	clientCertThumbprint?: string;
 	clientId: string;
 	config: OidcProviderConfig<UserType>;
 	dpopJkt?: string;
@@ -916,6 +943,7 @@ export const exchangeBackchannelAuth = async <UserType>({
 	// Single-use: drop the record before minting so a replay can't double-issue.
 	await config.backchannelAuthStore.deleteByAuthReqId(authReqId);
 	const tokenSet = await issueTokenSet({
+		clientCertThumbprint,
 		clientId,
 		config,
 		dpopJkt,
