@@ -17,7 +17,7 @@ on-demand into a sibling directory.
 ./conformance/setup.sh
 
 # 2. point at any URL that serves a `@absolutejs/auth` discovery document
-TARGET_ISSUER=https://oidc-conformance.absolutejs.com ./conformance/run.sh
+TARGET_ISSUER=https://auth.absolutejs.com ./conformance/run.sh
 
 # 3. browse results: http://localhost:8443/
 #    Default credentials: ssl/ca, see suite docs

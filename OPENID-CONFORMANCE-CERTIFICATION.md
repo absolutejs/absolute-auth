@@ -51,7 +51,7 @@ Before paying anyone:
 1. **Set up a public reference instance.** The conformance suite needs a live OP at a real URL it can hit. Could be:
    - An always-on instance running on DigitalOcean / Fly / Render with the package's `@absolutejs/auth` configured
    - Reuse the intent prod URL (intentshowcases.com) — risky because the conformance suite tries weird inputs
-   - **Recommendation:** dedicated `oidc-conformance.absolutejs.com` instance running a minimal `defineAuthConfig` with every block enabled, isolated from intent
+   - **Recommendation:** dedicated `auth.absolutejs.com` instance running a minimal `defineAuthConfig` with every block enabled, isolated from intent
 
 2. **Run the self-test suite locally.** The OpenID conformance test suite is open source at <https://gitlab.com/openid/conformance-suite>. Self-hostable via Docker. Free to run; finding gaps now (before paying for certification) is the whole point of the self-test phase.
 
