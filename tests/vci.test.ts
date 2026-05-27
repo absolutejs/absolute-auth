@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { Elysia } from 'elysia';
-import { generateSigningKey } from '../src/oidc/keys';
+import { generateSigningKey, signJwt, type SigningKey } from '../src/oidc/keys';
 import {
 	createInMemoryCredentialNonceStore,
 	createInMemoryCredentialOfferStore
@@ -22,6 +22,64 @@ const ISSUER = 'https://issuer.example';
 const HTTP_OK = 200;
 const HTTP_BAD_REQUEST = 400;
 const HTTP_UNAUTHORIZED = 401;
+
+// Helper: wallet builds a proof-of-possession JWT over the c_nonce + audience using its
+// holder key. The package's verifier enforces the header.jwk matches the signing key, the
+// aud matches the credential issuer, and the nonce was minted by the server.
+const buildHolderProofJwt = async ({
+	audience,
+	holderKey,
+	nonce
+}: {
+	audience: string;
+	holderKey: SigningKey;
+	nonce: string;
+}) => {
+	// We need a header that includes `jwk`. signJwt builds its own header (alg/kid/typ); for
+	// OID4VCI proof we want the wallet's public JWK embedded so the issuer knows what to
+	// verify against. Construct the JWT manually here.
+	const msPerSecond = 1000;
+	const header: {
+		alg: string;
+		jwk: JsonWebKey;
+		kid: string;
+		typ: string;
+	} = {
+		alg: 'ES256',
+		jwk: holderKey.publicJwk,
+		kid: holderKey.kid,
+		typ: 'openid4vci-proof+jwt'
+	};
+	const payload: { aud: string; iat: number; nonce: string } = {
+		aud: audience,
+		iat: Math.floor(Date.now() / msPerSecond),
+		nonce
+	};
+	const headerSegment = Buffer.from(JSON.stringify(header)).toString('base64url');
+	const payloadSegment = Buffer.from(JSON.stringify(payload)).toString('base64url');
+	const signingInput = `${headerSegment}.${payloadSegment}`;
+	// We sign by going through signJwt then swapping its header for ours — the WebCrypto
+	// signature is over the {header}.{payload} string, so we have to compute it with our
+	// custom header. Implement a thin custom signer using the same crypto primitives signJwt
+	// uses internally.
+	const cryptoKey = await crypto.subtle.importKey(
+		'jwk',
+		holderKey.privateJwk,
+		{ name: 'ECDSA', namedCurve: 'P-256' },
+		false,
+		['sign']
+	);
+	const signature = new Uint8Array(
+		await crypto.subtle.sign(
+			{ hash: 'SHA-256', name: 'ECDSA' },
+			cryptoKey,
+			new TextEncoder().encode(signingInput)
+		)
+	);
+
+	return `${signingInput}.${Buffer.from(signature).toString('base64url')}`;
+};
+void signJwt;
 
 const buildConfig = (signingKey: Awaited<ReturnType<typeof generateSigningKey>>) => {
 	const credentialOfferStore = createInMemoryCredentialOfferStore();
@@ -106,7 +164,7 @@ describe('OpenID4VCI pre-authorized_code flow (end-to-end)', () => {
 		});
 	});
 
-	test('binds the credential to the wallet key when proof.jwt is supplied', async () => {
+	test('binds the credential to the wallet key when proof.jwt verifies', async () => {
 		const signingKey = await generateSigningKey();
 		const holderKey = await generateSigningKey();
 		const { config, credentialOfferStore } = buildConfig(signingKey);
@@ -124,14 +182,17 @@ describe('OpenID4VCI pre-authorized_code flow (end-to-end)', () => {
 		});
 		expect(exchange.ok).toBe(true);
 		if (!exchange.ok) return;
+		const cNonce = exchange.c_nonce;
+		expect(cNonce).toBeDefined();
+		if (cNonce === undefined) return;
 
-		// Fake proof.jwt — header.jwk carries the holder's public key; the issuer reads it for
-		// cnf binding and doesn't verify the JWT signature in this slice (proof verification is a
-		// deferred step listed in VC-PLAN.md).
-		const header = Buffer.from(
-			JSON.stringify({ alg: 'ES256', jwk: holderKey.publicJwk, typ: 'openid4vci-proof+jwt' })
-		).toString('base64url');
-		const proofJwt = `${header}.payload.signature`;
+		// Real proof.jwt — wallet signs over the c_nonce + audience with its private key.
+		// The package now verifies the proof signature + nonce + audience before honoring cnf.
+		const proofJwt = await buildHolderProofJwt({
+			audience: ISSUER,
+			holderKey,
+			nonce: cNonce
+		});
 
 		const credential = await issueCredential({
 			config,
@@ -147,6 +208,86 @@ describe('OpenID4VCI pre-authorized_code flow (end-to-end)', () => {
 			token: credential.credential
 		});
 		expect(verified?.cnf?.jwk.x).toBe(holderKey.publicJwk.x);
+	});
+
+	test('rejects a proof.jwt signed with a key other than its header.jwk', async () => {
+		const signingKey = await generateSigningKey();
+		const realHolderKey = await generateSigningKey();
+		const attackerKey = await generateSigningKey();
+		const { config, credentialOfferStore } = buildConfig(signingKey);
+		const { preAuthorizedCode } = await createCredentialOffer({
+			clientId: 'wallet.example',
+			configurationId: 'identity_v1',
+			store: credentialOfferStore,
+			userId: 'user-123'
+		});
+		const exchange = await exchangePreAuthorizedCode({
+			config,
+			issuer: ISSUER,
+			preAuthorizedCode,
+			signingKey
+		});
+		if (!exchange.ok) throw new Error('exchange failed');
+		const cNonce = exchange.c_nonce;
+		if (cNonce === undefined) throw new Error('no c_nonce');
+		// Header claims realHolderKey's public JWK but the JWT is signed by attackerKey —
+		// signature verification against the header.jwk will fail.
+		const { generateSigningKey: gen, signJwt } = await import('../src/oidc/keys');
+		void gen;
+		const forgedHeader = Buffer.from(
+			JSON.stringify({
+				alg: 'ES256',
+				jwk: realHolderKey.publicJwk,
+				kid: attackerKey.kid,
+				typ: 'openid4vci-proof+jwt'
+			})
+		).toString('base64url');
+		const forgedSigned = await signJwt(
+			{ aud: ISSUER, iat: Math.floor(Date.now() / 1000), nonce: cNonce },
+			attackerKey
+		);
+		const [, payload, signature] = forgedSigned.split('.');
+		const proofJwt = `${forgedHeader}.${payload}.${signature}`;
+		const result = await issueCredential({
+			config,
+			input: { accessToken: exchange.access_token, proofJwt },
+			issuer: ISSUER,
+			signingKey
+		});
+		expect(result).toEqual({ error: 'invalid_proof', ok: false });
+	});
+
+	test('rejects a proof.jwt with the wrong audience', async () => {
+		const signingKey = await generateSigningKey();
+		const holderKey = await generateSigningKey();
+		const { config, credentialOfferStore } = buildConfig(signingKey);
+		const { preAuthorizedCode } = await createCredentialOffer({
+			clientId: 'wallet.example',
+			configurationId: 'identity_v1',
+			store: credentialOfferStore,
+			userId: 'user-123'
+		});
+		const exchange = await exchangePreAuthorizedCode({
+			config,
+			issuer: ISSUER,
+			preAuthorizedCode,
+			signingKey
+		});
+		if (!exchange.ok) throw new Error('exchange failed');
+		const cNonce = exchange.c_nonce;
+		if (cNonce === undefined) throw new Error('no c_nonce');
+		const proofJwt = await buildHolderProofJwt({
+			audience: 'https://wrong-issuer.example',
+			holderKey,
+			nonce: cNonce
+		});
+		const result = await issueCredential({
+			config,
+			input: { accessToken: exchange.access_token, proofJwt },
+			issuer: ISSUER,
+			signingKey
+		});
+		expect(result).toEqual({ error: 'invalid_proof', ok: false });
 	});
 
 	test('rejects a redeemed pre-authorized_code on second use', async () => {
