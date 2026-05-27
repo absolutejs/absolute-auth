@@ -469,6 +469,7 @@ export * from './crypto';
 export * from './tenancy';
 export * from './credentials/config';
 export * from './credentials/passwordPolicy';
+export * from './credentials/backgroundOps';
 export * from './credentials/emailValidation';
 export {
 	importUser,

@@ -1,5 +1,5 @@
 {
-	"version": "0.36.0",
+	"version": "0.37.0",
 	"name": "@absolutejs/auth",
 	"description": "An authorization library for absolutejs",
 	"repository": {
@@ -32,6 +32,7 @@
 	"types": "./dist/index.d.ts",
 	"peerDependencies": {
 		"@opentelemetry/api": ">=1.7",
+		"@simplewebauthn/browser": ">=13",
 		"elysia": ">= 1.4.26",
 		"react": ">=18 <20",
 		"solid-js": ">=1.8",
@@ -40,6 +41,9 @@
 	},
 	"peerDependenciesMeta": {
 		"@opentelemetry/api": {
+			"optional": true
+		},
+		"@simplewebauthn/browser": {
 			"optional": true
 		},
 		"react": {
@@ -66,6 +70,7 @@
 		"@eslint/js": "^10.0.1",
 		"@opentelemetry/api": "^1.9.1",
 		"@opentelemetry/sdk-trace-base": "^2.7.1",
+		"@simplewebauthn/browser": "^13.3.0",
 		"@stylistic/eslint-plugin": "^5.10.0",
 		"@types/bun": "1.2.9",
 		"@types/react": "^19.0.0",

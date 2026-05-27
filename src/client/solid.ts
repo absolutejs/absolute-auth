@@ -4,6 +4,10 @@
 
 import { createSignal, onCleanup, type Accessor } from 'solid-js';
 import type { AuthClient, AuthClientError } from './createAuthClient';
+import {
+	runConditionalAuthentication,
+	runPasskeyRegistration
+} from './passkeyHelpers';
 
 type Mutator<Args, Data> = (
 	args: Args
@@ -56,6 +60,73 @@ const useMutation = <Args, Data>(
 
 export const useMagicLink = (client: AuthClient) =>
 	useMutation(client.passwordless.requestMagicLink);
+
+// Conditional-UI WebAuthn — see the React doc for the wire-up pattern.
+export const usePasskeyAutofill = (client: AuthClient) => {
+	const [data, setData] = createSignal<{ status: 'authenticated' } | null>(
+		null
+	);
+	const [error, setError] = createSignal<AuthClientError | null>(null);
+	const [isPending, setIsPending] = createSignal(false);
+	let alive = true;
+	onCleanup(() => {
+		alive = false;
+	});
+
+	const start = async () => {
+		setIsPending(true);
+		setError(null);
+		const result = await runConditionalAuthentication(client);
+		if (alive) {
+			setData(() => result.data);
+			setError(result.error);
+			setIsPending(false);
+		}
+	};
+
+	const cancel = () => {
+		setIsPending(false);
+	};
+
+	return { cancel, data, error, isPending, start };
+};
+
+// "Upgrade to passkey" prompt — see the React doc.
+export const useUpgradeToPasskey = (client: AuthClient) => {
+	const [passkeys, setPasskeys] = createSignal<unknown[] | null>(null);
+	const [error, setError] = createSignal<AuthClientError | null>(null);
+	const [isPending, setIsPending] = createSignal(true);
+	let alive = true;
+	onCleanup(() => {
+		alive = false;
+	});
+
+	const refetch = async () => {
+		setIsPending(true);
+		const result = await client.passkeys.list();
+		if (alive) {
+			setPasskeys(() => result.data);
+			setError(result.error);
+			setIsPending(false);
+		}
+	};
+
+	const register = async () => {
+		const result = await runPasskeyRegistration(client);
+		if (result.error === null) await refetch();
+
+		return result;
+	};
+
+	void refetch();
+	const shouldPrompt = () => {
+		const list = passkeys();
+
+		return list !== null && list.length === 0;
+	};
+
+	return { error, isPending, passkeys, refetch, register, shouldPrompt };
+};
 
 export const useMfaChallenge = (client: AuthClient) =>
 	useMutation(client.mfa.challenge);
