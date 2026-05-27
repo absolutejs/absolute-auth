@@ -348,6 +348,14 @@ export type AuthorizeRoute = `${string}/:provider${'' | `/${string}`}`;
 
 export type AuthConfig<UserType> = {
 	providersConfiguration: OAuth2ConfigurationOptions;
+	/** Override the `Secure` attribute on every cookie the package sets (session, OAuth state,
+	 *  code_verifier, SSO nonce, ring, etc.). When omitted, defaults to
+	 *  `process.env.NODE_ENV === 'production'` — matching the convention used by
+	 *  express-session / iron-session / lucia / better-auth, and the only way non-browser
+	 *  HTTP clients (curl, SSR fetch, test runners) can round-trip cookies on a plain-HTTP
+	 *  dev server. If you run prod without setting `NODE_ENV=production`, set
+	 *  `cookieSecure: true` explicitly. */
+	cookieSecure?: boolean;
 	authorizeRoute?: AuthorizeRoute;
 	profileRoute?: RouteString;
 	callbackRoute?: RouteString;
@@ -511,6 +519,7 @@ export type InsantiateUserSessionProps<UserType> = {
 	user_session_id: Cookie<UserSessionId | undefined>;
 	onNewUser: OnNewUser<UserType>;
 	getUser: GetUser<UserType>;
+	cookieSecure?: boolean;
 	resolvedAuthorization?: ResolvedOAuthAuthorization;
 	sessionDurationMs?: number;
 	unregisteredSessionDurationMs?: number;

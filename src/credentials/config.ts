@@ -101,5 +101,6 @@ export type CredentialsConfig<UserType> = {
 // to persist promoted sessions, so they accept this superset of the public config.
 export type CredentialRouteProps<UserType> = CredentialsConfig<UserType> & {
 	authSessionStore?: AuthSessionStore<UserType>;
+	cookieSecure?: boolean;
 	lockoutGuard?: LockoutGuard;
 };

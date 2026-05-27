@@ -14,12 +14,14 @@ const DEFAULT_GUEST_TTL_MS = MILLISECONDS_IN_A_DAY;
 export const createAnonymousSession = async <UserType>({
 	authSessionStore,
 	cookie,
+	cookieSecure,
 	guestUser,
 	inMemorySession,
 	sessionDurationMs = DEFAULT_GUEST_TTL_MS
 }: {
 	authSessionStore?: AuthSessionStore<UserType>;
 	cookie: Cookie<UserSessionId | undefined>;
+	cookieSecure?: boolean;
 	guestUser: UserType;
 	inMemorySession: SessionRecord<UserType>;
 	sessionDurationMs?: number;
@@ -28,6 +30,7 @@ export const createAnonymousSession = async <UserType>({
 		anonymous: true,
 		authSessionStore,
 		cookie,
+		cookieSecure,
 		inMemorySession,
 		sessionDurationMs,
 		user: guestUser

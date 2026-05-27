@@ -18,10 +18,12 @@ import {
 	OnAuthorizeError,
 	OnAuthorizeSuccess
 } from '../types';
+import { resolveCookieSecure } from '../utils';
 
 type AuthorizeProps = {
 	clientProviders: ClientProviders;
 	authorizeRoute?: AuthorizeRoute;
+	cookieSecure?: boolean;
 	onAuthorizeSuccess: OnAuthorizeSuccess;
 	onAuthorizeError: OnAuthorizeError;
 };
@@ -45,10 +47,13 @@ const parseReferer = (headerReferer: string | undefined) => {
 export const authorize = ({
 	clientProviders,
 	authorizeRoute = '/oauth2/:provider/authorization',
+	cookieSecure,
 	onAuthorizeSuccess,
 	onAuthorizeError
-}: AuthorizeProps) =>
-	new Elysia().get(
+}: AuthorizeProps) => {
+	const secure = resolveCookieSecure(cookieSecure);
+
+	return new Elysia().get(
 		authorizeRoute,
 		async ({
 			status,
@@ -97,7 +102,7 @@ export const authorize = ({
 				maxAge: COOKIE_DURATION,
 				path: '/',
 				sameSite: 'lax',
-				secure: true,
+				secure,
 				value: referer
 			});
 
@@ -106,7 +111,7 @@ export const authorize = ({
 				maxAge: COOKIE_DURATION,
 				path: '/',
 				sameSite: 'lax',
-				secure: true,
+				secure,
 				value: provider
 			});
 
@@ -115,7 +120,7 @@ export const authorize = ({
 				maxAge: COOKIE_DURATION,
 				path: '/',
 				sameSite: 'lax',
-				secure: true,
+				secure,
 				value: clientName ?? ''
 			});
 
@@ -125,7 +130,7 @@ export const authorize = ({
 					maxAge: COOKIE_DURATION,
 					path: '/',
 					sameSite: 'lax',
-					secure: true,
+					secure,
 					value: authIntent
 				});
 			} else {
@@ -138,7 +143,7 @@ export const authorize = ({
 				maxAge: COOKIE_DURATION,
 				path: '/',
 				sameSite: 'lax',
-				secure: true,
+				secure,
 				value: currentState
 			});
 
@@ -152,7 +157,7 @@ export const authorize = ({
 					maxAge: COOKIE_DURATION,
 					path: '/',
 					sameSite: 'lax',
-					secure: true,
+					secure,
 					value: codeVerifier
 				});
 			}
@@ -215,3 +220,4 @@ export const authorize = ({
 			})
 		}
 	);
+};

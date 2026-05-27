@@ -59,5 +59,6 @@ export type PasswordlessConfig<UserType> = {
 
 export type PasswordlessRouteProps<UserType> = PasswordlessConfig<UserType> & {
 	authSessionStore?: AuthSessionStore<UserType>;
+	cookieSecure?: boolean;
 	emit?: AuditEmitter;
 };

@@ -53,6 +53,7 @@ export const getStatus = async <UserType>(
 };
 export const instantiateUserSession = async <UserType>({
 	authProvider,
+	cookieSecure,
 	session,
 	user_session_id,
 	unregisteredSession,
@@ -75,6 +76,7 @@ export const instantiateUserSession = async <UserType>({
 
 	const userSession = validateSession({ session, user_session_id });
 	const userSessionId = getUserSessionId({
+		cookieSecure,
 		session,
 		unregisteredSession,
 		user_session_id
@@ -121,6 +123,15 @@ export const instantiateUserSession = async <UserType>({
 
 	return response;
 };
+// Cookie Secure flag resolution. Default convention: only set Secure=true in production
+// (matches express-session, iron-session, lucia, better-auth). Hardcoding Secure=true broke
+// non-browser HTTP clients (curl, SSR fetch, Playwright API contexts, test runners) on
+// http://localhost in dev, because they don't honor the browser's "localhost is a secure
+// context" exemption. An explicit `cookieSecure` on AuthConfig overrides; otherwise we
+// look at NODE_ENV. Consumers running prod without NODE_ENV=production should set
+// `cookieSecure: true` explicitly.
+export const resolveCookieSecure = (override?: boolean) =>
+	override ?? process.env.NODE_ENV === 'production';
 export const resolveOAuthAuthorization = async ({
 	authProvider,
 	providerInstance,
@@ -230,6 +241,7 @@ export const validateSession = <
 };
 
 type GetUserSessionIdProps<UserType> = {
+	cookieSecure?: boolean;
 	user_session_id: Cookie<UserSessionId | undefined>;
 	session?: SessionRecord<UserType>;
 	unregisteredSession?: UnregisteredSessionRecord;
@@ -245,6 +257,7 @@ const clearExistingSession = <UserType>(
 };
 
 export const getUserSessionId = <UserType>({
+	cookieSecure,
 	user_session_id,
 	session,
 	unregisteredSession
@@ -260,7 +273,7 @@ export const getUserSessionId = <UserType>({
 	user_session_id.set({
 		httpOnly: true,
 		sameSite: 'lax',
-		secure: true,
+		secure: resolveCookieSecure(cookieSecure),
 		value: userSessionId
 	});
 

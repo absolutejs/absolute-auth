@@ -38,4 +38,5 @@ export type MfaConfig<UserType> = {
 
 export type MfaRouteProps<UserType> = MfaConfig<UserType> & {
 	authSessionStore?: AuthSessionStore<UserType>;
+	cookieSecure?: boolean;
 };

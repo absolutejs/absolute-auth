@@ -1,5 +1,6 @@
 import type { Cookie } from 'elysia';
 import type { SessionData, SessionRecord, UserSessionId } from '../types';
+import { resolveCookieSecure } from '../utils';
 import { createSessionCompatibilityLayer } from './access';
 import type { AuthSessionStore } from './types';
 
@@ -51,6 +52,7 @@ type PromoteToSessionProps<UserType> = {
 	anonymous?: boolean;
 	authSessionStore?: AuthSessionStore<UserType>;
 	cookie: Cookie<UserSessionId | undefined>;
+	cookieSecure?: boolean;
 	impersonator?: SessionData<UserType>['impersonator'];
 	inMemorySession: SessionRecord<UserType>;
 	samlLogout?: SessionData<UserType>['samlLogout'];
@@ -66,6 +68,7 @@ export const promoteToSession = async <UserType>({
 	anonymous,
 	authSessionStore,
 	cookie,
+	cookieSecure,
 	impersonator,
 	inMemorySession,
 	samlLogout,
@@ -93,7 +96,7 @@ export const promoteToSession = async <UserType>({
 	cookie.set({
 		httpOnly: true,
 		sameSite: 'lax',
-		secure: true,
+		secure: resolveCookieSecure(cookieSecure),
 		value: userSessionId
 	});
 

@@ -49,6 +49,7 @@ export type WebAuthnConfig<UserType> = {
 
 export type WebAuthnRouteProps<UserType> = WebAuthnConfig<UserType> & {
 	authSessionStore?: AuthSessionStore<UserType>;
+	cookieSecure?: boolean;
 	// When `auth()` has an audit block, registration / authentication emit audit events.
 	emit?: AuditEmitter;
 };

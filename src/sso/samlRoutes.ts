@@ -16,6 +16,7 @@ import {
 
 type SamlRoutesProps<UserType> = SSOConfig<UserType> & {
 	authSessionStore?: AuthSessionStore<UserType>;
+	cookieSecure?: boolean;
 	samlAdapter: SamlAdapter;
 };
 
@@ -49,6 +50,7 @@ const settle = async <Value>(work: Value | Promise<Value>) => {
 
 export const samlSsoRoutes = <UserType>({
 	authSessionStore,
+	cookieSecure,
 	getSsoUser,
 	onSsoCallbackError,
 	onSsoCallbackSuccess,
@@ -162,6 +164,7 @@ export const samlSsoRoutes = <UserType>({
 					const userSessionId = await promoteToSession({
 						authSessionStore,
 						cookie: user_session_id,
+						cookieSecure,
 						inMemorySession: session,
 						samlLogout: {
 							connectionId: connection.connectionId,

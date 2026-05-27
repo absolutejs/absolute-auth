@@ -7,6 +7,7 @@ import { createSessionCompatibilityLayer } from '../session/access';
 import { persistWhen, promoteToSession } from '../session/promote';
 import { sessionStore } from '../session/state';
 import { userSessionIdTypebox } from '../typebox';
+import { resolveCookieSecure } from '../utils';
 import {
 	type CredentialRouteProps,
 	DEFAULT_CREDENTIAL_SESSION_TTL_MS
@@ -16,6 +17,7 @@ import { isPasswordCompromised } from './passwordPolicy';
 export const credentialsLogin = <UserType>({
 	authSessionStore,
 	checkBreachesOnLogin,
+	cookieSecure,
 	credentialStore,
 	getUserByEmail,
 	isMfaRequired,
@@ -134,7 +136,7 @@ export const credentialsLogin = <UserType>({
 				user_session_id.set({
 					httpOnly: true,
 					sameSite: 'lax',
-					secure: true,
+					secure: resolveCookieSecure(cookieSecure),
 					value: pendingSessionId
 				});
 				await persistWhen(
@@ -154,6 +156,7 @@ export const credentialsLogin = <UserType>({
 			const userSessionId = await promoteToSession({
 				authSessionStore,
 				cookie: user_session_id,
+				cookieSecure,
 				inMemorySession: session,
 				sessionDurationMs,
 				user

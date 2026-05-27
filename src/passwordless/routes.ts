@@ -31,6 +31,7 @@ const generateOtpCode = (length: number) => {
 // mounts this before `protectRoutePlugin` when a `passwordless` block is supplied.
 export const passwordlessRoutes = <UserType>({
 	authSessionStore,
+	cookieSecure,
 	emit,
 	getUserByEmail,
 	getUserId,
@@ -64,6 +65,7 @@ export const passwordlessRoutes = <UserType>({
 		const userSessionId = await promoteToSession({
 			authSessionStore,
 			cookie: userSessionCookie,
+			cookieSecure,
 			inMemorySession: session,
 			sessionDurationMs,
 			user

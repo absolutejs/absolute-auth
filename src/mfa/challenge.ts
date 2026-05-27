@@ -4,6 +4,7 @@ import { createSessionCompatibilityLayer } from '../session/access';
 import { persistWhen } from '../session/promote';
 import { sessionStore } from '../session/state';
 import { userSessionIdTypebox } from '../typebox';
+import { resolveCookieSecure } from '../utils';
 import { consumeBackupCode } from './backupCodes';
 import { DEFAULT_MFA_SESSION_TTL_MS, type MfaRouteProps } from './config';
 import { decryptTotpSecret } from './secret';
@@ -11,6 +12,7 @@ import { decryptTotpSecret } from './secret';
 export const mfaChallenge = <UserType>({
 	authSessionStore,
 	challengeRoute = '/auth/mfa/challenge',
+	cookieSecure,
 	encryptionKey,
 	getChallengeUser,
 	getUserId,
@@ -94,7 +96,7 @@ export const mfaChallenge = <UserType>({
 			user_session_id.set({
 				httpOnly: true,
 				sameSite: 'lax',
-				secure: true,
+				secure: resolveCookieSecure(cookieSecure),
 				value: userSessionId
 			});
 			await persistWhen(
