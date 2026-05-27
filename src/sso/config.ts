@@ -76,6 +76,71 @@ export type SamlLogoutInfo = {
 	sessionIndex?: string;
 };
 
+// What the IdP-side adapter extracts from a validated AuthnRequest before we redirect
+// the user to login. `id` is the SAML `ID` attribute we must echo back as `InResponseTo`
+// on the Response. `acsUrl` may be omitted (defaults to the SP's pre-registered ACS).
+export type SamlAuthnRequestInfo = {
+	acsUrl?: string;
+	forceAuthn?: boolean;
+	id: string;
+	issuer: string;
+	relayState?: string;
+};
+
+// Inputs the package gives the adapter to mint a signed SAML Response.
+export type SamlIdpResponseRequest = {
+	acsUrl: string;
+	attributes?: Record<string, unknown>;
+	audience: string; // = SP's entityID
+	idpEntityId: string;
+	inResponseTo?: string;
+	nameId: string;
+	nameIdFormat?: string;
+	relayState?: string;
+	sessionIndex: string;
+};
+
+// The IdP-side adapter — inverse of `SamlAdapter`. Same delegation philosophy: the
+// package owns routes + storage + URL/HTML scaffolding, the consumer owns the XML +
+// crypto (wrapping `@node-saml/node-saml` / `samlify` / etc.). The package never
+// bundles a SAML library.
+export type SamlIdpAdapter = {
+	// Render an XHTML auto-POST form that posts `SAMLResponse` (and optional
+	// `RelayState`) to `acsUrl`. Returns the full HTML string; the route serves it
+	// as `text/html`. Most adapters just template a tiny `<form>` + `<script>` —
+	// kept in the adapter so consumers can customize for browsers that block
+	// auto-submit (CSP) without forking the package.
+	buildAutoPostForm: (input: {
+		acsUrl: string;
+		relayState?: string;
+		samlResponse: string;
+	}) => string;
+	// Build a signed SAML Response (base64-encoded). Throw on signing failure.
+	createSamlResponse: (
+		request: SamlIdpResponseRequest
+	) => Promise<string> | string;
+	// Return the IdP's metadata XML for SP-side configuration. `entityId` is THIS
+	// IdP's identifier (typically the issuer URL); `ssoUrl` is the IdP's SSO endpoint
+	// (the package's `/sso/saml/idp/sso`).
+	getIdpMetadata: (input: {
+		entityId: string;
+		ssoUrl: string;
+	}) => Promise<string> | string;
+	// Parse + validate an inbound AuthnRequest (URL-encoded for HTTP-Redirect binding,
+	// base64 for HTTP-POST). When `serviceProvider` is omitted (first-pass "who sent
+	// this?" lookup), the adapter MAY skip signature verification and just return the
+	// issuer / id / acsUrl. When provided, the adapter MUST verify the signature against
+	// the SP's `signingCert` (when set) and throw on invalid signature / malformed XML.
+	parseAuthnRequest: (input: {
+		binding: 'POST' | 'Redirect';
+		samlRequest: string;
+		serviceProvider?: import('./types').SamlServiceProvider;
+		signature?: string;
+		signatureAlgorithm?: string;
+		signedQueryString?: string;
+	}) => Promise<SamlAuthnRequestInfo> | SamlAuthnRequestInfo;
+};
+
 // SAML signature validation and XML handling are a security footgun, so the package never
 // bundles a SAML library: the consumer supplies an adapter wrapping a vetted dependency
 // (e.g. `@node-saml/node-saml`). The package owns the route wiring, cookies, and session

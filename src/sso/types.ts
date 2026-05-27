@@ -47,6 +47,30 @@ export type SamlConnection = SSOConnectionBase & {
 
 export type SSOConnection = OidcConnection | SamlConnection;
 
+// A relying-party Service Provider that this IdP issues SAML assertions to.
+// Inverse of `SamlConnection` (which describes IdPs WE consume): one row per SP we
+// trust, keyed on its entityID. `signingCert` is the SP's X.509 public cert used to
+// verify the incoming AuthnRequest's signature (when signed). `nameIdFormat` defaults
+// to `urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress` when omitted — that's
+// what every modern SaaS (Salesforce, Workday, Concur) expects.
+export type SamlServiceProvider = {
+	acsUrl: string;
+	createdAt: number;
+	entityId: string;
+	nameIdFormat?: string;
+	signingCert?: string;
+	updatedAt: number;
+};
+
+export type SamlServiceProviderStore = {
+	deleteServiceProvider: (entityId: string) => Promise<void>;
+	findServiceProvider: (
+		entityId: string
+	) => Promise<SamlServiceProvider | undefined>;
+	listServiceProviders: () => Promise<SamlServiceProvider[]>;
+	saveServiceProvider: (sp: SamlServiceProvider) => Promise<void>;
+};
+
 export type SSOConnectionStore = {
 	deleteConnection: (connectionId: string) => Promise<void>;
 	getConnection: (connectionId: string) => Promise<SSOConnection | undefined>;
