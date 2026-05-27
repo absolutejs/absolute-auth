@@ -695,6 +695,10 @@ export * from './fga/schema';
 export * from './fga/types';
 export { createInMemoryWarrantStore, warrantKey } from './fga/inMemoryStores';
 export {
+	createRedisFgaCache,
+	type RedisFgaCacheClient
+} from './fga/redisCheckCache';
+export {
 	createNeonWarrantStore,
 	createPostgresWarrantStore,
 	warrantsTable
