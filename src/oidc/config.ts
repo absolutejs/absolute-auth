@@ -9,11 +9,13 @@ import { signJwt, verifyJwt, type SigningKey } from './keys';
 import type { OnClientRegistration } from './registration';
 import type {
 	AuthorizationCodeStore,
+	BackchannelAuthStore,
 	ClientAssertionJtiStore,
 	ClientRegistrationTokenStore,
 	DeviceAuthorizationStore,
 	InitialAccessTokenStore,
 	LogoutDeliveryStore,
+	OAuthClient,
 	OAuthClientStore,
 	OidcRefreshTokenStore,
 	PushedAuthorizationRequestStore
@@ -59,6 +61,32 @@ export type OidcProviderConfig<UserType> = {
 	deviceAuthorizationStore?: DeviceAuthorizationStore;
 	deviceCodeTtlMs?: number;
 	devicePollIntervalSeconds?: number;
+	// Optional — enables OIDC Client-Initiated Backchannel Authentication (CIBA Core 1.0).
+	// When set, `/oauth2/bc-authorize` + the `urn:openid:params:grant-type:ciba` token grant
+	// are mounted, `approveBackchannelAuth` / `denyBackchannelAuth` become callable from
+	// your approval UI, and the consumer's `onBackchannelAuthRequest` hook fires so they
+	// can push a notification to the user's second device (FCM / APNs / SMS / etc.).
+	// Poll-mode only in this release; ping + push follow.
+	backchannelAuthStore?: BackchannelAuthStore;
+	backchannelAuthTtlMs?: number;
+	backchannelPollIntervalSeconds?: number;
+	// Resolves the CIBA `login_hint` (RFC's flexible "however you identify the user" param,
+	// e.g. an email, phone, or external id) to the user. Required to enable CIBA. When this
+	// returns `undefined`, /bc-authorize replies with `unknown_user_id`.
+	resolveBackchannelUser?: (
+		hint: { client: OAuthClient; loginHint: string }
+	) => Promise<{ sub: string } | undefined>;
+	// Out-of-band push hook: fires once the auth request is persisted with
+	// `status: 'pending'`. The consumer wires this to their notification backend
+	// (FCM/APNs/Twilio/email) so the user can approve on their phone. The package never
+	// owns this transport — we just hand you the context.
+	onBackchannelAuthRequest?: (context: {
+		authReqId: string;
+		bindingMessage: string | undefined;
+		clientId: string;
+		scopes: string[];
+		userSub: string;
+	}) => Promise<void> | void;
 	// Extra ACCESS token claims (per-token, after grants/exchange). Reserved keys (iss/sub/
 	// aud/exp/iat/jti/client_id/scope/token_use/act/cnf) cannot be overridden.
 	getAccessTokenClaims?: (context: {
@@ -663,6 +691,230 @@ export const exchangeDeviceCode = async <UserType>({
 
 	// Single-use: drop the record before minting so a replay can't double-issue.
 	await config.deviceAuthorizationStore.deleteByDeviceCodeHash(deviceCodeHash);
+	const tokenSet = await issueTokenSet({
+		clientId,
+		config,
+		dpopJkt,
+		now,
+		scopes: record.scopes,
+		sub: record.userSub
+	});
+
+	return { ...tokenSet, ok: true };
+};
+
+// OIDC Client-Initiated Backchannel Authentication (CIBA Core 1.0). The desktop / web
+// client hits /oauth2/bc-authorize with a `login_hint` for the user; the package resolves
+// the hint via `resolveBackchannelUser`, persists a pending request, and fires
+// `onBackchannelAuthRequest` so the consumer can push a notification to the user's phone.
+// The user approves on the phone (consumer calls `approveBackchannelAuth`), and the
+// client polls /oauth2/token with `grant_type=urn:openid:params:grant-type:ciba` to
+// collect the tokens. Banking + healthcare + B2B-internal workflow.
+const AUTH_REQ_ID_BYTES = 32;
+const DEFAULT_BACKCHANNEL_TTL_MINUTES = 10;
+const DEFAULT_BACKCHANNEL_TTL_MS =
+	MILLISECONDS_IN_A_MINUTE * DEFAULT_BACKCHANNEL_TTL_MINUTES;
+const DEFAULT_BACKCHANNEL_POLL_INTERVAL_SECONDS = 5;
+export const CIBA_GRANT_TYPE = 'urn:openid:params:grant-type:ciba';
+
+export type BackchannelAuthResponse = {
+	auth_req_id: string;
+	expires_in: number;
+	interval: number;
+};
+
+export type BackchannelAuthError =
+	| 'expired_login_hint_token'
+	| 'invalid_client'
+	| 'invalid_request'
+	| 'unknown_user_id';
+
+export const issueBackchannelAuth = async <UserType>({
+	clientId,
+	config,
+	loginHint,
+	bindingMessage,
+	now = Date.now(),
+	requestedScopes
+}: {
+	clientId: string;
+	config: OidcProviderConfig<UserType>;
+	loginHint: string;
+	bindingMessage?: string;
+	now?: number;
+	requestedScopes: string[];
+}): Promise<
+	| { error: BackchannelAuthError; ok: false }
+	| ({ ok: true } & BackchannelAuthResponse)
+> => {
+	if (!config.backchannelAuthStore || !config.resolveBackchannelUser) {
+		return { error: 'invalid_request', ok: false };
+	}
+	const client = await config.clientStore.findClient(clientId);
+	if (!client) return { error: 'invalid_client', ok: false };
+	const resolved = await config.resolveBackchannelUser({
+		client,
+		loginHint
+	});
+	if (!resolved) return { error: 'unknown_user_id', ok: false };
+
+	const authReqId = generateSecureToken(AUTH_REQ_ID_BYTES);
+	const ttl = config.backchannelAuthTtlMs ?? DEFAULT_BACKCHANNEL_TTL_MS;
+	const interval =
+		config.backchannelPollIntervalSeconds ??
+		DEFAULT_BACKCHANNEL_POLL_INTERVAL_SECONDS;
+
+	await config.backchannelAuthStore.saveBackchannelAuth({
+		authReqId,
+		bindingMessage,
+		clientId,
+		createdAt: now,
+		expiresAt: now + ttl,
+		intervalSeconds: interval,
+		scopes: requestedScopes,
+		status: 'pending',
+		userSub: resolved.sub
+	});
+
+	await config.onBackchannelAuthRequest?.({
+		authReqId,
+		bindingMessage,
+		clientId,
+		scopes: requestedScopes,
+		userSub: resolved.sub
+	});
+
+	return {
+		auth_req_id: authReqId,
+		expires_in: Math.floor(ttl / MS_PER_SECOND),
+		interval,
+		ok: true
+	};
+};
+
+export type BackchannelDecisionResult =
+	| {
+			error:
+				| 'already_decided'
+				| 'expired_token'
+				| 'invalid_auth_req_id'
+				| 'not_configured';
+			ok: false;
+	  }
+	| { ok: true };
+
+const decideBackchannel = async <UserType>(
+	config: OidcProviderConfig<UserType>,
+	authReqId: string,
+	approval: { status: 'approved' | 'denied'; userSub?: string }
+): Promise<BackchannelDecisionResult> => {
+	if (!config.backchannelAuthStore) {
+		return { error: 'not_configured', ok: false };
+	}
+	const record =
+		await config.backchannelAuthStore.findByAuthReqId(authReqId);
+	if (!record) return { error: 'invalid_auth_req_id', ok: false };
+	if (record.expiresAt < Date.now()) {
+		return { error: 'expired_token', ok: false };
+	}
+	if (record.status !== 'pending') {
+		return { error: 'already_decided', ok: false };
+	}
+	await config.backchannelAuthStore.updateStatus(
+		authReqId,
+		approval.status,
+		approval.userSub ?? record.userSub
+	);
+
+	return { ok: true };
+};
+
+export const approveBackchannelAuth = async <UserType>({
+	authReqId,
+	config,
+	userSub
+}: {
+	authReqId: string;
+	config: OidcProviderConfig<UserType>;
+	userSub?: string;
+}) =>
+	decideBackchannel(config, authReqId, {
+		status: 'approved',
+		userSub
+	});
+
+export const denyBackchannelAuth = async <UserType>({
+	authReqId,
+	config
+}: {
+	authReqId: string;
+	config: OidcProviderConfig<UserType>;
+}) => decideBackchannel(config, authReqId, { status: 'denied' });
+
+export type BackchannelExchangeError =
+	| 'access_denied'
+	| 'authorization_pending'
+	| 'expired_token'
+	| 'invalid_grant'
+	| 'slow_down';
+
+export type BackchannelExchangeResult =
+	| {
+			access_token: string;
+			expires_in: number;
+			id_token: string;
+			ok: true;
+			refresh_token: string;
+			scope: string;
+			token_type: 'Bearer' | 'DPoP';
+	  }
+	| { error: BackchannelExchangeError; ok: false };
+
+export const exchangeBackchannelAuth = async <UserType>({
+	authReqId,
+	clientId,
+	config,
+	dpopJkt,
+	now = Date.now()
+}: {
+	authReqId: string;
+	clientId: string;
+	config: OidcProviderConfig<UserType>;
+	dpopJkt?: string;
+	now?: number;
+}): Promise<BackchannelExchangeResult> => {
+	if (!config.backchannelAuthStore) {
+		return { error: 'invalid_grant', ok: false };
+	}
+	const record =
+		await config.backchannelAuthStore.findByAuthReqId(authReqId);
+	if (!record || record.clientId !== clientId) {
+		return { error: 'invalid_grant', ok: false };
+	}
+	if (record.expiresAt < now) {
+		await config.backchannelAuthStore.deleteByAuthReqId(authReqId);
+
+		return { error: 'expired_token', ok: false };
+	}
+	// Poll-rate enforcement: if the client polls faster than `intervalSeconds` since
+	// its last poll, bump the interval and return slow_down per spec.
+	if (
+		record.lastPolledAt !== undefined &&
+		now - record.lastPolledAt < record.intervalSeconds * MS_PER_SECOND
+	) {
+		return { error: 'slow_down', ok: false };
+	}
+	await config.backchannelAuthStore.recordPoll(authReqId, now);
+
+	if (record.status === 'pending') {
+		return { error: 'authorization_pending', ok: false };
+	}
+	if (record.status === 'denied' || record.userSub === undefined) {
+		return { error: 'access_denied', ok: false };
+	}
+
+	// Single-use: drop the record before minting so a replay can't double-issue.
+	await config.backchannelAuthStore.deleteByAuthReqId(authReqId);
 	const tokenSet = await issueTokenSet({
 		clientId,
 		config,

@@ -204,3 +204,43 @@ export type DeviceAuthorizationStore = {
 		userSub?: string
 	) => Promise<void>;
 };
+
+// OIDC Client-Initiated Backchannel Authentication (CIBA Core 1.0). The user authorizes
+// on a second device — desktop client hits `/oauth2/bc-authorize`, server pushes a
+// notification to the user's phone via the consumer's `onBackchannelAuthRequest` hook,
+// user approves; client polls `/oauth2/token` with `grant_type=urn:openid:params:grant-type:ciba`
+// and gets the tokens. Used by banking + healthcare + B2B-internal apps where the device
+// initiating the request isn't where the user authenticates.
+
+export type BackchannelAuthStatus = 'approved' | 'denied' | 'pending';
+
+export type BackchannelAuthRequest = {
+	authReqId: string;
+	bindingMessage?: string;
+	clientId: string;
+	createdAt: number;
+	expiresAt: number;
+	/** Poll-mode interval seconds. Bumped by 5 each time the client polls faster than
+	 *  allowed (returns `slow_down` until the new interval has elapsed). */
+	intervalSeconds: number;
+	lastPolledAt?: number;
+	scopes: string[];
+	status: BackchannelAuthStatus;
+	userSub?: string;
+};
+
+export type BackchannelAuthStore = {
+	deleteByAuthReqId: (authReqId: string) => Promise<void>;
+	findByAuthReqId: (
+		authReqId: string
+	) => Promise<BackchannelAuthRequest | undefined>;
+	recordPoll: (authReqId: string, at: number) => Promise<void>;
+	saveBackchannelAuth: (
+		request: BackchannelAuthRequest
+	) => Promise<void>;
+	updateStatus: (
+		authReqId: string,
+		status: BackchannelAuthStatus,
+		userSub?: string
+	) => Promise<void>;
+};
