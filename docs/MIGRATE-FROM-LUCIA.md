@@ -52,8 +52,28 @@ them against your DB.
 
 ### 2. Backfill from Lucia's tables
 
-Lucia v3 has `user`, `session`, and `key` (or `oauth_account` depending
-on your adapter setup). Migrate each row:
+The package ships an import CLI that handles this end-to-end:
+
+```bash
+# Export your Lucia tables to a single JSON file:
+psql $LUCIA_DB -c "\COPY (SELECT json_agg(row_to_json(u)) FROM \"user\" u) TO 'users.json'"
+psql $LUCIA_DB -c "\COPY (SELECT json_agg(row_to_json(k)) FROM \"key\" k) TO 'keys.json'"
+# Concatenate into one document:
+jq -s '{ users: .[0], keys: .[1] }' users.json keys.json > lucia-export.json
+
+# Dry-run (counts only, no inserts):
+bunx absolute-auth import lucia lucia-export.json --db $DATABASE_URL
+
+# Commit:
+bunx absolute-auth import lucia lucia-export.json --db $DATABASE_URL --commit
+```
+
+The CLI extracts `email:`/`username:` keys → `users.password` and
+treats the rest as OAuth identities → `auth_identities`. Re-running is
+idempotent (`ON CONFLICT DO NOTHING` on email + provider:subject).
+
+If you'd rather do the SQL yourself (e.g. you need custom column
+mapping):
 
 ```ts
 // scripts/migrateFromLucia.ts
