@@ -42,16 +42,17 @@ export const signout = <UserType>({
 			store: { session },
 			cookie: { user_session_id, auth_provider }
 		}) => {
-			if (auth_provider === undefined || user_session_id === undefined) {
+			if (user_session_id === undefined) {
 				return status('Bad Request', 'Cookies are missing');
-			}
-
-			if (auth_provider.value === undefined) {
-				return status('Unauthorized', 'No auth provider found');
 			}
 			if (user_session_id.value === undefined) {
 				return status('Unauthorized', 'No user session id found');
 			}
+			// `auth_provider` is only set by the OAuth2 `/authorize` flow. Credentials,
+			// MFA, passwordless, SSO, WebAuthn, and impersonation-minted sessions never
+			// set it — but they are still valid sessions and must be signable-out.
+			// Prior versions hard-failed here, which 401'd every non-OAuth signout
+			// (issue #7).
 
 			const compatibilityLayer = await createSessionCompatibilityLayer({
 				authSessionStore,
@@ -64,7 +65,7 @@ export const signout = <UserType>({
 
 			if (currentSession !== undefined) {
 				const signedOut = await runSignOut(onSignOut, {
-					authProvider: auth_provider.value,
+					authProvider: auth_provider?.value,
 					session: signoutSession,
 					userSessionId: user_session_id.value
 				});
@@ -88,7 +89,7 @@ export const signout = <UserType>({
 			}
 
 			user_session_id.remove();
-			auth_provider.remove();
+			auth_provider?.remove();
 
 			return new Response(null, { status: 204 });
 		},
