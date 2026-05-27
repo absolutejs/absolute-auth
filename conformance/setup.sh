@@ -31,7 +31,7 @@ docker run --rm \
 	-v "$SUITE_DIR":/usr/src/mymaven \
 	-v "$HOME/.m2":/root/.m2 \
 	-w /usr/src/mymaven \
-	maven:3.9-eclipse-temurin-17 \
+	maven:3.9-eclipse-temurin-21 \
 	mvn -B clean package -DskipTests
 
 echo "[setup] done. Next step: ./conformance/run.sh"

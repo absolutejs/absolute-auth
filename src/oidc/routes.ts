@@ -304,6 +304,12 @@ export const oidcProviderRoutes = <UserType>(
 		if (mtlsResult !== undefined) return mtlsResult;
 
 		const clientSecret = bodyClientSecret ?? basicClientSecret;
+		// FAPI 2.0 baseline (RFC 9700) bans both `client_secret_basic` and
+		// `client_secret_post` — only `private_key_jwt` + `tls_client_auth`
+		// are conformant. When `strictFapi` is on, refuse to fall through.
+		if (config.strictFapi === true && clientSecret !== undefined) {
+			return undefined;
+		}
 		const client = await authenticateClient(clientId, clientSecret);
 
 		return client === undefined
@@ -623,18 +629,27 @@ export const oidcProviderRoutes = <UserType>(
 		subject_types_supported: ['public'],
 		tls_client_certificate_bound_access_tokens: true,
 		token_endpoint: tokenUrl,
-		token_endpoint_auth_methods_supported: [
-			'client_secret_basic',
-			'client_secret_post',
-			'none',
-			'private_key_jwt',
-			'self_signed_tls_client_auth'
-		],
+		token_endpoint_auth_methods_supported:
+			config.strictFapi === true
+				? // FAPI 2.0 baseline (RFC 9700) bans shared-secret client auth.
+					['private_key_jwt', 'self_signed_tls_client_auth']
+				: [
+						'client_secret_basic',
+						'client_secret_post',
+						'none',
+						'private_key_jwt',
+						'self_signed_tls_client_auth'
+					],
 		token_endpoint_auth_signing_alg_values_supported: ['ES256'],
 		userinfo_endpoint: `${issuer}${userinfoRoute}`
 	};
 	if (config.deviceAuthorizationStore) {
 		discovery.device_authorization_endpoint = `${issuer}${deviceAuthorizationRoute}`;
+	}
+	if (config.strictFapi === true) {
+		// FAPI 2.0 baseline requires PAR for every client; flip the discovery
+		// flag so RPs running compliance checks see the requirement.
+		discovery.require_pushed_authorization_requests = true;
 	}
 	if (config.backchannelAuthStore) {
 		// OIDC CIBA Core 1.0 §4 discovery metadata.
@@ -857,10 +872,11 @@ export const oidcProviderRoutes = <UserType>(
 				// plain /authorize call — must have come through the PAR path above (which
 				// rewrites effectiveQuery from the stored bag, so we detect it by checking
 				// whether the original query carried `request_uri`).
-				if (
-					client.requirePushedAuthorizationRequests === true &&
-					query.request_uri === undefined
-				) {
+				// `strictFapi` widens this to ALL clients (FAPI 2.0 baseline requires PAR).
+				const requirePar =
+					client.requirePushedAuthorizationRequests === true ||
+					config.strictFapi === true;
+				if (requirePar && query.request_uri === undefined) {
 					return errorRedirect('invalid_request');
 				}
 				// FAPI hardening: clients that opted into signed-only requests must use

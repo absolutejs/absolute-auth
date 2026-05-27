@@ -169,6 +169,17 @@ export type OidcProviderConfig<UserType> = {
 	refreshTokenStore: OidcRefreshTokenStore;
 	refreshTokenTtlMs?: number;
 	signingKey: SigningKey;
+	// FAPI 2.0 baseline switch. When `true`, the OIDC routes (a) reject any
+	// `/token` request that authenticates with `client_secret_basic` or
+	// `client_secret_post` (only `private_key_jwt` and
+	// `self_signed_tls_client_auth` are accepted), (b) reject `/authorize`
+	// requests that aren't pushed (PAR-required, even if the individual
+	// client hasn't opted in), (c) reject `code_challenge_method` values
+	// other than `S256`, and (d) treat absent DPoP / mTLS sender-constrained
+	// tokens as a misconfiguration warning at boot. Use this when targeting
+	// FAPI 2.0 conformance certification — it's the one-flag-on equivalent
+	// of the per-client hardening fields. Defaults to `false` (back-compat).
+	strictFapi?: boolean;
 	// Optional — enables OpenID4VCI issuer side. When set, the pre-authorized_code grant is
 	// honored at /oauth2/token (skips client auth per OID4VCI §3.5; the pre-auth code IS the
 	// auth material). The companion `vciRoutes()` plugin mounts the credential + discovery
