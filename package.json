@@ -1,5 +1,5 @@
 {
-	"version": "0.32.0",
+	"version": "0.33.0",
 	"name": "@absolutejs/auth",
 	"description": "An authorization library for absolutejs",
 	"repository": {
@@ -10,7 +10,7 @@
 	"license": "CC BY-NC 4.0",
 	"author": "Alex Kahn",
 	"scripts": {
-		"build": "rm -rf dist && bun build src/index.ts src/htmx/index.ts src/client/index.ts src/client/react.ts src/plugins/index.ts --outdir dist --sourcemap --target=bun --external elysia --external react && bun build src/fingerprint-client/index.ts --outdir dist/fingerprint-client --sourcemap --target=browser && tsc --emitDeclarationOnly --project tsconfig.json",
+		"build": "rm -rf dist && bun build src/index.ts src/htmx/index.ts src/client/index.ts src/client/react.ts src/client/vue.ts src/client/solid.ts src/client/svelte.ts src/plugins/index.ts --outdir dist --sourcemap --target=bun --external elysia --external react --external vue --external solid-js --external svelte && bun build src/fingerprint-client/index.ts --outdir dist/fingerprint-client --sourcemap --target=browser && tsc --emitDeclarationOnly --project tsconfig.json",
 		"config": "absolute config",
 		"test": "bun test",
 		"format": "absolute prettier --write",
@@ -29,10 +29,22 @@
 	"types": "./dist/index.d.ts",
 	"peerDependencies": {
 		"elysia": ">= 1.4.26",
-		"react": ">=18 <20"
+		"react": ">=18 <20",
+		"solid-js": ">=1.8",
+		"svelte": ">=4",
+		"vue": ">=3.4"
 	},
 	"peerDependenciesMeta": {
 		"react": {
+			"optional": true
+		},
+		"solid-js": {
+			"optional": true
+		},
+		"svelte": {
+			"optional": true
+		},
+		"vue": {
 			"optional": true
 		}
 	},
@@ -56,8 +68,11 @@
 		"eslint-plugin-security": "^4.0.0",
 		"globals": "^17.4.0",
 		"prettier": "3.5.3",
+		"solid-js": "^1.9.13",
+		"svelte": "^5.55.9",
 		"typescript": "5.8.3",
-		"typescript-eslint": "^8.57.2"
+		"typescript-eslint": "^8.57.2",
+		"vue": "^3.5.34"
 	},
 	"module": "./dist/index.js",
 	"exports": {
@@ -84,6 +99,18 @@
 		"./react": {
 			"import": "./dist/client/react.js",
 			"types": "./dist/client/react.d.ts"
+		},
+		"./solid": {
+			"import": "./dist/client/solid.js",
+			"types": "./dist/client/solid.d.ts"
+		},
+		"./svelte": {
+			"import": "./dist/client/svelte.js",
+			"types": "./dist/client/svelte.d.ts"
+		},
+		"./vue": {
+			"import": "./dist/client/vue.js",
+			"types": "./dist/client/vue.d.ts"
 		}
 	},
 	"type": "module",
