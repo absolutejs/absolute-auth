@@ -200,3 +200,18 @@ export const useSignOut = (client: AuthClient) => useMutation(client.signOut);
 
 export const useSignUp = (client: AuthClient) =>
 	useMutation(client.signUp.email);
+
+// Drop-in headless components — minimal default markup, fully
+// restyleable via the `classNames` prop. Every element carries a
+// `data-abs-auth=…` attribute the consumer can target from CSS. Useful
+// when migrating off Clerk's `<UserButton />` / `<SignIn />`: pass
+// `classNames` to match your existing visual treatment, drop the
+// vendor dep.
+export { SignIn, type SignInProps } from './components/react/SignIn';
+export { SignUp, type SignUpProps } from './components/react/SignUp';
+export {
+	UserButton,
+	type UserButtonItem,
+	type UserButtonProps,
+	type UserButtonUser
+} from './components/react/UserButton';
