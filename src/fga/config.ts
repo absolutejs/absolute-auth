@@ -7,10 +7,14 @@ const DEFAULT_CACHE_MAX_ENTRIES = 10000;
 // Optional memoization for `check`. Bounds reads at the cost of TTL-bounded staleness; writes
 // through `writeWarrant`/`deleteWarrant` clear it on the writing instance (other instances see
 // staleness up to ttlMs). Supply your own (e.g. Redis-backed) or use createInMemoryCheckCache.
+//
+// `get` may be sync or async so a network-backed cache (Redis) can implement the contract;
+// `set` and `clear` are fire-and-forget for the in-memory path and may return promises that
+// are intentionally not awaited for the Redis path (cache is a hint, not a source of truth).
 export type FgaCache = {
-	clear: () => void;
-	get: (key: string) => boolean | undefined;
-	set: (key: string, value: boolean) => void;
+	clear: () => void | Promise<void>;
+	get: (key: string) => boolean | undefined | Promise<boolean | undefined>;
+	set: (key: string, value: boolean) => void | Promise<void>;
 };
 
 export type FgaConfig = {
@@ -176,7 +180,7 @@ const cacheKey = (query: CheckQuery) =>
 // inheritance rules)? Memoized when `config.cache` is set.
 export const check = async (config: FgaConfig, query: CheckQuery) => {
 	const key = cacheKey(query);
-	const cached = config.cache?.get(key);
+	const cached = await config.cache?.get(key);
 	if (cached !== undefined) return cached;
 
 	const context: EvalContext = {
