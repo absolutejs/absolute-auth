@@ -560,6 +560,7 @@ export * from './sso/types';
 export * from './sso/config';
 export * from './scim/types';
 export * from './scim/config';
+export * from './scim/extensions';
 export { scimRoutes } from './scim/routes';
 export { createInMemoryScimTokenStore } from './scim/inMemoryScimTokenStore';
 export {

@@ -1,6 +1,7 @@
 import { generateSecureToken, hashToken } from '../crypto';
 import type { OrganizationId } from '../tenancy';
 import type { RouteString } from '../types';
+import type { ScimAttributeMap } from './extensions';
 import type {
 	ScimFilter,
 	ScimGroup,
@@ -19,6 +20,11 @@ const BEARER_PREFIX = 'Bearer ';
 // SCIM protocol + per-org bearer-token auth; the consumer owns its user table through these
 // mapping hooks, exactly like the OAuth / credentials / SSO surfaces.
 export type ScimConfig = {
+	// Optional declarative attribute mapping. When set, the package threads inbound JSON through
+	// `customAttributes.fromScim` and surfaces the result as `input.custom` on the create/replace
+	// hooks; reverse, `toScim` is merged into the SCIM resource response. The `schemas` it declares
+	// drive /Schemas + /ResourceTypes.
+	customAttributes?: ScimAttributeMap;
 	// Group hooks are optional — when omitted, the `/Groups` routes respond 501 Not Implemented.
 	getScimGroup?: (context: {
 		id: string;
