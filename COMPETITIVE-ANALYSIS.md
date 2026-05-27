@@ -14,11 +14,15 @@ Legend: ✅ full · ◐ partial / hook-only / BYO · ✖ none · — N/A for a l
 | Social / OAuth login | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Credentials + password policy | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Breached-password check (HIBP) | ✅ | ◐ | ✅ | ✅ | ◐ | ◐ |
+| **Background breach re-scan (HIBP emails)** | ✅ | ✖ | ✅ (CG) | ✖ | ✖ | ✖ |
+| **Inactive-user prune orchestrator** | ✅ | ✖ | ◐ | ✖ | ✖ | ✖ |
 | Passwordless (magic link / OTP) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Passkeys / WebAuthn | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Passkey autofill + upgrade-prompt composables (4 fw)** | ✅ | ◐ | ◐ | ◐ | ✖ | ◐ |
 | MFA (TOTP + backup) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Enterprise SSO (SAML + OIDC) | ✅ | ✅ | ✅ | ✅ | ✅ | ◐ |
 | SCIM / directory sync | ✅ | ✅ | ✅ | ✅ | ◐ | ◐ |
+| **SCIM attribute mapping + /Schemas + /ResourceTypes** | ✅ | ◐ | ✅ | ◐ | ◐ | ✖ |
 | Organizations / multi-tenancy | ✅ | ✅ | ✅ | ✅ | ◐ | ✅ |
 | RBAC | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Fine-grained authz (ReBAC/Zanzibar) | ✅ | ✅ | ✅ (FGA) | ◐ | ✅ (Keto) | ◐ |
@@ -32,6 +36,12 @@ Legend: ✅ full · ◐ partial / hook-only / BYO · ✖ none · — N/A for a l
 | API keys + M2M (client_credentials) | ✅ | ✅ | ✅ | ✅ | ✅ (Hydra) | ✅ |
 | OAuth2/OIDC **provider** (be an IdP) | ✅ | ✅ | ✅ | ✅ | ✅ (Hydra) | ✅ |
 | **DPoP (sender-constrained tokens)** | ✅ | ✖ | ◐ | ✖ | ◐ | ✖ |
+| **mTLS client auth + cert-bound tokens (RFC 8705)** | ✅ | ✖ | ◐ | ✖ | ◐ | ✖ |
+| **CIBA poll mode (OIDC backchannel auth)** | ✅ | ✖ | ◐ | ✖ | ✖ | ✖ |
+| **FAPI 2.0 baseline-ready** (PAR + JAR + DPoP + mTLS + private_key_jwt) | ✅ | ✖ | ◐ | ✖ | ◐ | ✖ |
+| **Verifiable Credentials issuer (OpenID4VCI, SD-JWT VC)** | ✅ | ✖ | ✖ | ✖ | ◐ (KC beta) | ✖ |
+| **Verifiable Presentation verifier (OpenID4VP)** | ✅ | ✖ | ✖ | ✖ | ✖ | ✖ |
+| **Bitstring Status List (VC revocation)** | ✅ | ✖ | ✖ | ✖ | ✖ | ✖ |
 | Self-hosted JWKS / own your keys | ✅ | ✖ | ✖ | ✖ | ✅ | ✅ |
 | Admin impersonation | ✅ | ✅ | ✅ | ◐ | ✖ | ◐ |
 | Adaptive / risk-based auth | ✅ | ✅ | ✅ | ✅ | ✖ | ◐ |
@@ -50,16 +60,33 @@ Legend: ✅ full · ◐ partial / hook-only / BYO · ✖ none · — N/A for a l
 | Custom JWT claims on issued tokens | ✅ | ✅ | ✅ (Actions) | ✅ | ✅ | ◐ |
 | JIT / domain-based org assignment | ✅ | ✅ (HRD) | ✅ | ✅ | ◐ | ◐ |
 | Hosted UI / drop-in components | — by design | ✅ (AuthKit) | ✅ (Universal Login) | ✅ | ✅ (Kratos UI) | ◐ |
-| UI integration primitives (client + hooks/composables) | ✅ | ◐ | ✅ | ✅ | ◐ | ✅ |
+| UI integration primitives (client + hooks/composables, 4 fw) | ✅ | ◐ | ✅ | ✅ | ◐ | ✅ |
+| **OpenTelemetry instrumentation (CNCF standard)** | ✅ | ◐ (proprietary) | ◐ (proprietary) | ◐ (proprietary) | ◐ | ✖ |
+| **Drizzle migrations + first-party CLI** | ✅ | — | — | — | ◐ (manual SQL) | ◐ |
 | Per-MAU / per-check pricing | none | yes | yes | yes | none (OSS) | none (OSS) |
 | Vendor SOC 2 / hosted infra | — | ✅ | ✅ | ✅ | — | — |
 
 ## Where we already lead (most/all competitors lack)
+- **Verifiable Credentials full stack** — issuer (OpenID4VCI + SD-JWT VC) + verifier (OpenID4VP) + revocation (Bitstring Status List). **First OSS TypeScript auth library to ship the complete `issue → present → verify → revoke` loop.** Keycloak is doing it (issuer beta only); Logto announced a beta; nobody else in the OSS TS ecosystem has it.
+- **FAPI 2.0 baseline-ready** — PAR (9126) + JAR (9101) + DPoP (9449) + mTLS (8705) + cert-bound tokens + private_key_jwt + DCR. The full open-banking/healthcare/regulated-industry profile. Among self-hosted competitors, only Hydra comes close — and they ship none of the SCIM, audit-integrity, or VC pieces.
+- **CIBA poll mode (OIDC backchannel auth)** — the "approve on your phone" flow for high-trust scenarios (banking, healthcare, call-center). Auth0 has it; we're the only OSS implementation.
 - **Tamper-evident, hash-chained audit log** with `verifyAuditChain` — no major vendor advertises log integrity.
 - **DPoP (RFC 9449) sender-constrained tokens**, self-hosted — rare even among the big players.
 - **Self-hosted OIDC provider keys** (own your JWKS; no `api.workos.com`).
+- **Background ops** — `runEmailBreachScan` re-scans user emails against HIBP on a schedule (Auth0's Credential Guard but for emails); `pruneInactiveUsers` walks the population and orchestrates deletion. Most vendors leave this to the customer.
+- **OpenTelemetry instrumentation** — CNCF vendor-neutral, opt-in via optional peer dep. Most competitors ship proprietary observability hooks; we ship the standard everyone else exports to.
+- **First-party Drizzle migrations + `bunx absolute-auth migrate` CLI** — 19 idempotent blocks. Ory ships manual SQL; everyone else is SaaS so it's N/A.
 - **Dependency-light, in-house crypto**, no per-MAU/per-check pricing, full data ownership.
 - **MFA encryption-key rotation** as a turnkey op.
+- **Passkey composables across 4 frameworks** (React + Vue + Solid + Svelte) — autofill + upgrade-prompt patterns with `@simplewebauthn/browser` as an optional peer dep. Big-vendor passkey support exists but as hosted UI rather than composable primitives.
+
+## Post-0.40 standing (2026-05-27)
+
+**Feature-complete vs every self-hosted competitor** on the OAuth2/OIDC + enterprise auth surface — every gap row from the original matrix is now ✅ except deliberate non-goals (hosted UI components, hosted infra, vendor SOC 2, cross-customer reputation network).
+
+**First-to-ship in the OSS TypeScript ecosystem** for: Verifiable Credentials (full loop), FAPI 2.0 baseline, CIBA, tamper-evident audit, OpenTelemetry-standard observability.
+
+**Deliberate non-goals** that stay non-goals: hosted infrastructure, drop-in component library, cross-customer reputation data network, hosted plugin marketplace, vendor SOC 2 attestation. These are SaaS-shaped properties; the consumer-owned shape is hooks + a thin client + their own ops.
 
 ## Gaps (ranked by value), with extension path
 
