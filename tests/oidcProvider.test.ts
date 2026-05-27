@@ -246,6 +246,101 @@ describe('OIDC provider', () => {
 		expect(reuse.status).toBe(400);
 	});
 
+	test('authorization response carries RFC 9207 iss parameter (mix-up defense)', async () => {
+		const challenge = await hashToken(VERIFIER);
+		const redirect = await authorize(
+			app,
+			challenge,
+			`user_session_id=${SESSION_ID}`
+		);
+		expect(redirect.status).toBe(302);
+		const location = redirect.headers.get('location') ?? '';
+		const url = new URL(location);
+		expect(url.searchParams.get('iss')).toBe(ISSUER);
+		// Error responses also carry iss — exercise via unsupported_response_type.
+		const badParams = new URLSearchParams({
+			client_id: 'app1',
+			code_challenge: challenge,
+			code_challenge_method: 'S256',
+			redirect_uri: REDIRECT_URI,
+			response_type: 'token',
+			scope: 'openid',
+			state: 'state-err'
+		});
+		const errorResponse = await app.handle(
+			new Request(
+				`http://localhost/oauth2/authorize?${badParams.toString()}`,
+				{ headers: { cookie: `user_session_id=${SESSION_ID}` } }
+			)
+		);
+		expect(errorResponse.status).toBe(302);
+		const errorUrl = new URL(errorResponse.headers.get('location') ?? '');
+		expect(errorUrl.searchParams.get('error')).toBe(
+			'unsupported_response_type'
+		);
+		expect(errorUrl.searchParams.get('iss')).toBe(ISSUER);
+	});
+
+	test('form_post response_mode returns auto-submitting HTML with code + state', async () => {
+		const challenge = await hashToken(VERIFIER);
+		const params = new URLSearchParams({
+			client_id: 'app1',
+			code_challenge: challenge,
+			code_challenge_method: 'S256',
+			nonce: 'nonce-fp',
+			redirect_uri: REDIRECT_URI,
+			response_mode: 'form_post',
+			response_type: 'code',
+			scope: 'openid',
+			state: 'state-fp"with-quote'
+		});
+		const response = await app.handle(
+			new Request(`http://localhost/oauth2/authorize?${params.toString()}`, {
+				headers: { cookie: `user_session_id=${SESSION_ID}` }
+			})
+		);
+
+		expect(response.status).toBe(200);
+		expect(response.headers.get('content-type')).toContain('text/html');
+		const html = await response.text();
+		// Auto-submit shell
+		expect(html).toContain('<form method="post"');
+		expect(html).toContain(`action="${REDIRECT_URI}"`);
+		expect(html).toContain('document.forms[0].submit()');
+		// State is HTML-attribute escaped (`"` → `&quot;`)
+		expect(html).toContain(
+			'name="state" value="state-fp&quot;with-quote"'
+		);
+		// code is present + non-empty
+		const codeMatch = html.match(/name="code" value="([^"]+)"/);
+		expect(codeMatch).not.toBeNull();
+		expect((codeMatch?.[1] ?? '').length).toBeGreaterThan(0);
+	});
+
+	test('unsupported response_mode is rejected with invalid_request error code', async () => {
+		const challenge = await hashToken(VERIFIER);
+		const params = new URLSearchParams({
+			client_id: 'app1',
+			code_challenge: challenge,
+			code_challenge_method: 'S256',
+			nonce: 'nonce-bad-mode',
+			redirect_uri: REDIRECT_URI,
+			response_mode: 'fragment',
+			response_type: 'code',
+			scope: 'openid',
+			state: 'state-bad'
+		});
+		const response = await app.handle(
+			new Request(`http://localhost/oauth2/authorize?${params.toString()}`, {
+				headers: { cookie: `user_session_id=${SESSION_ID}` }
+			})
+		);
+
+		expect(response.status).toBe(400);
+		const body = await response.json();
+		expect(body.error).toBe('unsupported_response_mode');
+	});
+
 	test('discovery + jwks describe the provider', async () => {
 		const discovery = await (
 			await app.handle(
@@ -255,6 +350,10 @@ describe('OIDC provider', () => {
 		expect(discovery.issuer).toBe(ISSUER);
 		expect(discovery.code_challenge_methods_supported).toContain('S256');
 		expect(discovery.dpop_signing_alg_values_supported).toContain('ES256');
+		expect(discovery.response_modes_supported).toEqual(['query', 'form_post']);
+		expect(discovery.authorization_response_iss_parameter_supported).toBe(
+			true
+		);
 
 		const jwks = await (
 			await app.handle(new Request('http://localhost/oauth2/jwks'))

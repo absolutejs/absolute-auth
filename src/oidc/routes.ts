@@ -93,6 +93,66 @@ const tokenResponse = (tokens: TokenSet) => jsonResponse(tokens, HTTP_OK);
 const redirectTo = (url: string) =>
 	new Response(null, { headers: { location: url }, status: HTTP_FOUND });
 
+// HTML-escape the four characters that change meaning inside an HTML attribute
+// value. The form_post response_mode renders untrusted parameter values
+// (state, code, error, error_description) into <input value="..."> attrs.
+const escapeHtmlAttr = (value: string) =>
+	value
+		.replaceAll('&', '&amp;')
+		.replaceAll('<', '&lt;')
+		.replaceAll('>', '&gt;')
+		.replaceAll('"', '&quot;');
+
+// OAuth 2.0 Form Post Response Mode (openid.net/specs/oauth-v2-form-post-response-mode-1_0.html).
+// Renders an auto-submitting HTML form POSTing the response parameters to the
+// client's redirect_uri, instead of the default `?param=…` GET redirect. Used
+// by clients that pass `response_mode=form_post` to /authorize — the typical
+// motivation is keeping large response payloads out of the URL or browser
+// history when the client can't accept fragment/query delivery.
+const formPostResponse = (
+	redirectUri: string,
+	params: Record<string, string>
+) => {
+	const inputs = Object.entries(params)
+		.map(
+			([name, value]) =>
+				`<input type="hidden" name="${escapeHtmlAttr(name)}" value="${escapeHtmlAttr(value)}" />`
+		)
+		.join('');
+	const body =
+		`<!DOCTYPE html><html><head><meta charset="utf-8" />` +
+		`<title>Submitting…</title></head>` +
+		`<body onload="document.forms[0].submit()">` +
+		`<form method="post" action="${escapeHtmlAttr(redirectUri)}">${inputs}` +
+		`<noscript><button type="submit">Continue</button></noscript>` +
+		`</form></body></html>`;
+
+	return new Response(body, {
+		headers: {
+			'cache-control': 'no-store',
+			'content-type': 'text/html;charset=UTF-8'
+		},
+		status: HTTP_OK
+	});
+};
+
+// Dispatch an /authorize response to the client according to its
+// `response_mode`. Only the success / error pair: both routes use this so
+// `?error=…` and `?code=…` go via the same channel (the spec requires it —
+// you can't return a code via form_post and the error via query).
+const respondToClient = (
+	redirectUri: string,
+	responseMode: string,
+	params: Record<string, string>
+) => {
+	if (responseMode === 'form_post') {
+		return formPostResponse(redirectUri, params);
+	}
+	const search = new URLSearchParams(params);
+
+	return redirectTo(`${redirectUri}?${search.toString()}`);
+};
+
 // RFC 6749 §2.3.1 HTTP Basic client credentials.
 const readBasicAuth = (authorization: string | undefined) => {
 	if (
@@ -556,6 +616,8 @@ export const oidcProviderRoutes = <UserType>(
 		request_object_signing_alg_values_supported: ['ES256'],
 		request_parameter_supported: true,
 		require_signed_request_object_supported: true,
+		authorization_response_iss_parameter_supported: true,
+		response_modes_supported: ['query', 'form_post'],
 		response_types_supported: ['code'],
 		revocation_endpoint: `${issuer}${revokeRoute}`,
 		subject_types_supported: ['public'],
@@ -747,6 +809,7 @@ export const oidcProviderRoutes = <UserType>(
 					code_challenge_method: codeChallengeMethod,
 					nonce,
 					redirect_uri: redirectUri,
+					response_mode: requestedResponseMode,
 					response_type: responseType,
 					scope,
 					state
@@ -765,11 +828,30 @@ export const oidcProviderRoutes = <UserType>(
 					);
 				}
 
-				const errorRedirect = (error: string) => {
-					const params = new URLSearchParams({ error });
-					if (state !== undefined) params.set('state', state);
+				// Default response_mode follows the spec: 'query' for
+				// response_type=code (what we support). 'form_post' is opt-in
+				// via the query param.
+				const responseMode =
+					requestedResponseMode === 'form_post' ? 'form_post' : 'query';
+				if (
+					requestedResponseMode !== undefined &&
+					requestedResponseMode !== 'query' &&
+					requestedResponseMode !== 'form_post'
+				) {
+					return jsonResponse(
+						{ error: 'unsupported_response_mode' },
+						HTTP_BAD_REQUEST
+					);
+				}
 
-					return redirectTo(`${redirectUri}?${params.toString()}`);
+				const errorRedirect = (error: string) => {
+					// RFC 9207 — include the issuer identifier so RPs can
+					// detect mix-up attacks where another authorization
+					// server's response is redirected to them.
+					const params: Record<string, string> = { error, iss: issuer };
+					if (state !== undefined) params.state = state;
+
+					return respondToClient(redirectUri, responseMode, params);
 				};
 				// FAPI hardening: clients that opted into PAR-only can't sneak in via a
 				// plain /authorize call — must have come through the PAR path above (which
@@ -930,10 +1012,14 @@ export const oidcProviderRoutes = <UserType>(
 					userId: getUserId(userSession.user)
 				});
 
-				const params = new URLSearchParams({ code });
-				if (state !== undefined) params.set('state', state);
+				const params: Record<string, string> = {
+					code,
+					// RFC 9207 — mix-up attack defense.
+					iss: issuer
+				};
+				if (state !== undefined) params.state = state;
 
-				return redirectTo(`${redirectUri}?${params.toString()}`);
+				return respondToClient(redirectUri, responseMode, params);
 			},
 			{
 				cookie: t.Cookie({
@@ -952,6 +1038,7 @@ export const oidcProviderRoutes = <UserType>(
 					redirect_uri: t.Optional(t.String()),
 					request: t.Optional(t.String()),
 					request_uri: t.Optional(t.String()),
+					response_mode: t.Optional(t.String()),
 					response_type: t.Optional(t.String()),
 					scope: t.Optional(t.String()),
 					state: t.Optional(t.String())
