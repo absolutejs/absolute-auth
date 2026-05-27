@@ -324,7 +324,11 @@ export type OnSignOut<UserType> =
 			userSessionId,
 			session
 	  }: {
-			authProvider: string;
+			/** Set only when the session was minted by the OAuth2 `/authorize` flow —
+			 *  credentials, MFA, passwordless, SSO, WebAuthn, and impersonation-minted
+			 *  sessions sign out without one. Use it to revoke the upstream provider
+			 *  token when present; ignore when undefined. */
+			authProvider: string | undefined;
 			userSessionId: UserSessionId;
 			session: SessionRecord<UserType>;
 	  }) => void | Promise<void>)
