@@ -27,6 +27,7 @@ import {
 	CLIENT_ASSERTION_TYPE,
 	verifyClientAssertion
 } from './clientAuth';
+import { computeCertThumbprint, resolveClientCert } from './mtls';
 import {
 	extractDpopNonceClaim,
 	mintDpopNonce,
@@ -160,17 +161,46 @@ export const oidcProviderRoutes = <UserType>(
 		return matches ? client : undefined;
 	};
 
+	// RFC 8705 self_signed_tls_client_auth — match the inbound TLS cert's thumbprint
+	// against the client's registered list. Returns the matched binding on hit; undefined
+	// when this auth path isn't applicable (no registered thumbprints, no forwarded cert,
+	// or thumbprint mismatch) so the caller falls through to the next auth method.
+	const tryMtlsAuth = async ({
+		candidate,
+		extract,
+		requestHeaders
+	}: {
+		candidate: OAuthClient | undefined;
+		extract: OidcProviderConfig<UserType>['extractTlsClientCert'];
+		requestHeaders: Headers;
+	}) => {
+		const registered = candidate?.tlsCertificateBoundThumbprints ?? [];
+		if (candidate === undefined || registered.length === 0) return undefined;
+		const cert = await resolveClientCert({
+			extract,
+			headers: requestHeaders
+		});
+		if (cert === undefined) return undefined;
+		const presented = await computeCertThumbprint(cert);
+		if (!registered.includes(presented)) return undefined;
+
+		return { client: candidate, clientCertThumbprint: presented };
+	};
+
 	// Token-endpoint client auth router. Tries `private_key_jwt` (RFC 7521/7523) first
-	// when the client presented a `client_assertion`; falls back to the classic
-	// `client_secret_basic` / `client_secret_post` path. Returns the verified client or
-	// `undefined`; the caller turns that into `invalid_client` (401).
+	// when the client presented a `client_assertion`; falls back to mTLS (RFC 8705
+	// self_signed_tls_client_auth) when a forwarded client cert + a client with registered
+	// thumbprints is present; then the classic `client_secret_basic` / `client_secret_post`
+	// path. Returns the verified client + (optional) cert thumbprint to attach to the
+	// access token's `cnf.x5t#S256` binding. The caller turns `undefined` into 401.
 	const authenticateTokenClient = async ({
 		basicClientId,
 		basicClientSecret,
 		bodyClientAssertion,
 		bodyClientAssertionType,
 		bodyClientId,
-		bodyClientSecret
+		bodyClientSecret,
+		requestHeaders
 	}: {
 		basicClientId: string | undefined;
 		basicClientSecret: string | undefined;
@@ -178,23 +208,43 @@ export const oidcProviderRoutes = <UserType>(
 		bodyClientAssertionType: string | undefined;
 		bodyClientId: string | undefined;
 		bodyClientSecret: string | undefined;
+		requestHeaders: Headers;
 	}) => {
 		if (
 			bodyClientAssertion !== undefined &&
 			bodyClientAssertionType === CLIENT_ASSERTION_TYPE
 		) {
-			return verifyClientAssertion({
+			const client = await verifyClientAssertion({
 				assertion: bodyClientAssertion,
 				expectedAudience: tokenUrl,
 				jtiStore: config.clientAssertionJtiStore,
 				resolveClient: clientStore.findClient
 			});
+
+			return client === undefined
+			? undefined
+			: { client, clientCertThumbprint: undefined };
 		}
 		const clientId = bodyClientId ?? basicClientId;
-		const clientSecret = bodyClientSecret ?? basicClientSecret;
 		if (clientId === undefined) return undefined;
 
-		return authenticateClient(clientId, clientSecret);
+		const candidate = await clientStore.findClient(clientId);
+		// RFC 8705 self_signed_tls_client_auth: client registered cert thumbprints AND a
+		// cert is forwarded by the reverse proxy. Match its SHA-256 thumbprint against the
+		// registered list; on hit, return the client + the thumbprint for cnf binding.
+		const mtlsResult = await tryMtlsAuth({
+			candidate,
+			extract: config.extractTlsClientCert,
+			requestHeaders
+		});
+		if (mtlsResult !== undefined) return mtlsResult;
+
+		const clientSecret = bodyClientSecret ?? basicClientSecret;
+		const client = await authenticateClient(clientId, clientSecret);
+
+		return client === undefined
+			? undefined
+			: { client, clientCertThumbprint: undefined };
 	};
 
 	// RFC 9449 §8 — DPoP nonce challenge. Returns either:
@@ -236,7 +286,8 @@ export const oidcProviderRoutes = <UserType>(
 	const grantAuthorizationCode = async (
 		client: OAuthClient,
 		body: Record<string, string | undefined>,
-		dpop: string | undefined
+		dpop: string | undefined,
+		clientCertThumbprint: string | undefined
 	) => {
 		const {
 			code,
@@ -278,6 +329,7 @@ export const oidcProviderRoutes = <UserType>(
 			await issueTokenSet({
 				acr: record.acr,
 				claims: record.claims,
+				clientCertThumbprint,
 				clientId: client.clientId,
 				config,
 				dpopJkt: dpopResult?.jkt,
@@ -291,7 +343,8 @@ export const oidcProviderRoutes = <UserType>(
 	const grantRefreshToken = async (
 		client: OAuthClient,
 		body: Record<string, string | undefined>,
-		dpop: string | undefined
+		dpop: string | undefined,
+		clientCertThumbprint: string | undefined
 	) => {
 		const presented = body.refresh_token;
 		if (presented === undefined) {
@@ -322,6 +375,7 @@ export const oidcProviderRoutes = <UserType>(
 			await issueTokenSet({
 				acr: record.acr,
 				claims: record.claims,
+				clientCertThumbprint,
 				clientId: client.clientId,
 				config,
 				dpopJkt: record.dpopJkt,
@@ -380,7 +434,8 @@ export const oidcProviderRoutes = <UserType>(
 	const grantBackchannel = async (
 		client: OAuthClient,
 		body: Record<string, string | undefined>,
-		dpop: string | undefined
+		dpop: string | undefined,
+		clientCertThumbprint: string | undefined
 	) => {
 		if (config.backchannelAuthStore === undefined) {
 			return oauthError(HTTP_BAD_REQUEST, 'unsupported_grant_type');
@@ -402,6 +457,7 @@ export const oidcProviderRoutes = <UserType>(
 
 		const result = await exchangeBackchannelAuth({
 			authReqId: body.auth_req_id,
+			clientCertThumbprint,
 			clientId: client.clientId,
 			config,
 			dpopJkt: dpopResult?.jkt
@@ -496,12 +552,14 @@ export const oidcProviderRoutes = <UserType>(
 		response_types_supported: ['code'],
 		revocation_endpoint: `${issuer}${revokeRoute}`,
 		subject_types_supported: ['public'],
+		tls_client_certificate_bound_access_tokens: true,
 		token_endpoint: tokenUrl,
 		token_endpoint_auth_methods_supported: [
 			'client_secret_basic',
 			'client_secret_post',
 			'none',
-			'private_key_jwt'
+			'private_key_jwt',
+			'self_signed_tls_client_auth'
 		],
 		token_endpoint_auth_signing_alg_values_supported: ['ES256'],
 		userinfo_endpoint: `${issuer}${userinfoRoute}`
@@ -895,27 +953,39 @@ export const oidcProviderRoutes = <UserType>(
 		)
 		.post(
 			tokenRoute,
-			async ({ body, headers }) => {
+			async ({ body, headers, request }) => {
 				const basic = readBasicAuth(headers.authorization);
-				const client = await authenticateTokenClient({
+				const auth = await authenticateTokenClient({
 					basicClientId: basic.clientId,
 					basicClientSecret: basic.clientSecret,
 					bodyClientAssertion: body.client_assertion,
 					bodyClientAssertionType: body.client_assertion_type,
 					bodyClientId: body.client_id,
-					bodyClientSecret: body.client_secret
+					bodyClientSecret: body.client_secret,
+					requestHeaders: request.headers
 				});
-				if (client === undefined) {
+				if (auth === undefined) {
 					return oauthError(HTTP_UNAUTHORIZED, 'invalid_client');
 				}
+				const { client, clientCertThumbprint } = auth;
 				const nonceChallenge = await dpopNonceChallenge(headers.dpop);
 				if (nonceChallenge !== undefined) return nonceChallenge;
 
 				if (body.grant_type === 'authorization_code') {
-					return grantAuthorizationCode(client, body, headers.dpop);
+					return grantAuthorizationCode(
+						client,
+						body,
+						headers.dpop,
+						clientCertThumbprint
+					);
 				}
 				if (body.grant_type === 'refresh_token') {
-					return grantRefreshToken(client, body, headers.dpop);
+					return grantRefreshToken(
+						client,
+						body,
+						headers.dpop,
+						clientCertThumbprint
+					);
 				}
 				if (
 					body.grant_type ===
@@ -930,7 +1000,12 @@ export const oidcProviderRoutes = <UserType>(
 					return grantDeviceCode(client, body, headers.dpop);
 				}
 				if (body.grant_type === CIBA_GRANT_TYPE) {
-					return grantBackchannel(client, body, headers.dpop);
+					return grantBackchannel(
+						client,
+						body,
+						headers.dpop,
+						clientCertThumbprint
+					);
 				}
 
 				return oauthError(HTTP_BAD_REQUEST, 'unsupported_grant_type');
@@ -962,7 +1037,7 @@ export const oidcProviderRoutes = <UserType>(
 		// replays it. The point: request params never traverse the user-agent.
 		.post(
 			parRoute,
-			async ({ body, headers }) => {
+			async ({ body, headers, request }) => {
 				if (config.pushedAuthorizationRequestStore === undefined) {
 					return oauthError(
 						HTTP_NOT_IMPLEMENTED,
@@ -970,17 +1045,19 @@ export const oidcProviderRoutes = <UserType>(
 					);
 				}
 				const basic = readBasicAuth(headers.authorization);
-				const client = await authenticateTokenClient({
+				const auth = await authenticateTokenClient({
 					basicClientId: basic.clientId,
 					basicClientSecret: basic.clientSecret,
 					bodyClientAssertion: body.client_assertion,
 					bodyClientAssertionType: body.client_assertion_type,
 					bodyClientId: body.client_id,
-					bodyClientSecret: body.client_secret
+					bodyClientSecret: body.client_secret,
+					requestHeaders: request.headers
 				});
-				if (client === undefined) {
+				if (auth === undefined) {
 					return oauthError(HTTP_UNAUTHORIZED, 'invalid_client');
 				}
+				const { client } = auth;
 				// Strip Optional `undefined`s + client auth fields so the persisted
 				// param bag is a clean `Record<string, string>` (jsonb-friendly + matches
 				// what /authorize will look up).

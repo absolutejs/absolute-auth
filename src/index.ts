@@ -611,6 +611,12 @@ export {
 export { parseSignedRequestObject } from './oidc/jar';
 export type { JarParseResult } from './oidc/jar';
 export {
+	computeCertThumbprint,
+	extractRfc9440ClientCert,
+	resolveClientCert,
+	verifyCertificateBoundToken
+} from './oidc/mtls';
+export {
 	createInMemoryAuthorizationCodeStore,
 	createInMemoryBackchannelAuthStore,
 	createInMemoryClientAssertionJtiStore,

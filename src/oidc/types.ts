@@ -26,6 +26,11 @@ export type OAuthClient = {
 	// `invalid_request_object`. Off by default — opt-in per client.
 	requireSignedRequestObject?: boolean;
 	scopes: string[];
+	// RFC 8705 `self_signed_tls_client_auth` — when set, the client authenticates at the
+	// token endpoint by presenting a TLS client cert whose SHA-256 thumbprint (base64url)
+	// matches one entry in this list. Issued access tokens get a `cnf.x5t#S256` binding
+	// (sender-constrained — a stolen bearer is useless without the cert's private key).
+	tlsCertificateBoundThumbprints?: string[];
 };
 
 // One-use `jti` ledger for `client_assertion` JWTs — RFC 7523 §3 requires us to reject
