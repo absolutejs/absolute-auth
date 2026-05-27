@@ -345,6 +345,15 @@ export {
 	createPostgresVaultStore,
 	vaultEntriesTable
 } from './vault/postgresVaultStore';
+export {
+	createFederatedTokenStore,
+	getOrRefreshFederatedTokens
+} from './federation/tokenStore';
+export type {
+	FederatedTokenRefresher,
+	FederatedTokenSet,
+	FederatedTokenStore
+} from './federation/tokenStore';
 export type { AuthSessionStore } from './session/types';
 export { isAuthIntent, isUserSessionId, isValidUser } from './typeGuards';
 export { AuthIdentityConflictError } from './errors';
