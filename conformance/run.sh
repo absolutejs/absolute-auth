@@ -16,7 +16,7 @@ TARGET_ISSUER="${TARGET_ISSUER:-}"
 
 if [ -z "$TARGET_ISSUER" ]; then
 	echo "[run] error: set TARGET_ISSUER, e.g.:" >&2
-	echo "      TARGET_ISSUER=https://oidc-conformance.absolutejs.com ./conformance/run.sh" >&2
+	echo "      TARGET_ISSUER=https://auth.absolutejs.com ./conformance/run.sh" >&2
 	exit 1
 fi
 
