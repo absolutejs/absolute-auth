@@ -707,6 +707,17 @@ export {
 	type TracingConfig
 } from './telemetry/tracing';
 export {
+	blockMigrations,
+	runMigrations,
+	type BlockMigrations,
+	type BlockName,
+	type Migration
+} from './migrations';
+export type {
+	MigrationRunResult,
+	RunMigrationsOptions
+} from './migrations/runner';
+export {
 	createNeonWarrantStore,
 	createPostgresWarrantStore,
 	warrantsTable
