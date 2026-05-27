@@ -14,6 +14,7 @@ import type {
 	WebhookEndpoint,
 	WebhookEvent
 } from './types';
+import { withSpan } from '../telemetry/tracing';
 
 const defaultSleep = (delayMs: number) =>
 	// eslint-disable-next-line promise/avoid-new -- a setTimeout-backed delay needs the bare Promise constructor
@@ -36,17 +37,30 @@ const attemptOnce = async ({
 	timeoutMs: number;
 	timestamp: string;
 }) => {
-	const response = await fetchImpl(endpoint.url, {
-		body: payload,
-		headers: {
-			'content-type': 'application/json',
-			'webhook-id': envelope.id,
-			'webhook-signature': signature,
-			'webhook-timestamp': timestamp
+	const response = await withSpan(
+		'auth.webhook.deliver',
+		{
+			'auth.webhook.event': envelope.type,
+			'auth.webhook.url': endpoint.url,
+			'http.method': 'POST'
 		},
-		method: 'POST',
-		signal: AbortSignal.timeout(timeoutMs)
-	});
+		async (span) => {
+			const result = await fetchImpl(endpoint.url, {
+				body: payload,
+				headers: {
+					'content-type': 'application/json',
+					'webhook-id': envelope.id,
+					'webhook-signature': signature,
+					'webhook-timestamp': timestamp
+				},
+				method: 'POST',
+				signal: AbortSignal.timeout(timeoutMs)
+			});
+			span?.setAttribute('http.status_code', result.status);
+
+			return result;
+		}
+	);
 	if (!response.ok) {
 		throw new Error(`Webhook delivery returned ${response.status}`);
 	}

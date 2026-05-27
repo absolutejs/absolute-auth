@@ -9,6 +9,7 @@ import {
 	DEFAULT_VERIFICATION_TOKEN_TTL_MS
 } from './config';
 import { promoteToSession } from '../session/promote';
+import { withSpan } from '../telemetry/tracing';
 import { evaluatePassword } from './passwordPolicy';
 
 export const credentialsRegister = <UserType>({
@@ -32,7 +33,8 @@ export const credentialsRegister = <UserType>({
 			cookie: { user_session_id },
 			status,
 			store: { session }
-		}) => {
+		}) =>
+		withSpan('auth.credentials.register', undefined, async () => {
 			const normalizedEmail = email.trim().toLowerCase();
 			if (!normalizedEmail.includes('@')) {
 				return status('Bad Request', 'A valid email is required');
@@ -105,7 +107,7 @@ export const credentialsRegister = <UserType>({
 			await onCredentialsLoginSuccess?.({ user: created, userSessionId });
 
 			return status('Created', { status: 'authenticated' });
-		},
+		}),
 		{
 			// `additionalProperties` lets extra signup fields (e.g. given_name)
 			// flow through to onCreateCredentialUser for profile capture.

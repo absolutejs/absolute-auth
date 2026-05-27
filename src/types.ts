@@ -26,6 +26,7 @@ import type { ScimConfig } from './scim/config';
 import type { SessionsConfig } from './session/sessionsConfig';
 import type { AuthSessionStore } from './session/types';
 import type { SSOConfig } from './sso/config';
+import type { TracingConfig } from './telemetry/tracing';
 import type { WebAuthnConfig } from './webauthn/config';
 import type { WebhooksConfig } from './webhooks/config';
 
@@ -360,6 +361,13 @@ export type AuthConfig<UserType> = {
 	 *  dev server. If you run prod without setting `NODE_ENV=production`, set
 	 *  `cookieSecure: true` explicitly. */
 	cookieSecure?: boolean;
+	/** OpenTelemetry instrumentation. Pass your configured `TracerProvider` (from
+	 *  `@opentelemetry/sdk-trace-node` / `-web` / `-bun`) and the package emits spans for
+	 *  every key flow: `auth.credentials.login`, `auth.oauth.callback`, `auth.mfa.challenge`,
+	 *  `auth.webhook.deliver`, etc. Pipe the spans into Datadog / Honeycomb / Grafana Tempo /
+	 *  Sentry / Jaeger / whichever APM you already pay for. `@opentelemetry/api` is an
+	 *  OPTIONAL peer dep — consumers that leave `tracing` unset never load it. */
+	tracing?: TracingConfig;
 	authorizeRoute?: AuthorizeRoute;
 	profileRoute?: RouteString;
 	callbackRoute?: RouteString;

@@ -2,6 +2,7 @@ import { Elysia, t } from 'elysia';
 import { createSessionCompatibilityLayer } from '../session/access';
 import { sessionStore } from '../session/state';
 import type { AuthSessionStore } from '../session/types';
+import { withSpan } from '../telemetry/tracing';
 import { authProviderOption } from '../typebox';
 import { OnSignOut, RouteString } from '../types';
 
@@ -41,7 +42,8 @@ export const signout = <UserType>({
 			status,
 			store: { session },
 			cookie: { user_session_id, auth_provider }
-		}) => {
+		}) =>
+		withSpan('auth.signout', { 'auth.provider': auth_provider?.value }, async () => {
 			if (user_session_id === undefined) {
 				return status('Bad Request', 'Cookies are missing');
 			}
@@ -92,7 +94,7 @@ export const signout = <UserType>({
 			auth_provider?.remove();
 
 			return new Response(null, { status: 204 });
-		},
+		}),
 		{
 			cookie: t.Cookie({
 				auth_provider: t.Optional(authProviderOption),
