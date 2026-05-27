@@ -19,9 +19,11 @@ export type ScimTokenStore = {
 
 // The package's normalized view of a SCIM User — the shape the consumer's mapping hooks read and
 // return. The package serializes it to/from the SCIM 2.0 wire format (schemas, name, emails,
-// meta, …) so the consumer never touches SCIM JSON.
+// meta, …) so the consumer never touches SCIM JSON. `custom` carries the bag produced by
+// `ScimConfig.customAttributes.fromScim` so the consumer's hooks see one merged shape.
 export type ScimUser = {
 	active: boolean;
+	custom?: Record<string, unknown>;
 	displayName?: string;
 	email?: string;
 	externalId?: string;
@@ -34,6 +36,7 @@ export type ScimUser = {
 // A SCIM User to create or replace — `ScimUser` without the server-assigned `id`.
 export type ScimUserInput = {
 	active: boolean;
+	custom?: Record<string, unknown>;
 	displayName?: string;
 	email?: string;
 	externalId?: string;
