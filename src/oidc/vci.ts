@@ -255,6 +255,47 @@ const extractHolderJwk = (proofJwt: string) => {
 	} satisfies JsonWebKey;
 };
 
+// Verify the wallet's proof-of-possession JWT (OID4VCI §7.2.1). The JWT MUST:
+//   - be signed by the key in its `header.jwk`
+//   - have `aud === issuer` (the credential issuer URL)
+//   - have a `nonce` claim — when `credentialNonceStore` is configured, the nonce is
+//     consumed from the store (single-use, time-bounded)
+// Returns the holder's JWK on success, undefined otherwise. The cnf binding the issuer
+// bakes into the SD-JWT VC is taken from this verified JWK — so a wallet can't substitute
+// a different key after the fact.
+const verifyProofJwt = async ({
+	config,
+	issuer,
+	now,
+	proofJwt
+}: {
+	config: VciConfig;
+	issuer: string;
+	now: number;
+	proofJwt: string;
+}) => {
+	const holderJwk = extractHolderJwk(proofJwt);
+	if (holderJwk === undefined) return undefined;
+	const decoded = await verifyJwt(proofJwt, holderJwk);
+	if (decoded === undefined) return undefined;
+	const rawPayload = decoded.payload;
+	if (typeof rawPayload !== 'object' || rawPayload === null) return undefined;
+	const payload: { [key: string]: unknown } = { ...rawPayload };
+	if (payload.aud !== issuer) return undefined;
+	if (typeof payload.iat !== 'number') return undefined;
+	// Optional but enforced when configured — replay protection for the proof.
+	if (config.credentialNonceStore !== undefined) {
+		const { nonce } = payload;
+		if (typeof nonce !== 'string') return undefined;
+		const record = await config.credentialNonceStore.consumeNonce(
+			await hashToken(nonce)
+		);
+		if (record === undefined || record.expiresAt < now) return undefined;
+	}
+
+	return holderJwk;
+};
+
 // Issue an SD-JWT VC against an authorized VCI access token. The wallet's proof.jwt (header.jwk)
 // supplies the cnf binding when present.
 export const buildIssuerMetadata = ({
@@ -343,10 +384,15 @@ export const issueCredential = async ({
 	);
 	if (configuration === undefined) return issueFail('invalid_credential_request');
 
-	const holderJwk =
-		input.proofJwt === undefined ? undefined : extractHolderJwk(input.proofJwt);
-	if (input.proofJwt !== undefined && holderJwk === undefined) {
-		return issueFail('invalid_proof');
+	let holderJwk: JsonWebKey | undefined;
+	if (input.proofJwt !== undefined) {
+		holderJwk = await verifyProofJwt({
+			config,
+			issuer,
+			now,
+			proofJwt: input.proofJwt
+		});
+		if (holderJwk === undefined) return issueFail('invalid_proof');
 	}
 
 	const selective = await config.resolveCredentialClaims({

@@ -607,6 +607,17 @@ export type {
 } from './vc/openid4vp';
 export { createInMemoryPresentationRequestStore } from './vc/inMemoryVpStores';
 export { vpRoutes, DEFAULT_VP_ROUTE } from './vc/vpRoutes';
+export {
+	createNeonCredentialNonceStore,
+	createNeonCredentialOfferStore,
+	createNeonPresentationRequestStore,
+	createPostgresCredentialNonceStore,
+	createPostgresCredentialOfferStore,
+	createPostgresPresentationRequestStore,
+	vcCredentialNoncesTable,
+	vcCredentialOffersTable,
+	vcPresentationRequestsTable
+} from './vc/postgresVcStores';
 export { createInMemoryScimTokenStore } from './scim/inMemoryScimTokenStore';
 export {
 	createNeonScimTokenStore,

@@ -49,6 +49,11 @@ import {
 } from '../session/neonStore';
 import { samlServiceProvidersTable } from '../sso/postgresSamlServiceProviderStore';
 import { ssoConnectionsTable } from '../sso/postgresSsoConnectionStore';
+import {
+	vcCredentialNoncesTable,
+	vcCredentialOffersTable,
+	vcPresentationRequestsTable
+} from '../vc/postgresVcStores';
 import { vaultEntriesTable } from '../vault/postgresVaultStore';
 import { webauthnCredentialsTable } from '../webauthn/postgresWebAuthnCredentialStore';
 import { webhookDeliveriesTable } from '../webhooks/postgresStore';
@@ -73,6 +78,7 @@ export type BlockName =
 	| 'sessions'
 	| 'sso'
 	| 'vault'
+	| 'vc'
 	| 'webauthn'
 	| 'webhooks';
 
@@ -128,6 +134,11 @@ export const blockMigrations: Record<BlockName, BlockMigrations> = {
 	]),
 	sso: initMigration('sso', [ssoConnectionsTable, samlServiceProvidersTable]),
 	vault: initMigration('vault', [vaultEntriesTable]),
+	vc: initMigration('vc', [
+		vcCredentialOffersTable,
+		vcCredentialNoncesTable,
+		vcPresentationRequestsTable
+	]),
 	webauthn: initMigration('webauthn', [webauthnCredentialsTable]),
 	webhooks: initMigration('webhooks', [webhookDeliveriesTable])
 };
