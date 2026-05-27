@@ -29,7 +29,12 @@ Ranked by `(value to consumers) / (work to implement)`. "Value" is biased toward
 ### Tier 1 — high-value, low-to-medium effort
 
 #### G1. OpenTelemetry instrumentation
-Every modern auth library a production team picks now is expected to emit OTel spans by default. We currently emit audit events and webhooks, but a consumer's APM (Datadog / Honeycomb / Grafana Tempo / etc.) can't see a `signIn → mfaChallenge → promoteToSession` causal trace without manual `withActiveSpan` wrapping at every call site.
+
+> **What it is:** [OpenTelemetry](https://opentelemetry.io/) is the [CNCF](https://www.cncf.io/projects/opentelemetry/) vendor-neutral standard for distributed tracing, metrics, and logs (the merger of OpenTracing + OpenCensus, ~2019). It's the contract that lets a consumer pipe the same instrumentation into Datadog / Honeycomb / Grafana Tempo / Sentry / New Relic / Jaeger without us picking a vendor.
+>
+> **Distinct from absolutejs.com's own telemetry.** That one captures *product analytics* (which features got used, by which Bun version, on which OS — the `TelemetryEventRow` stream the docs site collects). OTel is *infrastructure observability* — letting a consumer's SRE see that one user's `signIn → mfaChallenge → promoteToSession` took 4.2s and the slow leg was a specific FGA check. The two are complementary; OTel doesn't displace the product-analytics pipeline.
+
+Every modern auth library a production team picks now is expected to emit OTel spans by default. We currently emit audit events and webhooks, but a consumer's APM can't see a causal trace through the auth flow without manual `withActiveSpan` wrapping at every call site.
 
 - Add `@opentelemetry/api` as an **optional** peer dep
 - Top-level `tracing: { tracerProvider }` config; when set, the package wraps every external action (route handler, store call, hook invocation, webhook delivery) in a span with semantic attributes (`auth.flow`, `auth.user.sub`, `auth.session.id`, `auth.provider`, `http.method`, `http.status_code`)
@@ -101,17 +106,7 @@ Current SCIM is "Users + ServiceProviderConfig". Real enterprise IT pulls in:
 
 **Effort:** ~2-3 days. Mostly schema mappings + the two extra discovery endpoints.
 
-#### G8. Project scaffolder — `bunx @absolutejs/create-auth-app`
-**Real adoption friction.** Today, "use @absolutejs/auth" means reading the README + writing your own `defineAuthConfig` + your own Neon/Drizzle wiring + your own Postgres tables. The first 30 minutes are the hard part.
-
-- A scaffolder that asks `which blocks?` (credentials, oauth, sso, mfa, fga, ...) and writes a working starter `auth.ts` + the matching migrations + an example `signin.html` (or whichever framework)
-- Ship as `@absolutejs/create-auth-app` (sibling package — separate to keep the main package lean)
-- The existing `@absolutejs/absolute` CLI has the scaffolder primitives; this would be auth-specific templates
-
-**Effort:** ~2-3 days. Half template work, half UX.
-**Beats:** Clerk's `npx create-clerk-app` at the friction point.
-
-#### G9. Idle background ops — periodic credential breach re-check + inactive-user cleanup
+#### G8. Idle background ops — periodic credential breach re-check + inactive-user cleanup
 We ship login-time `checkBreachesOnLogin` (HIBP at sign-in). Auth0 has Credential Guard which re-scans existing user passwords. Consumers can already do this manually via `isPasswordCompromised`, but the canonical setup is a daily cron.
 
 - Ship `runBreachAuditScan({ credentialStore, batchSize, onCompromised })` — a streaming scanner the consumer schedules
@@ -122,19 +117,19 @@ We ship login-time `checkBreachesOnLogin` (HIBP at sign-in). Auth0 has Credentia
 
 ### Tier 3 — lower value, sometimes higher effort, mostly defer-or-skip
 
-#### G10. JARM (JWT Secured Authorization Response Mode)
+#### G9. JARM (JWT Secured Authorization Response Mode)
 Niche. Returns the authorize-response params (`code`, `state`) inside a signed JWT instead of as query params, to prevent tampering after PAR/JAR closed the request side. FAPI Advanced wants it; nobody outside FAPI cares. Skip until a FAPI consumer asks.
 
-#### G11. OIDC Federation 1.0
+#### G10. OIDC Federation 1.0
 For inter-org trust frameworks (the eIDAS pattern again). Almost no production usage outside academic + government PoCs. Defer until VC work (G6) makes it relevant.
 
-#### G12. Identity broker / IDP chaining
+#### G11. Identity broker / IDP chaining
 Keycloak's pattern of "use IdP A to authenticate to IdP B." We have the primitives (SSO + custom callback hooks) to compose this manually; a turnkey wrapper isn't widely demanded. Skip unless asked.
 
-#### G13. Hosted admin dashboard
+#### G12. Hosted admin dashboard
 Explicit non-goal (drop-in UI). The headless `portal` block + the React/Vue/Solid/Svelte composables are the seam; consumers build their own.
 
-#### G14. Cross-customer reputation network
+#### G13. Cross-customer reputation network
 Explicit non-goal (SaaS data network). The fingerprint-client + adaptive-risk primitives are the algorithm side; a shared reputation feed is fundamentally a SaaS product.
 
 ---
@@ -143,15 +138,19 @@ Explicit non-goal (SaaS data network). The fingerprint-client + adaptive-risk pr
 
 Pack into roughly version-sized cycles. Tier 1 first, ordered by independence (so each release stands alone):
 
-1. **`0.35.0` — Observability + scaffolding**: G1 (OTel) + G2 (migrations + CLI). Both are pure adoption-friction reductions; together they remove the two biggest "we tried it but ops/onboarding pain" objections.
+1. **`0.35.0` — Observability + onboarding**: G1 (OTel) + G2 (migrations + CLI). Both are pure adoption-friction reductions; together they remove the two biggest "we tried it but ops/onboarding pain" objections.
 2. **`0.36.0` — Financial-grade auth**: G3 (CIBA) + G4 (mTLS). Both unlock the FAPI 2.0 baseline profile; ship together so a banking/healthcare consumer can adopt in one bump.
-3. **`0.37.0` — Passkey ergonomics + background ops**: G5 (passkey autofill/upgrade) + G9 (background scans). Small, ships easily.
-4. **`0.38.0` — SCIM polish + scaffolder**: G7 + G8.
+3. **`0.37.0` — Passkey ergonomics + background ops**: G5 (passkey autofill/upgrade) + G8 (background scans). Small, ships easily.
+4. **`0.38.0` — SCIM polish**: G7.
 5. **`0.40.0` — Verifiable credentials**: G6 alone as a dedicated cycle because it's a new spec family.
 
-Optional: bundle G10/G11 into 0.40 if a consumer asks during VC work.
+Optional: bundle G9/G10 (JARM + Federation) into 0.40 if a consumer asks during VC work.
 
 ---
+
+## Handled elsewhere
+
+- **Project scaffolder** — owned by [`~/abs/create-absolutejs`](https://github.com/absolutejs) (`bunx create-absolutejs`), which already scaffolds an auth-enabled AbsoluteJS project when you pick auth in the prompt. Templates need a refresh to the latest auth version (currently pinned at `@absolutejs/auth@0.22.0` in its package.json), but that work belongs in the scaffolder repo, not here. NOT a `@absolutejs/auth` deliverable.
 
 ## Explicit non-goals (recorded so they don't come back)
 
