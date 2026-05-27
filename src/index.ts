@@ -587,6 +587,26 @@ export {
 	createInMemoryCredentialOfferStore
 } from './oidc/inMemoryVciStores';
 export { vciRoutes } from './oidc/vciRoutes';
+export * from './vc/statusList';
+export { statusListRoutes, DEFAULT_STATUS_ROUTE } from './vc/statusListRoutes';
+export {
+	buildHolderKeyBindingJwt,
+	createPresentationRequest,
+	parsePresentationToken,
+	verifyPresentationResponse
+} from './vc/openid4vp';
+export type {
+	CreatePresentationRequestInput,
+	PresentationRequest,
+	PresentationRequestStore,
+	PresentationResponseInput,
+	PresentationVerifyError,
+	PresentationVerifyResult,
+	VerifiedPresentation,
+	Vp4Config
+} from './vc/openid4vp';
+export { createInMemoryPresentationRequestStore } from './vc/inMemoryVpStores';
+export { vpRoutes, DEFAULT_VP_ROUTE } from './vc/vpRoutes';
 export { createInMemoryScimTokenStore } from './scim/inMemoryScimTokenStore';
 export {
 	createNeonScimTokenStore,
