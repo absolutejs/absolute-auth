@@ -1,5 +1,5 @@
 {
-	"version": "0.30.0-beta.1",
+	"version": "0.30.0-beta.2",
 	"name": "@absolutejs/auth",
 	"description": "An authorization library for absolutejs",
 	"repository": {
@@ -10,7 +10,7 @@
 	"license": "CC BY-NC 4.0",
 	"author": "Alex Kahn",
 	"scripts": {
-		"build": "rm -rf dist && bun build src/index.ts src/htmx/index.ts src/client/index.ts src/client/react.ts --outdir dist --sourcemap --target=bun --external elysia --external react && tsc --emitDeclarationOnly --project tsconfig.json",
+		"build": "rm -rf dist && bun build src/index.ts src/htmx/index.ts src/client/index.ts src/client/react.ts src/plugins/index.ts --outdir dist --sourcemap --target=bun --external elysia --external react && tsc --emitDeclarationOnly --project tsconfig.json",
 		"config": "absolute config",
 		"test": "bun test",
 		"format": "absolute prettier --write",
@@ -72,6 +72,10 @@
 		"./htmx": {
 			"import": "./dist/htmx/index.js",
 			"types": "./dist/htmx/index.d.ts"
+		},
+		"./plugins": {
+			"import": "./dist/plugins/index.js",
+			"types": "./dist/plugins/index.d.ts"
 		},
 		"./react": {
 			"import": "./dist/client/react.js",
