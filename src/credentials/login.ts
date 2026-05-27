@@ -6,6 +6,7 @@ import { isLegacyHash } from './legacyHashers';
 import { createSessionCompatibilityLayer } from '../session/access';
 import { persistWhen, promoteToSession } from '../session/promote';
 import { sessionStore } from '../session/state';
+import { withSpan } from '../telemetry/tracing';
 import { userSessionIdTypebox } from '../typebox';
 import { resolveCookieSecure } from '../utils';
 import {
@@ -38,7 +39,8 @@ export const credentialsLogin = <UserType>({
 			request,
 			status,
 			store: { session, unregisteredSession }
-		}) => {
+		}) =>
+		withSpan('auth.credentials.login', undefined, async (span) => {
 			// Build the loose request-context bag we expose to `isMfaRequired` so
 			// the consumer can adapt the gate per-request (e.g. plug in `scoreRisk`).
 			const headerBag: Record<string, string | undefined> = {};
@@ -100,6 +102,10 @@ export const credentialsLogin = <UserType>({
 			}
 
 			await lockoutGuard?.recordSuccess(normalizedEmail);
+			// Note: consumers can attach an `auth.user.sub` attribute from inside
+			// their `onCredentialsLoginSuccess` hook by wrapping with `withSpan`;
+			// we can't safely access UserType-internal fields from generic code.
+			void span;
 
 			// Migration upgrade path: imported users that came in with a non-native
 			// hash (Auth0 PBKDF2, Cognito SHA-256, custom scrypt, etc.) get their
@@ -164,7 +170,7 @@ export const credentialsLogin = <UserType>({
 			await onCredentialsLoginSuccess?.({ user, userSessionId });
 
 			return status('OK', { passwordCompromised, status: 'authenticated' });
-		},
+		}),
 		{
 			body: t.Object({ email: t.String(), password: t.String() }),
 			cookie: t.Cookie({ user_session_id: userSessionIdTypebox })

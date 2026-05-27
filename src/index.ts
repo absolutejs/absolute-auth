@@ -41,6 +41,7 @@ import { oidcSsoRoutes } from './sso/oidcRoutes';
 import { samlSsoRoutes } from './sso/samlRoutes';
 import { webauthnRoutes } from './webauthn/routes';
 import { createWebhookDispatcher } from './webhooks/dispatcher';
+import { initTracing } from './telemetry/tracing';
 import { AuthConfig, ClientProviders } from './types';
 import { resolveCookieSecure } from './utils';
 
@@ -76,6 +77,7 @@ export const auth = async <UserType>({
 	webauthn,
 	webhooks,
 	htmx,
+	tracing,
 	resolveAuthIntent,
 	onAuthorizeSuccess,
 	onAuthorizeError,
@@ -94,6 +96,7 @@ export const auth = async <UserType>({
 	onRevocationError,
 	onSessionCleanup
 }: AuthConfig<UserType>) => {
+	if (tracing !== undefined) await initTracing(tracing);
 	const clientProviders: ClientProviders = await buildClientProviders(
 		providersConfiguration,
 		createOAuth2Client
@@ -698,6 +701,11 @@ export {
 	createRedisFgaCache,
 	type RedisFgaCacheClient
 } from './fga/redisCheckCache';
+export {
+	initTracing,
+	withSpan,
+	type TracingConfig
+} from './telemetry/tracing';
 export {
 	createNeonWarrantStore,
 	createPostgresWarrantStore,

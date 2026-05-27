@@ -3,6 +3,7 @@ import { verifyTotp } from '../crypto';
 import { createSessionCompatibilityLayer } from '../session/access';
 import { persistWhen } from '../session/promote';
 import { sessionStore } from '../session/state';
+import { withSpan } from '../telemetry/tracing';
 import { userSessionIdTypebox } from '../typebox';
 import { resolveCookieSecure } from '../utils';
 import { consumeBackupCode } from './backupCodes';
@@ -28,7 +29,8 @@ export const mfaChallenge = <UserType>({
 			cookie: { user_session_id },
 			status,
 			store: { session, unregisteredSession }
-		}) => {
+		}) =>
+		withSpan('auth.mfa.challenge', undefined, async () => {
 			const compatibilityLayer = await createSessionCompatibilityLayer({
 				authSessionStore,
 				userSessionId: user_session_id.value
@@ -106,7 +108,7 @@ export const mfaChallenge = <UserType>({
 			await onMfaChallengeSuccess?.({ user, userSessionId });
 
 			return status('OK', { status: 'authenticated' });
-		},
+		}),
 		{
 			body: t.Object({ code: t.String() }),
 			cookie: t.Cookie({ user_session_id: userSessionIdTypebox })

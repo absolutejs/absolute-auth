@@ -5,6 +5,7 @@ import { resolveClientProviderEntry } from '../providers/clients';
 import { createSessionCompatibilityLayer } from '../session/access';
 import { sessionStore } from '../session/state';
 import type { AuthSessionStore } from '../session/types';
+import { withSpan } from '../telemetry/tracing';
 import { isAuthIntent, isNonEmptyString } from '../typeGuards';
 import {
 	authClientOption,
@@ -63,7 +64,8 @@ export const callback = <UserType>({
 				auth_intent
 			},
 			query: { code, state: callback_state }
-		}) => {
+		}) =>
+		withSpan('auth.oauth.callback', { 'auth.provider': auth_provider?.value }, async () => {
 			if (
 				stored_state === undefined ||
 				code_verifier === undefined ||
@@ -230,7 +232,7 @@ export const callback = <UserType>({
 			}
 
 			return redirect(originUrl);
-		},
+		}),
 		{
 			cookie: t.Cookie({
 				auth_client: authClientOption,
