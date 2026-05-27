@@ -15,6 +15,7 @@
         "@eslint/js": "^10.0.1",
         "@opentelemetry/api": "^1.9.1",
         "@opentelemetry/sdk-trace-base": "^2.7.1",
+        "@simplewebauthn/browser": "^13.3.0",
         "@stylistic/eslint-plugin": "^5.10.0",
         "@types/bun": "1.2.9",
         "@types/react": "^19.0.0",
@@ -33,6 +34,8 @@
         "vue": "^3.5.34",
       },
       "peerDependencies": {
+        "@opentelemetry/api": ">=1.7",
+        "@simplewebauthn/browser": ">=13",
         "elysia": ">= 1.4.26",
         "react": ">=18 <20",
         "solid-js": ">=1.8",
@@ -40,6 +43,8 @@
         "vue": ">=3.4",
       },
       "optionalPeers": [
+        "@opentelemetry/api",
+        "@simplewebauthn/browser",
         "react",
         "solid-js",
         "svelte",
@@ -121,6 +126,8 @@
     "@opentelemetry/semantic-conventions": ["@opentelemetry/semantic-conventions@1.41.1", "", {}, "sha512-/UhIkaZgPutTFmQ7RnIJGgDXZmtEJ7Dvi86xNTFWcnRxVRNk/aotsqDJYeEvDP+FSMB2SdW+pQzNMcWP0rwuNA=="],
 
     "@petamoriken/float16": ["@petamoriken/float16@3.9.2", "", {}, "sha512-VgffxawQde93xKxT3qap3OH+meZf7VaSB5Sqd4Rqc+FP5alWbpOyan/7tRbOAvynjpG3GpdtAuGU/NdhQpmrog=="],
+
+    "@simplewebauthn/browser": ["@simplewebauthn/browser@13.3.0", "", {}, "sha512-BE/UWv6FOToAdVk0EokzkqQQDOWtNydYlY6+OrmiZ5SCNmb41VehttboTetUM3T/fr6EAFYVXjz4My2wg230rQ=="],
 
     "@sinclair/typebox": ["@sinclair/typebox@0.34.33", "", {}, "sha512-5HAV9exOMcXRUxo+9iYB5n09XxzCXnfy4VTNW4xnDv+FgjzAGY989C28BIdljKqmF+ZltUwujE3aossvcVtq6g=="],
 

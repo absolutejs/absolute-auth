@@ -6,6 +6,10 @@
 
 import { writable, type Writable } from 'svelte/store';
 import type { AuthClient, AuthClientError } from './createAuthClient';
+import {
+	runConditionalAuthentication,
+	runPasskeyRegistration
+} from './passkeyHelpers';
 
 type Mutator<Args, Data> = (
 	args: Args
@@ -50,6 +54,60 @@ const useMutation = <Args, Data>(
 
 export const useMagicLink = (client: AuthClient) =>
 	useMutation(client.passwordless.requestMagicLink);
+
+// Conditional-UI WebAuthn — see the React doc for the wire-up pattern.
+export const usePasskeyAutofill = (client: AuthClient) => {
+	const data: Writable<{ status: 'authenticated' } | null> = writable(null);
+	const error: Writable<AuthClientError | null> = writable(null);
+	const isPending = writable(false);
+
+	const start = async () => {
+		isPending.set(true);
+		error.set(null);
+		const result = await runConditionalAuthentication(client);
+		data.set(result.data);
+		error.set(result.error);
+		isPending.set(false);
+	};
+
+	const cancel = () => {
+		isPending.set(false);
+	};
+
+	return { cancel, data, error, isPending, start };
+};
+
+// "Upgrade to passkey" prompt — see the React doc.
+export const useUpgradeToPasskey = (client: AuthClient) => {
+	const passkeys: Writable<unknown[] | null> = writable(null);
+	const error: Writable<AuthClientError | null> = writable(null);
+	const isPending = writable(true);
+	const shouldPrompt = writable(false);
+
+	const recompute = (list: unknown[] | null) => {
+		shouldPrompt.set(list !== null && list.length === 0);
+	};
+
+	const refetch = async () => {
+		isPending.set(true);
+		const result = await client.passkeys.list();
+		passkeys.set(result.data);
+		error.set(result.error);
+		isPending.set(false);
+		recompute(result.data);
+	};
+
+	const register = async () => {
+		const result = await runPasskeyRegistration(client);
+		if (result.error === null) await refetch();
+
+		return result;
+	};
+
+	void refetch();
+
+	return { error, isPending, passkeys, refetch, register, shouldPrompt };
+};
 
 export const useMfaChallenge = (client: AuthClient) =>
 	useMutation(client.mfa.challenge);

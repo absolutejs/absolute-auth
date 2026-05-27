@@ -15,11 +15,13 @@ import * as vueHooks from '../src/client/vue';
 const EXPECTED_API = [
 	'useMagicLink',
 	'useMfaChallenge',
+	'usePasskeyAutofill',
 	'usePasswordReset',
 	'useSessions',
 	'useSignIn',
 	'useSignOut',
-	'useSignUp'
+	'useSignUp',
+	'useUpgradeToPasskey'
 ] as const;
 
 const stubFetch = (handler: (url: string) => Response) =>
