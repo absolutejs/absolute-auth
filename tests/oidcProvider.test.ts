@@ -30,6 +30,7 @@ const buildApp = async (
 	extras: {
 		deviceFlow?: boolean;
 		getAccessTokenClaims?: ClaimsHook;
+		strictFapi?: boolean;
 	} = {}
 ) => {
 	const authSessionStore = createInMemoryAuthSessionStore<TestUser>();
@@ -55,7 +56,8 @@ const buildApp = async (
 			getUserId: (user) => user.sub,
 			issuer: ISSUER,
 			refreshTokenStore: createInMemoryOidcRefreshTokenStore(),
-			signingKey
+			signingKey,
+			strictFapi: extras.strictFapi
 		},
 		providersConfiguration: {}
 	});
@@ -339,6 +341,61 @@ describe('OIDC provider', () => {
 		expect(response.status).toBe(400);
 		const body = await response.json();
 		expect(body.error).toBe('unsupported_response_mode');
+	});
+
+	test('strictFapi tightens discovery + rejects shared-secret client auth + requires PAR', async () => {
+		const strictApp = await buildApp({ strictFapi: true });
+
+		// 1. Discovery reflects the FAPI 2.0 baseline.
+		const discovery = await (
+			await strictApp.handle(
+				new Request('http://localhost/.well-known/openid-configuration')
+			)
+		).json();
+		expect(discovery.token_endpoint_auth_methods_supported).toEqual([
+			'private_key_jwt',
+			'self_signed_tls_client_auth'
+		]);
+		expect(discovery.require_pushed_authorization_requests).toBe(true);
+
+		// 2. /authorize without `request_uri` is rejected — PAR is required
+		//    for ALL clients in strictFapi (not just opted-in ones).
+		const challenge = await hashToken(VERIFIER);
+		const params = new URLSearchParams({
+			client_id: 'app1',
+			code_challenge: challenge,
+			code_challenge_method: 'S256',
+			nonce: 'nonce-strict',
+			redirect_uri: REDIRECT_URI,
+			response_type: 'code',
+			scope: 'openid',
+			state: 'state-strict'
+		});
+		const response = await strictApp.handle(
+			new Request(`http://localhost/oauth2/authorize?${params.toString()}`, {
+				headers: { cookie: `user_session_id=${SESSION_ID}` }
+			})
+		);
+		expect(response.status).toBe(302);
+		const errorUrl = new URL(response.headers.get('location') ?? '');
+		expect(errorUrl.searchParams.get('error')).toBe('invalid_request');
+
+		// 3. /token with client_secret_post is rejected (no private_key_jwt /
+		//    mTLS provided → returns invalid_client).
+		const tokenResponse = await strictApp.handle(
+			new Request('http://localhost/oauth2/token', {
+				body: new URLSearchParams({
+					client_id: 'app1',
+					client_secret: 'nope',
+					grant_type: 'authorization_code',
+					code: 'whatever',
+					code_verifier: VERIFIER,
+					redirect_uri: REDIRECT_URI
+				}),
+				method: 'POST'
+			})
+		);
+		expect(tokenResponse.status).toBe(401);
 	});
 
 	test('discovery + jwks describe the provider', async () => {
