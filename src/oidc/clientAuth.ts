@@ -80,6 +80,16 @@ const verifyAgainstAny = async (
 	return undefined;
 };
 
+const verifyJwtSignedByClientImpl = async (
+	client: OAuthClient,
+	jwt: string
+) => {
+	const candidates = await resolveClientJwks(client);
+	if (candidates === undefined || candidates.length === 0) return undefined;
+
+	return verifyAgainstAny(jwt, candidates);
+};
+
 // Verify a `client_assertion` JWT presented at the token endpoint. Returns the resolved
 // `OAuthClient` on success, or `undefined` if any check fails. The caller logs +
 // returns `invalid_client` from the route.
@@ -158,3 +168,17 @@ export const verifyClientAssertion = async ({
 
 	return client;
 };
+
+// Verify a JWT was signed by one of the client's registered keys (inline JWKS or
+// fetched JWKS URI). Returns the decoded payload on success, or `undefined`. Does
+// NOT check claim semantics — that's the caller's job (different JWT shapes from the
+// same client have different aud / sub / iss expectations: client_assertion vs JAR).
+// Exposed so the JAR (RFC 9101) path can reuse the same JWKS infrastructure as
+// `private_key_jwt` without duplicating the key-resolution + fetch cache.
+export const verifyJwtSignedByClient = ({
+	jwt,
+	client
+}: {
+	client: OAuthClient;
+	jwt: string;
+}) => verifyJwtSignedByClientImpl(client, jwt);

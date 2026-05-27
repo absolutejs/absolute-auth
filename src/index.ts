@@ -586,8 +586,11 @@ export {
 export type { DpopResult } from './oidc/dpop';
 export {
 	CLIENT_ASSERTION_TYPE,
-	verifyClientAssertion
+	verifyClientAssertion,
+	verifyJwtSignedByClient
 } from './oidc/clientAuth';
+export { parseSignedRequestObject } from './oidc/jar';
+export type { JarParseResult } from './oidc/jar';
 export {
 	createInMemoryAuthorizationCodeStore,
 	createInMemoryClientAssertionJtiStore,

@@ -1,5 +1,12 @@
 import { and, desc, eq, gt, lt } from 'drizzle-orm';
-import { bigint, jsonb, pgTable, text, varchar } from 'drizzle-orm/pg-core';
+import {
+	bigint,
+	boolean,
+	jsonb,
+	pgTable,
+	text,
+	varchar
+} from 'drizzle-orm/pg-core';
 import { type AnyPgDatabase, createNeonDatabase } from '../stores/postgres';
 import type {
 	AuthorizationCode,
@@ -58,6 +65,10 @@ export const oauthClientsTable = pgTable('auth_oauth_clients', {
 	name: varchar('name', { length: ID_LENGTH }).notNull(),
 	post_logout_redirect_uris: text('post_logout_redirect_uris').array(),
 	redirect_uris: text('redirect_uris').array().notNull(),
+	require_pushed_authorization_requests: boolean(
+		'require_pushed_authorization_requests'
+	),
+	require_signed_request_object: boolean('require_signed_request_object'),
 	scopes: text('scopes').array().notNull()
 });
 
@@ -157,6 +168,9 @@ const toClient = (row: ClientRow): OAuthClient => ({
 	name: row.name,
 	postLogoutRedirectUris: row.post_logout_redirect_uris ?? undefined,
 	redirectUris: row.redirect_uris,
+	requirePushedAuthorizationRequests:
+		row.require_pushed_authorization_requests ?? undefined,
+	requireSignedRequestObject: row.require_signed_request_object ?? undefined,
 	scopes: row.scopes
 });
 
@@ -454,6 +468,9 @@ const toClientValues = (
 	name: client.name,
 	post_logout_redirect_uris: client.postLogoutRedirectUris ?? null,
 	redirect_uris: client.redirectUris,
+	require_pushed_authorization_requests:
+		client.requirePushedAuthorizationRequests ?? null,
+	require_signed_request_object: client.requireSignedRequestObject ?? null,
 	scopes: client.scopes
 });
 

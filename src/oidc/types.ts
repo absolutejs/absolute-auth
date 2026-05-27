@@ -21,6 +21,10 @@ export type OAuthClient = {
 	// FAPI-style hardening: when true, `/authorize` rejects requests that didn't go through
 	// `/oauth2/par` first. Off by default — opt-in per client.
 	requirePushedAuthorizationRequests?: boolean;
+	// FAPI-style hardening: when true, `/authorize` requires a signed `request=<jwt>`
+	// parameter (RFC 9101 JAR). Plain query-string requests are rejected with
+	// `invalid_request_object`. Off by default — opt-in per client.
+	requireSignedRequestObject?: boolean;
 	scopes: string[];
 };
 

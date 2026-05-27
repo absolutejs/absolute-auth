@@ -36,6 +36,7 @@ import {
 	resolvePostLogoutRedirect,
 	verifyIdTokenHint
 } from './logout';
+import { parseSignedRequestObject } from './jar';
 import {
 	consumePushedRequest,
 	pushAuthorizationRequest,
@@ -437,6 +438,10 @@ export const oidcProviderRoutes = <UserType>(
 		introspection_endpoint: `${issuer}${introspectRoute}`,
 		issuer,
 		jwks_uri: `${issuer}${jwksRoute}`,
+		// RFC 9101 — JAR (signed request objects).
+		request_object_signing_alg_values_supported: ['ES256'],
+		request_parameter_supported: true,
+		require_signed_request_object_supported: true,
 		response_types_supported: ['code'],
 		revocation_endpoint: `${issuer}${revokeRoute}`,
 		subject_types_supported: ['public'],
@@ -579,6 +584,41 @@ export const oidcProviderRoutes = <UserType>(
 					);
 				}
 
+				const initialClientId = effectiveQuery.client_id;
+				const initialClient =
+					initialClientId === undefined
+						? undefined
+						: await clientStore.findClient(initialClientId);
+
+				// RFC 9101 — if the caller passed `request=<jwt>`, the signed JWT's
+				// payload REPLACES every other authorize param. We can only verify the
+				// signature once we know which client claims to be sending it (from the
+				// query's `client_id`), so this happens after the initial client lookup
+				// + before the param destructure that drives the rest of the flow.
+				if (
+					effectiveQuery.request !== undefined &&
+					initialClient !== undefined
+				) {
+					const parsed = await parseSignedRequestObject({
+						client: initialClient,
+						expectedIssuer: issuer,
+						jwt: effectiveQuery.request
+					});
+					if (!parsed.ok) {
+						return jsonResponse(
+							{ error: parsed.error },
+							HTTP_BAD_REQUEST
+						);
+					}
+					// Carry the original client_id through so the rest of the flow
+					// sees a consistent identity (the request JWT's iss is also the
+					// client_id per parseSignedRequestObject's iss check).
+					effectiveQuery = {
+						...parsed.params,
+						client_id: initialClientId
+					};
+				}
+
 				const {
 					client_id: clientId,
 					code_challenge: codeChallenge,
@@ -590,12 +630,10 @@ export const oidcProviderRoutes = <UserType>(
 					state
 				} = effectiveQuery;
 
-				const client =
-					clientId === undefined
-						? undefined
-						: await clientStore.findClient(clientId);
+				const client = initialClient;
 				if (
 					client === undefined ||
+					clientId !== client.clientId ||
 					redirectUri === undefined ||
 					!client.redirectUris.includes(redirectUri)
 				) {
@@ -620,6 +658,16 @@ export const oidcProviderRoutes = <UserType>(
 					query.request_uri === undefined
 				) {
 					return errorRedirect('invalid_request');
+				}
+				// FAPI hardening: clients that opted into signed-only requests must use
+				// JAR — plain query-only `/authorize` (no `request=` and no `request_uri=`)
+				// gets rejected with the spec-named error.
+				if (
+					client.requireSignedRequestObject === true &&
+					query.request === undefined &&
+					query.request_uri === undefined
+				) {
+					return errorRedirect('invalid_request_object');
 				}
 				if (responseType !== 'code') {
 					return errorRedirect('unsupported_response_type');
@@ -780,6 +828,7 @@ export const oidcProviderRoutes = <UserType>(
 					nonce: t.Optional(t.String()),
 					prompt: t.Optional(t.String()),
 					redirect_uri: t.Optional(t.String()),
+					request: t.Optional(t.String()),
 					request_uri: t.Optional(t.String()),
 					response_type: t.Optional(t.String()),
 					scope: t.Optional(t.String()),
