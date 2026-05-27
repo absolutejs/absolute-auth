@@ -7,6 +7,7 @@ import { generateSecureToken, hashToken } from '../crypto';
 import type { RouteString } from '../types';
 import { signJwt, verifyJwt, type SigningKey } from './keys';
 import type { OnClientRegistration } from './registration';
+import type { VciConfig } from './vci';
 import type {
 	AuthorizationCodeStore,
 	BackchannelAuthStore,
@@ -168,6 +169,11 @@ export type OidcProviderConfig<UserType> = {
 	refreshTokenStore: OidcRefreshTokenStore;
 	refreshTokenTtlMs?: number;
 	signingKey: SigningKey;
+	// Optional — enables OpenID4VCI issuer side. When set, the pre-authorized_code grant is
+	// honored at /oauth2/token (skips client auth per OID4VCI §3.5; the pre-auth code IS the
+	// auth material). The companion `vciRoutes()` plugin mounts the credential + discovery
+	// endpoints. See VC-PLAN.md for the broader roadmap.
+	vciConfig?: VciConfig;
 };
 
 const nowSeconds = (milliseconds: number) =>

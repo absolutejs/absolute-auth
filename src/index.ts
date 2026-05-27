@@ -562,6 +562,31 @@ export * from './scim/types';
 export * from './scim/config';
 export * from './scim/extensions';
 export { scimRoutes } from './scim/routes';
+export * from './vc/sdJwt';
+export {
+	buildIssuerMetadata,
+	createCredentialOffer,
+	DEFAULT_VCI_ROUTE,
+	exchangePreAuthorizedCode,
+	issueCredential,
+	PRE_AUTHORIZED_CODE_GRANT
+} from './oidc/vci';
+export type {
+	CredentialConfiguration,
+	CredentialIssueInput,
+	CredentialIssueResult,
+	CredentialNonceRecord,
+	CredentialNonceStore,
+	CredentialOffer,
+	CredentialOfferStore,
+	PreAuthExchangeResult,
+	VciConfig
+} from './oidc/vci';
+export {
+	createInMemoryCredentialNonceStore,
+	createInMemoryCredentialOfferStore
+} from './oidc/inMemoryVciStores';
+export { vciRoutes } from './oidc/vciRoutes';
 export { createInMemoryScimTokenStore } from './scim/inMemoryScimTokenStore';
 export {
 	createNeonScimTokenStore,

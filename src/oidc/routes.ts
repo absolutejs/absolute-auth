@@ -27,6 +27,10 @@ import {
 	CLIENT_ASSERTION_TYPE,
 	verifyClientAssertion
 } from './clientAuth';
+import {
+	exchangePreAuthorizedCode,
+	PRE_AUTHORIZED_CODE_GRANT
+} from './vci';
 import { computeCertThumbprint, resolveClientCert } from './mtls';
 import {
 	extractDpopNonceClaim,
@@ -532,6 +536,9 @@ export const oidcProviderRoutes = <UserType>(
 	if (config.backchannelAuthStore) {
 		grantTypes.push(CIBA_GRANT_TYPE);
 	}
+	if (config.vciConfig !== undefined) {
+		grantTypes.push(PRE_AUTHORIZED_CODE_GRANT);
+	}
 
 	const discovery: Record<string, boolean | string | string[]> = {
 		authorization_endpoint: `${issuer}${authorizeRoute}`,
@@ -954,6 +961,36 @@ export const oidcProviderRoutes = <UserType>(
 		.post(
 			tokenRoute,
 			async ({ body, headers, request }) => {
+				// OID4VCI §3.5 — the pre-authorized_code grant is the wallet's auth material;
+				// no client_id / client_secret. Route it before authenticateTokenClient so a
+				// public wallet client doesn't get a `invalid_client` on a clean token call.
+				if (
+					body.grant_type === PRE_AUTHORIZED_CODE_GRANT &&
+					config.vciConfig !== undefined
+				) {
+					const preAuthorizedCode = body['pre-authorized_code'];
+					if (typeof preAuthorizedCode !== 'string') {
+						return oauthError(HTTP_BAD_REQUEST, 'invalid_request');
+					}
+					const result = await exchangePreAuthorizedCode({
+						config: config.vciConfig,
+						issuer: config.issuer,
+						preAuthorizedCode,
+						signingKey: config.vciConfig.signingKey ?? config.signingKey
+					});
+					if (!result.ok) return oauthError(HTTP_BAD_REQUEST, result.error);
+
+					return jsonResponse(
+						{
+							access_token: result.access_token,
+							c_nonce: result.c_nonce,
+							c_nonce_expires_in: result.c_nonce_expires_in,
+							expires_in: result.expires_in,
+							token_type: result.token_type
+						},
+						HTTP_OK
+					);
+				}
 				const basic = readBasicAuth(headers.authorization);
 				const auth = await authenticateTokenClient({
 					basicClientId: basic.clientId,
@@ -1022,6 +1059,7 @@ export const oidcProviderRoutes = <UserType>(
 					code_verifier: t.Optional(t.String()),
 					device_code: t.Optional(t.String()),
 					grant_type: t.Optional(t.String()),
+					'pre-authorized_code': t.Optional(t.String()),
 					redirect_uri: t.Optional(t.String()),
 					refresh_token: t.Optional(t.String()),
 					resource: t.Optional(t.String()),
