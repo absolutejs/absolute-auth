@@ -7,6 +7,7 @@ import type { AuthSessionStore } from '../session/types';
 import { isNonEmptyString } from '../typeGuards';
 import { userSessionIdTypebox } from '../typebox';
 import type { RouteString } from '../types';
+import { resolveCookieSecure } from '../utils';
 import {
 	DEFAULT_SSO_ROUTE,
 	DEFAULT_SSO_SESSION_TTL_MS,
@@ -16,21 +17,24 @@ import {
 
 type OidcRoutesProps<UserType> = SSOConfig<UserType> & {
 	authSessionStore?: AuthSessionStore<UserType>;
+	cookieSecure?: boolean;
 };
 
-const ssoCookieOptions: {
+type SsoCookieOptions = {
 	httpOnly: boolean;
 	maxAge: number;
 	path: string;
 	sameSite: 'lax';
 	secure: boolean;
-} = {
+};
+
+const makeSsoCookieOptions = (secure: boolean): SsoCookieOptions => ({
 	httpOnly: true,
 	maxAge: COOKIE_DURATION,
 	path: '/',
 	sameSite: 'lax',
-	secure: true
-};
+	secure
+});
 
 const ssoCookieSchema = t.Cookie({
 	sso_nonce: t.Optional(t.String()),
@@ -57,6 +61,7 @@ const parseReferer = (referer: string | undefined) => {
 
 export const oidcSsoRoutes = <UserType>({
 	authSessionStore,
+	cookieSecure,
 	getSsoUser,
 	onSsoCallbackError,
 	onSsoCallbackSuccess,
@@ -64,6 +69,9 @@ export const oidcSsoRoutes = <UserType>({
 	ssoConnectionStore,
 	ssoRoute = DEFAULT_SSO_ROUTE
 }: OidcRoutesProps<UserType>) => {
+	const ssoCookieOptions = makeSsoCookieOptions(
+		resolveCookieSecure(cookieSecure)
+	);
 	const authorizeRoute: RouteString = `${ssoRoute}/oidc/:organizationId/authorize`;
 	const callbackRoute: RouteString = `${ssoRoute}/oidc/:organizationId/callback`;
 
@@ -219,6 +227,7 @@ export const oidcSsoRoutes = <UserType>({
 					const userSessionId = await promoteToSession({
 						authSessionStore,
 						cookie: user_session_id,
+						cookieSecure,
 						inMemorySession: session,
 						sessionDurationMs,
 						user

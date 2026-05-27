@@ -1,6 +1,7 @@
 import type { Cookie } from 'elysia';
 import { isUserSessionId } from '../typeGuards';
 import type { SessionRecord, UserSessionId } from '../types';
+import { resolveCookieSecure } from '../utils';
 import { loadSessionFromSource } from './access';
 import type { AuthSessionStore } from './types';
 
@@ -12,11 +13,15 @@ import type { AuthSessionStore } from './types';
 
 const SEPARATOR = ' ';
 
-const writeRing = (ring: Cookie<string | undefined>, ids: UserSessionId[]) =>
+const writeRing = (
+	ring: Cookie<string | undefined>,
+	ids: UserSessionId[],
+	cookieSecure?: boolean
+) =>
 	ring.set({
 		httpOnly: true,
 		sameSite: 'lax',
-		secure: true,
+		secure: resolveCookieSecure(cookieSecure),
 		value: ids.join(SEPARATOR)
 	});
 
@@ -27,8 +32,14 @@ const readRing = (ring: Cookie<string | undefined>) =>
 
 export const addToSessionRing = (
 	ring: Cookie<string | undefined>,
-	sessionId: UserSessionId
-) => writeRing(ring, [...new Set([...readRing(ring), sessionId])]);
+	sessionId: UserSessionId,
+	cookieSecure?: boolean
+) =>
+	writeRing(
+		ring,
+		[...new Set([...readRing(ring), sessionId])],
+		cookieSecure
+	);
 
 // Resolve the ring to its still-valid sessions (for an account switcher). Drops expired ones.
 export const listRingSessions = async <UserType>({
@@ -69,18 +80,20 @@ export const readSessionRing = (ring: Cookie<string | undefined>) =>
 export const removeFromSessionRing = async <UserType>({
 	activeCookie,
 	authSessionStore,
+	cookieSecure,
 	inMemorySession,
 	ring,
 	sessionId
 }: {
 	activeCookie?: Cookie<UserSessionId | undefined>;
 	authSessionStore?: AuthSessionStore<UserType>;
+	cookieSecure?: boolean;
 	inMemorySession?: SessionRecord<UserType>;
 	ring: Cookie<string | undefined>;
 	sessionId: UserSessionId;
 }) => {
 	const remaining = readRing(ring).filter((id) => id !== sessionId);
-	writeRing(ring, remaining);
+	writeRing(ring, remaining, cookieSecure);
 	if (authSessionStore) await authSessionStore.removeSession(sessionId);
 	else if (inMemorySession) delete inMemorySession[sessionId];
 
@@ -91,7 +104,7 @@ export const removeFromSessionRing = async <UserType>({
 		activeCookie.set({
 			httpOnly: true,
 			sameSite: 'lax',
-			secure: true,
+			secure: resolveCookieSecure(cookieSecure),
 			value: fallback
 		});
 };
@@ -99,10 +112,12 @@ export const removeFromSessionRing = async <UserType>({
 // Make a ring member the active session. Returns false if it isn't in the ring.
 export const switchActiveSession = ({
 	activeCookie,
+	cookieSecure,
 	ring,
 	sessionId
 }: {
 	activeCookie: Cookie<UserSessionId | undefined>;
+	cookieSecure?: boolean;
 	ring: Cookie<string | undefined>;
 	sessionId: UserSessionId;
 }) => {
@@ -110,7 +125,7 @@ export const switchActiveSession = ({
 	activeCookie.set({
 		httpOnly: true,
 		sameSite: 'lax',
-		secure: true,
+		secure: resolveCookieSecure(cookieSecure),
 		value: sessionId
 	});
 

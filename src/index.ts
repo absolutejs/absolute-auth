@@ -42,10 +42,12 @@ import { samlSsoRoutes } from './sso/samlRoutes';
 import { webauthnRoutes } from './webauthn/routes';
 import { createWebhookDispatcher } from './webhooks/dispatcher';
 import { AuthConfig, ClientProviders } from './types';
+import { resolveCookieSecure } from './utils';
 
 export const auth = async <UserType>({
 	providersConfiguration,
 	authorizeRoute,
+	cookieSecure,
 	callbackRoute,
 	profileRoute,
 	signoutRoute,
@@ -96,6 +98,7 @@ export const auth = async <UserType>({
 		providersConfiguration,
 		createOAuth2Client
 	);
+	const resolvedCookieSecure = resolveCookieSecure(cookieSecure);
 
 	// `webhooks` forwards every emitted event; composing it into the audit emitter means
 	// configuring webhooks alone (without `audit`) is enough to turn on event emission.
@@ -183,6 +186,7 @@ export const auth = async <UserType>({
 			authorize({
 				authorizeRoute,
 				clientProviders,
+				cookieSecure: resolvedCookieSecure,
 				onAuthorizeError,
 				onAuthorizeSuccess
 			})
@@ -213,13 +217,18 @@ export const auth = async <UserType>({
 				? credentialRoutes<UserType>({
 						...auditedCredentials,
 						authSessionStore,
+						cookieSecure: resolvedCookieSecure,
 						lockoutGuard
 					})
 				: new Elysia()
 		)
 		.use(
 			auditedMfa
-				? mfaRoutes<UserType>({ ...auditedMfa, authSessionStore })
+				? mfaRoutes<UserType>({
+						...auditedMfa,
+						authSessionStore,
+						cookieSecure: resolvedCookieSecure
+					})
 				: new Elysia()
 		)
 		.use(
@@ -227,6 +236,7 @@ export const auth = async <UserType>({
 				? passwordlessRoutes<UserType>({
 						...passwordless,
 						authSessionStore,
+						cookieSecure: resolvedCookieSecure,
 						emit: auditEmit
 					})
 				: new Elysia()
@@ -238,7 +248,11 @@ export const auth = async <UserType>({
 		)
 		.use(
 			sso
-				? oidcSsoRoutes<UserType>({ ...sso, authSessionStore })
+				? oidcSsoRoutes<UserType>({
+						...sso,
+						authSessionStore,
+						cookieSecure: resolvedCookieSecure
+					})
 				: new Elysia()
 		)
 		.use(
@@ -246,6 +260,7 @@ export const auth = async <UserType>({
 				? samlSsoRoutes<UserType>({
 						...sso,
 						authSessionStore,
+						cookieSecure: resolvedCookieSecure,
 						samlAdapter: sso.samlAdapter
 					})
 				: new Elysia()
@@ -293,6 +308,7 @@ export const auth = async <UserType>({
 				? webauthnRoutes<UserType>({
 						...webauthn,
 						authSessionStore,
+						cookieSecure: resolvedCookieSecure,
 						emit: auditEmit
 					})
 				: new Elysia()

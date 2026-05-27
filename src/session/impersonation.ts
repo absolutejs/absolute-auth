@@ -7,6 +7,7 @@ import type {
 	SessionRecord,
 	UserSessionId
 } from '../types';
+import { resolveCookieSecure } from '../utils';
 import { loadSessionFromSource } from './access';
 import { promoteToSession } from './promote';
 import type { AuthSessionStore } from './types';
@@ -21,11 +22,13 @@ type Emit = (event: AuditEvent) => Promise<void> | void;
 export const endImpersonation = async <UserType>({
 	authSessionStore,
 	cookie,
+	cookieSecure,
 	emit,
 	inMemorySession
 }: {
 	authSessionStore?: AuthSessionStore<UserType>;
 	cookie: Cookie<UserSessionId | undefined>;
+	cookieSecure?: boolean;
 	emit?: Emit;
 	inMemorySession: SessionRecord<UserType>;
 }) => {
@@ -65,7 +68,7 @@ export const endImpersonation = async <UserType>({
 		cookie.set({
 			httpOnly: true,
 			sameSite: 'lax',
-			secure: true,
+			secure: resolveCookieSecure(cookieSecure),
 			value: returnTo
 		});
 
@@ -91,6 +94,7 @@ export const isImpersonating = <UserType>(
 export const startImpersonation = async <UserType>({
 	authSessionStore,
 	cookie,
+	cookieSecure,
 	emit,
 	getUserId,
 	impersonator,
@@ -100,6 +104,7 @@ export const startImpersonation = async <UserType>({
 }: {
 	authSessionStore?: AuthSessionStore<UserType>;
 	cookie: Cookie<UserSessionId | undefined>;
+	cookieSecure?: boolean;
 	emit?: Emit;
 	getUserId?: (user: UserType) => string;
 	impersonator: { actorEmail?: string; actorId: string; reason: string };
@@ -119,6 +124,7 @@ export const startImpersonation = async <UserType>({
 	const sessionId = await promoteToSession({
 		authSessionStore,
 		cookie,
+		cookieSecure,
 		impersonator: stamp,
 		inMemorySession,
 		sessionDurationMs,

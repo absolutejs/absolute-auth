@@ -5,6 +5,7 @@ import { promoteToSession } from '../session/promote';
 import { sessionStore } from '../session/state';
 import { isNonEmptyString } from '../typeGuards';
 import { userSessionIdTypebox } from '../typebox';
+import { resolveCookieSecure } from '../utils';
 import {
 	DEFAULT_WEBAUTHN_CHALLENGE_TTL_MS,
 	DEFAULT_WEBAUTHN_ROUTE,
@@ -19,6 +20,7 @@ import {
 export const webauthnRoutes = <UserType>({
 	authSessionStore,
 	challengeDurationMs = DEFAULT_WEBAUTHN_CHALLENGE_TTL_MS,
+	cookieSecure,
 	credentialStore,
 	emit,
 	getUserDisplayName,
@@ -34,6 +36,7 @@ export const webauthnRoutes = <UserType>({
 	webauthnAdapter,
 	webauthnRoute = DEFAULT_WEBAUTHN_ROUTE
 }: WebAuthnRouteProps<UserType>) => {
+	const secure = resolveCookieSecure(cookieSecure);
 	const challengeCookie = t.Cookie({
 		user_session_id: t.Optional(userSessionIdTypebox),
 		webauthn_challenge: t.Optional(t.String())
@@ -46,7 +49,7 @@ export const webauthnRoutes = <UserType>({
 			httpOnly: true,
 			maxAge: Math.floor(challengeDurationMs / MILLISECONDS_IN_A_SECOND),
 			sameSite: 'lax',
-			secure: true,
+			secure,
 			value: challenge
 		});
 
@@ -227,6 +230,7 @@ export const webauthnRoutes = <UserType>({
 				const userSessionId = await promoteToSession({
 					authSessionStore,
 					cookie: user_session_id,
+					cookieSecure,
 					inMemorySession: session,
 					sessionDurationMs,
 					user

@@ -13,6 +13,7 @@ import { evaluatePassword } from './passwordPolicy';
 
 export const credentialsRegister = <UserType>({
 	authSessionStore,
+	cookieSecure,
 	credentialStore,
 	onCreateCredentialUser,
 	onCredentialsLoginSuccess,
@@ -96,6 +97,7 @@ export const credentialsRegister = <UserType>({
 			const userSessionId = await promoteToSession({
 				authSessionStore,
 				cookie: user_session_id,
+				cookieSecure,
 				inMemorySession: session,
 				sessionDurationMs,
 				user: created
