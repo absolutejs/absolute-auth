@@ -1,6 +1,8 @@
 import type {
 	AuthorizationCode,
 	AuthorizationCodeStore,
+	BackchannelAuthRequest,
+	BackchannelAuthStore,
 	ClientAssertionJtiStore,
 	ClientRegistrationToken,
 	ClientRegistrationTokenStore,
@@ -35,6 +37,29 @@ export const createInMemoryAuthorizationCodeStore =
 			}
 		};
 	};
+export const createInMemoryBackchannelAuthStore = (): BackchannelAuthStore => {
+	const byAuthReqId = new Map<string, BackchannelAuthRequest>();
+
+	return {
+		deleteByAuthReqId: async (authReqId) => {
+			byAuthReqId.delete(authReqId);
+		},
+		findByAuthReqId: async (authReqId) => byAuthReqId.get(authReqId),
+		recordPoll: async (authReqId, polledAt) => {
+			const record = byAuthReqId.get(authReqId);
+			if (!record) return;
+			byAuthReqId.set(authReqId, { ...record, lastPolledAt: polledAt });
+		},
+		saveBackchannelAuth: async (request) => {
+			byAuthReqId.set(request.authReqId, { ...request });
+		},
+		updateStatus: async (authReqId, status, userSub) => {
+			const record = byAuthReqId.get(authReqId);
+			if (!record) return;
+			byAuthReqId.set(authReqId, { ...record, status, userSub });
+		}
+	};
+};
 export const createInMemoryClientAssertionJtiStore =
 	(): ClientAssertionJtiStore => {
 		const seen = new Map<string, number>();

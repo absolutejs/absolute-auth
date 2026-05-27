@@ -23,6 +23,7 @@ import {
 import { lockoutsTable } from '../lockout/postgresLockoutStore';
 import { mfaEnrollmentsTable } from '../mfa/postgresMfaStore';
 import {
+	oauthBackchannelAuthRequestsTable,
 	oauthClientAssertionJtisTable,
 	oauthClientRegistrationTokensTable,
 	oauthClientsTable,
@@ -101,6 +102,7 @@ export const blockMigrations: Record<BlockName, BlockMigrations> = {
 	lockout: initMigration('lockout', [lockoutsTable]),
 	mfa: initMigration('mfa', [mfaEnrollmentsTable]),
 	oidc: initMigration('oidc', [
+		oauthBackchannelAuthRequestsTable,
 		oauthClientAssertionJtisTable,
 		oauthClientRegistrationTokensTable,
 		oauthClientsTable,

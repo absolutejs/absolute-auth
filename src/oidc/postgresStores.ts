@@ -11,6 +11,9 @@ import { type AnyPgDatabase, createNeonDatabase } from '../stores/postgres';
 import type {
 	AuthorizationCode,
 	AuthorizationCodeStore,
+	BackchannelAuthRequest,
+	BackchannelAuthStatus,
+	BackchannelAuthStore,
 	ClientAssertionJtiStore,
 	ClientRegistrationToken,
 	ClientRegistrationTokenStore,
@@ -33,6 +36,23 @@ const DEFAULT_LIST_LIMIT = 100;
 
 const ID_LENGTH = 255;
 
+export const oauthBackchannelAuthRequestsTable = pgTable(
+	'auth_oauth_backchannel_auth_requests',
+	{
+		auth_req_id: varchar('auth_req_id', { length: ID_LENGTH }).primaryKey(),
+		binding_message: text('binding_message'),
+		client_id: varchar('client_id', { length: ID_LENGTH }).notNull(),
+		created_at_ms: bigint('created_at_ms', { mode: 'number' }).notNull(),
+		expires_at_ms: bigint('expires_at_ms', { mode: 'number' }).notNull(),
+		interval_seconds: bigint('interval_seconds', {
+			mode: 'number'
+		}).notNull(),
+		last_polled_at_ms: bigint('last_polled_at_ms', { mode: 'number' }),
+		scopes: text('scopes').array().notNull(),
+		status: varchar('status', { length: 16 }).notNull(),
+		user_sub: varchar('user_sub', { length: ID_LENGTH })
+	}
+);
 export const oauthClientAssertionJtisTable = pgTable(
 	'auth_oauth_client_assertion_jtis',
 	{
@@ -44,7 +64,6 @@ export const oauthClientAssertionJtisTable = pgTable(
 		jti: varchar('jti', { length: ID_LENGTH }).notNull()
 	}
 );
-
 export const oauthClientRegistrationTokensTable = pgTable(
 	'auth_oauth_client_registration_tokens',
 	{
@@ -53,7 +72,6 @@ export const oauthClientRegistrationTokensTable = pgTable(
 		token_hash: varchar('token_hash', { length: ID_LENGTH }).primaryKey()
 	}
 );
-
 export const oauthClientsTable = pgTable('auth_oauth_clients', {
 	backchannel_logout_uri: varchar('backchannel_logout_uri', {
 		length: URL_LENGTH
@@ -71,7 +89,6 @@ export const oauthClientsTable = pgTable('auth_oauth_clients', {
 	require_signed_request_object: boolean('require_signed_request_object'),
 	scopes: text('scopes').array().notNull()
 });
-
 export const oauthCodesTable = pgTable('auth_oauth_codes', {
 	acr: varchar('acr', { length: ID_LENGTH }),
 	claims_json: jsonb('claims_json').$type<Record<string, unknown>>(),
@@ -86,7 +103,6 @@ export const oauthCodesTable = pgTable('auth_oauth_codes', {
 	scopes: text('scopes').array().notNull(),
 	user_id: varchar('user_id', { length: ID_LENGTH }).notNull()
 });
-
 export const oauthDeviceAuthorizationsTable = pgTable(
 	'auth_oauth_device_authorizations',
 	{
@@ -103,14 +119,12 @@ export const oauthDeviceAuthorizationsTable = pgTable(
 		user_sub: varchar('user_sub', { length: ID_LENGTH })
 	}
 );
-
 export const oauthInitialAccessTokensTable = pgTable(
 	'auth_oauth_initial_access_tokens',
 	{
 		token_hash: varchar('token_hash', { length: ID_LENGTH }).primaryKey()
 	}
 );
-
 export const oauthLogoutDeliveriesTable = pgTable(
 	'auth_oauth_logout_deliveries',
 	{
@@ -125,7 +139,6 @@ export const oauthLogoutDeliveriesTable = pgTable(
 		user_id: varchar('user_id', { length: ID_LENGTH }).notNull()
 	}
 );
-
 export const oauthPushedAuthorizationRequestsTable = pgTable(
 	'auth_oauth_pushed_authorization_requests',
 	{
@@ -140,7 +153,6 @@ export const oauthPushedAuthorizationRequestsTable = pgTable(
 		}).primaryKey()
 	}
 );
-
 export const oauthRefreshTokensTable = pgTable('auth_oauth_refresh_tokens', {
 	acr: varchar('acr', { length: ID_LENGTH }),
 	claims_json: jsonb('claims_json').$type<Record<string, unknown>>(),
@@ -586,5 +598,77 @@ export const createPostgresPushedAuthorizationRequestStore = (
 			params_json: request.params,
 			request_uri_hash: request.requestUriHash
 		});
+	}
+});
+
+type BackchannelAuthRow = typeof oauthBackchannelAuthRequestsTable.$inferSelect;
+
+const toBackchannelAuth = (row: BackchannelAuthRow): BackchannelAuthRequest => ({
+	authReqId: row.auth_req_id,
+	bindingMessage: row.binding_message ?? undefined,
+	clientId: row.client_id,
+	createdAt: row.created_at_ms,
+	expiresAt: row.expires_at_ms,
+	intervalSeconds: row.interval_seconds,
+	lastPolledAt: row.last_polled_at_ms ?? undefined,
+	scopes: row.scopes,
+	// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- deserialization boundary: status was persisted from BackchannelAuthStatus
+	status: row.status as BackchannelAuthStatus,
+	userSub: row.user_sub ?? undefined
+});
+
+export const createNeonBackchannelAuthStore = (databaseUrl: string) =>
+	createPostgresBackchannelAuthStore(createNeonDatabase(databaseUrl));
+
+export const createPostgresBackchannelAuthStore = (
+	db: AnyPgDatabase
+): BackchannelAuthStore => ({
+	deleteByAuthReqId: async (authReqId) => {
+		await db
+			.delete(oauthBackchannelAuthRequestsTable)
+			.where(
+				eq(oauthBackchannelAuthRequestsTable.auth_req_id, authReqId)
+			);
+	},
+	findByAuthReqId: async (authReqId) => {
+		const [row] = await db
+			.select()
+			.from(oauthBackchannelAuthRequestsTable)
+			.where(
+				eq(oauthBackchannelAuthRequestsTable.auth_req_id, authReqId)
+			)
+			.limit(1);
+
+		return row ? toBackchannelAuth(row) : undefined;
+	},
+	recordPoll: async (authReqId, polledAt) => {
+		await db
+			.update(oauthBackchannelAuthRequestsTable)
+			.set({ last_polled_at_ms: polledAt })
+			.where(
+				eq(oauthBackchannelAuthRequestsTable.auth_req_id, authReqId)
+			);
+	},
+	saveBackchannelAuth: async (request) => {
+		await db.insert(oauthBackchannelAuthRequestsTable).values({
+			auth_req_id: request.authReqId,
+			binding_message: request.bindingMessage ?? null,
+			client_id: request.clientId,
+			created_at_ms: request.createdAt,
+			expires_at_ms: request.expiresAt,
+			interval_seconds: request.intervalSeconds,
+			last_polled_at_ms: request.lastPolledAt ?? null,
+			scopes: request.scopes,
+			status: request.status,
+			user_sub: request.userSub ?? null
+		});
+	},
+	updateStatus: async (authReqId, status, userSub) => {
+		await db
+			.update(oauthBackchannelAuthRequestsTable)
+			.set({ status, user_sub: userSub ?? null })
+			.where(
+				eq(oauthBackchannelAuthRequestsTable.auth_req_id, authReqId)
+			);
 	}
 });

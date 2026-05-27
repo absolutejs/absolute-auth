@@ -612,6 +612,7 @@ export { parseSignedRequestObject } from './oidc/jar';
 export type { JarParseResult } from './oidc/jar';
 export {
 	createInMemoryAuthorizationCodeStore,
+	createInMemoryBackchannelAuthStore,
 	createInMemoryClientAssertionJtiStore,
 	createInMemoryClientRegistrationTokenStore,
 	createInMemoryDeviceAuthorizationStore,
@@ -641,6 +642,7 @@ export {
 } from './oidc/logout';
 export {
 	createNeonAuthorizationCodeStore,
+	createNeonBackchannelAuthStore,
 	createNeonClientAssertionJtiStore,
 	createNeonClientRegistrationTokenStore,
 	createNeonDeviceAuthorizationStore,
@@ -650,6 +652,7 @@ export {
 	createNeonOidcRefreshTokenStore,
 	createNeonPushedAuthorizationRequestStore,
 	createPostgresAuthorizationCodeStore,
+	createPostgresBackchannelAuthStore,
 	createPostgresClientAssertionJtiStore,
 	createPostgresClientRegistrationTokenStore,
 	createPostgresDeviceAuthorizationStore,
@@ -662,6 +665,7 @@ export {
 	oauthClientRegistrationTokensTable,
 	oauthClientsTable,
 	oauthCodesTable,
+	oauthBackchannelAuthRequestsTable,
 	oauthDeviceAuthorizationsTable,
 	oauthInitialAccessTokensTable,
 	oauthLogoutDeliveriesTable,

@@ -9,11 +9,14 @@ import type { RouteString } from '../types';
 import { userSessionIdTypebox } from '../typebox';
 import {
 	approveDeviceAuthorization,
+	CIBA_GRANT_TYPE,
 	DEFAULT_OIDC_ROUTE,
 	denyDeviceAuthorization,
+	exchangeBackchannelAuth,
 	exchangeDeviceCode,
 	exchangeToken,
 	introspectToken,
+	issueBackchannelAuth,
 	issueDeviceAuthorization,
 	issueTokenSet,
 	revokeRefreshToken,
@@ -132,6 +135,7 @@ export const oidcProviderRoutes = <UserType>(
 	const introspectRoute: RouteString = `${oidcRoute}/introspect`;
 	const revokeRoute: RouteString = `${oidcRoute}/revoke`;
 	const deviceAuthorizationRoute: RouteString = `${oidcRoute}/device_authorization`;
+	const backchannelAuthorizationRoute: RouteString = `${oidcRoute}/bc-authorize`;
 	const deviceApproveRoute: RouteString = `${oidcRoute}/device/decision`;
 	const endSessionRoute: RouteString = `${oidcRoute}/end_session`;
 	const parRoute: RouteString = `${oidcRoute}/par`;
@@ -373,6 +377,50 @@ export const oidcProviderRoutes = <UserType>(
 		);
 	};
 
+	const grantBackchannel = async (
+		client: OAuthClient,
+		body: Record<string, string | undefined>,
+		dpop: string | undefined
+	) => {
+		if (config.backchannelAuthStore === undefined) {
+			return oauthError(HTTP_BAD_REQUEST, 'unsupported_grant_type');
+		}
+		if (body.auth_req_id === undefined) {
+			return oauthError(HTTP_BAD_REQUEST, 'invalid_request');
+		}
+		const dpopResult =
+			dpop === undefined
+				? undefined
+				: await verifyDpopProof({
+						htm: 'POST',
+						htu: tokenUrl,
+						proof: dpop
+					});
+		if (dpop !== undefined && dpopResult === undefined) {
+			return oauthError(HTTP_BAD_REQUEST, 'invalid_dpop_proof');
+		}
+
+		const result = await exchangeBackchannelAuth({
+			authReqId: body.auth_req_id,
+			clientId: client.clientId,
+			config,
+			dpopJkt: dpopResult?.jkt
+		});
+		if (!result.ok) return oauthError(HTTP_BAD_REQUEST, result.error);
+
+		return jsonResponse(
+			{
+				access_token: result.access_token,
+				expires_in: result.expires_in,
+				id_token: result.id_token,
+				refresh_token: result.refresh_token,
+				scope: result.scope,
+				token_type: dpopResult === undefined ? 'Bearer' : 'DPoP'
+			},
+			HTTP_OK
+		);
+	};
+
 	const grantDeviceCode = async (
 		client: OAuthClient,
 		body: Record<string, string | undefined>,
@@ -425,6 +473,9 @@ export const oidcProviderRoutes = <UserType>(
 	if (config.deviceAuthorizationStore) {
 		grantTypes.push('urn:ietf:params:oauth:grant-type:device_code');
 	}
+	if (config.backchannelAuthStore) {
+		grantTypes.push(CIBA_GRANT_TYPE);
+	}
 
 	const discovery: Record<string, boolean | string | string[]> = {
 		authorization_endpoint: `${issuer}${authorizeRoute}`,
@@ -457,6 +508,12 @@ export const oidcProviderRoutes = <UserType>(
 	};
 	if (config.deviceAuthorizationStore) {
 		discovery.device_authorization_endpoint = `${issuer}${deviceAuthorizationRoute}`;
+	}
+	if (config.backchannelAuthStore) {
+		// OIDC CIBA Core 1.0 §4 discovery metadata.
+		discovery.backchannel_authentication_endpoint = `${issuer}${backchannelAuthorizationRoute}`;
+		discovery.backchannel_token_delivery_modes_supported = ['poll'];
+		discovery.backchannel_user_code_parameter_supported = false;
 	}
 	if (config.clientRegistrationTokenStore !== undefined) {
 		discovery.registration_endpoint = registrationBaseUrl;
@@ -872,12 +929,16 @@ export const oidcProviderRoutes = <UserType>(
 				) {
 					return grantDeviceCode(client, body, headers.dpop);
 				}
+				if (body.grant_type === CIBA_GRANT_TYPE) {
+					return grantBackchannel(client, body, headers.dpop);
+				}
 
 				return oauthError(HTTP_BAD_REQUEST, 'unsupported_grant_type');
 			},
 			{
 				body: t.Object({
 					audience: t.Optional(t.String()),
+					auth_req_id: t.Optional(t.String()),
 					client_assertion: t.Optional(t.String()),
 					client_assertion_type: t.Optional(t.String()),
 					client_id: t.Optional(t.String()),
@@ -1041,6 +1102,69 @@ export const oidcProviderRoutes = <UserType>(
 					client_secret: t.Optional(t.String()),
 					token: t.String(),
 					token_type_hint: t.Optional(t.String())
+				}),
+				headers: t.Object({
+					authorization: t.Optional(t.String())
+				})
+			}
+		)
+		// OIDC CIBA Core 1.0 §7.1 — backchannel authorization request. Clients
+		// hit this with a login_hint identifying the user; the package resolves
+		// the user via `resolveBackchannelUser`, persists a pending auth_req,
+		// fires `onBackchannelAuthRequest` so the consumer can push a notification
+		// to the user's phone, and returns an auth_req_id the client polls
+		// /token with (grant_type=urn:openid:params:grant-type:ciba).
+		.post(
+			backchannelAuthorizationRoute,
+			async ({ body, headers }) => {
+				if (config.backchannelAuthStore === undefined) {
+					return oauthError(HTTP_BAD_REQUEST, 'unsupported_grant_type');
+				}
+				const basic = readBasicAuth(headers.authorization);
+				const clientId = body.client_id ?? basic.clientId;
+				const clientSecret = body.client_secret ?? basic.clientSecret;
+				if (clientId === undefined) {
+					return oauthError(HTTP_UNAUTHORIZED, 'invalid_client');
+				}
+				const client = await authenticateClient(clientId, clientSecret);
+				if (client === undefined) {
+					return oauthError(HTTP_UNAUTHORIZED, 'invalid_client');
+				}
+				if (body.login_hint === undefined) {
+					return oauthError(HTTP_BAD_REQUEST, 'invalid_request');
+				}
+				const requested =
+					body.scope === undefined || body.scope.length === 0
+						? client.scopes
+						: body.scope
+								.split(' ')
+								.filter((entry) => client.scopes.includes(entry));
+				const result = await issueBackchannelAuth({
+					bindingMessage: body.binding_message,
+					clientId: client.clientId,
+					config,
+					loginHint: body.login_hint,
+					now: Date.now(),
+					requestedScopes: requested
+				});
+				if (!result.ok) return oauthError(HTTP_BAD_REQUEST, result.error);
+
+				return jsonResponse(
+					{
+						auth_req_id: result.auth_req_id,
+						expires_in: result.expires_in,
+						interval: result.interval
+					},
+					HTTP_OK
+				);
+			},
+			{
+				body: t.Object({
+					binding_message: t.Optional(t.String()),
+					client_id: t.Optional(t.String()),
+					client_secret: t.Optional(t.String()),
+					login_hint: t.Optional(t.String()),
+					scope: t.Optional(t.String())
 				}),
 				headers: t.Object({
 					authorization: t.Optional(t.String())
