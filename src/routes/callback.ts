@@ -69,10 +69,15 @@ export const callback = <UserType>({
 			if (
 				stored_state === undefined ||
 				code_verifier === undefined ||
+				auth_provider === undefined ||
 				user_session_id === undefined ||
 				auth_client === undefined ||
 				auth_intent === undefined
 			) {
+				return status('Bad Request', 'Cookies are missing');
+			}
+			const authProvider = auth_provider.value;
+			if (authProvider === undefined) {
 				return status('Bad Request', 'Cookies are missing');
 			}
 
@@ -96,7 +101,6 @@ export const callback = <UserType>({
 
 			stored_state.remove();
 
-			const authProvider = auth_provider.value;
 			const requiresPKCE = isPKCEProviderOption(authProvider);
 			const verifier = requiresPKCE ? code_verifier.value : undefined;
 			if (requiresPKCE && verifier === undefined) {
@@ -237,11 +241,11 @@ export const callback = <UserType>({
 			cookie: t.Cookie({
 				auth_client: authClientOption,
 				auth_intent: authIntentOption,
-				auth_provider: authProviderOption,
+				auth_provider: t.Optional(authProviderOption),
 				code_verifier: t.Optional(t.String()),
 				origin_url: t.Optional(t.String()),
 				state: t.Optional(t.String()),
-				user_session_id: userSessionIdTypebox
+				user_session_id: t.Optional(userSessionIdTypebox)
 			})
 		}
 	);
