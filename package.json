@@ -1,5 +1,5 @@
 {
-	"version": "0.44.1",
+	"version": "0.44.2",
 	"name": "@absolutejs/auth",
 	"description": "An authorization library for absolutejs",
 	"repository": {
@@ -92,43 +92,53 @@
 	"exports": {
 		".": {
 			"import": "./dist/index.js",
-			"types": "./dist/index.d.ts"
+			"types": "./dist/index.d.ts",
+			"require": "./dist/index.js"
 		},
 		"./client": {
 			"import": "./dist/client/index.js",
-			"types": "./dist/client/index.d.ts"
+			"types": "./dist/client/index.d.ts",
+			"require": "./dist/client/index.js"
 		},
 		"./htmx": {
 			"import": "./dist/htmx/index.js",
-			"types": "./dist/htmx/index.d.ts"
+			"types": "./dist/htmx/index.d.ts",
+			"require": "./dist/htmx/index.js"
 		},
 		"./fingerprint-client": {
 			"import": "./dist/fingerprint-client/index.js",
-			"types": "./dist/fingerprint-client/index.d.ts"
+			"types": "./dist/fingerprint-client/index.d.ts",
+			"require": "./dist/fingerprint-client/index.js"
 		},
 		"./plugins": {
 			"import": "./dist/plugins/index.js",
-			"types": "./dist/plugins/index.d.ts"
+			"types": "./dist/plugins/index.d.ts",
+			"require": "./dist/plugins/index.js"
 		},
 		"./providers": {
 			"import": "./dist/providers/index.js",
-			"types": "./dist/providers/index.d.ts"
+			"types": "./dist/providers/index.d.ts",
+			"require": "./dist/providers/index.js"
 		},
 		"./react": {
 			"import": "./dist/client/react.js",
-			"types": "./dist/client/react.d.ts"
+			"types": "./dist/client/react.d.ts",
+			"require": "./dist/client/react.js"
 		},
 		"./solid": {
 			"import": "./dist/client/solid.js",
-			"types": "./dist/client/solid.d.ts"
+			"types": "./dist/client/solid.d.ts",
+			"require": "./dist/client/solid.js"
 		},
 		"./svelte": {
 			"import": "./dist/client/svelte.js",
-			"types": "./dist/client/svelte.d.ts"
+			"types": "./dist/client/svelte.d.ts",
+			"require": "./dist/client/svelte.js"
 		},
 		"./vue": {
 			"import": "./dist/client/vue.js",
-			"types": "./dist/client/vue.d.ts"
+			"types": "./dist/client/vue.d.ts",
+			"require": "./dist/client/vue.js"
 		}
 	},
 	"type": "module",
