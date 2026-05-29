@@ -218,7 +218,8 @@ export const samlSsoRoutes = <UserType>({
 
 				const metadata = await samlAdapter.getServiceProviderMetadata({
 					acsUrl: acsUrlFor(request.url, organizationId),
-					connection
+					connection,
+					sloUrl: sloUrlFor(request.url, organizationId)
 				});
 
 				return new Response(metadata, {
@@ -294,7 +295,7 @@ export const samlSsoRoutes = <UserType>({
 			async ({
 				cookie: { user_session_id },
 				params: { organizationId },
-				query: { RelayState, SAMLRequest, SAMLResponse },
+				query: { RelayState, SAMLRequest, SAMLResponse, SigAlg, Signature },
 				redirect,
 				request,
 				status,
@@ -312,6 +313,13 @@ export const samlSsoRoutes = <UserType>({
 					);
 				}
 				const sloUrl = sloUrlFor(request.url, organizationId);
+				// The raw, still-encoded query string is what the IdP signed for the
+				// HTTP-Redirect binding; the adapter needs it (plus Signature / SigAlg)
+				// to verify the signature over the exact octet string.
+				const signedQueryString = new URL(request.url).search.replace(
+					/^\?/,
+					''
+				);
 
 				if (isNonEmptyString(SAMLResponse)) {
 					const responseSettled = await settle(
@@ -319,6 +327,9 @@ export const samlSsoRoutes = <UserType>({
 							connection,
 							relayState: RelayState,
 							samlResponse: SAMLResponse,
+							signature: Signature,
+							signatureAlgorithm: SigAlg,
+							signedQueryString,
 							sloUrl
 						}) ?? Promise.resolve()
 					);
@@ -355,6 +366,9 @@ export const samlSsoRoutes = <UserType>({
 						connection,
 						relayState: RelayState,
 						samlRequest: SAMLRequest,
+						signature: Signature,
+						signatureAlgorithm: SigAlg,
+						signedQueryString,
 						sloUrl
 					})
 				);
@@ -397,7 +411,9 @@ export const samlSsoRoutes = <UserType>({
 				query: t.Object({
 					RelayState: t.Optional(t.String()),
 					SAMLRequest: t.Optional(t.String()),
-					SAMLResponse: t.Optional(t.String())
+					SAMLResponse: t.Optional(t.String()),
+					SigAlg: t.Optional(t.String()),
+					Signature: t.Optional(t.String())
 				})
 			}
 		);

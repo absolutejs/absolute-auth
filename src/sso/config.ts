@@ -36,6 +36,10 @@ type SamlAssertionRequest = {
 type SamlMetadataRequest = {
 	acsUrl: string;
 	connection: SamlConnection;
+	// The SP's Single Logout endpoint, advertised as <SingleLogoutService> in
+	// the published metadata so the IdP knows where to send LogoutResponses /
+	// IdP-initiated LogoutRequests. Omitted when the adapter can't do SLO.
+	sloUrl?: string;
 };
 
 type SamlLogoutRequest = {
@@ -50,6 +54,14 @@ type SamlLogoutResponseRequest = {
 	connection: SamlConnection;
 	relayState?: string;
 	samlResponse: string;
+	// HTTP-Redirect binding signature material — `signedQueryString` is the raw
+	// (still URL-encoded) query string the IdP signed; `signature` / `signatureAlgorithm`
+	// are its `Signature` / `SigAlg` params. The adapter needs all three to verify the
+	// LogoutResponse signature against the IdP cert (redirect signing covers the octet
+	// string, not the XML). Mirrors `parseAuthnRequest`'s signature inputs.
+	signature?: string;
+	signatureAlgorithm?: string;
+	signedQueryString?: string;
 	sloUrl: string;
 };
 
@@ -57,6 +69,9 @@ type SamlIdpLogoutRequest = {
 	connection: SamlConnection;
 	relayState?: string;
 	samlRequest: string;
+	signature?: string;
+	signatureAlgorithm?: string;
+	signedQueryString?: string;
 	sloUrl: string;
 };
 
