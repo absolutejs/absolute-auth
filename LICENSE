@@ -1,24 +1,88 @@
-```
-# Creative Commons Attribution-NonCommercial 4.0 International License (CC BY-NC 4.0)
+# Business Source License 1.1
 
-By using this project, you agree to the following terms under the Creative Commons Attribution-NonCommercial 4.0 International License.
+**Licensor:** Alex Kahn
 
-## License Summary
-This license allows you to:
-- **Share**: Copy and redistribute the material in any medium or format.
-- **Adapt**: Remix, transform, and build upon the material.
+**Licensed Work:** @absolutejs/auth (https://github.com/absolutejs/auth)
 
-**Under the following conditions**:
-- **Attribution**: You must give appropriate credit, provide a link to the license, and indicate if changes were made. You may do so in any reasonable manner, but not in any way that suggests the licensor endorses you or your use.
-- **Non-Commercial**: You may not use the material for commercial purposes.
+**Change Date:** May 29, 2030
 
-## Full License Text
-The full license text can be found at: https://creativecommons.org/licenses/by-nc/4.0/legalcode
+**Change License:** Apache License, Version 2.0
 
-## Contact Information for Commercial Use
-For commercial use, licensing inquiries, or additional permissions, please contact:
-Alex Kahn
-alexkahndev@gmail.com
-alexkahndev.github.io
-```
+---
 
+## Terms
+
+The Licensor hereby grants you the right to copy, modify, create derivative
+works, redistribute, and make non-production use of the Licensed Work. The
+Licensor may make an Additional Use Grant, permitting limited production use.
+
+### Additional Use Grant
+
+You may use the Licensed Work in production, provided your use does not include
+any of the following:
+
+1. **Offering a Competing Service.** You may not offer the Licensed Work, or
+   any derivative or substantial portion of it, to third parties as a hosted or
+   managed service that competes with a hosted authentication, identity, or user-management service (including, but not limited to, services like Auth0, Clerk, Stytch, WorkOS, Supabase Auth, or Firebase Auth). This includes any
+   product whose primary value to its users is the functionality the Licensed
+   Work provides.
+
+2. **Resale or Redistribution as a Standalone Product.** You may not sell,
+   license, or distribute the Licensed Work, or any derivative or fork of it,
+   as a standalone commercial product.
+
+3. **Removal of Attribution.** Any derivative work, fork, or redistribution of
+   the Licensed Work must prominently credit AbsoluteJS and include a link to
+   the original project repository (https://github.com/absolutejs/auth).
+
+For clarity, the following uses are expressly permitted:
+
+- Using the Licensed Work to build and operate your own applications, websites,
+  internal tools, or SaaS products (whether commercial or non-commercial), so
+  long as the Licensed Work itself is not the primary product you are selling.
+- Using the Licensed Work as a dependency in commercial software you build and
+  sell, as long as the software is not itself a competing managed service of
+  the kind described in clause 1.
+- Providing consulting, development, or professional services to clients using
+  the Licensed Work.
+- Forking and modifying the Licensed Work for your own internal use, provided
+  attribution is maintained.
+
+### Change Date and Change License
+
+On the Change Date specified above, or on such other date as the Licensor may
+specify by written notice, the Licensed Work will be made available under the
+Change License (Apache License, Version 2.0). Until the Change Date, the terms
+of this Business Source License 1.1 apply.
+
+### Trademark
+
+This license does not grant you any rights to use the "AbsoluteJS" or
+"@absolutejs" name, logo, or any related trademarks. Forks and derivative works
+must not be named or branded in a manner that suggests endorsement by or
+affiliation with AbsoluteJS or the Licensor.
+
+### Notices
+
+You must not remove or obscure any licensing, copyright, or other notices
+included in the Licensed Work.
+
+### No Warranty
+
+THE LICENSED WORK IS PROVIDED "AS IS". THE LICENSOR HEREBY DISCLAIMS ALL
+WARRANTIES, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NONINFRINGEMENT. IN NO
+EVENT SHALL THE LICENSOR BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY,
+WHETHER IN AN ACTION OF CONTRACT, TORT, OR OTHERWISE, ARISING FROM, OUT OF, OR
+IN CONNECTION WITH THE LICENSED WORK OR THE USE OR OTHER DEALINGS IN THE
+LICENSED WORK.
+
+---
+
+## Contact
+
+For commercial licensing inquiries or additional permissions, contact:
+
+- **Alex Kahn**
+- alexkahndev@gmail.com
+- alexkahndev.github.io

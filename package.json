@@ -10,7 +10,7 @@
 	"bin": {
 		"absolute-auth": "./dist/cli/migrate.js"
 	},
-	"license": "CC BY-NC 4.0",
+	"license": "BSL-1.1",
 	"author": "Alex Kahn",
 	"scripts": {
 		"build": "rm -rf dist && bun build src/index.ts src/htmx/index.ts src/client/index.ts src/client/react.ts src/client/vue.ts src/client/solid.ts src/client/svelte.ts src/plugins/index.ts src/providers/index.ts --root src --outdir dist --sourcemap --target=bun --external elysia --external react --external vue --external solid-js --external svelte --external @opentelemetry/api && bun build src/cli/migrate.ts --outdir dist/cli --sourcemap --target=bun --external @neondatabase/serverless --external drizzle-orm && bun build src/fingerprint-client/index.ts --outdir dist/fingerprint-client --sourcemap --target=browser && tsc --emitDeclarationOnly --project tsconfig.json && chmod +x dist/cli/migrate.js",
