@@ -1,6 +1,10 @@
 import { eq } from 'drizzle-orm';
 import { bigint, jsonb, pgTable, varchar } from 'drizzle-orm/pg-core';
-import { type AnyPgDatabase, createNeonDatabase } from '../stores/postgres';
+import {
+	type AnyPgDatabase,
+	type PgQueryResultHKT,
+	createNeonDatabase
+} from '../stores/postgres';
 import type { SetupCapability, SetupSession, SetupSessionStore } from './types';
 
 const ID_LENGTH = 255;
@@ -37,8 +41,8 @@ const toSession = (row: SetupRow): SetupSession => ({
 
 export const createNeonSetupSessionStore = (databaseUrl: string) =>
 	createPostgresSetupSessionStore(createNeonDatabase(databaseUrl));
-export const createPostgresSetupSessionStore = (
-	db: AnyPgDatabase
+export const createPostgresSetupSessionStore = <Q extends PgQueryResultHKT>(
+	db: AnyPgDatabase<Q>
 ): SetupSessionStore => ({
 	deleteSetupSession: async (setupSessionId) => {
 		await db

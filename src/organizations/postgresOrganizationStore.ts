@@ -6,7 +6,11 @@ import {
 	primaryKey,
 	varchar
 } from 'drizzle-orm/pg-core';
-import { type AnyPgDatabase, createNeonDatabase } from '../stores/postgres';
+import {
+	type AnyPgDatabase,
+	type PgQueryResultHKT,
+	createNeonDatabase
+} from '../stores/postgres';
 import type {
 	InvitationState,
 	MembershipStatus,
@@ -110,8 +114,8 @@ const toInvitation = (row: InvitationRow): OrganizationInvitation => ({
 
 export const createNeonOrganizationStore = (databaseUrl: string) =>
 	createPostgresOrganizationStore(createNeonDatabase(databaseUrl));
-export const createPostgresOrganizationStore = (
-	db: AnyPgDatabase
+export const createPostgresOrganizationStore = <Q extends PgQueryResultHKT>(
+	db: AnyPgDatabase<Q>
 ): OrganizationStore => ({
 	deleteOrganization: async (organizationId) => {
 		await db
