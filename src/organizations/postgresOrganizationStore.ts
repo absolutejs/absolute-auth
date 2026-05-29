@@ -9,6 +9,7 @@ import {
 import {
 	type AnyPgDatabase,
 	type PgQueryResultHKT,
+	type TablesRelationalConfig,
 	createNeonDatabase
 } from '../stores/postgres';
 import type {
@@ -114,8 +115,12 @@ const toInvitation = (row: InvitationRow): OrganizationInvitation => ({
 
 export const createNeonOrganizationStore = (databaseUrl: string) =>
 	createPostgresOrganizationStore(createNeonDatabase(databaseUrl));
-export const createPostgresOrganizationStore = <Q extends PgQueryResultHKT>(
-	db: AnyPgDatabase<Q>
+export const createPostgresOrganizationStore = <
+	Q extends PgQueryResultHKT,
+	TFullSchema extends Record<string, unknown>,
+	TSchema extends TablesRelationalConfig
+>(
+	db: AnyPgDatabase<Q, TFullSchema, TSchema>
 ): OrganizationStore => ({
 	deleteOrganization: async (organizationId) => {
 		await db

@@ -3,6 +3,7 @@ import { bigint, pgTable, varchar } from 'drizzle-orm/pg-core';
 import {
 	type AnyPgDatabase,
 	type PgQueryResultHKT,
+	type TablesRelationalConfig,
 	createNeonDatabase
 } from '../stores/postgres';
 import type { ScimToken, ScimTokenStore } from './types';
@@ -41,8 +42,12 @@ const toValues = (token: ScimToken): ScimTokenInsert => ({
 export const createNeonScimTokenStore = (databaseUrl: string) =>
 	createPostgresScimTokenStore(createNeonDatabase(databaseUrl));
 
-export const createPostgresScimTokenStore = <Q extends PgQueryResultHKT>(
-	db: AnyPgDatabase<Q>
+export const createPostgresScimTokenStore = <
+	Q extends PgQueryResultHKT,
+	TFullSchema extends Record<string, unknown>,
+	TSchema extends TablesRelationalConfig
+>(
+	db: AnyPgDatabase<Q, TFullSchema, TSchema>
 ): ScimTokenStore => ({
 	deleteToken: async (tokenId) => {
 		await db
