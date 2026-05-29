@@ -1,11 +1,6 @@
 import { and, desc, eq } from 'drizzle-orm';
 import { bigint, boolean, jsonb, pgTable, varchar } from 'drizzle-orm/pg-core';
-import {
-	type AnyPgDatabase,
-	type PgQueryResultHKT,
-	type TablesRelationalConfig,
-	createNeonDatabase
-} from '../stores/postgres';
+import { type AnyPgDatabase, createNeonDatabase } from '../stores/postgres';
 import type {
 	OidcConnection,
 	OidcConnectionConfig,
@@ -137,12 +132,8 @@ const toValues = (connection: SSOConnection): SsoInsert => ({
 export const createNeonSsoConnectionStore = (databaseUrl: string) =>
 	createPostgresSsoConnectionStore(createNeonDatabase(databaseUrl));
 
-export const createPostgresSsoConnectionStore = <
-	Q extends PgQueryResultHKT,
-	TFullSchema extends Record<string, unknown>,
-	TSchema extends TablesRelationalConfig
->(
-	db: AnyPgDatabase<Q, TFullSchema, TSchema>
+export const createPostgresSsoConnectionStore = <DB extends AnyPgDatabase>(
+	db: DB
 ): SSOConnectionStore => ({
 	deleteConnection: async (connectionId) => {
 		await db

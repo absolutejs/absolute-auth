@@ -22,15 +22,8 @@ import { loadSessionFromSource } from '../session/access';
 import { sessionStore } from '../session/state';
 import type { AuthSessionStore } from '../session/types';
 import { userSessionIdTypebox } from '../typebox';
-import type {
-	RouteString,
-	SessionRecord,
-	UserSessionId
-} from '../types';
-import {
-	DEFAULT_SSO_ROUTE,
-	type SamlIdpAdapter
-} from './config';
+import type { RouteString, SessionRecord, UserSessionId } from '../types';
+import { DEFAULT_SSO_ROUTE, type SamlIdpAdapter } from './config';
 import type { SamlServiceProviderStore } from './types';
 
 type SamlIdpRoutesProps<UserType> = {
@@ -147,9 +140,10 @@ export const samlIdpRoutes = <UserType>({
 		} catch {
 			return errorJson(HTTP_BAD_REQUEST, 'invalid_authn_request');
 		}
-		const serviceProvider = await samlServiceProviderStore.findServiceProvider(
-			firstPass.issuer
-		);
+		const serviceProvider =
+			await samlServiceProviderStore.findServiceProvider(
+				firstPass.issuer
+			);
 		if (serviceProvider === undefined) {
 			return errorJson(HTTP_BAD_REQUEST, 'unknown_service_provider');
 		}
@@ -162,7 +156,9 @@ export const samlIdpRoutes = <UserType>({
 				signature: body.Signature,
 				signatureAlgorithm: body.SigAlg,
 				signedQueryString:
-					binding === 'Redirect' ? new URL(request.url).search.slice(1) : undefined
+					binding === 'Redirect'
+						? new URL(request.url).search.slice(1)
+						: undefined
 			});
 		} catch {
 			return errorJson(HTTP_BAD_REQUEST, 'invalid_authn_request');
@@ -196,12 +192,7 @@ export const samlIdpRoutes = <UserType>({
 		.use(sessionStore<UserType>())
 		.post(
 			ssoIdpRoute,
-			async ({
-				body,
-				cookie: { user_session_id },
-				request,
-				store
-			}) =>
+			async ({ body, cookie: { user_session_id }, request, store }) =>
 				handleSpInitiated({
 					binding: 'POST',
 					body,
@@ -221,12 +212,7 @@ export const samlIdpRoutes = <UserType>({
 		)
 		.get(
 			ssoIdpRoute,
-			async ({
-				cookie: { user_session_id },
-				query,
-				request,
-				store
-			}) =>
+			async ({ cookie: { user_session_id }, query, request, store }) =>
 				handleSpInitiated({
 					binding: 'Redirect',
 					body: query,
@@ -257,11 +243,15 @@ export const samlIdpRoutes = <UserType>({
 				if (serviceProviderEntityId === undefined) {
 					return errorJson(HTTP_BAD_REQUEST, 'missing_sp');
 				}
-				const serviceProvider = await samlServiceProviderStore.findServiceProvider(
-					serviceProviderEntityId
-				);
+				const serviceProvider =
+					await samlServiceProviderStore.findServiceProvider(
+						serviceProviderEntityId
+					);
 				if (serviceProvider === undefined) {
-					return errorJson(HTTP_BAD_REQUEST, 'unknown_service_provider');
+					return errorJson(
+						HTTP_BAD_REQUEST,
+						'unknown_service_provider'
+					);
 				}
 				const userSession =
 					authSessionStore === undefined

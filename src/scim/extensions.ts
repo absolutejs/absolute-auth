@@ -81,9 +81,7 @@ export const diffScimGroupMembers = (
 	const currentValues = new Set(current.map((member) => member.value));
 	const nextValues = new Set(next.map((member) => member.value));
 	const added = next.filter((member) => !currentValues.has(member.value));
-	const removed = current.filter(
-		(member) => !nextValues.has(member.value)
-	);
+	const removed = current.filter((member) => !nextValues.has(member.value));
 
 	return { added, removed };
 };

@@ -498,7 +498,10 @@ export const scimRoutes = ({
 						extensionSchemas
 					);
 					if (resourceType === undefined) {
-						return scimError(SCIM_NOT_FOUND, 'ResourceType not found');
+						return scimError(
+							SCIM_NOT_FOUND,
+							'ResourceType not found'
+						);
 					}
 
 					return scimJson(resourceType, SCIM_OK);

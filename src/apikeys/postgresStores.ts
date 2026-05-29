@@ -1,11 +1,6 @@
 import { desc, eq, lt } from 'drizzle-orm';
 import { bigint, pgTable, text, varchar } from 'drizzle-orm/pg-core';
-import {
-	type AnyPgDatabase,
-	type PgQueryResultHKT,
-	type TablesRelationalConfig,
-	createNeonDatabase
-} from '../stores/postgres';
+import { type AnyPgDatabase, createNeonDatabase } from '../stores/postgres';
 import type {
 	AccessToken,
 	AccessTokenStore,
@@ -122,12 +117,8 @@ export const createNeonApiClientStore = (databaseUrl: string) =>
 	createPostgresApiClientStore(createNeonDatabase(databaseUrl));
 export const createNeonApiKeyStore = (databaseUrl: string) =>
 	createPostgresApiKeyStore(createNeonDatabase(databaseUrl));
-export const createPostgresAccessTokenStore = <
-	Q extends PgQueryResultHKT,
-	TFullSchema extends Record<string, unknown>,
-	TSchema extends TablesRelationalConfig
->(
-	db: AnyPgDatabase<Q, TFullSchema, TSchema>
+export const createPostgresAccessTokenStore = <DB extends AnyPgDatabase>(
+	db: DB
 ): AccessTokenStore => ({
 	deleteExpired: async (now) => {
 		await db
@@ -156,12 +147,8 @@ export const createPostgresAccessTokenStore = <
 		});
 	}
 });
-export const createPostgresApiClientStore = <
-	Q extends PgQueryResultHKT,
-	TFullSchema extends Record<string, unknown>,
-	TSchema extends TablesRelationalConfig
->(
-	db: AnyPgDatabase<Q, TFullSchema, TSchema>
+export const createPostgresApiClientStore = <DB extends AnyPgDatabase>(
+	db: DB
 ): ApiClientStore => ({
 	deleteClient: async (clientId) => {
 		await db
@@ -200,12 +187,8 @@ export const createPostgresApiClientStore = <
 		});
 	}
 });
-export const createPostgresApiKeyStore = <
-	Q extends PgQueryResultHKT,
-	TFullSchema extends Record<string, unknown>,
-	TSchema extends TablesRelationalConfig
->(
-	db: AnyPgDatabase<Q, TFullSchema, TSchema>
+export const createPostgresApiKeyStore = <DB extends AnyPgDatabase>(
+	db: DB
 ): ApiKeyStore => ({
 	deleteKey: async (keyId) => {
 		await db.delete(apiKeysTable).where(eq(apiKeysTable.key_id, keyId));

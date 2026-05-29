@@ -1,7 +1,4 @@
-import type {
-	SamlServiceProvider,
-	SamlServiceProviderStore
-} from './types';
+import type { SamlServiceProvider, SamlServiceProviderStore } from './types';
 
 export const createInMemorySamlServiceProviderStore =
 	(): SamlServiceProviderStore => {
@@ -17,7 +14,9 @@ export const createInMemorySamlServiceProviderStore =
 				return found ? { ...found } : undefined;
 			},
 			listServiceProviders: async () =>
-				Array.from(providers.values()).map((serviceProvider) => ({ ...serviceProvider })),
+				Array.from(providers.values()).map((serviceProvider) => ({
+					...serviceProvider
+				})),
 			saveServiceProvider: async (serviceProvider) => {
 				providers.set(serviceProvider.entityId, { ...serviceProvider });
 			}

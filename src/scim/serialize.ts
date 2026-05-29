@@ -264,15 +264,30 @@ export const serviceProviderConfig = (location: string) => ({
 const CORE_USER_ATTRIBUTES: ScimAttributeDefinition[] = [
 	{ multiValued: false, name: 'userName', required: true, type: 'string' },
 	{ multiValued: false, name: 'active', required: false, type: 'boolean' },
-	{ multiValued: false, name: 'displayName', required: false, type: 'string' },
+	{
+		multiValued: false,
+		name: 'displayName',
+		required: false,
+		type: 'string'
+	},
 	{ multiValued: false, name: 'externalId', required: false, type: 'string' },
 	{
 		multiValued: false,
 		name: 'name',
 		required: false,
 		subAttributes: [
-			{ multiValued: false, name: 'givenName', required: false, type: 'string' },
-			{ multiValued: false, name: 'familyName', required: false, type: 'string' }
+			{
+				multiValued: false,
+				name: 'givenName',
+				required: false,
+				type: 'string'
+			},
+			{
+				multiValued: false,
+				name: 'familyName',
+				required: false,
+				type: 'string'
+			}
 		],
 		type: 'complex'
 	},
@@ -281,8 +296,18 @@ const CORE_USER_ATTRIBUTES: ScimAttributeDefinition[] = [
 		name: 'emails',
 		required: false,
 		subAttributes: [
-			{ multiValued: false, name: 'value', required: false, type: 'string' },
-			{ multiValued: false, name: 'primary', required: false, type: 'boolean' }
+			{
+				multiValued: false,
+				name: 'value',
+				required: false,
+				type: 'string'
+			},
+			{
+				multiValued: false,
+				name: 'primary',
+				required: false,
+				type: 'boolean'
+			}
 		],
 		type: 'complex'
 	}
@@ -296,8 +321,18 @@ const CORE_GROUP_ATTRIBUTES: ScimAttributeDefinition[] = [
 		name: 'members',
 		required: false,
 		subAttributes: [
-			{ multiValued: false, name: 'value', required: false, type: 'string' },
-			{ multiValued: false, name: 'display', required: false, type: 'string' }
+			{
+				multiValued: false,
+				name: 'value',
+				required: false,
+				type: 'string'
+			},
+			{
+				multiValued: false,
+				name: 'display',
+				required: false,
+				type: 'string'
+			}
 		],
 		type: 'complex'
 	}

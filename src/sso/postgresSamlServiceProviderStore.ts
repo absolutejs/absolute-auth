@@ -1,10 +1,7 @@
 import { eq } from 'drizzle-orm';
 import { bigint, pgTable, text, varchar } from 'drizzle-orm/pg-core';
 import { type AnyPgDatabase, createNeonDatabase } from '../stores/postgres';
-import type {
-	SamlServiceProvider,
-	SamlServiceProviderStore
-} from './types';
+import type { SamlServiceProvider, SamlServiceProviderStore } from './types';
 
 const ID_LENGTH = 255;
 const URL_LENGTH = 2048;
