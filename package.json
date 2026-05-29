@@ -1,5 +1,5 @@
 {
-	"version": "0.45.6",
+	"version": "0.45.7",
 	"name": "@absolutejs/auth",
 	"description": "An authorization library for absolutejs",
 	"repository": {
@@ -13,7 +13,7 @@
 	"license": "BSL-1.1",
 	"author": "Alex Kahn",
 	"scripts": {
-		"build": "rm -rf dist && bun build src/index.ts src/htmx/index.ts src/client/index.ts src/client/react.ts src/client/vue.ts src/client/solid.ts src/client/svelte.ts src/plugins/index.ts src/providers/index.ts --root src --outdir dist --sourcemap --target=bun --external elysia --external react --external vue --external solid-js --external svelte --external @opentelemetry/api && bun build src/cli/migrate.ts --outdir dist/cli --sourcemap --target=bun --external @neondatabase/serverless --external drizzle-orm && bun build src/fingerprint-client/index.ts --outdir dist/fingerprint-client --sourcemap --target=browser && tsc --emitDeclarationOnly --project tsconfig.json && chmod +x dist/cli/migrate.js",
+		"build": "rm -rf dist && bun build src/index.ts src/htmx/index.ts src/client/index.ts src/client/react.ts src/client/vue.ts src/client/solid.ts src/client/svelte.ts src/plugins/index.ts src/providers/index.ts --root src --outdir dist --sourcemap --target=bun --external elysia --external react --external vue --external solid-js --external svelte --external @opentelemetry/api --external @simplewebauthn/server && bun build src/cli/migrate.ts --outdir dist/cli --sourcemap --target=bun --external @neondatabase/serverless --external drizzle-orm && bun build src/fingerprint-client/index.ts --outdir dist/fingerprint-client --sourcemap --target=browser && tsc --emitDeclarationOnly --project tsconfig.json && chmod +x dist/cli/migrate.js",
 		"config": "absolute config",
 		"test": "bun test",
 		"format": "absolute prettier --write",
@@ -33,6 +33,7 @@
 	"peerDependencies": {
 		"@opentelemetry/api": ">=1.7",
 		"@simplewebauthn/browser": ">=13",
+		"@simplewebauthn/server": ">=13",
 		"drizzle-orm": ">=0.41.0",
 		"elysia": ">= 1.4.26",
 		"react": ">=18 <20",
@@ -45,6 +46,9 @@
 			"optional": true
 		},
 		"@simplewebauthn/browser": {
+			"optional": true
+		},
+		"@simplewebauthn/server": {
 			"optional": true
 		},
 		"react": {
@@ -67,15 +71,16 @@
 	},
 	"devDependencies": {
 		"@absolutejs/absolute": "^0.19.0-beta.1023",
-		"drizzle-orm": "0.41.0",
 		"@eslint/js": "^10.0.1",
 		"@opentelemetry/api": "^1.9.1",
 		"@opentelemetry/sdk-trace-base": "^2.7.1",
 		"@simplewebauthn/browser": "^13.3.0",
+		"@simplewebauthn/server": "^13",
 		"@stylistic/eslint-plugin": "^5.10.0",
 		"@types/bun": "1.2.9",
 		"@types/react": "^19.0.0",
 		"@typescript-eslint/parser": "^8.57.2",
+		"drizzle-orm": "0.41.0",
 		"elysia": "1.4.26",
 		"eslint": "^10.1.0",
 		"eslint-plugin-absolute": "^0.11.0",
