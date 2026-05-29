@@ -3,10 +3,14 @@ import { Elysia } from 'elysia';
 import { createInMemoryCredentialStore } from '../src/credentials/inMemoryCredentialStore';
 import { auth } from '../src/index';
 import { createInMemoryAuthSessionStore } from '../src/session/inMemoryStore';
-import { revokeUserSessions } from '../src/session/userSessions';
+import {
+	refreshUserSessions,
+	revokeUserSessions
+} from '../src/session/userSessions';
 
 type TestUser = {
 	email: string;
+	roles?: string[];
 	sub: string;
 };
 
@@ -92,6 +96,40 @@ describe('revokeUserSessions', () => {
 		expect(await store.getSession(ID_ONE)).toBeDefined();
 		expect(await store.getSession(ID_TWO)).toBeUndefined();
 		expect(await store.getSession(ID_THREE)).toBeDefined();
+	});
+});
+
+describe('refreshUserSessions', () => {
+	test('rewrites the user snapshot on every session for that user', async () => {
+		const store = createInMemoryAuthSessionStore<TestUser>();
+		const expiresAt = Date.now() + HOUR_MS;
+		const authenticatedAt = Date.now();
+		const session = (sub: string) => ({
+			authenticatedAt,
+			expiresAt,
+			user: { email: `${sub}@b.com`, roles: [], sub }
+		});
+		await store.setSession(ID_ONE, session('u1'));
+		await store.setSession(ID_TWO, session('u1'));
+		await store.setSession(ID_THREE, session('u2'));
+
+		const updated = await refreshUserSessions({
+			authSessionStore: store,
+			user: { email: 'u1@b.com', roles: ['admin'], sub: 'u1' },
+			userId: 'u1',
+			getUserId: (user) => user.sub
+		});
+
+		expect(updated).toBe(2);
+		expect((await store.getSession(ID_ONE))?.user.roles).toEqual(['admin']);
+		expect((await store.getSession(ID_TWO))?.user.roles).toEqual(['admin']);
+		// other session fields survive the rewrite
+		expect((await store.getSession(ID_ONE))?.expiresAt).toBe(expiresAt);
+		expect((await store.getSession(ID_ONE))?.authenticatedAt).toBe(
+			authenticatedAt
+		);
+		// other users are untouched
+		expect((await store.getSession(ID_THREE))?.user.roles).toEqual([]);
 	});
 });
 

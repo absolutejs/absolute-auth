@@ -63,6 +63,11 @@ export type Impersonator = {
 };
 
 export type SessionData<UserType> = {
+	/** Snapshot of your user, serialized into the session at login and handed to
+	 *  `protectRoute`/`userStatus` as-is — it is NOT re-read from your user table per
+	 *  request. Mutations made after login (role grants, bans, tier changes) stay
+	 *  invisible to existing sessions until you rewrite the snapshot with
+	 *  `refreshUserSessions`. */
 	user: UserType;
 	/** OAuth provider access token. Optional: credential / SSO sessions are not backed
 	 *  by a provider token, so they omit it. Only the OAuth routes (profile, refresh,

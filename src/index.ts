@@ -410,7 +410,11 @@ export {
 	removeFromSessionRing,
 	switchActiveSession
 } from './session/multiSession';
-export { listUserSessions, revokeUserSessions } from './session/userSessions';
+export {
+	listUserSessions,
+	refreshUserSessions,
+	revokeUserSessions
+} from './session/userSessions';
 export type { UserSession } from './session/userSessions';
 export { sessionCleanup } from './session/cleanup';
 export { createAuthHtmxRoutes } from './htmx/routes';

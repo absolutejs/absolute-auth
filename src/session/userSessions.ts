@@ -34,6 +34,39 @@ export const listUserSessions = async <UserType>({
 		);
 };
 
+// The `user` handed to `protectRoute`/`userStatus` is the snapshot persisted in the
+// session at login (`auth_sessions.user_json`); it is NOT re-read from your own user
+// table per request. So a post-login mutation — a role grant, a ban, a tier change —
+// stays invisible to existing sessions until the snapshot is rewritten, producing
+// silent 403s on role-gated routes. Call this from your own mutators (assignRole, ban,
+// etc.) right after the DB write to push the fresh `user` into every active session for
+// that user. Returns the number of sessions updated. (The library is agnostic to your
+// user model, so it cannot re-fetch on its own — you supply the new `user`.)
+export const refreshUserSessions = async <UserType>({
+	authSessionStore,
+	getUserId,
+	user,
+	userId
+}: ListUserSessionsProps<UserType> & {
+	user: UserType;
+}) => {
+	const sessions = await listUserSessions({
+		authSessionStore,
+		getUserId,
+		userId
+	});
+	await Promise.all(
+		sessions.map((entry) =>
+			authSessionStore.setSession(entry.id, {
+				...entry.session,
+				user
+			})
+		)
+	);
+
+	return sessions.length;
+};
+
 export const revokeUserSessions = async <UserType>({
 	authSessionStore,
 	exceptSessionId,
