@@ -1,9 +1,10 @@
 import { neon } from '@neondatabase/serverless';
-import { eq } from 'drizzle-orm';
+import { eq, lt } from 'drizzle-orm';
 import { drizzle, NeonHttpDatabase } from 'drizzle-orm/neon-http';
 import {
 	type AnyPgTable,
 	bigint,
+	index,
 	jsonb,
 	pgTable,
 	text,
@@ -14,16 +15,22 @@ import { isUserSessionId } from '../typeGuards';
 import type { SessionData, UnregisteredSessionData } from '../types';
 import type { AuthSessionStore } from './types';
 
-export const authSessionsTable = pgTable('auth_sessions', {
-	access_token: text('access_token'),
-	authenticated_at_ms: bigint('authenticated_at_ms', { mode: 'number' }),
-	created_at: timestamp('created_at').notNull().defaultNow(),
-	expires_at_ms: bigint('expires_at_ms', { mode: 'number' }).notNull(),
-	id: varchar('id', { length: 255 }).primaryKey(),
-	refresh_token: text('refresh_token'),
-	updated_at: timestamp('updated_at').notNull().defaultNow(),
-	user_json: jsonb('user_json').$type<Record<string, unknown>>().notNull()
-});
+export const authSessionsTable = pgTable(
+	'auth_sessions',
+	{
+		access_token: text('access_token'),
+		authenticated_at_ms: bigint('authenticated_at_ms', { mode: 'number' }),
+		created_at: timestamp('created_at').notNull().defaultNow(),
+		expires_at_ms: bigint('expires_at_ms', { mode: 'number' }).notNull(),
+		id: varchar('id', { length: 255 }).primaryKey(),
+		refresh_token: text('refresh_token'),
+		updated_at: timestamp('updated_at').notNull().defaultNow(),
+		user_json: jsonb('user_json').$type<Record<string, unknown>>().notNull()
+	},
+	// Indexed so `deleteExpired` (DELETE WHERE expires_at_ms < now) is a range
+	// scan, not a full-table scan, on the periodic cleanup.
+	(table) => [index('auth_sessions_expires_at_idx').on(table.expires_at_ms)]
+);
 
 export const authUnregisteredSessionsTable = pgTable(
 	'auth_unregistered_sessions',
@@ -39,7 +46,12 @@ export const authUnregisteredSessionsTable = pgTable(
 		updated_at: timestamp('updated_at').notNull().defaultNow(),
 		user_identity_json:
 			jsonb('user_identity_json').$type<Record<string, unknown>>()
-	}
+	},
+	(table) => [
+		index('auth_unregistered_sessions_expires_at_idx').on(
+			table.expires_at_ms
+		)
+	]
 );
 
 export const authSessionSchema = {
@@ -87,9 +99,7 @@ export const createNeonAuthSessionStore = <UserType>(
 	databaseUrl: string
 ): AuthSessionStore<UserType> => {
 	const sql = neon(databaseUrl);
-	const db: NeonHttpDatabase<AuthSessionSchema> = drizzle(sql, {
-		schema: authSessionSchema
-	});
+	const db: NeonHttpDatabase = drizzle({ client: sql });
 
 	return {
 		getSession: async (id) => {
@@ -123,6 +133,22 @@ export const createNeonAuthSessionStore = <UserType>(
 				.from(authUnregisteredSessionsTable);
 
 			return rows.map((row) => row.id).filter(isUserSessionId);
+		},
+		deleteExpired: async () => {
+			const rows = await db
+				.delete(authSessionsTable)
+				.where(lt(authSessionsTable.expires_at_ms, Date.now()))
+				.returning({ id: authSessionsTable.id });
+
+			return rows.length;
+		},
+		deleteExpiredUnregistered: async () => {
+			const rows = await db
+				.delete(authUnregisteredSessionsTable)
+				.where(lt(authUnregisteredSessionsTable.expires_at_ms, Date.now()))
+				.returning({ id: authUnregisteredSessionsTable.id });
+
+			return rows.length;
 		},
 		removeSession: async (id) => {
 			await db
