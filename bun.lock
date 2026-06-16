@@ -7,7 +7,7 @@
       "dependencies": {
         "@absolutejs/linked-providers": "0.0.2",
         "@neondatabase/serverless": "1.0.0",
-        "citra": "^0.28.0",
+        "citra": "^0.28.4",
       },
       "devDependencies": {
         "@absolutejs/absolute": "^0.19.0-beta.1023",
@@ -40,7 +40,7 @@
         "@opentelemetry/api": ">=1.7",
         "@simplewebauthn/browser": ">=13",
         "@simplewebauthn/server": ">=13",
-        "drizzle-orm": ">=0.41.0",
+        "drizzle-orm": ">=1.0.0-rc.1",
         "elysia": ">= 1.4.26",
         "react": ">=18 <20",
         "solid-js": ">=1.8",
@@ -266,7 +266,7 @@
 
     "bun-types": ["bun-types@1.2.9", "", { "dependencies": { "@types/node": "*", "@types/ws": "*" } }, "sha512-dk/kOEfQbajENN/D6FyiSgOKEuUi9PWfqKQJEgwKrCMWbjS/S6tEXp178mWvWAcUSYm9ArDlWHZKO3T/4cLXiw=="],
 
-    "citra": ["citra@0.28.0", "", {}, "sha512-OrrKDNKcgS3JFhNp+zWGWhz1uD+ii/R6fR/YPwEdcoYW3fs8zDz9C7QG91fIaUNspDHfdLBmU7jViuZN7I5gTQ=="],
+    "citra": ["citra@0.28.4", "", {}, "sha512-DFiS6wNAWAA8e45EeN0N6duw0cMTdiMOgtN3u2N78UUvvW7BvrliDTKIag62rqpbERxF02VgOKyRpw2rVxzD/w=="],
 
     "clsx": ["clsx@2.1.1", "", {}, "sha512-eYm0QWBtUrBWZWG0d386OGAw16Z995PiOVo2B7bjWSbHedGl5e0ZWaq65kOGgUSNesEIDkB9ISbTg/JK9dhCZA=="],
 
