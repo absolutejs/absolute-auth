@@ -29,7 +29,9 @@ const VCT = 'https://credentials.example/identity_v1';
 const STATUS_URI = `${ISSUER}/vc/status/list-1`;
 const STATUS_LIST_SIZE = 1024; // small list for tests
 
-const buildVpConfig = async (issuerKey: Awaited<ReturnType<typeof generateSigningKey>>) => {
+const buildVpConfig = async (
+	issuerKey: Awaited<ReturnType<typeof generateSigningKey>>
+) => {
 	const clientSigningKey = await generateSigningKey();
 
 	return {
@@ -65,7 +67,9 @@ describe('Bitstring Status List — bit math', () => {
 
 	test('rejects out-of-range indices', () => {
 		const bits = createStatusList(STATUS_LIST_SIZE);
-		expect(() => setCredentialStatus(bits, STATUS_LIST_SIZE + 1, 1)).toThrow();
+		expect(() =>
+			setCredentialStatus(bits, STATUS_LIST_SIZE + 1, 1)
+		).toThrow();
 	});
 });
 
@@ -88,7 +92,7 @@ describe('Bitstring Status List — JWT sign + verify round-trip', () => {
 		const bitsPerByte = 8;
 		const idx = 42;
 		const byte = verified?.bits[Math.floor(idx / bitsPerByte)] ?? 0;
-		expect(((byte >> (idx % bitsPerByte)) & 1) === 1).toBe(true);
+		expect(((byte >> idx % bitsPerByte) & 1) === 1).toBe(true);
 	});
 });
 
@@ -132,7 +136,9 @@ describe('OID4VP verifier — happy path', () => {
 		expect(result.ok).toBe(true);
 		if (!result.ok) return;
 		expect(result.verified.disclosedClaims).toEqual({ is_over_21: true });
-		expect(result.verified.disclosedClaims).not.toHaveProperty('postal_code');
+		expect(result.verified.disclosedClaims).not.toHaveProperty(
+			'postal_code'
+		);
 		expect(result.verified.holderJwk?.x).toBe(holderKey.publicJwk.x);
 	});
 });
@@ -284,7 +290,11 @@ describe('OID4VP verifier — status list integration', () => {
 		};
 
 		const credential = await issueSdJwtVc({
-			base: { iss: ISSUER, status: buildStatusClaim(7, STATUS_URI), vct: VCT },
+			base: {
+				iss: ISSUER,
+				status: buildStatusClaim(7, STATUS_URI),
+				vct: VCT
+			},
 			holderJwk: holderKey.publicJwk,
 			selective: { is_over_21: true },
 			signingKey: issuerKey
@@ -329,7 +339,11 @@ describe('OID4VP verifier — status list integration', () => {
 			statusListResolver: async () => statusJwt
 		};
 		const credential = await issueSdJwtVc({
-			base: { iss: ISSUER, status: buildStatusClaim(7, STATUS_URI), vct: VCT },
+			base: {
+				iss: ISSUER,
+				status: buildStatusClaim(7, STATUS_URI),
+				vct: VCT
+			},
 			holderJwk: holderKey.publicJwk,
 			selective: { is_over_21: true },
 			signingKey: issuerKey
@@ -452,7 +466,7 @@ describe('statusListRoutes — GET /vc/status/:listId', () => {
 		const bitsPerByte = 8;
 		const idx = 17;
 		const byte = verified?.bits[Math.floor(idx / bitsPerByte)] ?? 0;
-		expect(((byte >> (idx % bitsPerByte)) & 1) === 1).toBe(true);
+		expect(((byte >> idx % bitsPerByte) & 1) === 1).toBe(true);
 	});
 
 	test('returns 404 for an unknown listId', async () => {

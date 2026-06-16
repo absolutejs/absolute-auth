@@ -46,7 +46,9 @@ const toRole = (row: RoleRow): Role => ({
 
 export const createNeonRoleStore = (databaseUrl: string) =>
 	createPostgresRoleStore(createNeonDatabase(databaseUrl));
-export const createPostgresRoleStore = (db: AnyPgDatabase): RoleStore => ({
+export const createPostgresRoleStore = <DB extends AnyPgDatabase>(
+	db: DB
+): RoleStore => ({
 	deleteRole: async (slug, organizationId) => {
 		await db
 			.delete(rolesTable)

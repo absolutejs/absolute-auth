@@ -6,15 +6,9 @@ import type {
 } from '@absolutejs/linked-providers';
 import { neon } from '@neondatabase/serverless';
 import { desc, eq } from 'drizzle-orm';
-import { drizzle, NeonHttpDatabase } from 'drizzle-orm/neon-http';
-import {
-	type AnyPgTable,
-	jsonb,
-	pgTable,
-	text,
-	timestamp,
-	varchar
-} from 'drizzle-orm/pg-core';
+import { drizzle } from 'drizzle-orm/neon-http';
+import { jsonb, pgTable, text, timestamp, varchar } from 'drizzle-orm/pg-core';
+import type { AnyPgDatabase } from '../stores/postgres';
 import type { OAuth2ConfigurationOptions } from '../types';
 import { createOAuthLinkedProviderCredentialResolver } from './oauthResolver';
 
@@ -66,12 +60,6 @@ export const linkedProviderGrantsTable = pgTable('linked_provider_grants', {
 	token_type: varchar('token_type', { length: 64 }),
 	updated_at: timestamp('updated_at').notNull().defaultNow()
 });
-export const linkedProviderSchema = {
-	linkedProviderBindings: linkedProviderBindingsTable,
-	linkedProviderGrants: linkedProviderGrantsTable
-} satisfies Record<string, AnyPgTable>;
-
-export type LinkedProviderSchema = typeof linkedProviderSchema;
 export type LinkedProviderGrantRow =
 	typeof linkedProviderGrantsTable.$inferSelect;
 export type LinkedProviderBindingRow =
@@ -119,8 +107,8 @@ const toBinding = (row: LinkedProviderBindingRow): LinkedProviderBinding => ({
 	username: row.username ?? undefined
 });
 
-export const createNeonLinkedProviderBindingStore = (
-	db: NeonHttpDatabase<LinkedProviderSchema>
+export const createNeonLinkedProviderBindingStore = <DB extends AnyPgDatabase>(
+	db: DB
 ): LinkedProviderBindingStore => ({
 	getBinding: async (id) => {
 		const [row] = await db
@@ -199,8 +187,8 @@ export const createNeonLinkedProviderBindingStore = (
 			});
 	}
 });
-export const createNeonLinkedProviderGrantStore = (
-	db: NeonHttpDatabase<LinkedProviderSchema>
+export const createNeonLinkedProviderGrantStore = <DB extends AnyPgDatabase>(
+	db: DB
 ): LinkedProviderGrantStore => ({
 	getGrant: async (id) => {
 		const [row] = await db
@@ -274,7 +262,7 @@ export const createNeonLinkedProviderGrantStore = (
 });
 export const createNeonLinkedProviderStores = (databaseUrl: string) => {
 	const sql = neon(databaseUrl);
-	const db = drizzle(sql, { schema: linkedProviderSchema });
+	const db = drizzle({ client: sql });
 
 	return {
 		bindingStore: createNeonLinkedProviderBindingStore(db),

@@ -86,8 +86,7 @@ export const verifyDpopNonce = async ({
 	const candidates = await Promise.all(
 		Array.from(
 			{ length: NONCE_PREVIOUS_WINDOWS_ACCEPTED + 1 },
-			(_, offset) =>
-				hmacSha256(secret, String(currentWindow - offset))
+			(_, offset) => hmacSha256(secret, String(currentWindow - offset))
 		)
 	);
 

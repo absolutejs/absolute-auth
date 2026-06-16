@@ -138,7 +138,8 @@ const runMigrate = async (argv: string[]) => {
 
 		return;
 	}
-	const unknown = blocks?.filter((block) => !(block in blockMigrations)) ?? [];
+	const unknown =
+		blocks?.filter((block) => !(block in blockMigrations)) ?? [];
 	if (unknown.length > 0) {
 		die(`unknown block(s): ${unknown.join(', ')}`, MIGRATE_USAGE);
 

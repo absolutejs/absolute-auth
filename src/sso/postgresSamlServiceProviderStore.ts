@@ -43,8 +43,10 @@ const toValues = (
 export const createNeonSamlServiceProviderStore = (databaseUrl: string) =>
 	createPostgresSamlServiceProviderStore(createNeonDatabase(databaseUrl));
 
-export const createPostgresSamlServiceProviderStore = (
-	db: AnyPgDatabase
+export const createPostgresSamlServiceProviderStore = <
+	DB extends AnyPgDatabase
+>(
+	db: DB
 ): SamlServiceProviderStore => ({
 	deleteServiceProvider: async (entityId) => {
 		await db

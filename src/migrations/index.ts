@@ -3,7 +3,10 @@
 // to apply every migration the package ships. Adding a new block's migrations: import its
 // tables here + add to the `blockMigrations` map.
 
-import { knownDevicesTable, loginHistoryTable } from '../adaptive/postgresStores';
+import {
+	knownDevicesTable,
+	loginHistoryTable
+} from '../adaptive/postgresStores';
 import {
 	accessTokensTable,
 	apiClientsTable,
@@ -82,7 +85,10 @@ export type BlockName =
 	| 'webauthn'
 	| 'webhooks';
 
-const initMigration = (block: BlockName, tables: Parameters<typeof tablesToInitSql>[0]): BlockMigrations => ({
+const initMigration = (
+	block: BlockName,
+	tables: Parameters<typeof tablesToInitSql>[0]
+): BlockMigrations => ({
 	block,
 	migrations: [{ id: '0001_init', sql: tablesToInitSql(tables) }]
 });

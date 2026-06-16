@@ -112,7 +112,9 @@ export const oauthDeviceAuthorizationsTable = pgTable(
 			length: ID_LENGTH
 		}).primaryKey(),
 		expires_at_ms: bigint('expires_at_ms', { mode: 'number' }).notNull(),
-		interval_seconds: bigint('interval_seconds', { mode: 'number' }).notNull(),
+		interval_seconds: bigint('interval_seconds', {
+			mode: 'number'
+		}).notNull(),
 		scopes: text('scopes').array().notNull(),
 		status: varchar('status', { length: 16 }).notNull(),
 		user_code: varchar('user_code', { length: 16 }).notNull().unique(),
@@ -285,10 +287,14 @@ export const createNeonOAuthClientStore = (databaseUrl: string) =>
 	createPostgresOAuthClientStore(createNeonDatabase(databaseUrl));
 export const createNeonOidcRefreshTokenStore = (databaseUrl: string) =>
 	createPostgresOidcRefreshTokenStore(createNeonDatabase(databaseUrl));
-export const createNeonPushedAuthorizationRequestStore = (databaseUrl: string) =>
-	createPostgresPushedAuthorizationRequestStore(createNeonDatabase(databaseUrl));
-export const createPostgresAuthorizationCodeStore = (
-	db: AnyPgDatabase
+export const createNeonPushedAuthorizationRequestStore = (
+	databaseUrl: string
+) =>
+	createPostgresPushedAuthorizationRequestStore(
+		createNeonDatabase(databaseUrl)
+	);
+export const createPostgresAuthorizationCodeStore = <DB extends AnyPgDatabase>(
+	db: DB
 ): AuthorizationCodeStore => ({
 	consumeCode: async (codeHash) => {
 		const [row] = await db
@@ -302,8 +308,8 @@ export const createPostgresAuthorizationCodeStore = (
 		await db.insert(oauthCodesTable).values(toCodeValues(code));
 	}
 });
-export const createPostgresClientAssertionJtiStore = (
-	db: AnyPgDatabase
+export const createPostgresClientAssertionJtiStore = <DB extends AnyPgDatabase>(
+	db: DB
 ): ClientAssertionJtiStore => ({
 	recordIfFresh: async (clientId, jti, expiresAt) => {
 		// Lazy GC of expired entries on each call. Bounded by the assertion `exp` window
@@ -327,8 +333,10 @@ export const createPostgresClientAssertionJtiStore = (
 		}
 	}
 });
-export const createPostgresClientRegistrationTokenStore = (
-	db: AnyPgDatabase
+export const createPostgresClientRegistrationTokenStore = <
+	DB extends AnyPgDatabase
+>(
+	db: DB
 ): ClientRegistrationTokenStore => ({
 	deleteByClientId: async (clientId) => {
 		await db
@@ -364,8 +372,10 @@ export const createPostgresClientRegistrationTokenStore = (
 		});
 	}
 });
-export const createPostgresDeviceAuthorizationStore = (
-	db: AnyPgDatabase
+export const createPostgresDeviceAuthorizationStore = <
+	DB extends AnyPgDatabase
+>(
+	db: DB
 ): DeviceAuthorizationStore => ({
 	deleteByDeviceCodeHash: async (deviceCodeHash) => {
 		await db
@@ -425,20 +435,22 @@ export const createPostgresDeviceAuthorizationStore = (
 			);
 	}
 });
-export const createPostgresInitialAccessTokenStore = (
-	db: AnyPgDatabase
+export const createPostgresInitialAccessTokenStore = <DB extends AnyPgDatabase>(
+	db: DB
 ): InitialAccessTokenStore => ({
 	consumeToken: async (tokenHash) => {
 		const deleted = await db
 			.delete(oauthInitialAccessTokensTable)
 			.where(eq(oauthInitialAccessTokensTable.token_hash, tokenHash))
-			.returning({ token_hash: oauthInitialAccessTokensTable.token_hash });
+			.returning({
+				token_hash: oauthInitialAccessTokensTable.token_hash
+			});
 
 		return deleted.length > 0;
 	}
 });
-export const createPostgresLogoutDeliveryStore = (
-	db: AnyPgDatabase
+export const createPostgresLogoutDeliveryStore = <DB extends AnyPgDatabase>(
+	db: DB
 ): LogoutDeliveryStore => ({
 	listFailed: async (limit = DEFAULT_LIST_LIMIT) => {
 		const rows = await db
@@ -486,8 +498,8 @@ const toClientValues = (
 	scopes: client.scopes
 });
 
-export const createPostgresOAuthClientStore = (
-	db: AnyPgDatabase
+export const createPostgresOAuthClientStore = <DB extends AnyPgDatabase>(
+	db: DB
 ): OAuthClientStore => ({
 	deleteClient: async (clientId) => {
 		await db
@@ -513,8 +525,8 @@ export const createPostgresOAuthClientStore = (
 			.where(eq(oauthClientsTable.client_id, clientId));
 	}
 });
-export const createPostgresOidcRefreshTokenStore = (
-	db: AnyPgDatabase
+export const createPostgresOidcRefreshTokenStore = <DB extends AnyPgDatabase>(
+	db: DB
 ): OidcRefreshTokenStore => ({
 	consumeToken: async (tokenHash) => {
 		const [row] = await db
@@ -555,8 +567,10 @@ export const createPostgresOidcRefreshTokenStore = (
 		await db.insert(oauthRefreshTokensTable).values(toRefreshValues(token));
 	}
 });
-export const createPostgresPushedAuthorizationRequestStore = (
-	db: AnyPgDatabase
+export const createPostgresPushedAuthorizationRequestStore = <
+	DB extends AnyPgDatabase
+>(
+	db: DB
 ): PushedAuthorizationRequestStore => ({
 	consumeRequest: async (requestUriHash) => {
 		const [row] = await db
@@ -603,7 +617,9 @@ export const createPostgresPushedAuthorizationRequestStore = (
 
 type BackchannelAuthRow = typeof oauthBackchannelAuthRequestsTable.$inferSelect;
 
-const toBackchannelAuth = (row: BackchannelAuthRow): BackchannelAuthRequest => ({
+const toBackchannelAuth = (
+	row: BackchannelAuthRow
+): BackchannelAuthRequest => ({
 	authReqId: row.auth_req_id,
 	bindingMessage: row.binding_message ?? undefined,
 	clientId: row.client_id,
@@ -620,8 +636,8 @@ const toBackchannelAuth = (row: BackchannelAuthRow): BackchannelAuthRequest => (
 export const createNeonBackchannelAuthStore = (databaseUrl: string) =>
 	createPostgresBackchannelAuthStore(createNeonDatabase(databaseUrl));
 
-export const createPostgresBackchannelAuthStore = (
-	db: AnyPgDatabase
+export const createPostgresBackchannelAuthStore = <DB extends AnyPgDatabase>(
+	db: DB
 ): BackchannelAuthStore => ({
 	deleteByAuthReqId: async (authReqId) => {
 		await db
@@ -634,9 +650,7 @@ export const createPostgresBackchannelAuthStore = (
 		const [row] = await db
 			.select()
 			.from(oauthBackchannelAuthRequestsTable)
-			.where(
-				eq(oauthBackchannelAuthRequestsTable.auth_req_id, authReqId)
-			)
+			.where(eq(oauthBackchannelAuthRequestsTable.auth_req_id, authReqId))
 			.limit(1);
 
 		return row ? toBackchannelAuth(row) : undefined;

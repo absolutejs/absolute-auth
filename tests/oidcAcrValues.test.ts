@@ -113,7 +113,9 @@ describe('OIDC provider — RFC 9470 acr_values', () => {
 		const app = await buildApp(ACR_PWD);
 		const redirect = await authorize(app);
 		expect(redirect.status).toBe(HTTP_FOUND);
-		const tokens = await (await tokenExchange(app, codeFrom(redirect))).json();
+		const tokens = await (
+			await tokenExchange(app, codeFrom(redirect))
+		).json();
 
 		const jwks = await (
 			await app.handle(new Request('http://localhost/oauth2/jwks'))
@@ -129,7 +131,9 @@ describe('OIDC provider — RFC 9470 acr_values', () => {
 		const app = await buildApp(ACR_MFA);
 		const redirect = await authorize(app, ACR_MFA);
 		expect(redirect.status).toBe(HTTP_FOUND);
-		const tokens = await (await tokenExchange(app, codeFrom(redirect))).json();
+		const tokens = await (
+			await tokenExchange(app, codeFrom(redirect))
+		).json();
 		const jwks = await (
 			await app.handle(new Request('http://localhost/oauth2/jwks'))
 		).json();

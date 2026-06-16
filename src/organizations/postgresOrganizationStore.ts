@@ -1,4 +1,4 @@
-import { and, eq } from 'drizzle-orm';
+import { and, desc, eq } from 'drizzle-orm';
 import {
 	bigint,
 	jsonb,
@@ -189,6 +189,14 @@ export const createPostgresOrganizationStore = <DB extends AnyPgDatabase>(
 			.where(eq(organizationMembershipsTable.user_id, userId));
 
 		return rows.map(toMembership);
+	},
+	listOrganizations: async () => {
+		const rows = await db
+			.select()
+			.from(organizationsTable)
+			.orderBy(desc(organizationsTable.created_at_ms));
+
+		return rows.map(toOrganization);
 	},
 	removeMembership: async (organizationId, userId) => {
 		await db

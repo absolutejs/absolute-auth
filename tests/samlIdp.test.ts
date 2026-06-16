@@ -116,7 +116,9 @@ describe('SAML 2.0 IdP role — SP-initiated', () => {
 		const body = await response.text();
 		expect(response.headers.get('content-type')).toContain('text/html');
 		expect(body).toContain(`action="${ACS_URL}"`);
-		expect(body).toContain(`SAML:${SP_ENTITY_ID}:${ACS_URL}:alice@acme.test`);
+		expect(body).toContain(
+			`SAML:${SP_ENTITY_ID}:${ACS_URL}:alice@acme.test`
+		);
 		expect(body).toContain(':req-123'); // inResponseTo echoed
 		expect(body).toContain('state-xyz');
 	});
@@ -126,12 +128,15 @@ describe('SAML 2.0 IdP role — SP-initiated', () => {
 			SAMLRequest: `req-redir|${SP_ENTITY_ID}|prompt|`
 		});
 		const response = await app.handle(
-			new Request(`http://localhost/sso/saml/idp/sso?${params.toString()}`, {
-				headers: { cookie: `user_session_id=${SESSION_ID}` }
-			})
+			new Request(
+				`http://localhost/sso/saml/idp/sso?${params.toString()}`,
+				{
+					headers: { cookie: `user_session_id=${SESSION_ID}` }
+				}
+			)
 		);
 		expect(response.status).toBe(HTTP_OK);
-		expect((await response.text())).toContain(':req-redir');
+		expect(await response.text()).toContain(':req-redir');
 	});
 
 	test('unknown SP → 400 unknown_service_provider', async () => {

@@ -32,7 +32,9 @@ const toEvent = (row: AuditRow): AuditEvent => ({
 
 export const createNeonAuditSink = (databaseUrl: string) =>
 	createPostgresAuditSink(createNeonDatabase(databaseUrl));
-export const createPostgresAuditSink = (db: AnyPgDatabase): AuditSink => ({
+export const createPostgresAuditSink = <DB extends AnyPgDatabase>(
+	db: DB
+): AuditSink => ({
 	append: async (event) => {
 		await db.insert(auditEventsTable).values({
 			at_ms: event.at,

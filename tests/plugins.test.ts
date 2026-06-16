@@ -106,9 +106,7 @@ describe('plugin: denyDisposableEmailPlugin', () => {
 	});
 
 	test('blocks a known disposable email', async () => {
-		const decision = await denyDisposableEmailPlugin(
-			'test@mailinator.com'
-		);
+		const decision = await denyDisposableEmailPlugin('test@mailinator.com');
 		expect(decision.allow).toBe(false);
 		if (!decision.allow) expect(decision.reason).toBe('disposable_email');
 	});

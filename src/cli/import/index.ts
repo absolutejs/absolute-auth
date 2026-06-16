@@ -95,7 +95,8 @@ export const runImport = async (
 			ON CONFLICT (auth_provider, provider_subject) DO NOTHING
 			RETURNING id
 		`;
-		if (Array.isArray(inserted) && inserted.length > 0) insertedIdentities++;
+		if (Array.isArray(inserted) && inserted.length > 0)
+			insertedIdentities++;
 	}
 
 	return {

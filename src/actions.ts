@@ -46,7 +46,10 @@ export type AuthPipeline<UserType> = {
 	) => Promise<AuthActionResult>;
 };
 
-const matches = <UserType>(action: AuthAction<UserType>, event: AuthEventName) =>
+const matches = <UserType>(
+	action: AuthAction<UserType>,
+	event: AuthEventName
+) =>
 	Array.isArray(action.event)
 		? action.event.includes(event)
 		: action.event === event;

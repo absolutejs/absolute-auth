@@ -136,7 +136,8 @@ describe('OIDC provider — Dynamic Client Registration (RFC 7591/7592)', () => 
 		const app = await buildApp({
 			onClientRegistration: () => ({
 				allow: false,
-				denyReason: 'localhost redirect URIs are forbidden in this realm'
+				denyReason:
+					'localhost redirect URIs are forbidden in this realm'
 			})
 		});
 		const response = await postJson(
@@ -178,7 +179,9 @@ describe('OIDC provider — Dynamic Client Registration (RFC 7591/7592)', () => 
 		).json();
 
 		const unauth = await app.handle(
-			new Request(`http://localhost/oauth2/register/${registered.client_id}`)
+			new Request(
+				`http://localhost/oauth2/register/${registered.client_id}`
+			)
 		);
 		expect(unauth.status).toBe(HTTP_UNAUTHORIZED);
 

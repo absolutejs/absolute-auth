@@ -42,9 +42,9 @@ export const vcPresentationRequestsTable = pgTable(
 	{
 		client_id: varchar('client_id', { length: ID_LENGTH }).notNull(),
 		created_at_ms: bigint('created_at_ms', { mode: 'number' }).notNull(),
-		expected_issuer_jwk_json: jsonb(
-			'expected_issuer_jwk_json'
-		).$type<JsonWebKey>().notNull(),
+		expected_issuer_jwk_json: jsonb('expected_issuer_jwk_json')
+			.$type<JsonWebKey>()
+			.notNull(),
 		expires_at_ms: bigint('expires_at_ms', { mode: 'number' }).notNull(),
 		nonce: varchar('nonce', { length: ID_LENGTH }).notNull(),
 		request_id: varchar('request_id', { length: ID_LENGTH }).primaryKey(),
@@ -112,8 +112,8 @@ export const createNeonCredentialOfferStore = (databaseUrl: string) =>
 	createPostgresCredentialOfferStore(createNeonDatabase(databaseUrl));
 export const createNeonPresentationRequestStore = (databaseUrl: string) =>
 	createPostgresPresentationRequestStore(createNeonDatabase(databaseUrl));
-export const createPostgresCredentialNonceStore = (
-	database: AnyPgDatabase
+export const createPostgresCredentialNonceStore = <DB extends AnyPgDatabase>(
+	database: DB
 ): CredentialNonceStore => ({
 	consumeNonce: async (nonceHash) => {
 		const rows = await database
@@ -140,8 +140,8 @@ export const createPostgresCredentialNonceStore = (
 		});
 	}
 });
-export const createPostgresCredentialOfferStore = (
-	database: AnyPgDatabase
+export const createPostgresCredentialOfferStore = <DB extends AnyPgDatabase>(
+	database: DB
 ): CredentialOfferStore => ({
 	consumeOffer: async (preAuthorizedCodeHash) => {
 		const rows = await database
@@ -174,8 +174,10 @@ export const createPostgresCredentialOfferStore = (
 			.values(toOfferValues(offer));
 	}
 });
-export const createPostgresPresentationRequestStore = (
-	database: AnyPgDatabase
+export const createPostgresPresentationRequestStore = <
+	DB extends AnyPgDatabase
+>(
+	database: DB
 ): PresentationRequestStore => ({
 	consumeRequest: async (requestId) => {
 		const rows = await database

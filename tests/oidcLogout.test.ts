@@ -89,7 +89,7 @@ const buildApp = async ({
 
 	globalThis.fetch = (async (url: string, init: RequestInit) => ({
 		ok: fetchOk,
-		status: fetchOk ? HTTP_OK : HTTP_INTERNAL_ERROR,
+		status: fetchOk ? HTTP_OK : HTTP_INTERNAL_ERROR
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any -- minimal fetch stub
 	})) as any;
 	const recordingFetch = async (url: string, init: RequestInit) => {
@@ -103,8 +103,7 @@ const buildApp = async ({
 			status: fetchOk ? HTTP_OK : HTTP_INTERNAL_ERROR
 		});
 	};
-	globalThis.fetch =
-		recordingFetch as unknown as typeof globalThis.fetch;
+	globalThis.fetch = recordingFetch as unknown as typeof globalThis.fetch;
 
 	const app = await auth<TestUser>({
 		authSessionStore,
@@ -162,9 +161,7 @@ describe('OIDC end_session (RP-initiated logout)', () => {
 		const { app } = await buildApp({ captured });
 		const discovery = await (
 			await app.handle(
-				new Request(
-					'http://localhost/.well-known/openid-configuration'
-				)
+				new Request('http://localhost/.well-known/openid-configuration')
 			)
 		).json();
 		expect(discovery.end_session_endpoint).toContain('/oauth2/end_session');

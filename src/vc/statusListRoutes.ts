@@ -4,7 +4,11 @@
 
 import { Elysia, t } from 'elysia';
 import type { SigningKey } from '../oidc/keys';
-import { signStatusList, STATUS_LIST_SUB_TYP, type StatusListBits } from './statusList';
+import {
+	signStatusList,
+	STATUS_LIST_SUB_TYP,
+	type StatusListBits
+} from './statusList';
 
 const HTTP_OK = 200;
 const HTTP_NOT_FOUND = 404;

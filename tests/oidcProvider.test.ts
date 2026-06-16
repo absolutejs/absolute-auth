@@ -168,7 +168,11 @@ describe('OIDC provider', () => {
 
 		const challenge = await hashToken(VERIFIER);
 		const code = codeFromRedirect(
-			await authorize(customApp, challenge, `user_session_id=${SESSION_ID}`)
+			await authorize(
+				customApp,
+				challenge,
+				`user_session_id=${SESSION_ID}`
+			)
 		);
 		const tokens = await (
 			await token(customApp, {
@@ -297,9 +301,12 @@ describe('OIDC provider', () => {
 			state: 'state-fp"with-quote'
 		});
 		const response = await app.handle(
-			new Request(`http://localhost/oauth2/authorize?${params.toString()}`, {
-				headers: { cookie: `user_session_id=${SESSION_ID}` }
-			})
+			new Request(
+				`http://localhost/oauth2/authorize?${params.toString()}`,
+				{
+					headers: { cookie: `user_session_id=${SESSION_ID}` }
+				}
+			)
 		);
 
 		expect(response.status).toBe(200);
@@ -310,9 +317,7 @@ describe('OIDC provider', () => {
 		expect(html).toContain(`action="${REDIRECT_URI}"`);
 		expect(html).toContain('document.forms[0].submit()');
 		// State is HTML-attribute escaped (`"` → `&quot;`)
-		expect(html).toContain(
-			'name="state" value="state-fp&quot;with-quote"'
-		);
+		expect(html).toContain('name="state" value="state-fp&quot;with-quote"');
 		// code is present + non-empty
 		const codeMatch = html.match(/name="code" value="([^"]+)"/);
 		expect(codeMatch).not.toBeNull();
@@ -333,9 +338,12 @@ describe('OIDC provider', () => {
 			state: 'state-bad'
 		});
 		const response = await app.handle(
-			new Request(`http://localhost/oauth2/authorize?${params.toString()}`, {
-				headers: { cookie: `user_session_id=${SESSION_ID}` }
-			})
+			new Request(
+				`http://localhost/oauth2/authorize?${params.toString()}`,
+				{
+					headers: { cookie: `user_session_id=${SESSION_ID}` }
+				}
+			)
 		);
 
 		expect(response.status).toBe(400);
@@ -372,9 +380,12 @@ describe('OIDC provider', () => {
 			state: 'state-strict'
 		});
 		const response = await strictApp.handle(
-			new Request(`http://localhost/oauth2/authorize?${params.toString()}`, {
-				headers: { cookie: `user_session_id=${SESSION_ID}` }
-			})
+			new Request(
+				`http://localhost/oauth2/authorize?${params.toString()}`,
+				{
+					headers: { cookie: `user_session_id=${SESSION_ID}` }
+				}
+			)
 		);
 		expect(response.status).toBe(302);
 		const errorUrl = new URL(response.headers.get('location') ?? '');
@@ -407,7 +418,10 @@ describe('OIDC provider', () => {
 		expect(discovery.issuer).toBe(ISSUER);
 		expect(discovery.code_challenge_methods_supported).toContain('S256');
 		expect(discovery.dpop_signing_alg_values_supported).toContain('ES256');
-		expect(discovery.response_modes_supported).toEqual(['query', 'form_post']);
+		expect(discovery.response_modes_supported).toEqual([
+			'query',
+			'form_post'
+		]);
 		expect(discovery.authorization_response_iss_parameter_supported).toBe(
 			true
 		);
@@ -793,12 +807,12 @@ describe('OIDC provider — RFC 8628 device authorization', () => {
 		const app = await buildApp({ deviceFlow: true });
 		const discovery = await (
 			await app.handle(
-				new Request(
-					'http://localhost/.well-known/openid-configuration'
-				)
+				new Request('http://localhost/.well-known/openid-configuration')
 			)
 		).json();
-		expect(discovery.introspection_endpoint).toContain('/oauth2/introspect');
+		expect(discovery.introspection_endpoint).toContain(
+			'/oauth2/introspect'
+		);
 		expect(discovery.revocation_endpoint).toContain('/oauth2/revoke');
 		expect(discovery.device_authorization_endpoint).toContain(
 			'/oauth2/device_authorization'

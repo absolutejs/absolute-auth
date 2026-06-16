@@ -119,7 +119,11 @@ const readAudio = async () => {
 	try {
 		const ContextCtor = resolveOfflineAudioContextCtor();
 		if (ContextCtor === undefined) return undefined;
-		const context = new ContextCtor(1, AUDIO_SAMPLES_COUNT, AUDIO_SAMPLE_RATE);
+		const context = new ContextCtor(
+			1,
+			AUDIO_SAMPLES_COUNT,
+			AUDIO_SAMPLE_RATE
+		);
 		const oscillator = context.createOscillator();
 		oscillator.type = 'triangle';
 		oscillator.frequency.value = AUDIO_OSC_FREQ;
@@ -149,7 +153,8 @@ const readWebgl = () => {
 	try {
 		const canvas = document.createElement('canvas');
 		const context =
-			canvas.getContext('webgl') ?? canvas.getContext('experimental-webgl');
+			canvas.getContext('webgl') ??
+			canvas.getContext('experimental-webgl');
 		if (
 			context === null ||
 			!('getExtension' in context) ||
@@ -164,7 +169,9 @@ const readWebgl = () => {
 			renderer: String(
 				context.getParameter(debug.UNMASKED_RENDERER_WEBGL) ?? ''
 			),
-			vendor: String(context.getParameter(debug.UNMASKED_VENDOR_WEBGL) ?? '')
+			vendor: String(
+				context.getParameter(debug.UNMASKED_VENDOR_WEBGL) ?? ''
+			)
 		};
 	} catch {
 		return undefined;
@@ -202,7 +209,10 @@ const readFonts = () => {
 		document.body.appendChild(span);
 
 		const baseline: Record<string, number> = Object.fromEntries(
-			FONT_BASE_FAMILIES.map((family) => [family, measureFamily(span, family)])
+			FONT_BASE_FAMILIES.map((family) => [
+				family,
+				measureFamily(span, family)
+			])
 		);
 		const present = POPULAR_FONTS.filter((font) =>
 			detectFontPresent(span, font, baseline)
@@ -263,37 +273,39 @@ const sha256Base64Url = async (input: string) => {
 
 // Collect every signal we can, hash them, return both so the caller can persist the raw
 // signals (for debugging / drift detection) while sending just the deviceId on the wire.
-export const collectDeviceFingerprint = async (): Promise<DeviceFingerprint> => {
-	if (typeof window === 'undefined' || typeof document === 'undefined') {
-		throw new Error(
-			'collectDeviceFingerprint must run in a browser — server-side use the @absolutejs/auth fingerprintDevice helper instead'
-		);
-	}
-	const [canvas, audio, webgl, fonts] = await Promise.all([
-		Promise.resolve(readCanvas()),
-		readAudio(),
-		Promise.resolve(readWebgl()),
-		Promise.resolve(readFonts())
-	]);
+export const collectDeviceFingerprint =
+	async (): Promise<DeviceFingerprint> => {
+		if (typeof window === 'undefined' || typeof document === 'undefined') {
+			throw new Error(
+				'collectDeviceFingerprint must run in a browser — server-side use the @absolutejs/auth fingerprintDevice helper instead'
+			);
+		}
+		const [canvas, audio, webgl, fonts] = await Promise.all([
+			Promise.resolve(readCanvas()),
+			readAudio(),
+			Promise.resolve(readWebgl()),
+			Promise.resolve(readFonts())
+		]);
 
-	const deviceMemory =
-		'deviceMemory' in navigator
-			? Reflect.get(navigator, 'deviceMemory')
-			: undefined;
-	const signals: FingerprintSignals = {
-		audio,
-		canvas,
-		deviceMemory: typeof deviceMemory === 'number' ? deviceMemory : undefined,
-		fonts,
-		hardwareConcurrency: navigator.hardwareConcurrency,
-		languages: navigator.languages,
-		pixelRatio: window.devicePixelRatio,
-		platform: navigator.platform,
-		screen: readScreen(),
-		timezone: readTimezone(),
-		userAgent: navigator.userAgent,
-		webgl
+		const deviceMemory =
+			'deviceMemory' in navigator
+				? Reflect.get(navigator, 'deviceMemory')
+				: undefined;
+		const signals: FingerprintSignals = {
+			audio,
+			canvas,
+			deviceMemory:
+				typeof deviceMemory === 'number' ? deviceMemory : undefined,
+			fonts,
+			hardwareConcurrency: navigator.hardwareConcurrency,
+			languages: navigator.languages,
+			pixelRatio: window.devicePixelRatio,
+			platform: navigator.platform,
+			screen: readScreen(),
+			timezone: readTimezone(),
+			userAgent: navigator.userAgent,
+			webgl
+		};
+
+		return { deviceId: await sha256Base64Url(canonical(signals)), signals };
 	};
-
-	return { deviceId: await sha256Base64Url(canonical(signals)), signals };
-};

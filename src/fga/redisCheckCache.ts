@@ -34,7 +34,10 @@ const parseBoolean = (raw: string | null) => {
 
 export const createRedisFgaCache = (
 	redis: RedisFgaCacheClient,
-	{ keyPrefix = DEFAULT_PREFIX, ttlMs = DEFAULT_TTL_MS }: CreateRedisFgaCacheOptions = {}
+	{
+		keyPrefix = DEFAULT_PREFIX,
+		ttlMs = DEFAULT_TTL_MS
+	}: CreateRedisFgaCacheOptions = {}
 ): FgaCache => ({
 	clear: async () => {
 		const enumerate = redis.keys;

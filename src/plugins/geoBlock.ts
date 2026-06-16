@@ -19,11 +19,19 @@ export const geoBlockPlugin = (options: GeoBlockOptions) => {
 	const allow =
 		options.allowCountries === undefined
 			? undefined
-			: new Set(options.allowCountries.map((country) => country.toUpperCase()));
+			: new Set(
+					options.allowCountries.map((country) =>
+						country.toUpperCase()
+					)
+				);
 	const deny =
 		options.denyCountries === undefined
 			? undefined
-			: new Set(options.denyCountries.map((country) => country.toUpperCase()));
+			: new Set(
+					options.denyCountries.map((country) =>
+						country.toUpperCase()
+					)
+				);
 
 	return (headers: Record<string, string | undefined>) => {
 		const country = readCountry(headers);

@@ -115,7 +115,9 @@ export const parseSdJwtVc = (token: string): ParsedSdJwtVc => {
 	const hasKeyBinding = last !== undefined && last !== '';
 	const keyBindingJwt = hasKeyBinding ? last : undefined;
 	const disclosureCount = hasKeyBinding ? tail.length - 1 : tail.length - 1;
-	const disclosures = tail.slice(0, disclosureCount).filter((entry) => entry !== '');
+	const disclosures = tail
+		.slice(0, disclosureCount)
+		.filter((entry) => entry !== '');
 
 	return { disclosures, jwt, keyBindingJwt };
 };
@@ -188,7 +190,9 @@ export const verifySdJwtVc = async (input: SdJwtVcVerifyInput) => {
 	const sdArray = payload._sd;
 	const sdAlg = payload._sd_alg;
 	if (!Array.isArray(sdArray) || sdAlg !== SD_ALG) return undefined;
-	const acceptedHashes = new Set(sdArray.filter((entry): entry is string => typeof entry === 'string'));
+	const acceptedHashes = new Set(
+		sdArray.filter((entry): entry is string => typeof entry === 'string')
+	);
 
 	const disclosedClaims: Record<string, unknown> = {};
 	for (const encoded of parsed.disclosures) {
@@ -224,7 +228,12 @@ const extractCnf = (value: unknown) => {
 	const jwk = Reflect.get(value, 'jwk');
 	if (typeof jwk !== 'object' || jwk === null) return undefined;
 	// JWK is structural; narrow the fields we read.
-	const candidate: { crv?: unknown; kty?: unknown; x?: unknown; y?: unknown } = jwk;
+	const candidate: {
+		crv?: unknown;
+		kty?: unknown;
+		x?: unknown;
+		y?: unknown;
+	} = jwk;
 	const narrowed = {
 		crv: typeof candidate.crv === 'string' ? candidate.crv : undefined,
 		kty: typeof candidate.kty === 'string' ? candidate.kty : undefined,

@@ -19,7 +19,9 @@ const base64Decode = (value: string) =>
 	Uint8Array.from(atob(value), (char) => char.charCodeAt(0));
 
 const base64UrlEncode = (bytes: Uint8Array) => {
-	const binary = Array.from(bytes, (byte) => String.fromCharCode(byte)).join('');
+	const binary = Array.from(bytes, (byte) => String.fromCharCode(byte)).join(
+		''
+	);
 
 	return btoa(binary)
 		.replace(/\+/gu, '-')

@@ -96,7 +96,10 @@ export const vpRoutes = ({
 				// Re-emit the signed request object every fetch — wallets sometimes re-fetch
 				// on retry. The stored record carries the nonce + state we baked in.
 				const rebuilt = await createPresentationRequest({
-					config: { ...vpConfig, requestStore: passthroughStore(stored) },
+					config: {
+						...vpConfig,
+						requestStore: passthroughStore(stored)
+					},
 					input: {
 						clientId: stored.clientId,
 						requestedClaims: stored.requestedClaims,
@@ -107,7 +110,9 @@ export const vpRoutes = ({
 				});
 
 				return new Response(rebuilt.requestObject, {
-					headers: { 'content-type': 'application/oauth-authz-req+jwt' },
+					headers: {
+						'content-type': 'application/oauth-authz-req+jwt'
+					},
 					status: HTTP_OK
 				});
 			},
@@ -124,7 +129,8 @@ export const vpRoutes = ({
 					config: vpConfig,
 					input: { requestId, vpToken: body.vp_token }
 				});
-				if (!result.ok) return errorBody(result.error, HTTP_BAD_REQUEST);
+				if (!result.ok)
+					return errorBody(result.error, HTTP_BAD_REQUEST);
 				if (onVerifiedPresentation !== undefined) {
 					await onVerifiedPresentation({ verified: result.verified });
 				}
@@ -152,7 +158,9 @@ export const vpRoutes = ({
 // The /vp/request/:id handler re-runs `createPresentationRequest` to re-emit the JWT, but
 // we don't want it to write a duplicate row. This tiny pass-through wraps the stored record
 // as a no-op `saveRequest` so the JWT is signed in-place.
-const passthroughStore = (request: import('./openid4vp').PresentationRequest) => ({
+const passthroughStore = (
+	request: import('./openid4vp').PresentationRequest
+) => ({
 	consumeRequest: async () => request,
 	getRequest: async () => request,
 	saveRequest: async () => {

@@ -85,7 +85,8 @@ export const parseSchema = (dsl: string) => {
 
 	for (const rawLine of dsl.split('\n')) {
 		const line = rawLine.trim();
-		if (line === '' || line.startsWith('#') || line === 'relations') continue;
+		if (line === '' || line.startsWith('#') || line === 'relations')
+			continue;
 
 		const typeName = applyType(schema, line);
 		currentType = typeName ?? currentType;

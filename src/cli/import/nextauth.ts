@@ -50,9 +50,11 @@ type NextAuthExport = {
 };
 
 const splitName = (full: string | undefined) => {
-	if (full === undefined) return { familyName: undefined, givenName: undefined };
+	if (full === undefined)
+		return { familyName: undefined, givenName: undefined };
 	const parts = full.split(/\s+/);
-	if (parts.length === 1) return { familyName: undefined, givenName: parts[0] };
+	if (parts.length === 1)
+		return { familyName: undefined, givenName: parts[0] };
 
 	return {
 		familyName: parts.slice(1).join(' '),
@@ -73,7 +75,9 @@ export const nextauthImporter: Importer = {
 			return {
 				createdAtMs: Date.now(),
 				email: raw.email,
-				emailVerified: raw.emailVerified !== null && raw.emailVerified !== undefined,
+				emailVerified:
+					raw.emailVerified !== null &&
+					raw.emailVerified !== undefined,
 				externalId: raw.id,
 				familyName: split.familyName,
 				givenName: split.givenName,
@@ -87,7 +91,10 @@ export const nextauthImporter: Importer = {
 		});
 
 		const identities = (parsed.accounts ?? [])
-			.filter((account) => account.type === undefined || account.type === 'oauth')
+			.filter(
+				(account) =>
+					account.type === undefined || account.type === 'oauth'
+			)
 			.map((account) => ({
 				authProvider: account.provider,
 				createdAtMs: Date.now(),

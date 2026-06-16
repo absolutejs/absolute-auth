@@ -75,11 +75,7 @@ export const SignUp = ({
 		createElement(
 			'label',
 			{ className: classNames?.field, 'data-abs-auth': 'email-field' },
-			createElement(
-				'span',
-				{ className: classNames?.label },
-				emailLabel
-			),
+			createElement('span', { className: classNames?.label }, emailLabel),
 			createElement('input', {
 				autoComplete: 'email',
 				className: classNames?.input,

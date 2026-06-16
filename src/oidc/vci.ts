@@ -38,7 +38,10 @@ export type CredentialConfiguration = {
 	// The order claims should be rendered in (display hint for the wallet).
 	order?: string[];
 	// The selectively-disclosable claim names the issuer commits to supporting.
-	claims?: Record<string, { display?: Array<{ locale?: string; name: string }> }>;
+	claims?: Record<
+		string,
+		{ display?: Array<{ locale?: string; name: string }> }
+	>;
 	// `vct` claim value embedded in the issued credential (SD-JWT VC type URI).
 	vct: string;
 };
@@ -54,7 +57,9 @@ export type CredentialOffer = {
 };
 
 export type CredentialOfferStore = {
-	consumeOffer: (preAuthorizedCodeHash: string) => Promise<CredentialOffer | undefined>;
+	consumeOffer: (
+		preAuthorizedCodeHash: string
+	) => Promise<CredentialOffer | undefined>;
 	saveOffer: (offer: CredentialOffer) => Promise<void>;
 };
 
@@ -64,7 +69,9 @@ export type CredentialNonceRecord = {
 };
 
 export type CredentialNonceStore = {
-	consumeNonce: (nonceHash: string) => Promise<CredentialNonceRecord | undefined>;
+	consumeNonce: (
+		nonceHash: string
+	) => Promise<CredentialNonceRecord | undefined>;
 	saveNonce: (record: CredentialNonceRecord) => Promise<void>;
 };
 
@@ -86,9 +93,7 @@ export type VciConfig = {
 	resolveProtectedClaims?: (context: {
 		configurationId: string;
 		userId: string;
-	}) =>
-		| Promise<Record<string, unknown>>
-		| Record<string, unknown>;
+	}) => Promise<Record<string, unknown>> | Record<string, unknown>;
 	// VCI-specific issuer signing key. Defaults to the OIDC signing key when omitted, so a
 	// consumer that already runs the OIDC provider doesn't need to manage two keys; you'd
 	// override when you want VC issuance under a different KID (e.g. an eIDAS-attested key).
@@ -160,7 +165,9 @@ export const exchangePreAuthorizedCode = async ({
 	preAuthorizedCode: string;
 	signingKey: SigningKey;
 }) => {
-	const failFor = (error: Extract<PreAuthExchangeResult, { ok: false }>['error']) => {
+	const failFor = (
+		error: Extract<PreAuthExchangeResult, { ok: false }>['error']
+	) => {
 		const failure: PreAuthExchangeResult = { error, ok: false };
 
 		return failure;
@@ -245,7 +252,12 @@ const extractHolderJwk = (proofJwt: string) => {
 	const jwk = Reflect.get(header, 'jwk');
 	if (typeof jwk !== 'object' || jwk === null) return undefined;
 	// JWK is a structural type (no nominal brand) — narrow the keys we actually read.
-	const candidate: { crv?: unknown; kty?: unknown; x?: unknown; y?: unknown } = jwk;
+	const candidate: {
+		crv?: unknown;
+		kty?: unknown;
+		x?: unknown;
+		y?: unknown;
+	} = jwk;
 
 	return {
 		crv: typeof candidate.crv === 'string' ? candidate.crv : undefined,
@@ -317,7 +329,9 @@ export const buildIssuerMetadata = ({
 				display: configuration.display,
 				format: configuration.format,
 				order: configuration.order,
-				proof_types_supported: { jwt: { proof_signing_alg_values_supported: ['ES256'] } },
+				proof_types_supported: {
+					jwt: { proof_signing_alg_values_supported: ['ES256'] }
+				},
 				vct: configuration.vct
 			}
 		])
@@ -342,7 +356,9 @@ const issueOk = (credential: string) => {
 
 	return success;
 };
-const issueFail = (error: Extract<CredentialIssueResult, { ok: false }>['error']) => {
+const issueFail = (
+	error: Extract<CredentialIssueResult, { ok: false }>['error']
+) => {
 	const failure: CredentialIssueResult = { error, ok: false };
 
 	return failure;
@@ -362,7 +378,8 @@ export const issueCredential = async ({
 	signingKey: SigningKey;
 }) => {
 	const requested = input.requestedFormat ?? 'vc+sd-jwt';
-	if (requested !== 'vc+sd-jwt') return issueFail('unsupported_credential_format');
+	if (requested !== 'vc+sd-jwt')
+		return issueFail('unsupported_credential_format');
 
 	const decoded = await verifyJwt(input.accessToken, signingKey.publicJwk);
 	if (decoded === undefined) return issueFail('invalid_token');
@@ -382,7 +399,8 @@ export const issueCredential = async ({
 	const configuration = config.credentialConfigurations.find(
 		(entry) => entry.id === configurationId
 	);
-	if (configuration === undefined) return issueFail('invalid_credential_request');
+	if (configuration === undefined)
+		return issueFail('invalid_credential_request');
 
 	let holderJwk: JsonWebKey | undefined;
 	if (input.proofJwt !== undefined) {

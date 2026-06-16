@@ -39,9 +39,7 @@ const buildClientAssertion = async ({
 	signJwt(
 		{
 			aud: audience,
-			exp:
-				expSeconds ??
-				Math.floor(Date.now() / 1000) + 60,
+			exp: expSeconds ?? Math.floor(Date.now() / 1000) + 60,
 			iat: Math.floor(Date.now() / 1000),
 			iss: clientId,
 			jti: jti ?? crypto.randomUUID(),
@@ -88,7 +86,9 @@ const codeFromRedirect = (response: Response) =>
 	new URL(response.headers.get('location') ?? '').searchParams.get('code') ??
 	'';
 
-const getCode = async (app: { handle: (req: Request) => Promise<Response> }) => {
+const getCode = async (app: {
+	handle: (req: Request) => Promise<Response>;
+}) => {
 	const params = new URLSearchParams({
 		client_id: 'rp-with-keys',
 		code_challenge: await hashToken(VERIFIER),
@@ -100,9 +100,12 @@ const getCode = async (app: { handle: (req: Request) => Promise<Response> }) => 
 
 	return codeFromRedirect(
 		await app.handle(
-			new Request(`http://localhost/oauth2/authorize?${params.toString()}`, {
-				headers: { cookie: `user_session_id=${SESSION_ID}` }
-			})
+			new Request(
+				`http://localhost/oauth2/authorize?${params.toString()}`,
+				{
+					headers: { cookie: `user_session_id=${SESSION_ID}` }
+				}
+			)
 		)
 	);
 };
@@ -250,9 +253,9 @@ describe('OIDC provider — private_key_jwt client auth (RFC 7521/7523)', () => 
 				new Request('http://localhost/.well-known/openid-configuration')
 			)
 		).json();
-		expect(
-			discovery.token_endpoint_auth_methods_supported
-		).toContain('private_key_jwt');
+		expect(discovery.token_endpoint_auth_methods_supported).toContain(
+			'private_key_jwt'
+		);
 		expect(
 			discovery.token_endpoint_auth_signing_alg_values_supported
 		).toContain('ES256');

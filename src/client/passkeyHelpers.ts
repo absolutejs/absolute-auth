@@ -20,7 +20,10 @@ type StartRegistration = (options: {
 }) => Promise<unknown>;
 
 const loadBrowser = async () => {
-	const mod: { startAuthentication: StartAuthentication; startRegistration: StartRegistration } =
+	const mod: {
+		startAuthentication: StartAuthentication;
+		startRegistration: StartRegistration;
+	} =
 		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- @simplewebauthn/browser is an optional peer dep; the dynamic import is gated by composable use sites + the shape matches the upstream signature we depend on
 		(await import('@simplewebauthn/browser')) as {
 			startAuthentication: StartAuthentication;

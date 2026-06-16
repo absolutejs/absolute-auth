@@ -1,9 +1,6 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
 import { auth } from '../src/index';
-import {
-	createScimToken,
-	type ScimConfig
-} from '../src/scim/config';
+import { createScimToken, type ScimConfig } from '../src/scim/config';
 import {
 	defineScimAttributeMap,
 	diffScimGroupMembers
@@ -248,10 +245,9 @@ describe('/Schemas discovery', () => {
 		expect(body.id).toBe(USER_SCHEMA);
 
 		const unknown = await app.handle(
-			new Request(
-				'http://localhost/scim/v2/Schemas/urn:does:not:exist',
-				{ headers: { authorization: authHeader } }
-			)
+			new Request('http://localhost/scim/v2/Schemas/urn:does:not:exist', {
+				headers: { authorization: authHeader }
+			})
 		);
 		expect(unknown.status).toBe(HTTP_NOT_FOUND);
 	});

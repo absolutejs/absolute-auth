@@ -34,80 +34,85 @@ export const credentialsRegister = <UserType>({
 			status,
 			store: { session }
 		}) =>
-		withSpan('auth.credentials.register', undefined, async () => {
-			const normalizedEmail = email.trim().toLowerCase();
-			if (!normalizedEmail.includes('@')) {
-				return status('Bad Request', 'A valid email is required');
-			}
+			withSpan('auth.credentials.register', undefined, async () => {
+				const normalizedEmail = email.trim().toLowerCase();
+				if (!normalizedEmail.includes('@')) {
+					return status('Bad Request', 'A valid email is required');
+				}
 
-			const policy = await evaluatePassword(password, passwordPolicy);
-			if (!policy.ok) {
-				return status('Bad Request', {
-					message: 'Password does not meet the policy',
-					violations: policy.violations
+				const policy = await evaluatePassword(password, passwordPolicy);
+				if (!policy.ok) {
+					return status('Bad Request', {
+						message: 'Password does not meet the policy',
+						violations: policy.violations
+					});
+				}
+
+				const existing =
+					await credentialStore.getCredentialByEmail(normalizedEmail);
+				if (existing) {
+					return status('Conflict', 'Email is already registered');
+				}
+
+				const created = await onCreateCredentialUser({
+					...extraFields,
+					email: normalizedEmail
 				});
-			}
+				if (created instanceof Response || isStatusResponse(created)) {
+					return created;
+				}
 
-			const existing =
-				await credentialStore.getCredentialByEmail(normalizedEmail);
-			if (existing) {
-				return status('Conflict', 'Email is already registered');
-			}
+				const now = Date.now();
+				await credentialStore.saveCredential({
+					createdAt: now,
+					email: normalizedEmail,
+					emailVerified: false,
+					passwordHash: await hashPassword(password),
+					status: 'active',
+					updatedAt: now
+				});
 
-			const created = await onCreateCredentialUser({
-				...extraFields,
-				email: normalizedEmail
-			});
-			if (created instanceof Response || isStatusResponse(created)) {
-				return created;
-			}
+				const token = generateSecureToken();
+				const expiresAt = now + verificationTokenDurationMs;
+				await credentialStore.saveVerificationToken({
+					email: normalizedEmail,
+					expiresAt,
+					tokenHash: await hashToken(token)
+				});
+				await onSendEmail({
+					email: normalizedEmail,
+					expiresAt,
+					token,
+					type: 'verify_email'
+				});
+				await onRegistrationSuccess?.({
+					email: normalizedEmail,
+					user: created
+				});
 
-			const now = Date.now();
-			await credentialStore.saveCredential({
-				createdAt: now,
-				email: normalizedEmail,
-				emailVerified: false,
-				passwordHash: await hashPassword(password),
-				status: 'active',
-				updatedAt: now
-			});
+				if (requireEmailVerification) {
+					return status('Created', {
+						status: 'verification_required'
+					});
+				}
 
-			const token = generateSecureToken();
-			const expiresAt = now + verificationTokenDurationMs;
-			await credentialStore.saveVerificationToken({
-				email: normalizedEmail,
-				expiresAt,
-				tokenHash: await hashToken(token)
-			});
-			await onSendEmail({
-				email: normalizedEmail,
-				expiresAt,
-				token,
-				type: 'verify_email'
-			});
-			await onRegistrationSuccess?.({
-				email: normalizedEmail,
-				user: created
-			});
+				// Auto-login. A freshly registered user has no enrolled factors yet, so the
+				// MFA seam (enforced on subsequent logins) does not apply here.
+				const userSessionId = await promoteToSession({
+					authSessionStore,
+					cookie: user_session_id,
+					cookieSecure,
+					inMemorySession: session,
+					sessionDurationMs,
+					user: created
+				});
+				await onCredentialsLoginSuccess?.({
+					user: created,
+					userSessionId
+				});
 
-			if (requireEmailVerification) {
-				return status('Created', { status: 'verification_required' });
-			}
-
-			// Auto-login. A freshly registered user has no enrolled factors yet, so the
-			// MFA seam (enforced on subsequent logins) does not apply here.
-			const userSessionId = await promoteToSession({
-				authSessionStore,
-				cookie: user_session_id,
-				cookieSecure,
-				inMemorySession: session,
-				sessionDurationMs,
-				user: created
-			});
-			await onCredentialsLoginSuccess?.({ user: created, userSessionId });
-
-			return status('Created', { status: 'authenticated' });
-		}),
+				return status('Created', { status: 'authenticated' });
+			}),
 		{
 			// `additionalProperties` lets extra signup fields (e.g. given_name)
 			// flow through to onCreateCredentialUser for profile capture.

@@ -39,8 +39,7 @@ const buildRequestObject = async ({
 			client_id: clientId,
 			code_challenge: codeChallenge,
 			code_challenge_method: 'S256',
-			exp:
-				expSeconds ?? Math.floor(Date.now() / 1000) + 60,
+			exp: expSeconds ?? Math.floor(Date.now() / 1000) + 60,
 			iat: Math.floor(Date.now() / 1000),
 			iss: clientId,
 			nonce: 'jar-nonce',
@@ -115,9 +114,12 @@ describe('OIDC provider — JAR signed authorize requests (RFC 9101)', () => {
 		});
 
 		const response = await app.handle(
-			new Request(`http://localhost/oauth2/authorize?${params.toString()}`, {
-				headers: { cookie: `user_session_id=${SESSION_ID}` }
-			})
+			new Request(
+				`http://localhost/oauth2/authorize?${params.toString()}`,
+				{
+					headers: { cookie: `user_session_id=${SESSION_ID}` }
+				}
+			)
 		);
 		expect(response.status).toBe(HTTP_FOUND);
 		const location = response.headers.get('location') ?? '';
@@ -277,8 +279,8 @@ describe('OIDC provider — JAR signed authorize requests (RFC 9101)', () => {
 		).json();
 		expect(discovery.request_parameter_supported).toBe(true);
 		expect(discovery.require_signed_request_object_supported).toBe(true);
-		expect(
-			discovery.request_object_signing_alg_values_supported
-		).toContain('ES256');
+		expect(discovery.request_object_signing_alg_values_supported).toContain(
+			'ES256'
+		);
 	});
 });

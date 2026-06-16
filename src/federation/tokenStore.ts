@@ -60,7 +60,9 @@ export type FederatedTokenStore = {
 	) => Promise<void>;
 };
 
-export const createFederatedTokenStore = (vault: Vault): FederatedTokenStore => ({
+export const createFederatedTokenStore = (
+	vault: Vault
+): FederatedTokenStore => ({
 	delete: async (userId, provider, revoke) => {
 		const current =
 			revoke === undefined
@@ -128,11 +130,12 @@ export const getOrRefreshFederatedTokens = async ({
 	}
 	const refreshed = await refresh(current.refreshToken);
 	const expiresIn =
-		typeof refreshed.expires_in === 'number' ? refreshed.expires_in : undefined;
+		typeof refreshed.expires_in === 'number'
+			? refreshed.expires_in
+			: undefined;
 	const updated: Omit<FederatedTokenSet, 'storedAt'> = {
 		accessToken: refreshed.access_token,
-		expiresAt:
-			expiresIn === undefined ? undefined : now + expiresIn * 1000,
+		expiresAt: expiresIn === undefined ? undefined : now + expiresIn * 1000,
 		refreshToken: refreshed.refresh_token ?? current.refreshToken,
 		scopes: current.scopes,
 		tokenType: refreshed.token_type ?? current.tokenType

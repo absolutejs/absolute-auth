@@ -182,7 +182,9 @@ describe('webhook dispatcher — retry + DLQ', () => {
 				}
 			],
 			fetch: async (url, init) => {
-				const target = url.endsWith('/logins') ? loginsOnly : everything;
+				const target = url.endsWith('/logins')
+					? loginsOnly
+					: everything;
 				target.push({
 					body: init.body,
 					headers: init.headers,

@@ -40,7 +40,9 @@ const toEnrollment = (row: MfaRow): MfaEnrollment => ({
 
 export const createNeonMfaStore = (databaseUrl: string) =>
 	createPostgresMfaStore(createNeonDatabase(databaseUrl));
-export const createPostgresMfaStore = (db: AnyPgDatabase): MFAStore => ({
+export const createPostgresMfaStore = <DB extends AnyPgDatabase>(
+	db: DB
+): MFAStore => ({
 	getEnrollment: async (userId) => {
 		const [row] = await db
 			.select()

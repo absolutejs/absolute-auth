@@ -3,10 +3,12 @@ import { createAuthClient } from '../src/client/createAuthClient';
 
 const stub = (
 	handler: (url: string, init: RequestInit) => Response | Promise<Response>
-) => mock(async (input: RequestInfo | URL, init?: RequestInit) =>
-	handler(input.toString(), init ?? {})
-	// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- test stub for fetch
-) as unknown as typeof fetch;
+) =>
+	mock(
+		async (input: RequestInfo | URL, init?: RequestInit) =>
+			handler(input.toString(), init ?? {})
+		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- test stub for fetch
+	) as unknown as typeof fetch;
 
 describe('createAuthClient', () => {
 	test('signIn.email posts JSON and unwraps the body on 200', async () => {
@@ -14,11 +16,15 @@ describe('createAuthClient', () => {
 		const client = createAuthClient({
 			fetch: stub((url, init) => {
 				calls.push({
-					body: init.body ? JSON.parse(init.body.toString()) : undefined,
+					body: init.body
+						? JSON.parse(init.body.toString())
+						: undefined,
 					url
 				});
 
-				return new Response(JSON.stringify({ status: 'authenticated' }));
+				return new Response(
+					JSON.stringify({ status: 'authenticated' })
+				);
 			})
 		});
 

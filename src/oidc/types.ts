@@ -240,9 +240,7 @@ export type BackchannelAuthStore = {
 		authReqId: string
 	) => Promise<BackchannelAuthRequest | undefined>;
 	recordPoll: (authReqId: string, at: number) => Promise<void>;
-	saveBackchannelAuth: (
-		request: BackchannelAuthRequest
-	) => Promise<void>;
+	saveBackchannelAuth: (request: BackchannelAuthRequest) => Promise<void>;
 	updateStatus: (
 		authReqId: string,
 		status: BackchannelAuthStatus,

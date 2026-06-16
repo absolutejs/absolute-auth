@@ -74,7 +74,9 @@ export const clerkImporter: Importer = {
 					familyName: raw.last_name,
 					givenName: raw.first_name,
 					passwordHash: raw.password_digest,
-					passwordHashAlgo: raw.password_digest?.startsWith('$argon2id')
+					passwordHashAlgo: raw.password_digest?.startsWith(
+						'$argon2id'
+					)
 						? ('argon2id' as const)
 						: raw.password_digest?.startsWith('$2')
 							? ('bcrypt' as const)

@@ -156,9 +156,7 @@ describe('CLI import — Lucia', () => {
 				{ id: 'google:118391', user_id: 'u1' },
 				{ id: 'github:9999', user_id: 'u1' }
 			],
-			users: [
-				{ created_at: 1700000000, email: 'alice@x.test', id: 'u1' }
-			]
+			users: [{ created_at: 1700000000, email: 'alice@x.test', id: 'u1' }]
 		});
 		const result = await luciaImporter.parse(path);
 		expect(result.users[0]?.email).toBe('alice@x.test');

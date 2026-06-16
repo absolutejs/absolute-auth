@@ -87,7 +87,9 @@ describe('OIDC provider — Pushed Authorization Requests (RFC 9126)', () => {
 		});
 		expect(par.status).toBe(HTTP_OK);
 		const parBody = await par.json();
-		expect(parBody.request_uri).toMatch(/^urn:ietf:params:oauth:request_uri:/);
+		expect(parBody.request_uri).toMatch(
+			/^urn:ietf:params:oauth:request_uri:/
+		);
 		expect(parBody.expires_in).toBeGreaterThan(0);
 
 		const authorizeParams = new URLSearchParams({
@@ -135,15 +137,21 @@ describe('OIDC provider — Pushed Authorization Requests (RFC 9126)', () => {
 		});
 
 		const first = await app.handle(
-			new Request(`http://localhost/oauth2/authorize?${params.toString()}`, {
-				headers: { cookie: `user_session_id=${SESSION_ID}` }
-			})
+			new Request(
+				`http://localhost/oauth2/authorize?${params.toString()}`,
+				{
+					headers: { cookie: `user_session_id=${SESSION_ID}` }
+				}
+			)
 		);
 		expect(first.status).toBe(HTTP_FOUND);
 		const second = await app.handle(
-			new Request(`http://localhost/oauth2/authorize?${params.toString()}`, {
-				headers: { cookie: `user_session_id=${SESSION_ID}` }
-			})
+			new Request(
+				`http://localhost/oauth2/authorize?${params.toString()}`,
+				{
+					headers: { cookie: `user_session_id=${SESSION_ID}` }
+				}
+			)
 		);
 		expect(second.status).toBe(HTTP_BAD_REQUEST);
 		expect((await second.json()).error).toBe('invalid_request_uri');
@@ -222,9 +230,12 @@ describe('OIDC provider — Pushed Authorization Requests (RFC 9126)', () => {
 			response_type: 'code'
 		});
 		const response = await app.handle(
-			new Request(`http://localhost/oauth2/authorize?${params.toString()}`, {
-				headers: { cookie: `user_session_id=${SESSION_ID}` }
-			})
+			new Request(
+				`http://localhost/oauth2/authorize?${params.toString()}`,
+				{
+					headers: { cookie: `user_session_id=${SESSION_ID}` }
+				}
+			)
 		);
 		expect(response.status).toBe(HTTP_FOUND);
 		const location = response.headers.get('location') ?? '';
@@ -241,9 +252,9 @@ describe('OIDC provider — Pushed Authorization Requests (RFC 9126)', () => {
 		expect(discovery.pushed_authorization_request_endpoint).toContain(
 			'/oauth2/par'
 		);
-		expect(
-			discovery.require_pushed_authorization_requests_supported
-		).toBe(true);
+		expect(discovery.require_pushed_authorization_requests_supported).toBe(
+			true
+		);
 	});
 
 	test('discovery omits par when not configured', async () => {
@@ -263,9 +274,12 @@ describe('OIDC provider — Pushed Authorization Requests (RFC 9126)', () => {
 			request_uri: `${REQUEST_URI_PREFIX}fabricated-token`
 		});
 		const response = await app.handle(
-			new Request(`http://localhost/oauth2/authorize?${params.toString()}`, {
-				headers: { cookie: `user_session_id=${SESSION_ID}` }
-			})
+			new Request(
+				`http://localhost/oauth2/authorize?${params.toString()}`,
+				{
+					headers: { cookie: `user_session_id=${SESSION_ID}` }
+				}
+			)
 		);
 		expect(response.status).toBe(HTTP_BAD_REQUEST);
 	});

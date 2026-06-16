@@ -22,8 +22,8 @@ const toToken = (row: PasswordlessRow): PasswordlessToken => ({
 
 export const createNeonPasswordlessTokenStore = (databaseUrl: string) =>
 	createPostgresPasswordlessTokenStore(createNeonDatabase(databaseUrl));
-export const createPostgresPasswordlessTokenStore = (
-	db: AnyPgDatabase
+export const createPostgresPasswordlessTokenStore = <DB extends AnyPgDatabase>(
+	db: DB
 ): PasswordlessTokenStore => ({
 	consumeToken: async (tokenHash) => {
 		const [row] = await db

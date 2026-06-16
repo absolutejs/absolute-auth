@@ -119,7 +119,8 @@ export const useUpgradeToPasskey = (client: AuthClient) => {
 	void refetch();
 	const shouldPrompt = ref(false);
 	const updateShouldPrompt = () => {
-		shouldPrompt.value = passkeys.value !== null && passkeys.value.length === 0;
+		shouldPrompt.value =
+			passkeys.value !== null && passkeys.value.length === 0;
 	};
 	// Update shouldPrompt whenever the list changes via refetch/register.
 	const wrappedRefetch = async () => {

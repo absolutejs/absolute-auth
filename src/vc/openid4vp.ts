@@ -46,7 +46,9 @@ export type PresentationRequest = {
 };
 
 export type PresentationRequestStore = {
-	consumeRequest: (requestId: string) => Promise<PresentationRequest | undefined>;
+	consumeRequest: (
+		requestId: string
+	) => Promise<PresentationRequest | undefined>;
 	getRequest: (requestId: string) => Promise<PresentationRequest | undefined>;
 	saveRequest: (request: PresentationRequest) => Promise<void>;
 };
@@ -284,7 +286,7 @@ const checkStatus = async ({
 }) => {
 	if (config.statusListResolver === undefined) return true;
 	if (config.statusListPublicJwk === undefined) return true;
-	const {status} = credentialClaims;
+	const { status } = credentialClaims;
 	if (typeof status !== 'object' || status === null) return true;
 	const list = Reflect.get(status, 'status_list');
 	if (typeof list !== 'object' || list === null) return true;
@@ -332,4 +334,5 @@ export const buildHolderKeyBindingJwt = async ({
 		},
 		holderKey
 	);
-export const parsePresentationToken = (vpToken: string) => parseSdJwtVc(vpToken);
+export const parsePresentationToken = (vpToken: string) =>
+	parseSdJwtVc(vpToken);

@@ -30,85 +30,95 @@ export const mfaChallenge = <UserType>({
 			status,
 			store: { session, unregisteredSession }
 		}) =>
-		withSpan('auth.mfa.challenge', undefined, async () => {
-			const compatibilityLayer = await createSessionCompatibilityLayer({
-				authSessionStore,
-				userSessionId: user_session_id.value
-			});
-			const challengeSession = authSessionStore
-				? compatibilityLayer.session
-				: session;
-			const challengeUnregistered = authSessionStore
-				? compatibilityLayer.unregisteredSession
-				: unregisteredSession;
-			const pendingId = user_session_id.value;
-			const pending = pendingId
-				? challengeUnregistered[pendingId]
-				: undefined;
-			if (!pendingId || !pending) {
-				return status('Unauthorized', 'No MFA challenge in progress');
-			}
+			withSpan('auth.mfa.challenge', undefined, async () => {
+				const compatibilityLayer =
+					await createSessionCompatibilityLayer({
+						authSessionStore,
+						userSessionId: user_session_id.value
+					});
+				const challengeSession = authSessionStore
+					? compatibilityLayer.session
+					: session;
+				const challengeUnregistered = authSessionStore
+					? compatibilityLayer.unregisteredSession
+					: unregisteredSession;
+				const pendingId = user_session_id.value;
+				const pending = pendingId
+					? challengeUnregistered[pendingId]
+					: undefined;
+				if (!pendingId || !pending) {
+					return status(
+						'Unauthorized',
+						'No MFA challenge in progress'
+					);
+				}
 
-			const user = await getChallengeUser(pending.userIdentity ?? {});
-			const enrollment = user
-				? await mfaStore.getEnrollment(getUserId(user))
-				: undefined;
-			if (!user || !enrollment) {
-				return status('Unauthorized', 'No MFA challenge in progress');
-			}
+				const user = await getChallengeUser(pending.userIdentity ?? {});
+				const enrollment = user
+					? await mfaStore.getEnrollment(getUserId(user))
+					: undefined;
+				if (!user || !enrollment) {
+					return status(
+						'Unauthorized',
+						'No MFA challenge in progress'
+					);
+				}
 
-			const totpValid =
-				enrollment.totpVerified && enrollment.totpSecretCiphertext
-					? await verifyTotp({
-							secret: await decryptTotpSecret(
-								enrollment.totpSecretCiphertext,
-								encryptionKey
-							),
-							token: code
-						})
-					: false;
-			const remainingBackupHashes = totpValid
-				? undefined
-				: await consumeBackupCode(code, enrollment.backupCodeHashes);
+				const totpValid =
+					enrollment.totpVerified && enrollment.totpSecretCiphertext
+						? await verifyTotp({
+								secret: await decryptTotpSecret(
+									enrollment.totpSecretCiphertext,
+									encryptionKey
+								),
+								token: code
+							})
+						: false;
+				const remainingBackupHashes = totpValid
+					? undefined
+					: await consumeBackupCode(
+							code,
+							enrollment.backupCodeHashes
+						);
 
-			if (!totpValid && remainingBackupHashes === undefined) {
-				await onMfaChallengeError?.({
-					error: new Error('invalid_mfa_code'),
-					userId: getUserId(user)
+				if (!totpValid && remainingBackupHashes === undefined) {
+					await onMfaChallengeError?.({
+						error: new Error('invalid_mfa_code'),
+						userId: getUserId(user)
+					});
+
+					return status('Unauthorized', 'Invalid MFA code');
+				}
+
+				await mfaStore.saveEnrollment({
+					...enrollment,
+					backupCodeHashes:
+						remainingBackupHashes ?? enrollment.backupCodeHashes,
+					lastUsedAt: Date.now(),
+					updatedAt: Date.now()
 				});
 
-				return status('Unauthorized', 'Invalid MFA code');
-			}
+				delete challengeUnregistered[pendingId];
+				const userSessionId = crypto.randomUUID();
+				challengeSession[userSessionId] = {
+					authenticatedAt: Date.now(),
+					expiresAt: Date.now() + sessionDurationMs,
+					user
+				};
+				user_session_id.set({
+					httpOnly: true,
+					sameSite: 'lax',
+					secure: resolveCookieSecure(cookieSecure),
+					value: userSessionId
+				});
+				await persistWhen(
+					authSessionStore !== undefined,
+					compatibilityLayer.persist
+				);
+				await onMfaChallengeSuccess?.({ user, userSessionId });
 
-			await mfaStore.saveEnrollment({
-				...enrollment,
-				backupCodeHashes:
-					remainingBackupHashes ?? enrollment.backupCodeHashes,
-				lastUsedAt: Date.now(),
-				updatedAt: Date.now()
-			});
-
-			delete challengeUnregistered[pendingId];
-			const userSessionId = crypto.randomUUID();
-			challengeSession[userSessionId] = {
-				authenticatedAt: Date.now(),
-				expiresAt: Date.now() + sessionDurationMs,
-				user
-			};
-			user_session_id.set({
-				httpOnly: true,
-				sameSite: 'lax',
-				secure: resolveCookieSecure(cookieSecure),
-				value: userSessionId
-			});
-			await persistWhen(
-				authSessionStore !== undefined,
-				compatibilityLayer.persist
-			);
-			await onMfaChallengeSuccess?.({ user, userSessionId });
-
-			return status('OK', { status: 'authenticated' });
-		}),
+				return status('OK', { status: 'authenticated' });
+			}),
 		{
 			body: t.Object({ code: t.String() }),
 			cookie: t.Cookie({ user_session_id: userSessionIdTypebox })

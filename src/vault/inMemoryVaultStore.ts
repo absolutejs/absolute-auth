@@ -10,7 +10,8 @@ export const createInMemoryVaultStore = (): VaultStore => {
 			entries.delete(keyFor(ownerId, name));
 		},
 		getEntry: async (ownerId, name) => entries.get(keyFor(ownerId, name)),
-		listAllEntries: async () => [...entries.values()].map((entry) => ({ ...entry })),
+		listAllEntries: async () =>
+			[...entries.values()].map((entry) => ({ ...entry })),
 		listEntries: async (ownerId) =>
 			[...entries.values()]
 				.filter((entry) => entry.ownerId === ownerId)

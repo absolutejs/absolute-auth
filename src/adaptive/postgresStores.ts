@@ -106,8 +106,8 @@ export const createNeonKnownDeviceStore = (databaseUrl: string) =>
 	createPostgresKnownDeviceStore(createNeonDatabase(databaseUrl));
 export const createNeonLoginHistoryStore = (databaseUrl: string) =>
 	createPostgresLoginHistoryStore(createNeonDatabase(databaseUrl));
-export const createPostgresKnownDeviceStore = (
-	db: AnyPgDatabase
+export const createPostgresKnownDeviceStore = <DB extends AnyPgDatabase>(
+	db: DB
 ): KnownDeviceStore => ({
 	findDevice: async (userId, deviceId) => {
 		const [row] = await db
@@ -143,8 +143,8 @@ export const createPostgresKnownDeviceStore = (
 			});
 	}
 });
-export const createPostgresLoginHistoryStore = (
-	db: AnyPgDatabase
+export const createPostgresLoginHistoryStore = <DB extends AnyPgDatabase>(
+	db: DB
 ): LoginHistoryStore => ({
 	listRecent: async (userId, limit) => {
 		const rows = await db

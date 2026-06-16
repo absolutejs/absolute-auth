@@ -62,6 +62,7 @@ export type OrganizationStore = {
 	listMembershipsByUser: (
 		userId: string
 	) => Promise<OrganizationMembership[]>;
+	listOrganizations: () => Promise<Organization[]>;
 	removeMembership: (
 		organizationId: OrganizationId,
 		userId: string

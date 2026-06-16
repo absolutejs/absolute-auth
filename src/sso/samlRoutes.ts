@@ -295,7 +295,13 @@ export const samlSsoRoutes = <UserType>({
 			async ({
 				cookie: { user_session_id },
 				params: { organizationId },
-				query: { RelayState, SAMLRequest, SAMLResponse, SigAlg, Signature },
+				query: {
+					RelayState,
+					SAMLRequest,
+					SAMLResponse,
+					SigAlg,
+					Signature
+				},
 				redirect,
 				request,
 				status,

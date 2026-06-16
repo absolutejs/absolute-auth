@@ -24,7 +24,8 @@ const createFakeRedis = (): RedisFgaCacheClient & {
 	const store = new Map<string, StoreEntry>();
 	const prune = (key: string) => {
 		const entry = store.get(key);
-		if (entry !== undefined && entry.expiresAt < Date.now()) store.delete(key);
+		if (entry !== undefined && entry.expiresAt < Date.now())
+			store.delete(key);
 	};
 
 	return {

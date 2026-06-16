@@ -82,7 +82,11 @@ describe('tamper-evident audit', () => {
 		// Interleave appends — the failure mode that broke a single global chain.
 		await writerA.append({ at: 1, type: 'register', userId: 'u1' });
 		await writerB.append({ at: 2, type: 'oauth_login', userId: 'u2' });
-		await writerA.append({ at: 3, type: 'credentials_login', userId: 'u1' });
+		await writerA.append({
+			at: 3,
+			type: 'credentials_login',
+			userId: 'u1'
+		});
 		await writerB.append({ at: 4, type: 'logout', userId: 'u2' });
 
 		expect(await verifyAuditChain(events, 'k')).toEqual({ ok: true });
@@ -173,7 +177,11 @@ describe('audit retention + CSV export', () => {
 	test('prune removes events older than the cutoff', async () => {
 		const sink = createInMemoryAuditSink();
 		await sink.append({ at: 1000, type: 'register', userId: 'u1' });
-		await sink.append({ at: 2000, type: 'credentials_login', userId: 'u1' });
+		await sink.append({
+			at: 2000,
+			type: 'credentials_login',
+			userId: 'u1'
+		});
 		await sink.append({ at: 3000, type: 'logout', userId: 'u1' });
 
 		const removed = await sink.prune?.(2000);

@@ -93,7 +93,8 @@ export const createInMemoryClientRegistrationTokenStore =
 			saveToken: async (token) => {
 				// One reg token per client — replace any prior token on rotation.
 				for (const [hash, existing] of byHash) {
-					if (existing.clientId === token.clientId) byHash.delete(hash);
+					if (existing.clientId === token.clientId)
+						byHash.delete(hash);
 				}
 				byHash.set(token.tokenHash, { ...token });
 			}
@@ -124,7 +125,11 @@ export const createInMemoryDeviceAuthorizationStore =
 			updateStatus: async (deviceCodeHash, status, userSub) => {
 				const record = byDeviceCode.get(deviceCodeHash);
 				if (!record) return;
-				byDeviceCode.set(deviceCodeHash, { ...record, status, userSub });
+				byDeviceCode.set(deviceCodeHash, {
+					...record,
+					status,
+					userSub
+				});
 			}
 		};
 	};
@@ -142,23 +147,22 @@ export const createInMemoryInitialAccessTokenStore = (
 		}
 	};
 };
-export const createInMemoryLogoutDeliveryStore =
-	(): LogoutDeliveryStore => {
-		const failures = new Map<string, LogoutDelivery>();
+export const createInMemoryLogoutDeliveryStore = (): LogoutDeliveryStore => {
+	const failures = new Map<string, LogoutDelivery>();
 
-		return {
-			listFailed: async (limit = DEFAULT_LIST_LIMIT) =>
-				Array.from(failures.values())
-					.sort((left, right) => right.createdAt - left.createdAt)
-					.slice(0, limit),
-			recordFailure: async (delivery) => {
-				failures.set(delivery.id, delivery);
-			},
-			removeFailure: async (deliveryId) => {
-				failures.delete(deliveryId);
-			}
-		};
+	return {
+		listFailed: async (limit = DEFAULT_LIST_LIMIT) =>
+			Array.from(failures.values())
+				.sort((left, right) => right.createdAt - left.createdAt)
+				.slice(0, limit),
+		recordFailure: async (delivery) => {
+			failures.set(delivery.id, delivery);
+		},
+		removeFailure: async (deliveryId) => {
+			failures.delete(deliveryId);
+		}
 	};
+};
 export const createInMemoryOAuthClientStore = (
 	clients: OAuthClient[]
 ): OAuthClientStore => {
@@ -199,8 +203,7 @@ export const createInMemoryOidcRefreshTokenStore =
 			listClientIdsForUser: async (userId) => {
 				const now = Date.now();
 				const active = Array.from(tokens.values()).filter(
-					(token) =>
-						token.userId === userId && token.expiresAt > now
+					(token) => token.userId === userId && token.expiresAt > now
 				);
 
 				return Array.from(

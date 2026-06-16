@@ -145,10 +145,7 @@ const tryDeliverThenBackoff = async ({
 		const isLastAttempt = attempt >= retry.attempts - 1;
 		await (isLastAttempt
 			? Promise.resolve()
-			: sleep(
-					retry.initialDelayMs *
-						retry.backoffMultiplier ** attempt
-				));
+			: sleep(retry.initialDelayMs * retry.backoffMultiplier ** attempt));
 
 		return error;
 	}
@@ -233,8 +230,7 @@ export const createWebhookDispatcher = ({
 	const effectiveRetry: Required<WebhookRetryConfig> = {
 		attempts: retry?.attempts ?? DEFAULT_WEBHOOK_RETRY.attempts,
 		backoffMultiplier:
-			retry?.backoffMultiplier ??
-			DEFAULT_WEBHOOK_RETRY.backoffMultiplier,
+			retry?.backoffMultiplier ?? DEFAULT_WEBHOOK_RETRY.backoffMultiplier,
 		initialDelayMs:
 			retry?.initialDelayMs ?? DEFAULT_WEBHOOK_RETRY.initialDelayMs
 	};

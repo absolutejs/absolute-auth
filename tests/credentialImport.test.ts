@@ -31,7 +31,12 @@ const buildAuth0Pbkdf2Hash = async (password: string, salt: Uint8Array) => {
 		['deriveBits']
 	);
 	const derived = await crypto.subtle.deriveBits(
-		{ hash: 'SHA-256', iterations: PBKDF2_ITERATIONS, name: 'PBKDF2', salt },
+		{
+			hash: 'SHA-256',
+			iterations: PBKDF2_ITERATIONS,
+			name: 'PBKDF2',
+			salt
+		},
 		key,
 		256
 	);
@@ -109,7 +114,11 @@ describe('importUsers orchestration', () => {
 				onCreateUser: async ({ user }) => {
 					users.set(user.email, user);
 
-					return { email: user.email, emailVerified: true, userId: user.sub };
+					return {
+						email: user.email,
+						emailVerified: true,
+						userId: user.sub
+					};
 				}
 			}
 		);
@@ -117,13 +126,11 @@ describe('importUsers orchestration', () => {
 		expect(result.succeeded).toBe(3);
 		expect(result.failed).toBe(0);
 		expect(users.size).toBe(3);
-		const alice = await credentialStore.getCredentialByEmail(
-			'alice@example.com'
-		);
+		const alice =
+			await credentialStore.getCredentialByEmail('alice@example.com');
 		expect(alice?.passwordHash.startsWith('$argon2id$')).toBe(true);
-		const carol = await credentialStore.getCredentialByEmail(
-			'carol@example.com'
-		);
+		const carol =
+			await credentialStore.getCredentialByEmail('carol@example.com');
 		// OAuth-only: no credential row written.
 		expect(carol).toBeUndefined();
 	});
@@ -333,9 +340,8 @@ describe('rehashCredentialPassword direct call', () => {
 			status: 'active',
 			updatedAt: Date.now()
 		});
-		const before = await credentialStore.getCredentialByEmail(
-			'rehash@example.com'
-		);
+		const before =
+			await credentialStore.getCredentialByEmail('rehash@example.com');
 		expect(before?.passwordHash.startsWith('auth0_pbkdf2:')).toBe(true);
 
 		await rehashCredentialPassword({
@@ -345,9 +351,8 @@ describe('rehashCredentialPassword direct call', () => {
 			plainPassword: 'newPlainText'
 		});
 
-		const after = await credentialStore.getCredentialByEmail(
-			'rehash@example.com'
-		);
+		const after =
+			await credentialStore.getCredentialByEmail('rehash@example.com');
 		expect(after?.passwordHash.startsWith('$argon2id$')).toBe(true);
 		expect(after?.email).toBe('rehash@example.com');
 	});

@@ -35,8 +35,8 @@ const toDelivery = (row: DeliveryRow): WebhookDelivery => ({
 export const createNeonWebhookDeliveryStore = (databaseUrl: string) =>
 	createPostgresWebhookDeliveryStore(createNeonDatabase(databaseUrl));
 
-export const createPostgresWebhookDeliveryStore = (
-	db: AnyPgDatabase
+export const createPostgresWebhookDeliveryStore = <DB extends AnyPgDatabase>(
+	db: DB
 ): WebhookDeliveryStore => ({
 	listFailed: async (limit = DEFAULT_LIST_LIMIT) => {
 		const rows = await db

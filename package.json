@@ -6,6 +6,10 @@
 		"type": "git",
 		"url": "https://github.com/absolutejs/absolute-auth.git"
 	},
+	"homepage": "https://github.com/absolutejs/absolute-auth",
+	"bugs": {
+		"url": "https://github.com/absolutejs/absolute-auth/issues"
+	},
 	"main": "./dist/index.js",
 	"bin": {
 		"absolute-auth": "./dist/cli/migrate.js"

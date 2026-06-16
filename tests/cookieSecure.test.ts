@@ -37,9 +37,9 @@ const buildLoginApp = (cookieSecure?: boolean) => {
 		.use(credentialsLogin({ ...config, cookieSecure }));
 };
 
-const registerAndLogin = async (
-	app: { handle: (request: Request) => Promise<Response> }
-) => {
+const registerAndLogin = async (app: {
+	handle: (request: Request) => Promise<Response>;
+}) => {
 	await app.handle(
 		new Request('http://localhost/auth/register', {
 			body: JSON.stringify({

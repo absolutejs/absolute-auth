@@ -35,11 +35,7 @@ export const addToSessionRing = (
 	sessionId: UserSessionId,
 	cookieSecure?: boolean
 ) =>
-	writeRing(
-		ring,
-		[...new Set([...readRing(ring), sessionId])],
-		cookieSecure
-	);
+	writeRing(ring, [...new Set([...readRing(ring), sessionId])], cookieSecure);
 
 // Resolve the ring to its still-valid sessions (for an account switcher). Drops expired ones.
 export const listRingSessions = async <UserType>({

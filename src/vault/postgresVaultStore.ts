@@ -1,5 +1,11 @@
 import { and, eq } from 'drizzle-orm';
-import { bigint, pgTable, primaryKey, text, varchar } from 'drizzle-orm/pg-core';
+import {
+	bigint,
+	pgTable,
+	primaryKey,
+	text,
+	varchar
+} from 'drizzle-orm/pg-core';
 import { type AnyPgDatabase, createNeonDatabase } from '../stores/postgres';
 import type { VaultEntry, VaultStore } from './types';
 
@@ -29,7 +35,9 @@ const toEntry = (row: Row): VaultEntry => ({
 
 export const createNeonVaultStore = (databaseUrl: string) =>
 	createPostgresVaultStore(createNeonDatabase(databaseUrl));
-export const createPostgresVaultStore = (db: AnyPgDatabase): VaultStore => ({
+export const createPostgresVaultStore = <DB extends AnyPgDatabase>(
+	db: DB
+): VaultStore => ({
 	deleteEntry: async (ownerId, name) => {
 		await db
 			.delete(vaultEntriesTable)

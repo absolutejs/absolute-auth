@@ -65,178 +65,197 @@ export const callback = <UserType>({
 			},
 			query: { code, state: callback_state }
 		}) =>
-		withSpan('auth.oauth.callback', { 'auth.provider': auth_provider?.value }, async () => {
-			if (
-				stored_state === undefined ||
-				code_verifier === undefined ||
-				auth_provider === undefined ||
-				user_session_id === undefined ||
-				auth_client === undefined ||
-				auth_intent === undefined
-			) {
-				return status('Bad Request', 'Cookies are missing');
-			}
-			const authProvider = auth_provider.value;
-			if (authProvider === undefined) {
-				return status('Bad Request', 'Cookies are missing');
-			}
+			withSpan(
+				'auth.oauth.callback',
+				{ 'auth.provider': auth_provider?.value },
+				async () => {
+					if (
+						stored_state === undefined ||
+						code_verifier === undefined ||
+						auth_provider === undefined ||
+						user_session_id === undefined ||
+						auth_client === undefined ||
+						auth_intent === undefined
+					) {
+						return status('Bad Request', 'Cookies are missing');
+					}
+					const authProvider = auth_provider.value;
+					if (authProvider === undefined) {
+						return status('Bad Request', 'Cookies are missing');
+					}
 
-			if (!isNonEmptyString(code) || stored_state.value === undefined) {
-				return status('Bad Request', 'Invalid callback request');
-			}
+					if (
+						!isNonEmptyString(code) ||
+						stored_state.value === undefined
+					) {
+						return status(
+							'Bad Request',
+							'Invalid callback request'
+						);
+					}
 
-			if (callback_state !== stored_state.value) {
-				return status('Bad Request', 'Invalid state mismatch');
-			}
+					if (callback_state !== stored_state.value) {
+						return status('Bad Request', 'Invalid state mismatch');
+					}
 
-			const resolvedProvider = resolveClientProviderEntry({
-				clientName: auth_client.value || undefined,
-				clientProviders,
-				providerName: auth_provider.value
-			});
-			if ('error' in resolvedProvider) {
-				return status('Unauthorized', resolvedProvider.error);
-			}
-			const { clientName, providerInstance } = resolvedProvider.entry;
+					const resolvedProvider = resolveClientProviderEntry({
+						clientName: auth_client.value || undefined,
+						clientProviders,
+						providerName: auth_provider.value
+					});
+					if ('error' in resolvedProvider) {
+						return status('Unauthorized', resolvedProvider.error);
+					}
+					const { clientName, providerInstance } =
+						resolvedProvider.entry;
 
-			stored_state.remove();
+					stored_state.remove();
 
-			const requiresPKCE = isPKCEProviderOption(authProvider);
-			const verifier = requiresPKCE ? code_verifier.value : undefined;
-			if (requiresPKCE && verifier === undefined) {
-				return status(
-					'Bad Request',
-					'Code verifier not found and is required'
-				);
-			}
+					const requiresPKCE = isPKCEProviderOption(authProvider);
+					const verifier = requiresPKCE
+						? code_verifier.value
+						: undefined;
+					if (requiresPKCE && verifier === undefined) {
+						return status(
+							'Bad Request',
+							'Code verifier not found and is required'
+						);
+					}
 
-			const originUrl = origin_url?.value ?? '/';
+					const originUrl = origin_url?.value ?? '/';
 
-			let tokenResponse;
-			try {
-				tokenResponse =
-					await providerInstance.validateAuthorizationCode(
-						requiresPKCE
-							? { code, codeVerifier: verifier }
-							: { code }
-					);
-			} catch (err) {
-				console.error(
-					'[callback] Failed to validate authorization code:',
-					{
+					let tokenResponse;
+					try {
+						tokenResponse =
+							await providerInstance.validateAuthorizationCode(
+								requiresPKCE
+									? { code, codeVerifier: verifier }
+									: { code }
+							);
+					} catch (err) {
+						console.error(
+							'[callback] Failed to validate authorization code:',
+							{
+								authClient: clientName,
+								authProvider,
+								error: err instanceof Error ? err.message : err,
+								stack:
+									err instanceof Error ? err.stack : undefined
+							}
+						);
+
+						await onCallbackError?.({
+							authClient: clientName,
+							authProvider,
+							error: err,
+							originUrl
+						});
+
+						return status(
+							'Internal Server Error',
+							'Failed to validate authorization code'
+						);
+					}
+
+					const compatibilityLayer =
+						await createSessionCompatibilityLayer({
+							authSessionStore,
+							userSessionId: user_session_id.value
+						});
+					const callbackSession = authSessionStore
+						? compatibilityLayer.session
+						: session;
+					const callbackUnregisteredSession = authSessionStore
+						? compatibilityLayer.unregisteredSession
+						: unregisteredSession;
+					const currentUser =
+						user_session_id.value !== undefined
+							? callbackSession[user_session_id.value]?.user
+							: undefined;
+					const authIntent =
+						(isAuthIntent(auth_intent.value)
+							? auth_intent.value
+							: undefined) ??
+						(await resolveAuthIntent?.({
+							authClient: clientName,
+							authProvider,
+							currentUser,
+							originUrl,
+							session: callbackSession,
+							userSessionId: user_session_id.value
+						})) ??
+						'login';
+					auth_intent.remove();
+
+					const userSessionId =
+						user_session_id.value ?? crypto.randomUUID();
+					const callbackContext = {
 						authClient: clientName,
+						authIntent,
 						authProvider,
-						error: err instanceof Error ? err.message : err,
-						stack: err instanceof Error ? err.stack : undefined
+						cookie,
+						currentUser,
+						originUrl,
+						providerInstance,
+						redirect,
+						session: callbackSession,
+						status,
+						tokenResponse,
+						unregisteredSession: callbackUnregisteredSession,
+						userSessionId
+					} as const;
+
+					const dispatchSuccess = () => {
+						if (authIntent === 'link_identity' && onLinkIdentity) {
+							return onLinkIdentity(callbackContext);
+						}
+
+						if (
+							authIntent === 'link_connector' &&
+							onLinkConnector
+						) {
+							return onLinkConnector(callbackContext);
+						}
+
+						return onCallbackSuccess?.(callbackContext);
+					};
+
+					const handleDispatchError = (err: unknown) => {
+						if (
+							authIntent !== 'link_identity' ||
+							!(err instanceof AuthIdentityConflictError) ||
+							!onLinkIdentityConflict
+						) {
+							throw err;
+						}
+
+						return onLinkIdentityConflict({
+							...callbackContext,
+							conflict: {
+								...err.conflict,
+								intent: authIntent
+							}
+						});
+					};
+
+					let response;
+					try {
+						response = await dispatchSuccess();
+					} catch (err) {
+						response = await handleDispatchError(err);
 					}
-				);
 
-				await onCallbackError?.({
-					authClient: clientName,
-					authProvider,
-					error: err,
-					originUrl
-				});
-
-				return status(
-					'Internal Server Error',
-					'Failed to validate authorization code'
-				);
-			}
-
-			const compatibilityLayer = await createSessionCompatibilityLayer({
-				authSessionStore,
-				userSessionId: user_session_id.value
-			});
-			const callbackSession = authSessionStore
-				? compatibilityLayer.session
-				: session;
-			const callbackUnregisteredSession = authSessionStore
-				? compatibilityLayer.unregisteredSession
-				: unregisteredSession;
-			const currentUser =
-				user_session_id.value !== undefined
-					? callbackSession[user_session_id.value]?.user
-					: undefined;
-			const authIntent =
-				(isAuthIntent(auth_intent.value)
-					? auth_intent.value
-					: undefined) ??
-				(await resolveAuthIntent?.({
-					authClient: clientName,
-					authProvider,
-					currentUser,
-					originUrl,
-					session: callbackSession,
-					userSessionId: user_session_id.value
-				})) ??
-				'login';
-			auth_intent.remove();
-
-			const userSessionId = user_session_id.value ?? crypto.randomUUID();
-			const callbackContext = {
-				authClient: clientName,
-				authIntent,
-				authProvider,
-				cookie,
-				currentUser,
-				originUrl,
-				providerInstance,
-				redirect,
-				session: callbackSession,
-				status,
-				tokenResponse,
-				unregisteredSession: callbackUnregisteredSession,
-				userSessionId
-			} as const;
-
-			const dispatchSuccess = () => {
-				if (authIntent === 'link_identity' && onLinkIdentity) {
-					return onLinkIdentity(callbackContext);
-				}
-
-				if (authIntent === 'link_connector' && onLinkConnector) {
-					return onLinkConnector(callbackContext);
-				}
-
-				return onCallbackSuccess?.(callbackContext);
-			};
-
-			const handleDispatchError = (err: unknown) => {
-				if (
-					authIntent !== 'link_identity' ||
-					!(err instanceof AuthIdentityConflictError) ||
-					!onLinkIdentityConflict
-				) {
-					throw err;
-				}
-
-				return onLinkIdentityConflict({
-					...callbackContext,
-					conflict: {
-						...err.conflict,
-						intent: authIntent
+					if (authSessionStore) {
+						await compatibilityLayer.persist();
 					}
-				});
-			};
 
-			let response;
-			try {
-				response = await dispatchSuccess();
-			} catch (err) {
-				response = await handleDispatchError(err);
-			}
+					if (response) {
+						return response;
+					}
 
-			if (authSessionStore) {
-				await compatibilityLayer.persist();
-			}
-
-			if (response) {
-				return response;
-			}
-
-			return redirect(originUrl);
-		}),
+					return redirect(originUrl);
+				}
+			),
 		{
 			cookie: t.Cookie({
 				auth_client: authClientOption,

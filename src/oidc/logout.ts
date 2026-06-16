@@ -172,7 +172,12 @@ const deliverLogoutToOne = async <UserType>({
 	userId: string;
 }) => {
 	try {
-		await postLogoutToken({ endpointUrl, fetchImpl, logoutToken, timeoutMs });
+		await postLogoutToken({
+			endpointUrl,
+			fetchImpl,
+			logoutToken,
+			timeoutMs
+		});
 	} catch (error) {
 		const delivery: LogoutDelivery = {
 			attempts: 1,

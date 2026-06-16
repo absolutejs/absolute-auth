@@ -54,8 +54,8 @@ const toValues = (credential: WebAuthnCredential): WebAuthnInsert => ({
 
 export const createNeonWebAuthnCredentialStore = (databaseUrl: string) =>
 	createPostgresWebAuthnCredentialStore(createNeonDatabase(databaseUrl));
-export const createPostgresWebAuthnCredentialStore = (
-	db: AnyPgDatabase
+export const createPostgresWebAuthnCredentialStore = <DB extends AnyPgDatabase>(
+	db: DB
 ): WebAuthnCredentialStore => ({
 	getCredential: async (credentialId) => {
 		const [row] = await db

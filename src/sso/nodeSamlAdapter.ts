@@ -56,10 +56,8 @@ export type NodeSamlAdapterOptions = {
 // and `.../slo`, so one is a path-swap of the other — this keeps the adapter
 // from needing both passed on every call.
 const siblingEndpoints = (urls: { acsUrl?: string; sloUrl?: string }) => {
-	const acsUrl =
-		urls.acsUrl ?? urls.sloUrl?.replace(/\/slo(\?|$)/, '/acs$1');
-	const sloUrl =
-		urls.sloUrl ?? urls.acsUrl?.replace(/\/acs(\?|$)/, '/slo$1');
+	const acsUrl = urls.acsUrl ?? urls.sloUrl?.replace(/\/slo(\?|$)/, '/acs$1');
+	const sloUrl = urls.sloUrl ?? urls.acsUrl?.replace(/\/acs(\?|$)/, '/slo$1');
 
 	return { acsUrl, sloUrl };
 };
@@ -68,8 +66,11 @@ export const createNodeSamlAdapter = async (
 	options: NodeSamlAdapterOptions = {}
 ): Promise<SamlAdapter> => {
 	const { SAML } = await import('@node-saml/node-saml');
-	const { signatureAlgorithm = 'sha256', spCertificate, spPrivateKey } =
-		options;
+	const {
+		signatureAlgorithm = 'sha256',
+		spCertificate,
+		spPrivateKey
+	} = options;
 	const canSign = spPrivateKey !== undefined;
 
 	const build = (
@@ -113,10 +114,10 @@ export const createNodeSamlAdapter = async (
 				{}
 			),
 		getServiceProviderMetadata: ({ acsUrl, connection, sloUrl }) =>
-			build(connection, { acsUrl, sloUrl }).generateServiceProviderMetadata(
-				null,
-				spCertificate ?? null
-			),
+			build(connection, {
+				acsUrl,
+				sloUrl
+			}).generateServiceProviderMetadata(null, spCertificate ?? null),
 		validateAssertion: async ({ acsUrl, connection, samlResponse }) => {
 			const { profile } = await build(connection, {
 				acsUrl

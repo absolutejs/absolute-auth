@@ -74,9 +74,10 @@ export type OidcProviderConfig<UserType> = {
 	// Resolves the CIBA `login_hint` (RFC's flexible "however you identify the user" param,
 	// e.g. an email, phone, or external id) to the user. Required to enable CIBA. When this
 	// returns `undefined`, /bc-authorize replies with `unknown_user_id`.
-	resolveBackchannelUser?: (
-		hint: { client: OAuthClient; loginHint: string }
-	) => Promise<{ sub: string } | undefined>;
+	resolveBackchannelUser?: (hint: {
+		client: OAuthClient;
+		loginHint: string;
+	}) => Promise<{ sub: string } | undefined>;
 	// Out-of-band push hook: fires once the auth request is persisted with
 	// `status: 'pending'`. The consumer wires this to their notification backend
 	// (FCM/APNs/Twilio/email) so the user can approve on their phone. The package never
@@ -111,9 +112,7 @@ export type OidcProviderConfig<UserType> = {
 	// OIDC `/userinfo` claims for an authenticated access token, keyed by `sub`. Without
 	// this hook, /userinfo returns just `{sub}` (spec-compliant minimum). Wire it to your
 	// user store so RPs can fetch fresh profile data without parsing the id_token.
-	getUserInfo?: (
-		sub: string
-	) => Promise<Record<string, unknown> | undefined>;
+	getUserInfo?: (sub: string) => Promise<Record<string, unknown> | undefined>;
 	idTokenTtlMs?: number;
 	// The issuer URL, e.g. https://app.example.com (also the `iss` claim).
 	issuer: string;
@@ -497,8 +496,7 @@ export const introspectToken = async <UserType>({
 						: '',
 				exp: payload.exp,
 				iat: typeof payload.iat === 'number' ? payload.iat : 0,
-				scope:
-					typeof payload.scope === 'string' ? payload.scope : '',
+				scope: typeof payload.scope === 'string' ? payload.scope : '',
 				sub: payload.sub,
 				token_type: 'access_token'
 			} satisfies TokenIntrospection;
@@ -592,7 +590,8 @@ export const issueDeviceAuthorization = async <UserType>({
 	const userCode = generateUserCode();
 	const ttl = config.deviceCodeTtlMs ?? DEFAULT_DEVICE_CODE_TTL_MS;
 	const interval =
-		config.devicePollIntervalSeconds ?? DEFAULT_DEVICE_POLL_INTERVAL_SECONDS;
+		config.devicePollIntervalSeconds ??
+		DEFAULT_DEVICE_POLL_INTERVAL_SECONDS;
 	await config.deviceAuthorizationStore.saveDeviceAuthorization({
 		clientId,
 		createdAt: now,
@@ -732,7 +731,9 @@ export const exchangeDeviceCode = async <UserType>({
 	}
 
 	// Single-use: drop the record before minting so a replay can't double-issue.
-	await config.deviceAuthorizationStore.deleteByDeviceCodeHash(deviceCodeHash);
+	await config.deviceAuthorizationStore.deleteByDeviceCodeHash(
+		deviceCodeHash
+	);
 	const tokenSet = await issueTokenSet({
 		clientId,
 		config,
@@ -853,8 +854,7 @@ const decideBackchannel = async <UserType>(
 	if (!config.backchannelAuthStore) {
 		return { error: 'not_configured', ok: false };
 	}
-	const record =
-		await config.backchannelAuthStore.findByAuthReqId(authReqId);
+	const record = await config.backchannelAuthStore.findByAuthReqId(authReqId);
 	if (!record) return { error: 'invalid_auth_req_id', ok: false };
 	if (record.expiresAt < Date.now()) {
 		return { error: 'expired_token', ok: false };
@@ -930,8 +930,7 @@ export const exchangeBackchannelAuth = async <UserType>({
 	if (!config.backchannelAuthStore) {
 		return { error: 'invalid_grant', ok: false };
 	}
-	const record =
-		await config.backchannelAuthStore.findByAuthReqId(authReqId);
+	const record = await config.backchannelAuthStore.findByAuthReqId(authReqId);
 	if (!record || record.clientId !== clientId) {
 		return { error: 'invalid_grant', ok: false };
 	}

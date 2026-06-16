@@ -184,9 +184,7 @@ export type InactiveUserCandidate = {
 export type PruneInactiveUsersInput = {
 	dryRun?: boolean;
 	// Same shape as EmailBreachScanInput: cursor in, page + next cursor out.
-	iterateUsers: (
-		cursor: string | undefined
-	) => Promise<{
+	iterateUsers: (cursor: string | undefined) => Promise<{
 		nextCursor: string | undefined;
 		users: InactiveUserCandidate[];
 	}>;

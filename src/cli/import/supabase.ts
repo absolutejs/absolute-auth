@@ -30,7 +30,11 @@ type SupabaseUser = {
 	email_confirmed_at?: string;
 	encrypted_password?: string;
 	id: string;
-	raw_user_meta_data?: { family_name?: string; full_name?: string; given_name?: string };
+	raw_user_meta_data?: {
+		family_name?: string;
+		full_name?: string;
+		given_name?: string;
+	};
 };
 
 type SupabaseIdentity = {
@@ -46,9 +50,11 @@ type SupabaseExport = {
 };
 
 const splitFullName = (full: string | undefined) => {
-	if (full === undefined) return { familyName: undefined, givenName: undefined };
+	if (full === undefined)
+		return { familyName: undefined, givenName: undefined };
 	const parts = full.split(/\s+/);
-	if (parts.length === 1) return { familyName: undefined, givenName: parts[0] };
+	if (parts.length === 1)
+		return { familyName: undefined, givenName: parts[0] };
 
 	return {
 		familyName: parts.slice(1).join(' '),

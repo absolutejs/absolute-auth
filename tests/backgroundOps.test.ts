@@ -116,8 +116,14 @@ describe('pruneInactiveUsers', () => {
 		const iterateUsers = async () => ({
 			nextCursor: undefined,
 			users: [
-				{ lastLoginAt: REF_NOW - STALE_DAYS * MS_PER_DAY, userId: 'stale' },
-				{ lastLoginAt: REF_NOW - FRESH_DAYS * MS_PER_DAY, userId: 'fresh' },
+				{
+					lastLoginAt: REF_NOW - STALE_DAYS * MS_PER_DAY,
+					userId: 'stale'
+				},
+				{
+					lastLoginAt: REF_NOW - FRESH_DAYS * MS_PER_DAY,
+					userId: 'fresh'
+				},
 				{
 					createdAt: REF_NOW - VERY_OLD_DAYS * MS_PER_DAY,
 					lastLoginAt: null,
@@ -144,10 +150,7 @@ describe('pruneInactiveUsers', () => {
 			'never-logged-in-old',
 			'stale'
 		]);
-		expect([...deletions].sort()).toEqual([
-			'never-logged-in-old',
-			'stale'
-		]);
+		expect([...deletions].sort()).toEqual(['never-logged-in-old', 'stale']);
 	});
 
 	test('dryRun reports candidates without calling onDelete', async () => {

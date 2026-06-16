@@ -111,7 +111,8 @@ export const createAuthClient = ({
 			// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- HTTP response is unknown until parsed; the call site declares the expected T
 			return succeed(body as T);
 		} catch (caught) {
-			const message = caught instanceof Error ? caught.message : 'network';
+			const message =
+				caught instanceof Error ? caught.message : 'network';
 
 			return fail({ body: null, message, status: 0 });
 		}
@@ -121,7 +122,9 @@ export const createAuthClient = ({
 		request<T>(path, {
 			body: body === undefined ? undefined : JSON.stringify(body),
 			headers:
-				body === undefined ? undefined : { 'content-type': 'application/json' },
+				body === undefined
+					? undefined
+					: { 'content-type': 'application/json' },
 			method
 		});
 
@@ -138,7 +141,10 @@ export const createAuthClient = ({
 		},
 		mfa: {
 			challenge: (body: { code: string }) =>
-				post<{ status: 'authenticated' }>(resolvedRoutes.mfaChallenge, body),
+				post<{ status: 'authenticated' }>(
+					resolvedRoutes.mfaChallenge,
+					body
+				),
 			setup: () =>
 				post<{ secret: string; uri: string }>(resolvedRoutes.mfaSetup),
 			verifySetup: (body: { code: string }) =>
@@ -159,7 +165,10 @@ export const createAuthClient = ({
 			registerOptions: () =>
 				post<unknown>(resolvedRoutes.passkeyRegisterOptions),
 			registerVerify: (response: unknown) =>
-				post<{ ok: true }>(resolvedRoutes.passkeyRegisterVerify, response),
+				post<{ ok: true }>(
+					resolvedRoutes.passkeyRegisterVerify,
+					response
+				),
 			remove: (credentialId: string) =>
 				del<{ ok: true }>(
 					`${resolvedRoutes.passkeyRemove}/${encodeURIComponent(credentialId)}`

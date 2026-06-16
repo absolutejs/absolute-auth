@@ -26,7 +26,9 @@ const toRecord = (row: LockoutRow): LockoutRecord => ({
 
 export const createNeonLockoutStore = (databaseUrl: string) =>
 	createPostgresLockoutStore(createNeonDatabase(databaseUrl));
-export const createPostgresLockoutStore = (db: AnyPgDatabase): LockoutStore => {
+export const createPostgresLockoutStore = <DB extends AnyPgDatabase>(
+	db: DB
+): LockoutStore => {
 	const get = async (key: string) => {
 		const [row] = await db
 			.select()

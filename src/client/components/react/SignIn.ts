@@ -132,11 +132,7 @@ export const SignIn = ({
 		createElement(
 			'label',
 			{ className: classNames?.field, 'data-abs-auth': 'email-field' },
-			createElement(
-				'span',
-				{ className: classNames?.label },
-				emailLabel
-			),
+			createElement('span', { className: classNames?.label }, emailLabel),
 			createElement('input', {
 				autoComplete: 'username webauthn',
 				className: classNames?.input,

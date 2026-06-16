@@ -75,7 +75,11 @@ describe('OpenTelemetry instrumentation', () => {
 
 	test('withSpan is a no-op when initTracing was never called', async () => {
 		// Sanity: calling withSpan returns the work's value, no error, no provider needed.
-		const result = await withSpan('test.noop', { foo: 'bar' }, async () => 42);
+		const result = await withSpan(
+			'test.noop',
+			{ foo: 'bar' },
+			async () => 42
+		);
 		expect(result).toBe(42);
 	});
 
@@ -166,7 +170,9 @@ describe('OpenTelemetry instrumentation', () => {
 		expect(result).toBe('done');
 
 		const spans = exporter.getFinishedSpans();
-		const consumerSpan = spans.find((span) => span.name === 'consumer.action');
+		const consumerSpan = spans.find(
+			(span) => span.name === 'consumer.action'
+		);
 		expect(consumerSpan).toBeDefined();
 		expect(consumerSpan?.attributes['auth.flow']).toBe('custom');
 		expect(consumerSpan?.attributes.extra).toBe('thing');

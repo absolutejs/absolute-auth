@@ -32,14 +32,11 @@ export type ImportUsersOptions<UserType> = {
 	// stable string id the credential gets keyed by (usually the email after normalization).
 	// Throwing or returning `null` skips the credential write + records an error in the
 	// per-user result so the caller can react without aborting the whole batch.
-	onCreateUser: (input: ImportableUser<UserType>) => Promise<
-		| {
-				email: string;
-				emailVerified?: boolean;
-				userId?: string;
-		  }
-		| null
-	>;
+	onCreateUser: (input: ImportableUser<UserType>) => Promise<{
+		email: string;
+		emailVerified?: boolean;
+		userId?: string;
+	} | null>;
 	// Optional concurrency cap. Defaults to 1 (sequential) because most consumer
 	// `onCreateUser` hooks hit a single DB connection — parallel writes don't help and
 	// risk write conflicts. Bump for high-throughput stores that handle parallelism.
@@ -125,7 +122,10 @@ export const importUsers = async <UserType>(
 	}
 
 	return {
-		failed: results.filter((result): result is Extract<typeof result, { ok: false }> => !result.ok).length,
+		failed: results.filter(
+			(result): result is Extract<typeof result, { ok: false }> =>
+				!result.ok
+		).length,
 		results,
 		succeeded: results.filter((result) => result.ok).length
 	};

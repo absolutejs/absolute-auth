@@ -33,7 +33,10 @@ const errorBody = (error: string, status: number) =>
 	});
 
 const extractBearer = (authorization: string | undefined) => {
-	if (authorization === undefined || !authorization.startsWith(BEARER_PREFIX)) {
+	if (
+		authorization === undefined ||
+		!authorization.startsWith(BEARER_PREFIX)
+	) {
 		return undefined;
 	}
 	const value = authorization.slice(BEARER_PREFIX.length).trim();
@@ -58,7 +61,11 @@ export const vciRoutes = ({
 	return new Elysia()
 		.get('/.well-known/openid-credential-issuer', () =>
 			Response.json(
-				buildIssuerMetadata({ config: vciConfig, issuer: issuerUrl, vciRoute })
+				buildIssuerMetadata({
+					config: vciConfig,
+					issuer: issuerUrl,
+					vciRoute
+				})
 			)
 		)
 		.post(
@@ -78,7 +85,8 @@ export const vciRoutes = ({
 					issuer: issuerUrl,
 					signingKey: vciSigningKey
 				});
-				if (!result.ok) return errorBody(result.error, HTTP_BAD_REQUEST);
+				if (!result.ok)
+					return errorBody(result.error, HTTP_BAD_REQUEST);
 
 				return Response.json(
 					{ credential: result.credential, format: result.format },
@@ -87,9 +95,7 @@ export const vciRoutes = ({
 			},
 			{
 				body: t.Object({
-					format: t.Optional(
-						t.Union([t.Literal('vc+sd-jwt')])
-					),
+					format: t.Optional(t.Union([t.Literal('vc+sd-jwt')])),
 					proof: t.Optional(
 						t.Object({
 							jwt: t.String(),
@@ -103,7 +109,9 @@ export const vciRoutes = ({
 			if (vciConfig.credentialNonceStore === undefined) {
 				return errorBody('not_supported', HTTP_BAD_REQUEST);
 			}
-			const { generateSecureToken, hashToken } = await import('../crypto');
+			const { generateSecureToken, hashToken } = await import(
+				'../crypto'
+			);
 			const nonceBytes = 16;
 			const nonce = generateSecureToken(nonceBytes);
 			const ttlMs = vciConfig.nonceTtlMs ?? 300_000;
@@ -114,7 +122,10 @@ export const vciRoutes = ({
 			const msPerSecond = 1000;
 
 			return Response.json(
-				{ c_nonce: nonce, c_nonce_expires_in: Math.floor(ttlMs / msPerSecond) },
+				{
+					c_nonce: nonce,
+					c_nonce_expires_in: Math.floor(ttlMs / msPerSecond)
+				},
 				{ status: HTTP_OK }
 			);
 		});

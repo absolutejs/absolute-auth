@@ -163,7 +163,9 @@ describe('OIDC provider — /userinfo', () => {
 
 		const response = await app.handle(
 			new Request('http://localhost/oauth2/userinfo', {
-				body: new URLSearchParams({ access_token: tokens.access_token }),
+				body: new URLSearchParams({
+					access_token: tokens.access_token
+				}),
 				method: 'POST'
 			})
 		);
@@ -219,7 +221,7 @@ describe('OIDC provider — /userinfo', () => {
 				scope: 'openid',
 				sub: 'user-alice'
 			},
-			(await generateSigningKey()) // wrong key too — double-fails
+			await generateSigningKey() // wrong key too — double-fails
 		);
 		const response = await app.handle(
 			new Request('http://localhost/oauth2/userinfo', {

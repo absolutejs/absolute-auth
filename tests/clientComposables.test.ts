@@ -44,14 +44,13 @@ describe('framework composable API parity', () => {
 describe('svelte composables (end-to-end via writable stores)', () => {
 	test('useSignIn updates data/error/isPending stores through mutate', async () => {
 		const client = createAuthClient({
-			fetch: stubFetch(() =>
-				new Response(JSON.stringify({ status: 'authenticated' }))
+			fetch: stubFetch(
+				() => new Response(JSON.stringify({ status: 'authenticated' }))
 			)
 		});
 
-		const { data, error, isPending, mutate, reset } = svelteHooks.useSignIn(
-			client
-		);
+		const { data, error, isPending, mutate, reset } =
+			svelteHooks.useSignIn(client);
 		expect(get(data)).toBeNull();
 		expect(get(error)).toBeNull();
 		expect(get(isPending)).toBe(false);
@@ -98,7 +97,9 @@ describe('svelte composables (end-to-end via writable stores)', () => {
 					return new Response(JSON.stringify(sessions));
 				}
 				if (url.includes('/auth/sessions/')) {
-					sessions = sessions.filter((entry) => !url.endsWith(entry.id));
+					sessions = sessions.filter(
+						(entry) => !url.endsWith(entry.id)
+					);
 
 					return new Response(JSON.stringify({ ok: true }));
 				}
@@ -107,9 +108,8 @@ describe('svelte composables (end-to-end via writable stores)', () => {
 			})
 		});
 
-		const { data, isPending, refetch, revoke } = svelteHooks.useSessions(
-			client
-		);
+		const { data, isPending, refetch, revoke } =
+			svelteHooks.useSessions(client);
 		// Initial fetch is scheduled synchronously; flush microtasks.
 		await refetch();
 		expect(get(isPending)).toBe(false);

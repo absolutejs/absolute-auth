@@ -45,6 +45,50 @@ import { initTracing } from './telemetry/tracing';
 import { AuthConfig, ClientProviders } from './types';
 import { resolveCookieSecure } from './utils';
 
+/** The minimal reference instance capturing ONLY the global, consumer-facing
+ *  context `auth()` contributes: the `protectRoute` + step-up derives, typed by
+ *  `UserType`. `auth()` also mounts ~28 route plugins, but their paths are
+ *  CONFIGURABLE (`authorizeRoute`, `callbackRoute`, …), so Elysia keys those
+ *  routes by `string` — there is no literal route type to expose, and inferring
+ *  the whole chain trips TS7056 / a 2^N union blow-up. This typed context is the
+ *  precise surface consumers actually use (`protectRoute((user) => …)` yields
+ *  `UserType`); the routes are reached by path at runtime / direct fetch. */
+type MergeAuthContext<Base, Extra> =
+	Base extends Elysia<
+		infer Path,
+		infer Singleton,
+		infer Definitions,
+		infer Metadata,
+		infer Routes,
+		infer Ephemeral,
+		infer Volatile
+	>
+		? Extra extends Elysia<
+				infer ExtraPath,
+				infer ExtraSingleton,
+				infer ExtraDefinitions,
+				infer ExtraMetadata,
+				infer ExtraRoutes,
+				infer ExtraEphemeral,
+				infer ExtraVolatile
+			>
+			? Elysia<
+					Path & ExtraPath,
+					Singleton & ExtraSingleton,
+					Definitions & ExtraDefinitions,
+					Metadata & ExtraMetadata,
+					Routes & ExtraRoutes,
+					Ephemeral & ExtraEphemeral,
+					Volatile & ExtraVolatile
+				>
+			: never
+		: never;
+
+export type AuthInstance<UserType> = MergeAuthContext<
+	ReturnType<typeof protectRoutePlugin<UserType>>,
+	ReturnType<typeof stepUpPlugin<UserType>>
+>;
+
 export const auth = async <UserType>({
 	providersConfiguration,
 	authorizeRoute,
@@ -149,7 +193,7 @@ export const auth = async <UserType>({
 		? composeSignOutAudit(onSignOut, auditEmit)
 		: onSignOut;
 
-	return new Elysia()
+	const composedAuth = new Elysia()
 		.use(
 			sessionCleanup<UserType>({
 				authSessionStore,
@@ -351,6 +395,16 @@ export const auth = async <UserType>({
 					})
 				: new Elysia()
 		);
+
+	// One concentrated assertion (full rationale on AuthInstance above): the
+	// chain mounts ~28 route plugins whose configurable paths make their route
+	// keys `string`, so there is no precise route type to preserve and letting
+	// TS serialize the whole inferred chain trips TS7056. The runtime instance
+	// IS this context plus those routes; the cast just declares the stable,
+	// `UserType`-typed `protectRoute` context as the public type. Sound because
+	// runtime behaviour is unchanged and the routes are reached by path.
+	// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- see comment above
+	return composedAuth as unknown as AuthInstance<UserType>;
 };
 
 export * from './actions';

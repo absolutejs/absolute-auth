@@ -55,7 +55,9 @@ describe('extractRfc9440ClientCert', () => {
 
 	test('returns undefined when header is malformed', () => {
 		expect(
-			extractRfc9440ClientCert(headersWith({ 'client-cert': 'not-wrapped' }))
+			extractRfc9440ClientCert(
+				headersWith({ 'client-cert': 'not-wrapped' })
+			)
 		).toBeUndefined();
 	});
 

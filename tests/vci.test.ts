@@ -55,8 +55,12 @@ const buildHolderProofJwt = async ({
 		iat: Math.floor(Date.now() / msPerSecond),
 		nonce
 	};
-	const headerSegment = Buffer.from(JSON.stringify(header)).toString('base64url');
-	const payloadSegment = Buffer.from(JSON.stringify(payload)).toString('base64url');
+	const headerSegment = Buffer.from(JSON.stringify(header)).toString(
+		'base64url'
+	);
+	const payloadSegment = Buffer.from(JSON.stringify(payload)).toString(
+		'base64url'
+	);
 	const signingInput = `${headerSegment}.${payloadSegment}`;
 	// We sign by going through signJwt then swapping its header for ours — the WebCrypto
 	// signature is over the {header}.{payload} string, so we have to compute it with our
@@ -81,7 +85,9 @@ const buildHolderProofJwt = async ({
 };
 void signJwt;
 
-const buildConfig = (signingKey: Awaited<ReturnType<typeof generateSigningKey>>) => {
+const buildConfig = (
+	signingKey: Awaited<ReturnType<typeof generateSigningKey>>
+) => {
 	const credentialOfferStore = createInMemoryCredentialOfferStore();
 	const credentialNonceStore = createInMemoryCredentialNonceStore();
 	const config: VciConfig = {
@@ -232,7 +238,9 @@ describe('OpenID4VCI pre-authorized_code flow (end-to-end)', () => {
 		if (cNonce === undefined) throw new Error('no c_nonce');
 		// Header claims realHolderKey's public JWK but the JWT is signed by attackerKey —
 		// signature verification against the header.jwk will fail.
-		const { generateSigningKey: gen, signJwt } = await import('../src/oidc/keys');
+		const { generateSigningKey: gen, signJwt } = await import(
+			'../src/oidc/keys'
+		);
 		void gen;
 		const forgedHeader = Buffer.from(
 			JSON.stringify({
@@ -371,9 +379,9 @@ describe('OpenID4VCI discovery + nonce route', () => {
 		expect(metadata.credential_issuer).toBe(ISSUER);
 		expect(metadata.credential_endpoint).toBe(`${ISSUER}/vci/credential`);
 		expect(metadata.nonce_endpoint).toBe(`${ISSUER}/vci/nonce`);
-		expect(metadata.credential_configurations_supported.identity_v1.vct).toBe(
-			'https://credentials.acme.test/identity_v1'
-		);
+		expect(
+			metadata.credential_configurations_supported.identity_v1.vct
+		).toBe('https://credentials.acme.test/identity_v1');
 		expect(
 			metadata.credential_configurations_supported.identity_v1
 				.cryptographic_binding_methods_supported

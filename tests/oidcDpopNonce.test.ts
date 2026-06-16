@@ -129,9 +129,9 @@ describe('OIDC provider — DPoP nonce enforcement at /token', () => {
 		return app;
 	};
 
-	const getCode = async (
-		app: { handle: (req: Request) => Promise<Response> }
-	) => {
+	const getCode = async (app: {
+		handle: (req: Request) => Promise<Response>;
+	}) => {
 		const params = new URLSearchParams({
 			client_id: 'rp',
 			code_challenge: await hashToken(VERIFIER),
@@ -141,9 +141,12 @@ describe('OIDC provider — DPoP nonce enforcement at /token', () => {
 			scope: 'openid'
 		});
 		const response = await app.handle(
-			new Request(`http://localhost/oauth2/authorize?${params.toString()}`, {
-				headers: { cookie: `user_session_id=${SESSION_ID}` }
-			})
+			new Request(
+				`http://localhost/oauth2/authorize?${params.toString()}`,
+				{
+					headers: { cookie: `user_session_id=${SESSION_ID}` }
+				}
+			)
 		);
 		const location = response.headers.get('location') ?? '';
 

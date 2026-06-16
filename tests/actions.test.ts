@@ -5,19 +5,20 @@ type TestUser = { email: string; sub: string };
 
 const order: string[] = [];
 
-const tag =
-	(name: string, result: 'pass' | 'deny' | 'redirect'): AuthAction<TestUser> =>
-	({
-		event: 'postLogin',
-		handler: () => {
-			order.push(name);
-			if (result === 'pass') return { kind: 'pass' };
-			if (result === 'deny') return { kind: 'deny', reason: name };
+const tag = (
+	name: string,
+	result: 'pass' | 'deny' | 'redirect'
+): AuthAction<TestUser> => ({
+	event: 'postLogin',
+	handler: () => {
+		order.push(name);
+		if (result === 'pass') return { kind: 'pass' };
+		if (result === 'deny') return { kind: 'deny', reason: name };
 
-			return { kind: 'redirect', url: `/x/${name}` };
-		},
-		name
-	});
+		return { kind: 'redirect', url: `/x/${name}` };
+	},
+	name
+});
 
 describe('action pipeline', () => {
 	test('runs matching actions in order and passes if all pass', async () => {

@@ -107,10 +107,7 @@ export type RegisterClientResult =
 
 const readRegistrationAccessToken = (authorization: string | undefined) => {
 	const prefix = 'Bearer ';
-	if (
-		authorization === undefined ||
-		!authorization.startsWith(prefix)
-	) {
+	if (authorization === undefined || !authorization.startsWith(prefix)) {
 		return undefined;
 	}
 
@@ -158,7 +155,8 @@ export const deleteRegisteredClient = async ({
 		clientId,
 		registrationTokenStore
 	});
-	if (!authed) return { body: { error: 'invalid_token' }, status: 401 } as const;
+	if (!authed)
+		return { body: { error: 'invalid_token' }, status: 401 } as const;
 	await clientStore.deleteClient(clientId);
 	await registrationTokenStore.deleteByClientId(clientId);
 
@@ -182,7 +180,8 @@ export const getRegisteredClient = async ({
 		clientId,
 		registrationTokenStore
 	});
-	if (!authed) return { body: { error: 'invalid_token' }, status: 401 } as const;
+	if (!authed)
+		return { body: { error: 'invalid_token' }, status: 401 } as const;
 	const client = await clientStore.findClient(clientId);
 	if (client === undefined) {
 		return { body: { error: 'invalid_client' }, status: 404 } as const;
@@ -245,8 +244,9 @@ export const registerClient = async ({
 		};
 	}
 
-	const decision: ClientRegistrationDecision =
-		(await onClientRegistration?.({ metadata })) ?? { allow: true };
+	const decision: ClientRegistrationDecision = (await onClientRegistration?.({
+		metadata
+	})) ?? { allow: true };
 	if (!decision.allow) {
 		return {
 			body: {
@@ -304,9 +304,11 @@ export const updateRegisteredClient = async ({
 		clientId,
 		registrationTokenStore
 	});
-	if (!authed) return { body: { error: 'invalid_token' }, status: 401 } as const;
-	const decision: ClientRegistrationDecision =
-		(await onClientRegistration?.({ metadata })) ?? { allow: true };
+	if (!authed)
+		return { body: { error: 'invalid_token' }, status: 401 } as const;
+	const decision: ClientRegistrationDecision = (await onClientRegistration?.({
+		metadata
+	})) ?? { allow: true };
 	if (!decision.allow) {
 		return {
 			body: {

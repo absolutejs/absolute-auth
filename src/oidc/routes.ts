@@ -23,14 +23,8 @@ import {
 	verifyPkce,
 	type OidcProviderConfig
 } from './config';
-import {
-	CLIENT_ASSERTION_TYPE,
-	verifyClientAssertion
-} from './clientAuth';
-import {
-	exchangePreAuthorizedCode,
-	PRE_AUTHORIZED_CODE_GRANT
-} from './vci';
+import { CLIENT_ASSERTION_TYPE, verifyClientAssertion } from './clientAuth';
+import { exchangePreAuthorizedCode, PRE_AUTHORIZED_CODE_GRANT } from './vci';
 import { computeCertThumbprint, resolveClientCert } from './mtls';
 import {
 	extractDpopNonceClaim,
@@ -239,7 +233,8 @@ export const oidcProviderRoutes = <UserType>(
 		requestHeaders: Headers;
 	}) => {
 		const registered = candidate?.tlsCertificateBoundThumbprints ?? [];
-		if (candidate === undefined || registered.length === 0) return undefined;
+		if (candidate === undefined || registered.length === 0)
+			return undefined;
 		const cert = await resolveClientCert({
 			extract,
 			headers: requestHeaders
@@ -286,8 +281,8 @@ export const oidcProviderRoutes = <UserType>(
 			});
 
 			return client === undefined
-			? undefined
-			: { client, clientCertThumbprint: undefined };
+				? undefined
+				: { client, clientCertThumbprint: undefined };
 		}
 		const clientId = bodyClientId ?? basicClientId;
 		if (clientId === undefined) return undefined;
@@ -340,17 +335,14 @@ export const oidcProviderRoutes = <UserType>(
 			secret: config.dpopNonce.secret
 		});
 
-		return new Response(
-			JSON.stringify({ error: 'use_dpop_nonce' }),
-			{
-				headers: {
-					'content-type': 'application/json',
-					'dpop-nonce': fresh,
-					'www-authenticate': 'DPoP error="use_dpop_nonce"'
-				},
-				status: HTTP_UNAUTHORIZED
-			}
-		);
+		return new Response(JSON.stringify({ error: 'use_dpop_nonce' }), {
+			headers: {
+				'content-type': 'application/json',
+				'dpop-nonce': fresh,
+				'www-authenticate': 'DPoP error="use_dpop_nonce"'
+			},
+			status: HTTP_UNAUTHORIZED
+		});
 	};
 
 	const grantAuthorizationCode = async (
@@ -741,989 +733,1059 @@ export const oidcProviderRoutes = <UserType>(
 		}
 
 		const url = new URL(redirectUri);
-		if (query.state !== undefined) url.searchParams.set('state', query.state);
+		if (query.state !== undefined)
+			url.searchParams.set('state', query.state);
 
 		return redirectTo(url.toString());
 	};
 
-	return new Elysia()
-		.use(sessionStore<UserType>())
-		.get(
-			authorizeRoute,
-			async ({ cookie: { user_session_id }, query, request, store }) => {
-				// If the caller pushed the request first (RFC 9126), look up the stashed
-				// params + use those — `client_id` may still be in the query, but every
-				// other authorize param comes from the PAR record.
-				let effectiveQuery: Record<string, string | undefined> = query;
-				if (
-					query.request_uri !== undefined &&
-					config.pushedAuthorizationRequestStore !== undefined &&
-					query.client_id !== undefined
-				) {
-					const pushed = await consumePushedRequest({
-						clientId: query.client_id,
-						requestUri: query.request_uri,
-						store: config.pushedAuthorizationRequestStore
-					});
-					if (pushed === undefined) {
+	return (
+		new Elysia()
+			.use(sessionStore<UserType>())
+			.get(
+				authorizeRoute,
+				async ({
+					cookie: { user_session_id },
+					query,
+					request,
+					store
+				}) => {
+					// If the caller pushed the request first (RFC 9126), look up the stashed
+					// params + use those — `client_id` may still be in the query, but every
+					// other authorize param comes from the PAR record.
+					let effectiveQuery: Record<string, string | undefined> =
+						query;
+					if (
+						query.request_uri !== undefined &&
+						config.pushedAuthorizationRequestStore !== undefined &&
+						query.client_id !== undefined
+					) {
+						const pushed = await consumePushedRequest({
+							clientId: query.client_id,
+							requestUri: query.request_uri,
+							store: config.pushedAuthorizationRequestStore
+						});
+						if (pushed === undefined) {
+							return jsonResponse(
+								{ error: 'invalid_request_uri' },
+								HTTP_BAD_REQUEST
+							);
+						}
+						effectiveQuery = pushed;
+					} else if (
+						query.request_uri !== undefined &&
+						query.request_uri.startsWith(REQUEST_URI_PREFIX)
+					) {
+						// Caller passed a request_uri shape but PAR isn't configured.
 						return jsonResponse(
 							{ error: 'invalid_request_uri' },
 							HTTP_BAD_REQUEST
 						);
 					}
-					effectiveQuery = pushed;
-				} else if (
-					query.request_uri !== undefined &&
-					query.request_uri.startsWith(REQUEST_URI_PREFIX)
-				) {
-					// Caller passed a request_uri shape but PAR isn't configured.
-					return jsonResponse(
-						{ error: 'invalid_request_uri' },
-						HTTP_BAD_REQUEST
-					);
-				}
 
-				const initialClientId = effectiveQuery.client_id;
-				const initialClient =
-					initialClientId === undefined
-						? undefined
-						: await clientStore.findClient(initialClientId);
+					const initialClientId = effectiveQuery.client_id;
+					const initialClient =
+						initialClientId === undefined
+							? undefined
+							: await clientStore.findClient(initialClientId);
 
-				// RFC 9101 — if the caller passed `request=<jwt>`, the signed JWT's
-				// payload REPLACES every other authorize param. We can only verify the
-				// signature once we know which client claims to be sending it (from the
-				// query's `client_id`), so this happens after the initial client lookup
-				// + before the param destructure that drives the rest of the flow.
-				if (
-					effectiveQuery.request !== undefined &&
-					initialClient !== undefined
-				) {
-					const parsed = await parseSignedRequestObject({
-						client: initialClient,
-						expectedIssuer: issuer,
-						jwt: effectiveQuery.request
-					});
-					if (!parsed.ok) {
+					// RFC 9101 — if the caller passed `request=<jwt>`, the signed JWT's
+					// payload REPLACES every other authorize param. We can only verify the
+					// signature once we know which client claims to be sending it (from the
+					// query's `client_id`), so this happens after the initial client lookup
+					// + before the param destructure that drives the rest of the flow.
+					if (
+						effectiveQuery.request !== undefined &&
+						initialClient !== undefined
+					) {
+						const parsed = await parseSignedRequestObject({
+							client: initialClient,
+							expectedIssuer: issuer,
+							jwt: effectiveQuery.request
+						});
+						if (!parsed.ok) {
+							return jsonResponse(
+								{ error: parsed.error },
+								HTTP_BAD_REQUEST
+							);
+						}
+						// Carry the original client_id through so the rest of the flow
+						// sees a consistent identity (the request JWT's iss is also the
+						// client_id per parseSignedRequestObject's iss check).
+						effectiveQuery = {
+							...parsed.params,
+							client_id: initialClientId
+						};
+					}
+
+					const {
+						client_id: clientId,
+						code_challenge: codeChallenge,
+						code_challenge_method: codeChallengeMethod,
+						nonce,
+						redirect_uri: redirectUri,
+						response_mode: requestedResponseMode,
+						response_type: responseType,
+						scope,
+						state
+					} = effectiveQuery;
+
+					const client = initialClient;
+					if (
+						client === undefined ||
+						clientId !== client.clientId ||
+						redirectUri === undefined ||
+						!client.redirectUris.includes(redirectUri)
+					) {
 						return jsonResponse(
-							{ error: parsed.error },
+							{ error: 'invalid_client' },
 							HTTP_BAD_REQUEST
 						);
 					}
-					// Carry the original client_id through so the rest of the flow
-					// sees a consistent identity (the request JWT's iss is also the
-					// client_id per parseSignedRequestObject's iss check).
-					effectiveQuery = {
-						...parsed.params,
-						client_id: initialClientId
-					};
-				}
 
-				const {
-					client_id: clientId,
-					code_challenge: codeChallenge,
-					code_challenge_method: codeChallengeMethod,
-					nonce,
-					redirect_uri: redirectUri,
-					response_mode: requestedResponseMode,
-					response_type: responseType,
-					scope,
-					state
-				} = effectiveQuery;
-
-				const client = initialClient;
-				if (
-					client === undefined ||
-					clientId !== client.clientId ||
-					redirectUri === undefined ||
-					!client.redirectUris.includes(redirectUri)
-				) {
-					return jsonResponse(
-						{ error: 'invalid_client' },
-						HTTP_BAD_REQUEST
-					);
-				}
-
-				// Default response_mode follows the spec: 'query' for
-				// response_type=code (what we support). 'form_post' is opt-in
-				// via the query param.
-				const responseMode =
-					requestedResponseMode === 'form_post' ? 'form_post' : 'query';
-				if (
-					requestedResponseMode !== undefined &&
-					requestedResponseMode !== 'query' &&
-					requestedResponseMode !== 'form_post'
-				) {
-					return jsonResponse(
-						{ error: 'unsupported_response_mode' },
-						HTTP_BAD_REQUEST
-					);
-				}
-
-				const errorRedirect = (error: string) => {
-					// RFC 9207 — include the issuer identifier so RPs can
-					// detect mix-up attacks where another authorization
-					// server's response is redirected to them.
-					const params: Record<string, string> = { error, iss: issuer };
-					if (state !== undefined) params.state = state;
-
-					return respondToClient(redirectUri, responseMode, params);
-				};
-				// FAPI hardening: clients that opted into PAR-only can't sneak in via a
-				// plain /authorize call — must have come through the PAR path above (which
-				// rewrites effectiveQuery from the stored bag, so we detect it by checking
-				// whether the original query carried `request_uri`).
-				// `strictFapi` widens this to ALL clients (FAPI 2.0 baseline requires PAR).
-				const requirePar =
-					client.requirePushedAuthorizationRequests === true ||
-					config.strictFapi === true;
-				if (requirePar && query.request_uri === undefined) {
-					return errorRedirect('invalid_request');
-				}
-				// FAPI hardening: clients that opted into signed-only requests must use
-				// JAR — plain query-only `/authorize` (no `request=` and no `request_uri=`)
-				// gets rejected with the spec-named error.
-				if (
-					client.requireSignedRequestObject === true &&
-					query.request === undefined &&
-					query.request_uri === undefined
-				) {
-					return errorRedirect('invalid_request_object');
-				}
-				if (responseType !== 'code') {
-					return errorRedirect('unsupported_response_type');
-				}
-				if (
-					codeChallenge === undefined ||
-					codeChallengeMethod !== 'S256'
-				) {
-					return errorRedirect('invalid_request');
-				}
-
-				const userSession = await loadSessionFromSource({
-					authSessionStore,
-					session: store.session,
-					userSessionId: user_session_id.value
-				});
-
-				// OIDC `prompt`/`max_age`/`id_token_hint` re-auth handling.
-				// - prompt=none: never show login — caller can only get the response if
-				//   already authenticated AND no other re-auth signal fires.
-				// - prompt=login (or =consent): force a fresh authentication even if a
-				//   session exists.
-				// - max_age=N: if the current session was authenticated more than N
-				//   seconds ago, treat as needing re-auth.
-				// - id_token_hint: if the hint decodes to a different `sub` than the
-				//   current session's user, treat as needing re-auth.
-				const promptValues =
-					effectiveQuery.prompt === undefined
-						? []
-						: effectiveQuery.prompt.split(' ');
-				const wantsSilent = promptValues.includes('none');
-				const wantsLogin =
-					promptValues.includes('login') ||
-					promptValues.includes('consent');
-				const maxAge =
-					effectiveQuery.max_age === undefined
-						? undefined
-						: Number(effectiveQuery.max_age);
-				const sessionStaleByMaxAge =
-					userSession !== undefined &&
-					maxAge !== undefined &&
-					!Number.isNaN(maxAge) &&
-					maxAge >= 0 &&
-					(userSession.authenticatedAt ?? 0) <
-						Date.now() - maxAge * 1000;
-				const hintSub =
-					effectiveQuery.id_token_hint === undefined
-						? undefined
-						: (
-								await verifyIdTokenHint({
-									config,
-									idTokenHint: effectiveQuery.id_token_hint
-								})
-							)?.sub;
-				const hintMismatch =
-					userSession !== undefined &&
-					hintSub !== undefined &&
-					hintSub !== getUserId(userSession.user);
-				const needsReauth =
-					wantsLogin || sessionStaleByMaxAge || hintMismatch;
-
-				if (userSession === undefined || needsReauth) {
-					if (wantsSilent) {
-						return errorRedirect(
-							userSession === undefined
-								? 'login_required'
-								: 'interaction_required'
+					// Default response_mode follows the spec: 'query' for
+					// response_type=code (what we support). 'form_post' is opt-in
+					// via the query param.
+					const responseMode =
+						requestedResponseMode === 'form_post'
+							? 'form_post'
+							: 'query';
+					if (
+						requestedResponseMode !== undefined &&
+						requestedResponseMode !== 'query' &&
+						requestedResponseMode !== 'form_post'
+					) {
+						return jsonResponse(
+							{ error: 'unsupported_response_mode' },
+							HTTP_BAD_REQUEST
 						);
 					}
 
-					return loginUrl === undefined
-						? jsonResponse(
-								{ error: 'login_required' },
-								HTTP_UNAUTHORIZED
-							)
-						: redirectTo(
-								`${loginUrl}?return_to=${encodeURIComponent(request.url)}`
+					const errorRedirect = (error: string) => {
+						// RFC 9207 — include the issuer identifier so RPs can
+						// detect mix-up attacks where another authorization
+						// server's response is redirected to them.
+						const params: Record<string, string> = {
+							error,
+							iss: issuer
+						};
+						if (state !== undefined) params.state = state;
+
+						return respondToClient(
+							redirectUri,
+							responseMode,
+							params
+						);
+					};
+					// FAPI hardening: clients that opted into PAR-only can't sneak in via a
+					// plain /authorize call — must have come through the PAR path above (which
+					// rewrites effectiveQuery from the stored bag, so we detect it by checking
+					// whether the original query carried `request_uri`).
+					// `strictFapi` widens this to ALL clients (FAPI 2.0 baseline requires PAR).
+					const requirePar =
+						client.requirePushedAuthorizationRequests === true ||
+						config.strictFapi === true;
+					if (requirePar && query.request_uri === undefined) {
+						return errorRedirect('invalid_request');
+					}
+					// FAPI hardening: clients that opted into signed-only requests must use
+					// JAR — plain query-only `/authorize` (no `request=` and no `request_uri=`)
+					// gets rejected with the spec-named error.
+					if (
+						client.requireSignedRequestObject === true &&
+						query.request === undefined &&
+						query.request_uri === undefined
+					) {
+						return errorRedirect('invalid_request_object');
+					}
+					if (responseType !== 'code') {
+						return errorRedirect('unsupported_response_type');
+					}
+					if (
+						codeChallenge === undefined ||
+						codeChallengeMethod !== 'S256'
+					) {
+						return errorRedirect('invalid_request');
+					}
+
+					const userSession = await loadSessionFromSource({
+						authSessionStore,
+						session: store.session,
+						userSessionId: user_session_id.value
+					});
+
+					// OIDC `prompt`/`max_age`/`id_token_hint` re-auth handling.
+					// - prompt=none: never show login — caller can only get the response if
+					//   already authenticated AND no other re-auth signal fires.
+					// - prompt=login (or =consent): force a fresh authentication even if a
+					//   session exists.
+					// - max_age=N: if the current session was authenticated more than N
+					//   seconds ago, treat as needing re-auth.
+					// - id_token_hint: if the hint decodes to a different `sub` than the
+					//   current session's user, treat as needing re-auth.
+					const promptValues =
+						effectiveQuery.prompt === undefined
+							? []
+							: effectiveQuery.prompt.split(' ');
+					const wantsSilent = promptValues.includes('none');
+					const wantsLogin =
+						promptValues.includes('login') ||
+						promptValues.includes('consent');
+					const maxAge =
+						effectiveQuery.max_age === undefined
+							? undefined
+							: Number(effectiveQuery.max_age);
+					const sessionStaleByMaxAge =
+						userSession !== undefined &&
+						maxAge !== undefined &&
+						!Number.isNaN(maxAge) &&
+						maxAge >= 0 &&
+						(userSession.authenticatedAt ?? 0) <
+							Date.now() - maxAge * 1000;
+					const hintSub =
+						effectiveQuery.id_token_hint === undefined
+							? undefined
+							: (
+									await verifyIdTokenHint({
+										config,
+										idTokenHint:
+											effectiveQuery.id_token_hint
+									})
+								)?.sub;
+					const hintMismatch =
+						userSession !== undefined &&
+						hintSub !== undefined &&
+						hintSub !== getUserId(userSession.user);
+					const needsReauth =
+						wantsLogin || sessionStaleByMaxAge || hintMismatch;
+
+					if (userSession === undefined || needsReauth) {
+						if (wantsSilent) {
+							return errorRedirect(
+								userSession === undefined
+									? 'login_required'
+									: 'interaction_required'
 							);
-				}
+						}
 
-				const requested =
-					scope === undefined || scope.length === 0
-						? client.scopes
-						: scope
-								.split(' ')
-								.filter((entry) =>
-									client.scopes.includes(entry)
+						return loginUrl === undefined
+							? jsonResponse(
+									{ error: 'login_required' },
+									HTTP_UNAUTHORIZED
+								)
+							: redirectTo(
+									`${loginUrl}?return_to=${encodeURIComponent(request.url)}`
 								);
-				const granted =
-					getGrantedScopes === undefined
-						? requested
-						: await getGrantedScopes({
-								client: {
-									clientId: client.clientId,
-									name: client.name
-								},
-								requestedScopes: requested,
-								user: userSession.user
-							});
-				if (granted === undefined)
-					return errorRedirect('access_denied');
+					}
 
-				// RFC 9470 — if the RP asked for a specific authentication level
-				// (`acr_values`), the user's effective ACR must match one of them.
-				// Otherwise the RP gets `insufficient_user_authentication` so it can
-				// drive a step-up flow.
-				const userAcr = config.getAcr?.({
-					scopes: granted,
-					user: userSession.user
-				});
-				const requestedAcr =
-					effectiveQuery.acr_values === undefined ||
-					effectiveQuery.acr_values.length === 0
-						? undefined
-						: effectiveQuery.acr_values
-								.split(' ')
-								.filter((entry) => entry.length > 0);
-				if (
-					requestedAcr !== undefined &&
-					(userAcr === undefined ||
-						!requestedAcr.includes(userAcr))
-				) {
-					return errorRedirect('insufficient_user_authentication');
+					const requested =
+						scope === undefined || scope.length === 0
+							? client.scopes
+							: scope
+									.split(' ')
+									.filter((entry) =>
+										client.scopes.includes(entry)
+									);
+					const granted =
+						getGrantedScopes === undefined
+							? requested
+							: await getGrantedScopes({
+									client: {
+										clientId: client.clientId,
+										name: client.name
+									},
+									requestedScopes: requested,
+									user: userSession.user
+								});
+					if (granted === undefined)
+						return errorRedirect('access_denied');
+
+					// RFC 9470 — if the RP asked for a specific authentication level
+					// (`acr_values`), the user's effective ACR must match one of them.
+					// Otherwise the RP gets `insufficient_user_authentication` so it can
+					// drive a step-up flow.
+					const userAcr = config.getAcr?.({
+						scopes: granted,
+						user: userSession.user
+					});
+					const requestedAcr =
+						effectiveQuery.acr_values === undefined ||
+						effectiveQuery.acr_values.length === 0
+							? undefined
+							: effectiveQuery.acr_values
+									.split(' ')
+									.filter((entry) => entry.length > 0);
+					if (
+						requestedAcr !== undefined &&
+						(userAcr === undefined ||
+							!requestedAcr.includes(userAcr))
+					) {
+						return errorRedirect(
+							'insufficient_user_authentication'
+						);
+					}
+
+					const code = generateSecureToken(TOKEN_BYTES);
+					await authorizationCodeStore.saveCode({
+						acr: userAcr,
+						claims: getClaims?.(userSession.user),
+						clientId: client.clientId,
+						codeChallenge,
+						codeHash: await hashToken(code),
+						createdAt: Date.now(),
+						expiresAt: Date.now() + CODE_TTL_MS,
+						nonce,
+						redirectUri,
+						scopes: granted,
+						userId: getUserId(userSession.user)
+					});
+
+					const params: Record<string, string> = {
+						code,
+						// RFC 9207 — mix-up attack defense.
+						iss: issuer
+					};
+					if (state !== undefined) params.state = state;
+
+					return respondToClient(redirectUri, responseMode, params);
+				},
+				{
+					cookie: t.Cookie({
+						user_session_id: t.Optional(userSessionIdTypebox)
+					}),
+					query: t.Object({
+						acr_values: t.Optional(t.String()),
+						claims: t.Optional(t.String()),
+						client_id: t.Optional(t.String()),
+						code_challenge: t.Optional(t.String()),
+						code_challenge_method: t.Optional(t.String()),
+						id_token_hint: t.Optional(t.String()),
+						max_age: t.Optional(t.String()),
+						nonce: t.Optional(t.String()),
+						prompt: t.Optional(t.String()),
+						redirect_uri: t.Optional(t.String()),
+						request: t.Optional(t.String()),
+						request_uri: t.Optional(t.String()),
+						response_mode: t.Optional(t.String()),
+						response_type: t.Optional(t.String()),
+						scope: t.Optional(t.String()),
+						state: t.Optional(t.String())
+					})
 				}
+			)
+			.post(
+				tokenRoute,
+				async ({ body, headers, request }) => {
+					// OID4VCI §3.5 — the pre-authorized_code grant is the wallet's auth material;
+					// no client_id / client_secret. Route it before authenticateTokenClient so a
+					// public wallet client doesn't get a `invalid_client` on a clean token call.
+					if (
+						body.grant_type === PRE_AUTHORIZED_CODE_GRANT &&
+						config.vciConfig !== undefined
+					) {
+						const preAuthorizedCode = body['pre-authorized_code'];
+						if (typeof preAuthorizedCode !== 'string') {
+							return oauthError(
+								HTTP_BAD_REQUEST,
+								'invalid_request'
+							);
+						}
+						const result = await exchangePreAuthorizedCode({
+							config: config.vciConfig,
+							issuer: config.issuer,
+							preAuthorizedCode,
+							signingKey:
+								config.vciConfig.signingKey ?? config.signingKey
+						});
+						if (!result.ok)
+							return oauthError(HTTP_BAD_REQUEST, result.error);
 
-				const code = generateSecureToken(TOKEN_BYTES);
-				await authorizationCodeStore.saveCode({
-					acr: userAcr,
-					claims: getClaims?.(userSession.user),
-					clientId: client.clientId,
-					codeChallenge,
-					codeHash: await hashToken(code),
-					createdAt: Date.now(),
-					expiresAt: Date.now() + CODE_TTL_MS,
-					nonce,
-					redirectUri,
-					scopes: granted,
-					userId: getUserId(userSession.user)
-				});
+						return jsonResponse(
+							{
+								access_token: result.access_token,
+								c_nonce: result.c_nonce,
+								c_nonce_expires_in: result.c_nonce_expires_in,
+								expires_in: result.expires_in,
+								token_type: result.token_type
+							},
+							HTTP_OK
+						);
+					}
+					const basic = readBasicAuth(headers.authorization);
+					const auth = await authenticateTokenClient({
+						basicClientId: basic.clientId,
+						basicClientSecret: basic.clientSecret,
+						bodyClientAssertion: body.client_assertion,
+						bodyClientAssertionType: body.client_assertion_type,
+						bodyClientId: body.client_id,
+						bodyClientSecret: body.client_secret,
+						requestHeaders: request.headers
+					});
+					if (auth === undefined) {
+						return oauthError(HTTP_UNAUTHORIZED, 'invalid_client');
+					}
+					const { client, clientCertThumbprint } = auth;
+					const nonceChallenge = await dpopNonceChallenge(
+						headers.dpop
+					);
+					if (nonceChallenge !== undefined) return nonceChallenge;
 
-				const params: Record<string, string> = {
-					code,
-					// RFC 9207 — mix-up attack defense.
-					iss: issuer
-				};
-				if (state !== undefined) params.state = state;
+					if (body.grant_type === 'authorization_code') {
+						return grantAuthorizationCode(
+							client,
+							body,
+							headers.dpop,
+							clientCertThumbprint
+						);
+					}
+					if (body.grant_type === 'refresh_token') {
+						return grantRefreshToken(
+							client,
+							body,
+							headers.dpop,
+							clientCertThumbprint
+						);
+					}
+					if (
+						body.grant_type ===
+						'urn:ietf:params:oauth:grant-type:token-exchange'
+					) {
+						return grantTokenExchange(client, body, headers.dpop);
+					}
+					if (
+						body.grant_type ===
+						'urn:ietf:params:oauth:grant-type:device_code'
+					) {
+						return grantDeviceCode(client, body, headers.dpop);
+					}
+					if (body.grant_type === CIBA_GRANT_TYPE) {
+						return grantBackchannel(
+							client,
+							body,
+							headers.dpop,
+							clientCertThumbprint
+						);
+					}
 
-				return respondToClient(redirectUri, responseMode, params);
-			},
-			{
-				cookie: t.Cookie({
-					user_session_id: t.Optional(userSessionIdTypebox)
-				}),
-				query: t.Object({
-					acr_values: t.Optional(t.String()),
-					claims: t.Optional(t.String()),
-					client_id: t.Optional(t.String()),
-					code_challenge: t.Optional(t.String()),
-					code_challenge_method: t.Optional(t.String()),
-					id_token_hint: t.Optional(t.String()),
-					max_age: t.Optional(t.String()),
-					nonce: t.Optional(t.String()),
-					prompt: t.Optional(t.String()),
-					redirect_uri: t.Optional(t.String()),
-					request: t.Optional(t.String()),
-					request_uri: t.Optional(t.String()),
-					response_mode: t.Optional(t.String()),
-					response_type: t.Optional(t.String()),
-					scope: t.Optional(t.String()),
-					state: t.Optional(t.String())
-				})
-			}
-		)
-		.post(
-			tokenRoute,
-			async ({ body, headers, request }) => {
-				// OID4VCI §3.5 — the pre-authorized_code grant is the wallet's auth material;
-				// no client_id / client_secret. Route it before authenticateTokenClient so a
-				// public wallet client doesn't get a `invalid_client` on a clean token call.
-				if (
-					body.grant_type === PRE_AUTHORIZED_CODE_GRANT &&
-					config.vciConfig !== undefined
-				) {
-					const preAuthorizedCode = body['pre-authorized_code'];
-					if (typeof preAuthorizedCode !== 'string') {
+					return oauthError(
+						HTTP_BAD_REQUEST,
+						'unsupported_grant_type'
+					);
+				},
+				{
+					body: t.Object({
+						audience: t.Optional(t.String()),
+						auth_req_id: t.Optional(t.String()),
+						client_assertion: t.Optional(t.String()),
+						client_assertion_type: t.Optional(t.String()),
+						client_id: t.Optional(t.String()),
+						client_secret: t.Optional(t.String()),
+						code: t.Optional(t.String()),
+						code_verifier: t.Optional(t.String()),
+						device_code: t.Optional(t.String()),
+						grant_type: t.Optional(t.String()),
+						'pre-authorized_code': t.Optional(t.String()),
+						redirect_uri: t.Optional(t.String()),
+						refresh_token: t.Optional(t.String()),
+						resource: t.Optional(t.String()),
+						scope: t.Optional(t.String()),
+						subject_token: t.Optional(t.String()),
+						subject_token_type: t.Optional(t.String())
+					})
+				}
+			)
+			// RFC 9126 — Pushed Authorization Request. The RP POSTs the full authorize
+			// param set, authenticated like the token endpoint. We stash under a 90s
+			// opaque request_uri (urn:ietf:params:oauth:request_uri:<token>); /authorize
+			// replays it. The point: request params never traverse the user-agent.
+			.post(
+				parRoute,
+				async ({ body, headers, request }) => {
+					if (config.pushedAuthorizationRequestStore === undefined) {
+						return oauthError(
+							HTTP_NOT_IMPLEMENTED,
+							'unsupported_response_type'
+						);
+					}
+					const basic = readBasicAuth(headers.authorization);
+					const auth = await authenticateTokenClient({
+						basicClientId: basic.clientId,
+						basicClientSecret: basic.clientSecret,
+						bodyClientAssertion: body.client_assertion,
+						bodyClientAssertionType: body.client_assertion_type,
+						bodyClientId: body.client_id,
+						bodyClientSecret: body.client_secret,
+						requestHeaders: request.headers
+					});
+					if (auth === undefined) {
+						return oauthError(HTTP_UNAUTHORIZED, 'invalid_client');
+					}
+					const { client } = auth;
+					// Strip Optional `undefined`s + client auth fields so the persisted
+					// param bag is a clean `Record<string, string>` (jsonb-friendly + matches
+					// what /authorize will look up).
+					const isAuthField = (key: string) =>
+						key === 'client_assertion' ||
+						key === 'client_assertion_type' ||
+						key === 'client_secret';
+					const params: Record<string, string> = Object.fromEntries(
+						Object.entries(body).filter(
+							(entry): entry is [string, string] =>
+								typeof entry[1] === 'string' &&
+								!isAuthField(entry[0])
+						)
+					);
+					const result = await pushAuthorizationRequest({
+						client,
+						params,
+						store: config.pushedAuthorizationRequestStore,
+						ttlMs: config.pushedAuthorizationRequestTtlMs
+					});
+
+					return jsonResponse(
+						result.body,
+						result.ok ? HTTP_OK : result.status
+					);
+				},
+				{
+					body: t.Object({
+						acr_values: t.Optional(t.String()),
+						audience: t.Optional(t.String()),
+						claims: t.Optional(t.String()),
+						client_assertion: t.Optional(t.String()),
+						client_assertion_type: t.Optional(t.String()),
+						client_id: t.Optional(t.String()),
+						client_secret: t.Optional(t.String()),
+						code_challenge: t.Optional(t.String()),
+						code_challenge_method: t.Optional(t.String()),
+						nonce: t.Optional(t.String()),
+						redirect_uri: t.Optional(t.String()),
+						resource: t.Optional(t.String()),
+						response_type: t.Optional(t.String()),
+						scope: t.Optional(t.String()),
+						state: t.Optional(t.String())
+					}),
+					headers: t.Object({
+						authorization: t.Optional(t.String())
+					})
+				}
+			)
+			// RFC 7662 — token introspection. Authenticated clients learn whether
+			// a token is active. Tokens we issued ourselves are checked: JWT
+			// access tokens are verified against our signing key + exp; refresh
+			// tokens are looked up by hash. Unknown / expired / wrong-issuer
+			// tokens come back as `{ active: false }` — never an error.
+			.post(
+				introspectRoute,
+				async ({ body, headers }) => {
+					const basic = readBasicAuth(headers.authorization);
+					const clientId = body.client_id ?? basic.clientId;
+					const clientSecret =
+						body.client_secret ?? basic.clientSecret;
+					if (clientId === undefined) {
+						return oauthError(HTTP_UNAUTHORIZED, 'invalid_client');
+					}
+					const client = await authenticateClient(
+						clientId,
+						clientSecret
+					);
+					if (client === undefined) {
+						return oauthError(HTTP_UNAUTHORIZED, 'invalid_client');
+					}
+					const result = await introspectToken({
+						config,
+						hint:
+							body.token_type_hint === 'access_token' ||
+							body.token_type_hint === 'refresh_token'
+								? body.token_type_hint
+								: undefined,
+						now: Date.now(),
+						token: body.token
+					});
+
+					return jsonResponse(result, HTTP_OK);
+				},
+				{
+					body: t.Object({
+						client_id: t.Optional(t.String()),
+						client_secret: t.Optional(t.String()),
+						token: t.String(),
+						token_type_hint: t.Optional(t.String())
+					}),
+					headers: t.Object({
+						authorization: t.Optional(t.String())
+					})
+				}
+			)
+			// RFC 7009 — token revocation. Refresh tokens are deleted from the
+			// store. Access tokens (JWT) are stateless, so the response is 200
+			// OK without action — spec-permitted ("the authorization server
+			// responds with HTTP status code 200 if the token has been revoked
+			// successfully or if the client submitted an invalid token").
+			.post(
+				revokeRoute,
+				async ({ body, headers }) => {
+					const basic = readBasicAuth(headers.authorization);
+					const clientId = body.client_id ?? basic.clientId;
+					const clientSecret =
+						body.client_secret ?? basic.clientSecret;
+					if (clientId === undefined) {
+						return oauthError(HTTP_UNAUTHORIZED, 'invalid_client');
+					}
+					const client = await authenticateClient(
+						clientId,
+						clientSecret
+					);
+					if (client === undefined) {
+						return oauthError(HTTP_UNAUTHORIZED, 'invalid_client');
+					}
+					if (body.token_type_hint !== 'access_token') {
+						await revokeRefreshToken(config, body.token);
+					}
+
+					return new Response(null, { status: HTTP_OK });
+				},
+				{
+					body: t.Object({
+						client_id: t.Optional(t.String()),
+						client_secret: t.Optional(t.String()),
+						token: t.String(),
+						token_type_hint: t.Optional(t.String())
+					}),
+					headers: t.Object({
+						authorization: t.Optional(t.String())
+					})
+				}
+			)
+			// OIDC CIBA Core 1.0 §7.1 — backchannel authorization request. Clients
+			// hit this with a login_hint identifying the user; the package resolves
+			// the user via `resolveBackchannelUser`, persists a pending auth_req,
+			// fires `onBackchannelAuthRequest` so the consumer can push a notification
+			// to the user's phone, and returns an auth_req_id the client polls
+			// /token with (grant_type=urn:openid:params:grant-type:ciba).
+			.post(
+				backchannelAuthorizationRoute,
+				async ({ body, headers }) => {
+					if (config.backchannelAuthStore === undefined) {
+						return oauthError(
+							HTTP_BAD_REQUEST,
+							'unsupported_grant_type'
+						);
+					}
+					const basic = readBasicAuth(headers.authorization);
+					const clientId = body.client_id ?? basic.clientId;
+					const clientSecret =
+						body.client_secret ?? basic.clientSecret;
+					if (clientId === undefined) {
+						return oauthError(HTTP_UNAUTHORIZED, 'invalid_client');
+					}
+					const client = await authenticateClient(
+						clientId,
+						clientSecret
+					);
+					if (client === undefined) {
+						return oauthError(HTTP_UNAUTHORIZED, 'invalid_client');
+					}
+					if (body.login_hint === undefined) {
 						return oauthError(HTTP_BAD_REQUEST, 'invalid_request');
 					}
-					const result = await exchangePreAuthorizedCode({
-						config: config.vciConfig,
-						issuer: config.issuer,
-						preAuthorizedCode,
-						signingKey: config.vciConfig.signingKey ?? config.signingKey
+					const requested =
+						body.scope === undefined || body.scope.length === 0
+							? client.scopes
+							: body.scope
+									.split(' ')
+									.filter((entry) =>
+										client.scopes.includes(entry)
+									);
+					const result = await issueBackchannelAuth({
+						bindingMessage: body.binding_message,
+						clientId: client.clientId,
+						config,
+						loginHint: body.login_hint,
+						now: Date.now(),
+						requestedScopes: requested
 					});
-					if (!result.ok) return oauthError(HTTP_BAD_REQUEST, result.error);
+					if (!result.ok)
+						return oauthError(HTTP_BAD_REQUEST, result.error);
 
 					return jsonResponse(
 						{
-							access_token: result.access_token,
-							c_nonce: result.c_nonce,
-							c_nonce_expires_in: result.c_nonce_expires_in,
+							auth_req_id: result.auth_req_id,
 							expires_in: result.expires_in,
-							token_type: result.token_type
+							interval: result.interval
 						},
 						HTTP_OK
 					);
+				},
+				{
+					body: t.Object({
+						binding_message: t.Optional(t.String()),
+						client_id: t.Optional(t.String()),
+						client_secret: t.Optional(t.String()),
+						login_hint: t.Optional(t.String()),
+						scope: t.Optional(t.String())
+					}),
+					headers: t.Object({
+						authorization: t.Optional(t.String())
+					})
 				}
-				const basic = readBasicAuth(headers.authorization);
-				const auth = await authenticateTokenClient({
-					basicClientId: basic.clientId,
-					basicClientSecret: basic.clientSecret,
-					bodyClientAssertion: body.client_assertion,
-					bodyClientAssertionType: body.client_assertion_type,
-					bodyClientId: body.client_id,
-					bodyClientSecret: body.client_secret,
-					requestHeaders: request.headers
-				});
-				if (auth === undefined) {
-					return oauthError(HTTP_UNAUTHORIZED, 'invalid_client');
-				}
-				const { client, clientCertThumbprint } = auth;
-				const nonceChallenge = await dpopNonceChallenge(headers.dpop);
-				if (nonceChallenge !== undefined) return nonceChallenge;
+			)
+			// RFC 8628 §3.1 — device authorization request. Clients (CLIs,
+			// smart TVs, IoT) ask for a device_code + user_code pair, then poll
+			// /token while the user approves on a second device.
+			.post(
+				deviceAuthorizationRoute,
+				async ({ body, headers }) => {
+					if (config.deviceAuthorizationStore === undefined) {
+						return oauthError(
+							HTTP_BAD_REQUEST,
+							'unsupported_grant_type'
+						);
+					}
+					const basic = readBasicAuth(headers.authorization);
+					const clientId = body.client_id ?? basic.clientId;
+					const clientSecret =
+						body.client_secret ?? basic.clientSecret;
+					if (clientId === undefined) {
+						return oauthError(HTTP_UNAUTHORIZED, 'invalid_client');
+					}
+					const client = await authenticateClient(
+						clientId,
+						clientSecret
+					);
+					if (client === undefined) {
+						return oauthError(HTTP_UNAUTHORIZED, 'invalid_client');
+					}
+					const requested =
+						body.scope === undefined || body.scope.length === 0
+							? client.scopes
+							: body.scope
+									.split(' ')
+									.filter((entry) =>
+										client.scopes.includes(entry)
+									);
+					const response = await issueDeviceAuthorization({
+						clientId: client.clientId,
+						config,
+						now: Date.now(),
+						requestedScopes: requested
+					});
 
-				if (body.grant_type === 'authorization_code') {
-					return grantAuthorizationCode(
-						client,
-						body,
-						headers.dpop,
-						clientCertThumbprint
-					);
+					return jsonResponse(response, HTTP_OK);
+				},
+				{
+					body: t.Object({
+						client_id: t.Optional(t.String()),
+						client_secret: t.Optional(t.String()),
+						scope: t.Optional(t.String())
+					}),
+					headers: t.Object({
+						authorization: t.Optional(t.String())
+					})
 				}
-				if (body.grant_type === 'refresh_token') {
-					return grantRefreshToken(
-						client,
-						body,
-						headers.dpop,
-						clientCertThumbprint
-					);
-				}
-				if (
-					body.grant_type ===
-					'urn:ietf:params:oauth:grant-type:token-exchange'
-				) {
-					return grantTokenExchange(client, body, headers.dpop);
-				}
-				if (
-					body.grant_type ===
-					'urn:ietf:params:oauth:grant-type:device_code'
-				) {
-					return grantDeviceCode(client, body, headers.dpop);
-				}
-				if (body.grant_type === CIBA_GRANT_TYPE) {
-					return grantBackchannel(
-						client,
-						body,
-						headers.dpop,
-						clientCertThumbprint
-					);
-				}
+			)
+			// Internal verification endpoint — the consumer-built device-flow
+			// UI POSTs here once the user types their user_code and confirms
+			// (or denies). Requires an authenticated user session. Returns
+			// 200 + { ok: true } or an oauthError describing what went wrong.
+			.post(
+				deviceApproveRoute,
+				async ({ body, cookie: { user_session_id }, store }) => {
+					if (config.deviceAuthorizationStore === undefined) {
+						return oauthError(
+							HTTP_BAD_REQUEST,
+							'unsupported_grant_type'
+						);
+					}
+					const userSession = await loadSessionFromSource({
+						authSessionStore,
+						session: store.session,
+						userSessionId: user_session_id.value
+					});
+					if (userSession === undefined) {
+						return oauthError(HTTP_UNAUTHORIZED, 'login_required');
+					}
+					const result =
+						body.action === 'deny'
+							? await denyDeviceAuthorization({
+									config,
+									userCode: body.user_code
+								})
+							: await approveDeviceAuthorization({
+									config,
+									userCode: body.user_code,
+									userSub: getUserId(userSession.user)
+								});
+					if (!result.ok)
+						return oauthError(HTTP_BAD_REQUEST, result.error);
 
-				return oauthError(HTTP_BAD_REQUEST, 'unsupported_grant_type');
-			},
-			{
-				body: t.Object({
-					audience: t.Optional(t.String()),
-					auth_req_id: t.Optional(t.String()),
-					client_assertion: t.Optional(t.String()),
-					client_assertion_type: t.Optional(t.String()),
-					client_id: t.Optional(t.String()),
-					client_secret: t.Optional(t.String()),
-					code: t.Optional(t.String()),
-					code_verifier: t.Optional(t.String()),
-					device_code: t.Optional(t.String()),
-					grant_type: t.Optional(t.String()),
-					'pre-authorized_code': t.Optional(t.String()),
-					redirect_uri: t.Optional(t.String()),
-					refresh_token: t.Optional(t.String()),
-					resource: t.Optional(t.String()),
-					scope: t.Optional(t.String()),
-					subject_token: t.Optional(t.String()),
-					subject_token_type: t.Optional(t.String())
-				})
-			}
-		)
-		// RFC 9126 — Pushed Authorization Request. The RP POSTs the full authorize
-		// param set, authenticated like the token endpoint. We stash under a 90s
-		// opaque request_uri (urn:ietf:params:oauth:request_uri:<token>); /authorize
-		// replays it. The point: request params never traverse the user-agent.
-		.post(
-			parRoute,
-			async ({ body, headers, request }) => {
-				if (config.pushedAuthorizationRequestStore === undefined) {
-					return oauthError(
-						HTTP_NOT_IMPLEMENTED,
-						'unsupported_response_type'
-					);
+					return jsonResponse({ ok: true }, HTTP_OK);
+				},
+				{
+					body: t.Object({
+						action: t.Optional(
+							t.Union([t.Literal('approve'), t.Literal('deny')])
+						),
+						user_code: t.String()
+					}),
+					cookie: t.Cookie({
+						user_session_id: t.Optional(userSessionIdTypebox)
+					})
 				}
-				const basic = readBasicAuth(headers.authorization);
-				const auth = await authenticateTokenClient({
-					basicClientId: basic.clientId,
-					basicClientSecret: basic.clientSecret,
-					bodyClientAssertion: body.client_assertion,
-					bodyClientAssertionType: body.client_assertion_type,
-					bodyClientId: body.client_id,
-					bodyClientSecret: body.client_secret,
-					requestHeaders: request.headers
-				});
-				if (auth === undefined) {
-					return oauthError(HTTP_UNAUTHORIZED, 'invalid_client');
+			)
+			// OIDC RP-initiated logout (Session Management 1.0). The RP redirects the user
+			// here with `id_token_hint` (which we verify was signed by us) + an optional
+			// `post_logout_redirect_uri` (must be in the client's allow-list). We clear the
+			// user's session + fan out back-channel `logout_token` POSTs to every OTHER RP
+			// with active refresh tokens for this user + a registered backchannel URI. Spec
+			// allows GET + POST; we support both.
+			.get(
+				endSessionRoute,
+				async ({ cookie: { user_session_id }, query, store }) =>
+					handleEndSession({
+						cookie: user_session_id,
+						inMemorySession: store.session,
+						query
+					}),
+				{
+					cookie: t.Cookie({
+						user_session_id: t.Optional(userSessionIdTypebox)
+					}),
+					query: t.Object({
+						client_id: t.Optional(t.String()),
+						id_token_hint: t.Optional(t.String()),
+						post_logout_redirect_uri: t.Optional(t.String()),
+						state: t.Optional(t.String())
+					})
 				}
-				const { client } = auth;
-				// Strip Optional `undefined`s + client auth fields so the persisted
-				// param bag is a clean `Record<string, string>` (jsonb-friendly + matches
-				// what /authorize will look up).
-				const isAuthField = (key: string) =>
-					key === 'client_assertion' ||
-					key === 'client_assertion_type' ||
-					key === 'client_secret';
-				const params: Record<string, string> = Object.fromEntries(
-					Object.entries(body).filter(
-						(entry): entry is [string, string] =>
-							typeof entry[1] === 'string' && !isAuthField(entry[0])
+			)
+			.post(
+				endSessionRoute,
+				async ({ body, cookie: { user_session_id }, store }) =>
+					handleEndSession({
+						cookie: user_session_id,
+						inMemorySession: store.session,
+						query: body
+					}),
+				{
+					body: t.Object({
+						client_id: t.Optional(t.String()),
+						id_token_hint: t.Optional(t.String()),
+						post_logout_redirect_uri: t.Optional(t.String()),
+						state: t.Optional(t.String())
+					}),
+					cookie: t.Cookie({
+						user_session_id: t.Optional(userSessionIdTypebox)
+					})
+				}
+			)
+			// RFC 7591 — Dynamic Client Registration. The route is mounted unconditionally,
+			// but returns 501 when the registration token store isn't configured — that way
+			// /.well-known/openid-configuration's discovery flag stays the source of truth on
+			// whether DCR is on at this deployment.
+			.post(
+				registrationRoute,
+				async ({ body, headers }) => {
+					if (config.clientRegistrationTokenStore === undefined) {
+						return jsonResponse(
+							{ error: 'unsupported_response_type' },
+							HTTP_NOT_IMPLEMENTED
+						);
+					}
+					const presented = headers.authorization?.startsWith(
+						'Bearer '
 					)
-				);
-				const result = await pushAuthorizationRequest({
-					client,
-					params,
-					store: config.pushedAuthorizationRequestStore,
-					ttlMs: config.pushedAuthorizationRequestTtlMs
-				});
-
-				return jsonResponse(
-					result.body,
-					result.ok ? HTTP_OK : result.status
-				);
-			},
-			{
-				body: t.Object({
-					acr_values: t.Optional(t.String()),
-					audience: t.Optional(t.String()),
-					claims: t.Optional(t.String()),
-					client_assertion: t.Optional(t.String()),
-					client_assertion_type: t.Optional(t.String()),
-					client_id: t.Optional(t.String()),
-					client_secret: t.Optional(t.String()),
-					code_challenge: t.Optional(t.String()),
-					code_challenge_method: t.Optional(t.String()),
-					nonce: t.Optional(t.String()),
-					redirect_uri: t.Optional(t.String()),
-					resource: t.Optional(t.String()),
-					response_type: t.Optional(t.String()),
-					scope: t.Optional(t.String()),
-					state: t.Optional(t.String())
-				}),
-				headers: t.Object({
-					authorization: t.Optional(t.String())
-				})
-			}
-		)
-		// RFC 7662 — token introspection. Authenticated clients learn whether
-		// a token is active. Tokens we issued ourselves are checked: JWT
-		// access tokens are verified against our signing key + exp; refresh
-		// tokens are looked up by hash. Unknown / expired / wrong-issuer
-		// tokens come back as `{ active: false }` — never an error.
-		.post(
-			introspectRoute,
-			async ({ body, headers }) => {
-				const basic = readBasicAuth(headers.authorization);
-				const clientId = body.client_id ?? basic.clientId;
-				const clientSecret = body.client_secret ?? basic.clientSecret;
-				if (clientId === undefined) {
-					return oauthError(HTTP_UNAUTHORIZED, 'invalid_client');
-				}
-				const client = await authenticateClient(clientId, clientSecret);
-				if (client === undefined) {
-					return oauthError(HTTP_UNAUTHORIZED, 'invalid_client');
-				}
-				const result = await introspectToken({
-					config,
-					hint:
-						body.token_type_hint === 'access_token' ||
-						body.token_type_hint === 'refresh_token'
-							? body.token_type_hint
-							: undefined,
-					now: Date.now(),
-					token: body.token
-				});
-
-				return jsonResponse(result, HTTP_OK);
-			},
-			{
-				body: t.Object({
-					client_id: t.Optional(t.String()),
-					client_secret: t.Optional(t.String()),
-					token: t.String(),
-					token_type_hint: t.Optional(t.String())
-				}),
-				headers: t.Object({
-					authorization: t.Optional(t.String())
-				})
-			}
-		)
-		// RFC 7009 — token revocation. Refresh tokens are deleted from the
-		// store. Access tokens (JWT) are stateless, so the response is 200
-		// OK without action — spec-permitted ("the authorization server
-		// responds with HTTP status code 200 if the token has been revoked
-		// successfully or if the client submitted an invalid token").
-		.post(
-			revokeRoute,
-			async ({ body, headers }) => {
-				const basic = readBasicAuth(headers.authorization);
-				const clientId = body.client_id ?? basic.clientId;
-				const clientSecret = body.client_secret ?? basic.clientSecret;
-				if (clientId === undefined) {
-					return oauthError(HTTP_UNAUTHORIZED, 'invalid_client');
-				}
-				const client = await authenticateClient(clientId, clientSecret);
-				if (client === undefined) {
-					return oauthError(HTTP_UNAUTHORIZED, 'invalid_client');
-				}
-				if (body.token_type_hint !== 'access_token') {
-					await revokeRefreshToken(config, body.token);
-				}
-
-				return new Response(null, { status: HTTP_OK });
-			},
-			{
-				body: t.Object({
-					client_id: t.Optional(t.String()),
-					client_secret: t.Optional(t.String()),
-					token: t.String(),
-					token_type_hint: t.Optional(t.String())
-				}),
-				headers: t.Object({
-					authorization: t.Optional(t.String())
-				})
-			}
-		)
-		// OIDC CIBA Core 1.0 §7.1 — backchannel authorization request. Clients
-		// hit this with a login_hint identifying the user; the package resolves
-		// the user via `resolveBackchannelUser`, persists a pending auth_req,
-		// fires `onBackchannelAuthRequest` so the consumer can push a notification
-		// to the user's phone, and returns an auth_req_id the client polls
-		// /token with (grant_type=urn:openid:params:grant-type:ciba).
-		.post(
-			backchannelAuthorizationRoute,
-			async ({ body, headers }) => {
-				if (config.backchannelAuthStore === undefined) {
-					return oauthError(HTTP_BAD_REQUEST, 'unsupported_grant_type');
-				}
-				const basic = readBasicAuth(headers.authorization);
-				const clientId = body.client_id ?? basic.clientId;
-				const clientSecret = body.client_secret ?? basic.clientSecret;
-				if (clientId === undefined) {
-					return oauthError(HTTP_UNAUTHORIZED, 'invalid_client');
-				}
-				const client = await authenticateClient(clientId, clientSecret);
-				if (client === undefined) {
-					return oauthError(HTTP_UNAUTHORIZED, 'invalid_client');
-				}
-				if (body.login_hint === undefined) {
-					return oauthError(HTTP_BAD_REQUEST, 'invalid_request');
-				}
-				const requested =
-					body.scope === undefined || body.scope.length === 0
-						? client.scopes
-						: body.scope
-								.split(' ')
-								.filter((entry) => client.scopes.includes(entry));
-				const result = await issueBackchannelAuth({
-					bindingMessage: body.binding_message,
-					clientId: client.clientId,
-					config,
-					loginHint: body.login_hint,
-					now: Date.now(),
-					requestedScopes: requested
-				});
-				if (!result.ok) return oauthError(HTTP_BAD_REQUEST, result.error);
-
-				return jsonResponse(
-					{
-						auth_req_id: result.auth_req_id,
-						expires_in: result.expires_in,
-						interval: result.interval
-					},
-					HTTP_OK
-				);
-			},
-			{
-				body: t.Object({
-					binding_message: t.Optional(t.String()),
-					client_id: t.Optional(t.String()),
-					client_secret: t.Optional(t.String()),
-					login_hint: t.Optional(t.String()),
-					scope: t.Optional(t.String())
-				}),
-				headers: t.Object({
-					authorization: t.Optional(t.String())
-				})
-			}
-		)
-		// RFC 8628 §3.1 — device authorization request. Clients (CLIs,
-		// smart TVs, IoT) ask for a device_code + user_code pair, then poll
-		// /token while the user approves on a second device.
-		.post(
-			deviceAuthorizationRoute,
-			async ({ body, headers }) => {
-				if (config.deviceAuthorizationStore === undefined) {
-					return oauthError(HTTP_BAD_REQUEST, 'unsupported_grant_type');
-				}
-				const basic = readBasicAuth(headers.authorization);
-				const clientId = body.client_id ?? basic.clientId;
-				const clientSecret = body.client_secret ?? basic.clientSecret;
-				if (clientId === undefined) {
-					return oauthError(HTTP_UNAUTHORIZED, 'invalid_client');
-				}
-				const client = await authenticateClient(clientId, clientSecret);
-				if (client === undefined) {
-					return oauthError(HTTP_UNAUTHORIZED, 'invalid_client');
-				}
-				const requested =
-					body.scope === undefined || body.scope.length === 0
-						? client.scopes
-						: body.scope
-								.split(' ')
-								.filter((entry) => client.scopes.includes(entry));
-				const response = await issueDeviceAuthorization({
-					clientId: client.clientId,
-					config,
-					now: Date.now(),
-					requestedScopes: requested
-				});
-
-				return jsonResponse(response, HTTP_OK);
-			},
-			{
-				body: t.Object({
-					client_id: t.Optional(t.String()),
-					client_secret: t.Optional(t.String()),
-					scope: t.Optional(t.String())
-				}),
-				headers: t.Object({
-					authorization: t.Optional(t.String())
-				})
-			}
-		)
-		// Internal verification endpoint — the consumer-built device-flow
-		// UI POSTs here once the user types their user_code and confirms
-		// (or denies). Requires an authenticated user session. Returns
-		// 200 + { ok: true } or an oauthError describing what went wrong.
-		.post(
-			deviceApproveRoute,
-			async ({ body, cookie: { user_session_id }, store }) => {
-				if (config.deviceAuthorizationStore === undefined) {
-					return oauthError(HTTP_BAD_REQUEST, 'unsupported_grant_type');
-				}
-				const userSession = await loadSessionFromSource({
-					authSessionStore,
-					session: store.session,
-					userSessionId: user_session_id.value
-				});
-				if (userSession === undefined) {
-					return oauthError(HTTP_UNAUTHORIZED, 'login_required');
-				}
-				const result =
-					body.action === 'deny'
-						? await denyDeviceAuthorization({
-								config,
-								userCode: body.user_code
-							})
-						: await approveDeviceAuthorization({
-								config,
-								userCode: body.user_code,
-								userSub: getUserId(userSession.user)
-							});
-				if (!result.ok) return oauthError(HTTP_BAD_REQUEST, result.error);
-
-				return jsonResponse({ ok: true }, HTTP_OK);
-			},
-			{
-				body: t.Object({
-					action: t.Optional(
-						t.Union([t.Literal('approve'), t.Literal('deny')])
-					),
-					user_code: t.String()
-				}),
-				cookie: t.Cookie({
-					user_session_id: t.Optional(userSessionIdTypebox)
-				})
-			}
-		)
-		// OIDC RP-initiated logout (Session Management 1.0). The RP redirects the user
-		// here with `id_token_hint` (which we verify was signed by us) + an optional
-		// `post_logout_redirect_uri` (must be in the client's allow-list). We clear the
-		// user's session + fan out back-channel `logout_token` POSTs to every OTHER RP
-		// with active refresh tokens for this user + a registered backchannel URI. Spec
-		// allows GET + POST; we support both.
-		.get(
-			endSessionRoute,
-			async ({
-				cookie: { user_session_id },
-				query,
-				store
-			}) =>
-				handleEndSession({
-					cookie: user_session_id,
-					inMemorySession: store.session,
-					query
-				}),
-			{
-				cookie: t.Cookie({
-					user_session_id: t.Optional(userSessionIdTypebox)
-				}),
-				query: t.Object({
-					client_id: t.Optional(t.String()),
-					id_token_hint: t.Optional(t.String()),
-					post_logout_redirect_uri: t.Optional(t.String()),
-					state: t.Optional(t.String())
-				})
-			}
-		)
-		.post(
-			endSessionRoute,
-			async ({
-				body,
-				cookie: { user_session_id },
-				store
-			}) =>
-				handleEndSession({
-					cookie: user_session_id,
-					inMemorySession: store.session,
-					query: body
-				}),
-			{
-				body: t.Object({
-					client_id: t.Optional(t.String()),
-					id_token_hint: t.Optional(t.String()),
-					post_logout_redirect_uri: t.Optional(t.String()),
-					state: t.Optional(t.String())
-				}),
-				cookie: t.Cookie({
-					user_session_id: t.Optional(userSessionIdTypebox)
-				})
-			}
-		)
-		// RFC 7591 — Dynamic Client Registration. The route is mounted unconditionally,
-		// but returns 501 when the registration token store isn't configured — that way
-		// /.well-known/openid-configuration's discovery flag stays the source of truth on
-		// whether DCR is on at this deployment.
-		.post(
-			registrationRoute,
-			async ({ body, headers }) => {
-				if (config.clientRegistrationTokenStore === undefined) {
-					return jsonResponse(
-						{ error: 'unsupported_response_type' },
-						HTTP_NOT_IMPLEMENTED
-					);
-				}
-				const presented = headers.authorization?.startsWith('Bearer ')
-					? headers.authorization.slice('Bearer '.length).trim()
-					: undefined;
-				const result = await registerClient({
-					clientStore,
-					initialAccessTokenStore: config.initialAccessTokenStore,
-					metadata: body,
-					onClientRegistration: config.onClientRegistration,
-					presentedInitialAccessToken: presented,
-					registrationBaseUrl,
-					registrationTokenStore: config.clientRegistrationTokenStore
-				});
-
-				return jsonResponse(
-					result.body,
-					result.ok ? HTTP_OK : result.status
-				);
-			},
-			{
-				body: t.Object({
-					backchannel_logout_uri: t.Optional(t.String()),
-					client_name: t.Optional(t.String()),
-					jwks: t.Optional(t.Any()),
-					jwks_uri: t.Optional(t.String()),
-					post_logout_redirect_uris: t.Optional(t.Array(t.String())),
-					redirect_uris: t.Optional(t.Array(t.String())),
-					scope: t.Optional(t.String())
-				}),
-				headers: t.Object({
-					authorization: t.Optional(t.String())
-				})
-			}
-		)
-		.get(
-			`${registrationRoute}/:clientId`,
-			async ({ headers, params: { clientId } }) => {
-				if (config.clientRegistrationTokenStore === undefined) {
-					return jsonResponse(
-						{ error: 'unsupported_response_type' },
-						HTTP_NOT_IMPLEMENTED
-					);
-				}
-				const result = await getRegisteredClient({
-					authorization: headers.authorization,
-					clientId,
-					clientStore,
-					registrationTokenStore: config.clientRegistrationTokenStore
-				});
-
-				return jsonResponse(result.body, result.status);
-			},
-			{
-				headers: t.Object({
-					authorization: t.Optional(t.String())
-				}),
-				params: t.Object({ clientId: t.String() })
-			}
-		)
-		.put(
-			`${registrationRoute}/:clientId`,
-			async ({ body, headers, params: { clientId } }) => {
-				if (config.clientRegistrationTokenStore === undefined) {
-					return jsonResponse(
-						{ error: 'unsupported_response_type' },
-						HTTP_NOT_IMPLEMENTED
-					);
-				}
-				const result = await updateRegisteredClient({
-					authorization: headers.authorization,
-					clientId,
-					clientStore,
-					metadata: body,
-					onClientRegistration: config.onClientRegistration,
-					registrationTokenStore: config.clientRegistrationTokenStore
-				});
-
-				return jsonResponse(result.body, result.status);
-			},
-			{
-				body: t.Object({
-					backchannel_logout_uri: t.Optional(t.String()),
-					client_name: t.Optional(t.String()),
-					jwks: t.Optional(t.Any()),
-					jwks_uri: t.Optional(t.String()),
-					post_logout_redirect_uris: t.Optional(t.Array(t.String())),
-					redirect_uris: t.Optional(t.Array(t.String())),
-					scope: t.Optional(t.String())
-				}),
-				headers: t.Object({
-					authorization: t.Optional(t.String())
-				}),
-				params: t.Object({ clientId: t.String() })
-			}
-		)
-		.delete(
-			`${registrationRoute}/:clientId`,
-			async ({ headers, params: { clientId } }) => {
-				if (config.clientRegistrationTokenStore === undefined) {
-					return jsonResponse(
-						{ error: 'unsupported_response_type' },
-						HTTP_NOT_IMPLEMENTED
-					);
-				}
-				const result = await deleteRegisteredClient({
-					authorization: headers.authorization,
-					clientId,
-					clientStore,
-					registrationTokenStore: config.clientRegistrationTokenStore
-				});
-				if (result.status === HTTP_NO_CONTENT) {
-					return new Response(null, { status: HTTP_NO_CONTENT });
-				}
-
-				return jsonResponse(result.body, result.status);
-			},
-			{
-				headers: t.Object({
-					authorization: t.Optional(t.String())
-				}),
-				params: t.Object({ clientId: t.String() })
-			}
-		)
-		// OIDC `/userinfo`. RP presents Bearer access token; we verify (our sig + exp),
-		// optionally enrich via `getUserInfo(sub)` hook, return JSON. Always returns at
-		// least `{sub}`. WWW-Authenticate on errors per RFC 6750.
-		.get(
-			userinfoRoute,
-			async ({ headers }) => {
-				const token = readUserInfoBearer(headers.authorization);
-				const result = await fetchUserInfo({ config, token });
-				if (!result.ok) {
-					return new Response(JSON.stringify(result.body), {
-						headers: {
-							'content-type': 'application/json',
-							'www-authenticate': userInfoChallengeHeader(result.error)
-						},
-						status: HTTP_UNAUTHORIZED
+						? headers.authorization.slice('Bearer '.length).trim()
+						: undefined;
+					const result = await registerClient({
+						clientStore,
+						initialAccessTokenStore: config.initialAccessTokenStore,
+						metadata: body,
+						onClientRegistration: config.onClientRegistration,
+						presentedInitialAccessToken: presented,
+						registrationBaseUrl,
+						registrationTokenStore:
+							config.clientRegistrationTokenStore
 					});
-				}
 
-				return jsonResponse(result.body, HTTP_OK);
-			},
-			{
-				headers: t.Object({
-					authorization: t.Optional(t.String())
-				})
-			}
-		)
-		.post(
-			userinfoRoute,
-			async ({ headers, body }) => {
-				// Per spec, /userinfo accepts the token in the Authorization header OR
-				// the `access_token` form field. The form-field path lets RPs that can't
-				// set custom headers (rare today) still use it.
-				const token =
-					readUserInfoBearer(headers.authorization) ?? body.access_token;
-				const result = await fetchUserInfo({ config, token });
-				if (!result.ok) {
-					return new Response(JSON.stringify(result.body), {
-						headers: {
-							'content-type': 'application/json',
-							'www-authenticate': userInfoChallengeHeader(result.error)
-						},
-						status: HTTP_UNAUTHORIZED
+					return jsonResponse(
+						result.body,
+						result.ok ? HTTP_OK : result.status
+					);
+				},
+				{
+					body: t.Object({
+						backchannel_logout_uri: t.Optional(t.String()),
+						client_name: t.Optional(t.String()),
+						jwks: t.Optional(t.Any()),
+						jwks_uri: t.Optional(t.String()),
+						post_logout_redirect_uris: t.Optional(
+							t.Array(t.String())
+						),
+						redirect_uris: t.Optional(t.Array(t.String())),
+						scope: t.Optional(t.String())
+					}),
+					headers: t.Object({
+						authorization: t.Optional(t.String())
+					})
+				}
+			)
+			.get(
+				`${registrationRoute}/:clientId`,
+				async ({ headers, params: { clientId } }) => {
+					if (config.clientRegistrationTokenStore === undefined) {
+						return jsonResponse(
+							{ error: 'unsupported_response_type' },
+							HTTP_NOT_IMPLEMENTED
+						);
+					}
+					const result = await getRegisteredClient({
+						authorization: headers.authorization,
+						clientId,
+						clientStore,
+						registrationTokenStore:
+							config.clientRegistrationTokenStore
 					});
-				}
 
-				return jsonResponse(result.body, HTTP_OK);
-			},
-			{
-				body: t.Object({
-					access_token: t.Optional(t.String())
-				}),
-				headers: t.Object({
-					authorization: t.Optional(t.String())
-				})
-			}
-		)
-		.get(jwksRoute, () => ({ keys: [toPublicJwk(signingKey)] }))
-		.get('/.well-known/openid-configuration', () => discovery);
+					return jsonResponse(result.body, result.status);
+				},
+				{
+					headers: t.Object({
+						authorization: t.Optional(t.String())
+					}),
+					params: t.Object({ clientId: t.String() })
+				}
+			)
+			.put(
+				`${registrationRoute}/:clientId`,
+				async ({ body, headers, params: { clientId } }) => {
+					if (config.clientRegistrationTokenStore === undefined) {
+						return jsonResponse(
+							{ error: 'unsupported_response_type' },
+							HTTP_NOT_IMPLEMENTED
+						);
+					}
+					const result = await updateRegisteredClient({
+						authorization: headers.authorization,
+						clientId,
+						clientStore,
+						metadata: body,
+						onClientRegistration: config.onClientRegistration,
+						registrationTokenStore:
+							config.clientRegistrationTokenStore
+					});
+
+					return jsonResponse(result.body, result.status);
+				},
+				{
+					body: t.Object({
+						backchannel_logout_uri: t.Optional(t.String()),
+						client_name: t.Optional(t.String()),
+						jwks: t.Optional(t.Any()),
+						jwks_uri: t.Optional(t.String()),
+						post_logout_redirect_uris: t.Optional(
+							t.Array(t.String())
+						),
+						redirect_uris: t.Optional(t.Array(t.String())),
+						scope: t.Optional(t.String())
+					}),
+					headers: t.Object({
+						authorization: t.Optional(t.String())
+					}),
+					params: t.Object({ clientId: t.String() })
+				}
+			)
+			.delete(
+				`${registrationRoute}/:clientId`,
+				async ({ headers, params: { clientId } }) => {
+					if (config.clientRegistrationTokenStore === undefined) {
+						return jsonResponse(
+							{ error: 'unsupported_response_type' },
+							HTTP_NOT_IMPLEMENTED
+						);
+					}
+					const result = await deleteRegisteredClient({
+						authorization: headers.authorization,
+						clientId,
+						clientStore,
+						registrationTokenStore:
+							config.clientRegistrationTokenStore
+					});
+					if (result.status === HTTP_NO_CONTENT) {
+						return new Response(null, { status: HTTP_NO_CONTENT });
+					}
+
+					return jsonResponse(result.body, result.status);
+				},
+				{
+					headers: t.Object({
+						authorization: t.Optional(t.String())
+					}),
+					params: t.Object({ clientId: t.String() })
+				}
+			)
+			// OIDC `/userinfo`. RP presents Bearer access token; we verify (our sig + exp),
+			// optionally enrich via `getUserInfo(sub)` hook, return JSON. Always returns at
+			// least `{sub}`. WWW-Authenticate on errors per RFC 6750.
+			.get(
+				userinfoRoute,
+				async ({ headers }) => {
+					const token = readUserInfoBearer(headers.authorization);
+					const result = await fetchUserInfo({ config, token });
+					if (!result.ok) {
+						return new Response(JSON.stringify(result.body), {
+							headers: {
+								'content-type': 'application/json',
+								'www-authenticate': userInfoChallengeHeader(
+									result.error
+								)
+							},
+							status: HTTP_UNAUTHORIZED
+						});
+					}
+
+					return jsonResponse(result.body, HTTP_OK);
+				},
+				{
+					headers: t.Object({
+						authorization: t.Optional(t.String())
+					})
+				}
+			)
+			.post(
+				userinfoRoute,
+				async ({ headers, body }) => {
+					// Per spec, /userinfo accepts the token in the Authorization header OR
+					// the `access_token` form field. The form-field path lets RPs that can't
+					// set custom headers (rare today) still use it.
+					const token =
+						readUserInfoBearer(headers.authorization) ??
+						body.access_token;
+					const result = await fetchUserInfo({ config, token });
+					if (!result.ok) {
+						return new Response(JSON.stringify(result.body), {
+							headers: {
+								'content-type': 'application/json',
+								'www-authenticate': userInfoChallengeHeader(
+									result.error
+								)
+							},
+							status: HTTP_UNAUTHORIZED
+						});
+					}
+
+					return jsonResponse(result.body, HTTP_OK);
+				},
+				{
+					body: t.Object({
+						access_token: t.Optional(t.String())
+					}),
+					headers: t.Object({
+						authorization: t.Optional(t.String())
+					})
+				}
+			)
+			.get(jwksRoute, () => ({ keys: [toPublicJwk(signingKey)] }))
+			.get('/.well-known/openid-configuration', () => discovery)
+	);
 };

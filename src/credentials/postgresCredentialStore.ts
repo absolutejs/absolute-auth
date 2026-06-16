@@ -70,8 +70,8 @@ const toToken = (row: TokenRow): CredentialToken => ({
 	tokenHash: row.token_hash
 });
 
-const saveToken = async (
-	db: AnyPgDatabase,
+const saveToken = async <DB extends AnyPgDatabase>(
+	db: DB,
 	table: TokenTable,
 	token: CredentialToken
 ) => {
@@ -86,8 +86,8 @@ const saveToken = async (
 		.onConflictDoUpdate({ set: values, target: table.token_hash });
 };
 
-const consumeToken = async (
-	db: AnyPgDatabase,
+const consumeToken = async <DB extends AnyPgDatabase>(
+	db: DB,
 	table: TokenTable,
 	tokenHash: string
 ) => {
@@ -106,8 +106,8 @@ const consumeToken = async (
 
 export const createNeonCredentialStore = (databaseUrl: string) =>
 	createPostgresCredentialStore(createNeonDatabase(databaseUrl));
-export const createPostgresCredentialStore = (
-	db: AnyPgDatabase
+export const createPostgresCredentialStore = <DB extends AnyPgDatabase>(
+	db: DB
 ): CredentialStore => ({
 	consumeResetToken: (tokenHash) =>
 		consumeToken(db, credentialResetTokensTable, tokenHash),
@@ -133,13 +133,10 @@ export const createPostgresCredentialStore = (
 			updated_at_ms: credential.updatedAt,
 			user_id: credential.userId ?? null
 		};
-		await db
-			.insert(credentialsTable)
-			.values(values)
-			.onConflictDoUpdate({
-				set: values,
-				target: credentialsTable.email
-			});
+		await db.insert(credentialsTable).values(values).onConflictDoUpdate({
+			set: values,
+			target: credentialsTable.email
+		});
 	},
 	saveResetToken: (token) => saveToken(db, credentialResetTokensTable, token),
 	saveVerificationToken: (token) =>

@@ -357,6 +357,14 @@ export type RouteString = `/${string}`;
 export type AuthorizeRoute = `${string}/:provider${'' | `/${string}`}`;
 
 export type AuthConfig<UserType> = {
+	/** Canonical user resolver: load the application user for a session subject
+	 *  (`sub`). REQUIRED, and the single source of truth for `UserType` — every
+	 *  other user-typed callback (`credentials.getUserByEmail`,
+	 *  `sso.getSsoUser`, `onCallbackSuccess`, …) is checked against the shape
+	 *  `getUser` returns (via `NoInfer`), so they cannot disagree. This is also
+	 *  the resolver the package uses to hydrate the typed `user` in
+	 *  `protectRoute`'s context. */
+	getUser: (sub: string) => UserType | null | Promise<UserType | null>;
 	providersConfiguration: OAuth2ConfigurationOptions;
 	/** Override the `Secure` attribute on every cookie the package sets (session, OAuth state,
 	 *  code_verifier, SSO nonce, ring, etc.). When omitted, defaults to
@@ -383,36 +391,36 @@ export type AuthConfig<UserType> = {
 	cleanupIntervalMs?: number;
 	maxSessions?: number;
 	sessionDurationMs?: number;
-	authSessionStore?: AuthSessionStore<UserType>;
+	authSessionStore?: AuthSessionStore<NoInfer<UserType>>;
 	/** Append-only audit logging. When present, `auth()` emits structured events
 	 *  (register, login, mfa_*, password_reset, logout, …) from every flow into the
 	 *  `auditStore` and/or `onAuditEvent` hook. SOC 2 prerequisite. */
-	audit?: AuditConfig<UserType>;
+	audit?: AuditConfig<NoInfer<UserType>>;
 	/** Local email/password (credentials) block. Additive and optional — when present,
 	 *  mounts register / verify-email / login / reset-password routes that produce the
 	 *  same `SessionData<UserType>` as OAuth, transparent to `protectRoute`. */
-	credentials?: CredentialsConfig<UserType>;
+	credentials?: CredentialsConfig<NoInfer<UserType>>;
 	/** Passwordless login: magic links + email/SMS OTP. When present, mounts the magic-link flow
 	 *  (if `onSendMagicLink` is set) and/or the OTP flow (if `onSendOtp` is set) under
 	 *  `{passwordlessRoute}`; each verify route resolves the email to a user and mints the same
 	 *  `SessionData<UserType>` as every other flow. */
-	passwordless?: PasswordlessConfig<UserType>;
+	passwordless?: PasswordlessConfig<NoInfer<UserType>>;
 	/** Multi-factor auth (TOTP + backup codes). When present alongside `credentials`,
 	 *  `auth()` auto-wires the login MFA gate, mounts the enroll/challenge routes, and
 	 *  promotes the parked session once a factor is verified. */
-	mfa?: MfaConfig<UserType>;
+	mfa?: MfaConfig<NoInfer<UserType>>;
 	/** Per-identity attempt throttling + account lockout on the credential login route
 	 *  (progressive: locks after `maxAttempts` failures within `windowMs`). */
 	lockout?: LockoutConfig;
 	/** Self-service session management: `GET /auth/sessions` (list the caller's active
 	 *  sessions) and `DELETE /auth/sessions/:id` (remote revoke). Requires an
 	 *  `authSessionStore` that can enumerate sessions. */
-	sessions?: SessionsConfig<UserType>;
+	sessions?: SessionsConfig<NoInfer<UserType>>;
 	/** Per-organization enterprise SSO (the WorkOS-style model). When present, mounts
 	 *  `GET {ssoRoute}/oidc/:organizationId/authorize` + `.../callback`, resolves the org's
 	 *  OIDC connection from `ssoConnectionStore`, verifies the id_token in-house against the
 	 *  issuer's JWKS, and mints the same `SessionData<UserType>` as every other flow. */
-	sso?: SSOConfig<UserType>;
+	sso?: SSOConfig<NoInfer<UserType>>;
 	/** SCIM 2.0 auto-provisioning for enterprise directory sync (Okta / Azure AD). When present,
 	 *  mounts `{scimRoute}/Users` (+ `/ServiceProviderConfig`) with per-org bearer-token auth via
 	 *  `scimTokenStore`, and maps SCIM resources to the consumer's user store through hooks. */
@@ -430,12 +438,12 @@ export type AuthConfig<UserType> = {
 	 *  JWTs signed by a key you own (self-hosted JWKS), refresh-token rotation, and
 	 *  optional DPoP (RFC 9449) sender-constrained tokens. The authorize endpoint reuses
 	 *  the package session, so the IdP login gets passkeys / MFA / SSO for free. */
-	oidc?: OidcProviderConfig<UserType>;
+	oidc?: OidcProviderConfig<NoInfer<UserType>>;
 	/** First-class multi-tenancy (the WorkOS model). When present, mounts organization +
 	 *  membership + invitation routes under `{organizationsRoute}`: list the caller's orgs, create
 	 *  one (caller becomes owner), invite/accept/revoke by email, and list/remove members. Ties the
 	 *  bare `organizationId` used by SSO/SCIM/RBAC into a real tenant model with org-scoped roles. */
-	organizations?: OrganizationsConfig<UserType>;
+	organizations?: OrganizationsConfig<NoInfer<UserType>>;
 	/** Admin portal — the WorkOS self-serve "setup link" model, headless. When present, mounts
 	 *  `{portalRoute}` endpoints a customer's IT admin (holding a scoped setup token from
 	 *  `createSetupSession`) calls to read the service-provider URLs and configure their own SSO
@@ -444,21 +452,21 @@ export type AuthConfig<UserType> = {
 	/** Org-scoped roles & permissions (builds on `organizations`). When present, mounts routes to
 	 *  list an org's role definitions and set a member's roles. Pair with
 	 *  `createMembershipPermissionResolver` to make `authorization.hasPermission` turnkey. */
-	roles?: RolesConfig<UserType>;
+	roles?: RolesConfig<NoInfer<UserType>>;
 	/** Role-based / attribute-based access control (E4). When present, `auth()` exposes a
 	 *  `protectPermission(check, handler)` derive (alongside `protectRoute`) that delegates the
 	 *  decision to your `hasPermission` hook — the package stays schema-agnostic about roles. */
-	authorization?: AuthorizationConfig<UserType>;
+	authorization?: AuthorizationConfig<NoInfer<UserType>>;
 	/** GDPR/CCPA self-service compliance (E5). When present, mounts `GET {complianceRoute}/export`
 	 *  (right to access) and `DELETE {complianceRoute}` (right to erasure — runs your delete hook,
 	 *  revokes the user's sessions, clears the cookie). Pair with `audit.redact` for PII redaction. */
-	compliance?: ComplianceConfig<UserType>;
+	compliance?: ComplianceConfig<NoInfer<UserType>>;
 	/** Passwordless / passkey auth (WebAuthn). When present, mounts the registration ceremony
 	 *  (`{webauthnRoute}/register/options` + `/verify`, adds a passkey to the authenticated caller)
 	 *  and the authentication ceremony (`.../authenticate/options` + `/verify`, passwordless sign-in
 	 *  → mints the same `SessionData<UserType>`). A `webauthnAdapter` wraps a vetted library (e.g.
 	 *  `@simplewebauthn/server`); the package never bundles the WebAuthn crypto. */
-	webauthn?: WebAuthnConfig<UserType>;
+	webauthn?: WebAuthnConfig<NoInfer<UserType>>;
 	/** Signed outbound webhooks. When present, every emitted auth event (the audit taxonomy) is
 	 *  HMAC-signed (Standard Webhooks scheme) and POSTed to each endpoint. Delivery is best-effort
 	 *  and isolated per endpoint; configuring this alone (without `audit`) is enough to turn on
@@ -472,25 +480,25 @@ export type AuthConfig<UserType> = {
 	 *  Only available when `UserType` has the fields the fragments render
 	 *  (`sub` + optional email/name); users that don't enable HTMX are never
 	 *  constrained. */
-	htmx?: UserType extends AuthHtmxUser ? AuthHtmxConfig : never;
+	htmx?: NoInfer<UserType> extends AuthHtmxUser ? AuthHtmxConfig : never;
 	unregisteredSessionDurationMs?: number;
-	resolveAuthIntent?: ResolveAuthIntent<UserType>;
+	resolveAuthIntent?: ResolveAuthIntent<NoInfer<UserType>>;
 	onAuthorizeSuccess?: OnAuthorizeSuccess;
 	onAuthorizeError?: OnAuthorizeError;
-	onCallbackSuccess?: OnCallbackSuccess<UserType>;
-	onLinkIdentity?: OnLinkIdentity<UserType>;
-	onLinkIdentityConflict?: OnLinkIdentityConflict<UserType>;
-	onLinkConnector?: OnLinkConnector<UserType>;
+	onCallbackSuccess?: OnCallbackSuccess<NoInfer<UserType>>;
+	onLinkIdentity?: OnLinkIdentity<NoInfer<UserType>>;
+	onLinkIdentityConflict?: OnLinkIdentityConflict<NoInfer<UserType>>;
+	onLinkConnector?: OnLinkConnector<NoInfer<UserType>>;
 	onCallbackError?: OnCallbackError;
-	onStatus?: OnStatus<UserType>;
+	onStatus?: OnStatus<NoInfer<UserType>>;
 	onRefreshSuccess?: OnRefreshSuccess;
 	onRefreshError?: OnRefreshError;
-	onSignOut?: OnSignOut<UserType>;
+	onSignOut?: OnSignOut<NoInfer<UserType>>;
 	onRevocationSuccess?: OnRevocationSuccess;
 	onRevocationError?: OnRevocationError;
 	onProfileSuccess?: OnProfileSuccess;
 	onProfileError?: OnProfileError;
-	onSessionCleanup?: OnSessionCleanup<UserType>;
+	onSessionCleanup?: OnSessionCleanup<NoInfer<UserType>>;
 };
 
 /** The serializable subset of `AuthConfig` — the route paths, session durations, and

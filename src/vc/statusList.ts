@@ -17,8 +17,7 @@
 import { signJwt, verifyJwt, type SigningKey } from '../oidc/keys';
 
 const STATUS_LIST_TYP = 'statuslist+jwt';
-const STATUS_LIST_SUB_TYP =
-	'application/statuslist+jwt';
+const STATUS_LIST_SUB_TYP = 'application/statuslist+jwt';
 const DEFAULT_LIST_SIZE = 131_072; // 16 KiB of bits = 16,384 bytes — enough for many issuers
 const BITS_PER_BYTE = 8;
 const MS_PER_SECOND = 1000;
@@ -149,7 +148,10 @@ export const verifyStatusListJwt = async ({
 	}
 	const bits = await decompress(lst);
 
-	return { bits, sub: typeof payload.sub === 'string' ? payload.sub : undefined };
+	return {
+		bits,
+		sub: typeof payload.sub === 'string' ? payload.sub : undefined
+	};
 };
 
 export { STATUS_LIST_SUB_TYP, STATUS_LIST_TYP };

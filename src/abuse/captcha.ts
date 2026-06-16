@@ -51,7 +51,12 @@ export const verifyRecaptcha =
 	async (token: string | undefined, context: AbuseContext) => {
 		if (token === undefined || token === '') return false;
 		try {
-			const data = await siteverify(RECAPTCHA_URL, secret, token, context);
+			const data = await siteverify(
+				RECAPTCHA_URL,
+				secret,
+				token,
+				context
+			);
 			if (readField(data, 'success') !== true) return false;
 			if (minScore === undefined) return true;
 			const score = readField(data, 'score');
@@ -68,7 +73,12 @@ export const verifyTurnstile =
 	async (token: string | undefined, context: AbuseContext) => {
 		if (token === undefined || token === '') return false;
 		try {
-			const data = await siteverify(TURNSTILE_URL, secret, token, context);
+			const data = await siteverify(
+				TURNSTILE_URL,
+				secret,
+				token,
+				context
+			);
 
 			return readField(data, 'success') === true;
 		} catch {
