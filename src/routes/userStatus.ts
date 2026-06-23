@@ -19,18 +19,19 @@ export const userStatus = <UserType>({
 	new Elysia().use(sessionStore<UserType>()).get(
 		statusRoute,
 		async ({ status, cookie: { user_session_id }, store: { session } }) => {
-			const { user, error } = await getStatusFromSource<UserType>({
-				authSessionStore,
-				session,
-				user_session_id
-			});
+			const { user, impersonator, error } =
+				await getStatusFromSource<UserType>({
+					authSessionStore,
+					session,
+					user_session_id
+				});
 
 			if (error) {
 				return status(error.code, error.message);
 			}
 
 			try {
-				await onStatus?.({ user });
+				await onStatus?.({ impersonator, user });
 			} catch (err) {
 				return err instanceof Error
 					? status(
@@ -43,7 +44,9 @@ export const userStatus = <UserType>({
 						);
 			}
 
-			return { user };
+			// `impersonator` is present only for an admin-impersonation session — the client
+			// uses it to render an "impersonating <user>" banner and an exit control.
+			return { impersonator, user };
 		},
 		{ cookie: t.Cookie({ user_session_id: userSessionIdTypebox }) }
 	);

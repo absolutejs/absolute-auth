@@ -161,6 +161,9 @@ export const getStatusFromSource = async <UserType>({
 
 	return {
 		error: null,
+		// Surfaced so callers (userStatus, protectRoute) can show an "impersonating" banner
+		// and gate sensitive actions — without it the impersonation is invisible to the app.
+		impersonator: userSession?.impersonator,
 		user: userSession?.user ?? null
 	};
 };

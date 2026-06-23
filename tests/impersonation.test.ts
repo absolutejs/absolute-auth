@@ -1,6 +1,9 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
 import { Elysia, t } from 'elysia';
-import { loadSessionFromSource } from '../src/session/access';
+import {
+	getStatusFromSource,
+	loadSessionFromSource
+} from '../src/session/access';
 import {
 	endImpersonation,
 	isImpersonating,
@@ -47,14 +50,14 @@ const buildApp = () => {
 				await startImpersonation({
 					authSessionStore,
 					cookie: user_session_id,
-					getUserId: (user) => user.sub,
 					impersonator: {
 						actorId: admin.sub,
 						reason: 'support ticket #42'
 					},
 					inMemorySession: session,
 					sessionDurationMs: HOUR_MS,
-					user: target
+					user: target,
+					getUserId: (user) => user.sub
 				});
 
 				return { ok: true };
@@ -74,6 +77,71 @@ const buildApp = () => {
 					actorId: current?.impersonator?.actorId ?? null,
 					email: current?.user.email ?? null,
 					impersonating: isImpersonating(current)
+				};
+			},
+			cookieSchema
+		)
+		.post(
+			'/impersonate-audit-fail',
+			async ({ cookie: { user_session_id }, store: { session } }) => {
+				try {
+					await startImpersonation({
+						authSessionStore,
+						cookie: user_session_id,
+						impersonator: {
+							actorId: admin.sub,
+							reason: 'support ticket #43'
+						},
+						inMemorySession: session,
+						sessionDurationMs: HOUR_MS,
+						user: target,
+						emit: () => {
+							throw new Error('audit sink down');
+						}
+					});
+
+					return { threw: false };
+				} catch {
+					return { threw: true };
+				}
+			},
+			cookieSchema
+		)
+		.post(
+			'/impersonate-nested',
+			async ({ cookie: { user_session_id }, store: { session } }) => {
+				try {
+					await startImpersonation({
+						authSessionStore,
+						cookie: user_session_id,
+						impersonator: {
+							actorId: 'user-alice',
+							reason: 'chaining'
+						},
+						inMemorySession: session,
+						sessionDurationMs: HOUR_MS,
+						user: { email: 'bob@acme.test', sub: 'user-bob' }
+					});
+
+					return { threw: false };
+				} catch {
+					return { threw: true };
+				}
+			},
+			cookieSchema
+		)
+		.get(
+			'/status',
+			async ({ cookie: { user_session_id }, store: { session } }) => {
+				const { user, impersonator } = await getStatusFromSource({
+					authSessionStore,
+					session,
+					user_session_id
+				});
+
+				return {
+					actorId: impersonator?.actorId ?? null,
+					email: user?.email ?? null
 				};
 			},
 			cookieSchema
@@ -165,6 +233,98 @@ describe('admin impersonation', () => {
 			await send(app, '/whoami', 'GET', restoredCookie)
 		).json();
 		expect(back).toEqual({
+			actorId: null,
+			email: admin.email,
+			impersonating: false
+		});
+	});
+
+	test('getStatusFromSource surfaces the impersonator (banner data)', async () => {
+		const login = await send(app, '/login-admin', 'POST', '');
+		const adminCookie = cookieFrom(login);
+
+		// A normal admin session reports no impersonator.
+		const adminStatus = await (
+			await send(app, '/status', 'GET', adminCookie)
+		).json();
+		expect(adminStatus).toEqual({ actorId: null, email: admin.email });
+
+		const impersonate = await send(app, '/impersonate', 'POST', adminCookie);
+		const imperCookie = cookieFrom(impersonate);
+		const imperStatus = await (
+			await send(app, '/status', 'GET', imperCookie)
+		).json();
+		expect(imperStatus).toEqual({
+			actorId: admin.sub,
+			email: target.email
+		});
+	});
+
+	test('a failed audit write rolls back the impersonation session and restores the admin', async () => {
+		const login = await send(app, '/login-admin', 'POST', '');
+		const adminCookie = cookieFrom(login);
+
+		const attempt = await send(
+			app,
+			'/impersonate-audit-fail',
+			'POST',
+			adminCookie
+		);
+		expect(await attempt.json()).toEqual({ threw: true });
+
+		// The cookie must be restored to the admin's own session, not a dangling
+		// impersonation session that outlived its missing audit record.
+		const restoredCookie = cookieFrom(attempt);
+		expect(restoredCookie).toBe(adminCookie);
+
+		const whoami = await (
+			await send(app, '/whoami', 'GET', restoredCookie)
+		).json();
+		expect(whoami).toEqual({
+			actorId: null,
+			email: admin.email,
+			impersonating: false
+		});
+	});
+
+	test('nested impersonation is refused by default', async () => {
+		const login = await send(app, '/login-admin', 'POST', '');
+		const adminCookie = cookieFrom(login);
+		const impersonate = await send(app, '/impersonate', 'POST', adminCookie);
+		const imperCookie = cookieFrom(impersonate);
+
+		const nested = await send(
+			app,
+			'/impersonate-nested',
+			'POST',
+			imperCookie
+		);
+		expect(await nested.json()).toEqual({ threw: true });
+
+		// The original impersonation session is untouched — still acting as the first target,
+		// with the original actor stamp (no overwrite, no chain).
+		const stillFirst = await (
+			await send(app, '/whoami', 'GET', imperCookie)
+		).json();
+		expect(stillFirst).toEqual({
+			actorId: admin.sub,
+			email: target.email,
+			impersonating: true
+		});
+	});
+
+	test('ending impersonation on a normal session is a no-op (does not log out)', async () => {
+		const login = await send(app, '/login-admin', 'POST', '');
+		const adminCookie = cookieFrom(login);
+
+		const ended = await send(app, '/end', 'POST', adminCookie);
+		expect(await ended.json()).toEqual({ restored: false });
+
+		// The admin session must survive — a stray "end" must never destroy a real session.
+		const whoami = await (
+			await send(app, '/whoami', 'GET', adminCookie)
+		).json();
+		expect(whoami).toEqual({
 			actorId: null,
 			email: admin.email,
 			impersonating: false

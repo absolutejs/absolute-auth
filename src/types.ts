@@ -321,7 +321,13 @@ export type OnRevocationError =
 	| undefined;
 
 export type OnStatus<UserType> =
-	| (({ user }: { user: UserType | null }) => void | Promise<void>)
+	| (({
+			impersonator,
+			user
+	  }: {
+			impersonator?: Impersonator;
+			user: UserType | null;
+	  }) => void | Promise<void>)
 	| undefined;
 
 export type OnSignOut<UserType> =
