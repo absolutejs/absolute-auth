@@ -150,6 +150,7 @@ export const startImpersonation = async <UserType>({
 		actorId: string;
 		readOnly?: boolean;
 		reason: string;
+		suppressSideEffects?: boolean;
 	};
 	inMemorySession: SessionRecord<UserType>;
 	sessionDurationMs?: number;
@@ -180,7 +181,8 @@ export const startImpersonation = async <UserType>({
 		// promoteToSession keeps the caller's existing session; capture it (before the
 		// cookie rotates) so exit can return the admin to it.
 		returnToSessionId: callerSessionId,
-		startedAt: Date.now()
+		startedAt: Date.now(),
+		suppressSideEffects: impersonator.suppressSideEffects
 	};
 	const sessionId = await promoteToSession({
 		authSessionStore,

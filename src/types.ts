@@ -67,6 +67,13 @@ export type Impersonator = {
 	reason: string;
 	returnToSessionId?: UserSessionId;
 	startedAt: number;
+	/** Sandbox lever, surfaced for the app to enforce: when true, the app should
+	 *  suppress outbound side-effects (emails / SMS / push / notifications)
+	 *  triggered while acting as the member — so an admin can run a flow and watch
+	 *  the behavior WITHOUT the member or their partners being contacted. Like
+	 *  `readOnly`, the package only carries it; enforce it at your emitters.
+	 *  Independent of `readOnly` (a session can act AND suppress = "sandbox"). */
+	suppressSideEffects?: boolean;
 };
 
 export type SessionData<UserType> = {
