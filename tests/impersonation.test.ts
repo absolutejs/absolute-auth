@@ -52,6 +52,7 @@ const buildApp = () => {
 					cookie: user_session_id,
 					impersonator: {
 						actorId: admin.sub,
+						readOnly: true,
 						reason: 'support ticket #42'
 					},
 					inMemorySession: session,
@@ -61,6 +62,19 @@ const buildApp = () => {
 				});
 
 				return { ok: true };
+			},
+			cookieSchema
+		)
+		.get(
+			'/mode',
+			async ({ cookie: { user_session_id }, store: { session } }) => {
+				const current = await loadSessionFromSource({
+					authSessionStore,
+					session,
+					userSessionId: user_session_id.value
+				});
+
+				return { readOnly: current?.impersonator?.readOnly ?? null };
 			},
 			cookieSchema
 		)
@@ -237,6 +251,18 @@ describe('admin impersonation', () => {
 			email: admin.email,
 			impersonating: false
 		});
+	});
+
+	test('readOnly (ghost) flag is stamped on the impersonation session', async () => {
+		const login = await send(app, '/login-admin', 'POST', '');
+		const adminCookie = cookieFrom(login);
+		const impersonate = await send(app, '/impersonate', 'POST', adminCookie);
+		const imperCookie = cookieFrom(impersonate);
+
+		const mode = await (
+			await send(app, '/mode', 'GET', imperCookie)
+		).json();
+		expect(mode).toEqual({ readOnly: true });
 	});
 
 	test('getStatusFromSource surfaces the impersonator (banner data)', async () => {

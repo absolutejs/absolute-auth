@@ -53,10 +53,17 @@ export type UserSessionId = `${string}-${string}-${string}-${string}-${string}`;
 /** Stamped on a session created via admin impersonation (`startImpersonation`). RFC 8693
  *  actor semantics: `actorId`/`actorEmail` are the admin acting as the user, `reason` is
  *  required and audited, `returnToSessionId` is the admin's own session to restore on exit.
- *  Surfaced by userStatus so your UI can show an "impersonating" banner. */
+ *  Surfaced by userStatus so your UI can show an "impersonating" banner.
+ *
+ *  `readOnly` is the RFC 8693 §6 "down-scope the delegated session" lever, surfaced for the
+ *  app to enforce: when true this is a GHOST/observe-only session — the app should reject
+ *  writes (and suppress side-effects) so an admin can watch a member's account without
+ *  disturbing them. The package only CARRIES the flag (it can't know your routes); enforce
+ *  it in your own request guard. Absent/false = full-access acting session. */
 export type Impersonator = {
 	actorEmail?: string;
 	actorId: string;
+	readOnly?: boolean;
 	reason: string;
 	returnToSessionId?: UserSessionId;
 	startedAt: number;

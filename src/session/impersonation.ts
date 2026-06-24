@@ -145,7 +145,12 @@ export const startImpersonation = async <UserType>({
 	cookieSecure?: boolean;
 	emit?: Emit;
 	getUserId?: (user: UserType) => string;
-	impersonator: { actorEmail?: string; actorId: string; reason: string };
+	impersonator: {
+		actorEmail?: string;
+		actorId: string;
+		readOnly?: boolean;
+		reason: string;
+	};
 	inMemorySession: SessionRecord<UserType>;
 	sessionDurationMs?: number;
 	user: UserType;
@@ -170,6 +175,7 @@ export const startImpersonation = async <UserType>({
 	const stamp: Impersonator = {
 		actorEmail: impersonator.actorEmail,
 		actorId: impersonator.actorId,
+		readOnly: impersonator.readOnly,
 		reason: impersonator.reason,
 		// promoteToSession keeps the caller's existing session; capture it (before the
 		// cookie rotates) so exit can return the admin to it.
