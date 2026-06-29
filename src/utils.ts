@@ -153,6 +153,16 @@ export const resolveOAuthAuthorization = async ({
 			providerConfiguration: providers[authProvider],
 			source: 'idToken'
 		});
+	} else if (providers[authProvider].subjectBySource?.tokenResponse) {
+		// Providers whose connected identity is returned as top-level fields in
+		// the token-exchange response (e.g. GoHighLevel's locationId) rather than
+		// via a profile endpoint. Read the subject straight from the token
+		// response and skip the profile call.
+		userIdentity = normalizeProviderIdentity({
+			identity: tokenResponse,
+			providerConfiguration: providers[authProvider],
+			source: 'tokenResponse'
+		});
 	} else if (authProvider === 'withings') {
 		// @ts-expect-error TODO: Withings is its own case edit the validate response to accept this case
 		userIdentity = { userid: tokenResponse.body.userid };
