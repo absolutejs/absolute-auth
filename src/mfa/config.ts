@@ -1,4 +1,8 @@
-import { MILLISECONDS_IN_A_DAY } from '../constants';
+import {
+	MILLISECONDS_IN_A_DAY,
+	MILLISECONDS_IN_A_SECOND,
+	SECONDS_IN_A_MINUTE
+} from '../constants';
 import type { AuthSessionStore } from '../session/types';
 import type { RouteString, UserSessionId } from '../types';
 import type { MFAStore } from './types';
@@ -6,6 +10,19 @@ import type { MFAStore } from './types';
 export const DEFAULT_BACKUP_CODE_COUNT = 10;
 export const DEFAULT_MFA_ISSUER = 'AbsoluteAuth';
 export const DEFAULT_MFA_SESSION_TTL_MS = MILLISECONDS_IN_A_DAY;
+export const DEFAULT_SMS_CODE_LENGTH = 6;
+const SMS_CODE_TTL_MINUTES = 5;
+export const DEFAULT_SMS_CODE_TTL_MS =
+	SMS_CODE_TTL_MINUTES * SECONDS_IN_A_MINUTE * MILLISECONDS_IN_A_SECOND;
+export const DEFAULT_SMS_MAX_ATTEMPTS = 3;
+
+// Out-of-band SMS delivery payload. The plaintext `code` is handed to the consumer's sender
+// (e.g. Twilio) exactly once and is never persisted or returned from any route.
+export type SmsCodeMessage = {
+	code: string;
+	expiresAt: number;
+	phone: string;
+};
 
 export type MfaConfig<UserType> = {
 	mfaStore: MFAStore;
@@ -31,7 +48,16 @@ export type MfaConfig<UserType> = {
 		userSessionId: UserSessionId;
 	}) => void | Promise<void>;
 	onMfaEnrolled?: (context: { userId: string }) => void | Promise<void>;
+	// Out-of-band SMS sender (e.g. Twilio). Required for the SMS factor to be usable — the
+	// package never imports an SMS provider; the consumer owns delivery. The plaintext code
+	// is passed here exactly once and must never be logged.
+	onSendSmsCode?: (message: SmsCodeMessage) => void | Promise<void>;
 	sessionDurationMs?: number;
+	smsCodeLength?: number;
+	smsCodeTtlMs?: number;
+	smsMaxAttempts?: number;
+	smsSetupRoute?: RouteString;
+	smsVerifyRoute?: RouteString;
 	totpSetupRoute?: RouteString;
 	totpVerifyRoute?: RouteString;
 };

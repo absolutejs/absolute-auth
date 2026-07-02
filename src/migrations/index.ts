@@ -61,7 +61,7 @@ import { vaultEntriesTable } from '../vault/postgresVaultStore';
 import { webauthnCredentialsTable } from '../webauthn/postgresWebAuthnCredentialStore';
 import { webhookDeliveriesTable } from '../webhooks/postgresStore';
 import { tablesToInitSql } from './generate';
-import type { BlockMigrations } from './types';
+import type { BlockMigrations, Migration } from './types';
 
 export type BlockName =
 	| 'adaptive'
@@ -93,6 +93,20 @@ const initMigration = (
 	migrations: [{ id: '0001_init', sql: tablesToInitSql(tables) }]
 });
 
+// Additive SMS-factor columns for the `mfa` block. Fresh installs already get these via the
+// generated `0001_init` CREATE TABLE; this `ALTER ... ADD COLUMN IF NOT EXISTS` brings tables
+// created before the SMS factor up to date. Idempotent — safe to re-run.
+const mfaSmsColumnsMigration: Migration = {
+	id: '0002_sms_factor',
+	sql: [
+		'ALTER TABLE "auth_mfa_enrollments" ADD COLUMN IF NOT EXISTS "sms_phone" varchar(20);',
+		'ALTER TABLE "auth_mfa_enrollments" ADD COLUMN IF NOT EXISTS "sms_verified" boolean NOT NULL DEFAULT false;',
+		'ALTER TABLE "auth_mfa_enrollments" ADD COLUMN IF NOT EXISTS "sms_pending_code_hash" text;',
+		'ALTER TABLE "auth_mfa_enrollments" ADD COLUMN IF NOT EXISTS "sms_pending_code_expires_at_ms" bigint;',
+		'ALTER TABLE "auth_mfa_enrollments" ADD COLUMN IF NOT EXISTS "sms_failed_attempts" smallint NOT NULL DEFAULT 0;'
+	].join('\n')
+};
+
 export const blockMigrations: Record<BlockName, BlockMigrations> = {
 	adaptive: initMigration('adaptive', [knownDevicesTable, loginHistoryTable]),
 	apikeys: initMigration('apikeys', [
@@ -112,7 +126,13 @@ export const blockMigrations: Record<BlockName, BlockMigrations> = {
 		linkedProviderGrantsTable
 	]),
 	lockout: initMigration('lockout', [lockoutsTable]),
-	mfa: initMigration('mfa', [mfaEnrollmentsTable]),
+	mfa: {
+		block: 'mfa',
+		migrations: [
+			...initMigration('mfa', [mfaEnrollmentsTable]).migrations,
+			mfaSmsColumnsMigration
+		]
+	},
 	oidc: initMigration('oidc', [
 		oauthBackchannelAuthRequestsTable,
 		oauthClientAssertionJtisTable,

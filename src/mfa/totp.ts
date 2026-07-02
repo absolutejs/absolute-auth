@@ -47,6 +47,11 @@ export const mfaTotpRoutes = <UserType>({
 				await mfaStore.saveEnrollment({
 					backupCodeHashes: existing?.backupCodeHashes ?? [],
 					createdAt: existing?.createdAt ?? now,
+					smsFailedAttempts: existing?.smsFailedAttempts,
+					smsPendingCodeExpiresAt: existing?.smsPendingCodeExpiresAt,
+					smsPendingCodeHash: existing?.smsPendingCodeHash,
+					smsPhone: existing?.smsPhone,
+					smsVerified: existing?.smsVerified ?? false,
 					totpSecretCiphertext: await encryptTotpSecret(
 						secret,
 						encryptionKey
