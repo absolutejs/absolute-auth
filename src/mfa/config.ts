@@ -15,6 +15,7 @@ const SMS_CODE_TTL_MINUTES = 5;
 export const DEFAULT_SMS_CODE_TTL_MS =
 	SMS_CODE_TTL_MINUTES * SECONDS_IN_A_MINUTE * MILLISECONDS_IN_A_SECOND;
 export const DEFAULT_SMS_MAX_ATTEMPTS = 3;
+export const DEFAULT_TOTP_MAX_ATTEMPTS = 5;
 
 // Out-of-band SMS delivery payload. The plaintext `code` is handed to the consumer's sender
 // (e.g. Twilio) exactly once and is never persisted or returned from any route.
@@ -58,6 +59,9 @@ export type MfaConfig<UserType> = {
 	smsMaxAttempts?: number;
 	smsSetupRoute?: RouteString;
 	smsVerifyRoute?: RouteString;
+	// Max consecutive failed TOTP/backup-code verifications at the login challenge before
+	// the second-factor step locks out. Independent of the first-factor (password) lockout.
+	totpMaxAttempts?: number;
 	totpSetupRoute?: RouteString;
 	totpVerifyRoute?: RouteString;
 };

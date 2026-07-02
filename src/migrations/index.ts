@@ -107,6 +107,14 @@ const mfaSmsColumnsMigration: Migration = {
 	].join('\n')
 };
 
+// Additive TOTP-lockout column for the `mfa` block. Tracks consecutive failed TOTP/backup-code
+// verifications at the login challenge, independent of the first-factor (password) lockout.
+// Fresh installs get it via `0001_init`; this brings older tables up to date. Idempotent.
+const mfaTotpLockoutMigration: Migration = {
+	id: '0003_totp_lockout',
+	sql: 'ALTER TABLE "auth_mfa_enrollments" ADD COLUMN IF NOT EXISTS "totp_failed_attempts" smallint NOT NULL DEFAULT 0;'
+};
+
 export const blockMigrations: Record<BlockName, BlockMigrations> = {
 	adaptive: initMigration('adaptive', [knownDevicesTable, loginHistoryTable]),
 	apikeys: initMigration('apikeys', [
@@ -130,7 +138,8 @@ export const blockMigrations: Record<BlockName, BlockMigrations> = {
 		block: 'mfa',
 		migrations: [
 			...initMigration('mfa', [mfaEnrollmentsTable]).migrations,
-			mfaSmsColumnsMigration
+			mfaSmsColumnsMigration,
+			mfaTotpLockoutMigration
 		]
 	},
 	oidc: initMigration('oidc', [

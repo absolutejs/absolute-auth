@@ -12,7 +12,9 @@ type TestUser = {
 	sub: string;
 };
 
-const buildMfaApp = async () => {
+const buildMfaApp = async ({
+	totpMaxAttempts
+}: { totpMaxAttempts?: number } = {}) => {
 	const authSessionStore = createInMemoryAuthSessionStore<TestUser>();
 	const credentialStore = createInMemoryCredentialStore();
 	const mfaStore = createInMemoryMfaStore();
@@ -38,6 +40,7 @@ const buildMfaApp = async () => {
 		},
 		mfa: {
 			mfaStore,
+			totpMaxAttempts,
 			getChallengeUser: (identity) =>
 				getUserByEmail(
 					typeof identity.email === 'string' ? identity.email : ''
@@ -158,5 +161,86 @@ describe('MFA challenge integration', () => {
 			pending
 		);
 		expect(challenged.status).toBe(200);
+	});
+
+	test('the TOTP challenge locks out after too many failed attempts', async () => {
+		const { app } = await buildMfaApp({ totpMaxAttempts: 3 });
+		const { secret } = await enroll(app);
+
+		const login = await post(app, '/auth/login', {
+			email: 'flow@example.com',
+			password: 'supersecret'
+		});
+		const pending = cookieFrom(login);
+
+		for (let attempt = 0; attempt < 3; attempt += 1) {
+			// eslint-disable-next-line no-await-in-loop
+			const wrong = await post(
+				app,
+				'/auth/mfa/challenge',
+				{ code: '000000' },
+				pending
+			);
+			expect(wrong.status).toBe(401);
+			// eslint-disable-next-line no-await-in-loop
+			expect(await wrong.text()).toContain('Invalid MFA code');
+		}
+
+		// A valid code is now rejected: the lockout gates before verification.
+		const lockedOut = await post(
+			app,
+			'/auth/mfa/challenge',
+			{ code: await generateTotp({ secret }) },
+			pending
+		);
+		expect(lockedOut.status).toBe(401);
+		expect(await lockedOut.text()).toContain('Too many attempts');
+	});
+
+	test('a successful challenge resets the TOTP failed-attempt counter', async () => {
+		const { app } = await buildMfaApp({ totpMaxAttempts: 3 });
+		const { secret } = await enroll(app);
+
+		const firstLogin = await post(app, '/auth/login', {
+			email: 'flow@example.com',
+			password: 'supersecret'
+		});
+		const firstPending = cookieFrom(firstLogin);
+
+		// Two failures, then a success — the counter must be back at 0 afterwards.
+		for (let attempt = 0; attempt < 2; attempt += 1) {
+			// eslint-disable-next-line no-await-in-loop
+			await post(
+				app,
+				'/auth/mfa/challenge',
+				{ code: '000000' },
+				firstPending
+			);
+		}
+		const recovered = await post(
+			app,
+			'/auth/mfa/challenge',
+			{ code: await generateTotp({ secret }) },
+			firstPending
+		);
+		expect(recovered.status).toBe(200);
+
+		// Fresh login: two more failures should NOT trip the lockout if the reset worked.
+		const secondLogin = await post(app, '/auth/login', {
+			email: 'flow@example.com',
+			password: 'supersecret'
+		});
+		const secondPending = cookieFrom(secondLogin);
+		/* eslint-disable no-await-in-loop */
+		for (let attempt = 0; attempt < 2; attempt += 1) {
+			const wrong = await post(
+				app,
+				'/auth/mfa/challenge',
+				{ code: '000000' },
+				secondPending
+			);
+			expect(await wrong.text()).toContain('Invalid MFA code');
+		}
+		/* eslint-enable no-await-in-loop */
 	});
 });

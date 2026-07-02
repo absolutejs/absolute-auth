@@ -12,6 +12,7 @@ import {
 	DEFAULT_SMS_CODE_LENGTH,
 	DEFAULT_SMS_CODE_TTL_MS,
 	DEFAULT_SMS_MAX_ATTEMPTS,
+	DEFAULT_TOTP_MAX_ATTEMPTS,
 	type MfaRouteProps
 } from './config';
 import { decryptTotpSecret } from './secret';
@@ -31,7 +32,8 @@ export const mfaChallenge = <UserType>({
 	sessionDurationMs = DEFAULT_MFA_SESSION_TTL_MS,
 	smsCodeLength = DEFAULT_SMS_CODE_LENGTH,
 	smsCodeTtlMs = DEFAULT_SMS_CODE_TTL_MS,
-	smsMaxAttempts = DEFAULT_SMS_MAX_ATTEMPTS
+	smsMaxAttempts = DEFAULT_SMS_MAX_ATTEMPTS,
+	totpMaxAttempts = DEFAULT_TOTP_MAX_ATTEMPTS
 }: MfaRouteProps<UserType>) =>
 	new Elysia().use(sessionStore<UserType>()).post(
 		challengeRoute,
@@ -178,6 +180,15 @@ export const mfaChallenge = <UserType>({
 					return status('Unauthorized', 'Invalid MFA code');
 				}
 
+				if ((enrollment.totpFailedAttempts ?? 0) >= totpMaxAttempts) {
+					await onMfaChallengeError?.({
+						error: new Error('mfa_totp_attempts_exceeded'),
+						userId: getUserId(user)
+					});
+
+					return status('Unauthorized', 'Too many attempts');
+				}
+
 				const totpValid =
 					enrollment.totpVerified && enrollment.totpSecretCiphertext
 						? await verifyTotp({
@@ -196,6 +207,12 @@ export const mfaChallenge = <UserType>({
 						);
 
 				if (!totpValid && remainingBackupHashes === undefined) {
+					await mfaStore.saveEnrollment({
+						...enrollment,
+						totpFailedAttempts:
+							(enrollment.totpFailedAttempts ?? 0) + 1,
+						updatedAt: Date.now()
+					});
 					await onMfaChallengeError?.({
 						error: new Error('invalid_mfa_code'),
 						userId: getUserId(user)
@@ -209,6 +226,7 @@ export const mfaChallenge = <UserType>({
 					backupCodeHashes:
 						remainingBackupHashes ?? enrollment.backupCodeHashes,
 					lastUsedAt: Date.now(),
+					totpFailedAttempts: 0,
 					updatedAt: Date.now()
 				});
 

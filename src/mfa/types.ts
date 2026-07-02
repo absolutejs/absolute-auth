@@ -15,6 +15,10 @@ export type MfaEnrollment = {
 	// E.164 phone number the SMS code is delivered to.
 	smsPhone?: string;
 	smsVerified: boolean;
+	// Count of consecutive failed TOTP/backup-code verifications at the login challenge.
+	// Tracked separately from any first-factor (password) lockout and reset to 0 on a
+	// successful second-factor verification. Independent of `smsFailedAttempts`.
+	totpFailedAttempts?: number;
 	// TOTP secret encrypted at rest (AES-GCM) when an encryption key is configured,
 	// otherwise the raw base32 secret. Never the user's typed code.
 	totpSecretCiphertext?: string;

@@ -48,11 +48,21 @@ describe('blockMigrations manifest', () => {
 			}))
 	);
 
-	test('every block has at least one migration with a stable id', () => {
+	test('every migration has a stable, ordered id and a self-consistent block name', () => {
 		for (const entry of allEntries) {
 			expect(entry.blockSelfName).toBe(entry.blockName);
 			expect(entry.migration.id).toMatch(/^\d{4}_/u);
-			expect(entry.migration.sql).toContain('CREATE TABLE IF NOT EXISTS');
+		}
+	});
+
+	test('every block creates its tables in a base migration', () => {
+		// The init migration (`0001_*`) creates tables; later additive migrations
+		// (`ALTER TABLE ... ADD COLUMN`) legitimately do not.
+		for (const block of Object.values(blockMigrations)) {
+			const createsTables = block.migrations.some((migration) =>
+				migration.sql.includes('CREATE TABLE IF NOT EXISTS')
+			);
+			expect(createsTables).toBe(true);
 		}
 	});
 

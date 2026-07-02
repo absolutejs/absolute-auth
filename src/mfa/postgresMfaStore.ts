@@ -28,6 +28,9 @@ export const mfaEnrollmentsTable = pgTable('auth_mfa_enrollments', {
 	sms_pending_code_hash: text('sms_pending_code_hash'),
 	sms_phone: varchar('sms_phone', { length: PHONE_LENGTH }),
 	sms_verified: boolean('sms_verified').notNull().default(false),
+	totp_failed_attempts: smallint('totp_failed_attempts')
+		.notNull()
+		.default(0),
 	totp_secret_ciphertext: text('totp_secret_ciphertext'),
 	totp_verified: boolean('totp_verified').notNull().default(false),
 	updated_at_ms: bigint('updated_at_ms', { mode: 'number' }).notNull(),
@@ -46,6 +49,7 @@ const toEnrollment = (row: MfaRow): MfaEnrollment => ({
 	smsPendingCodeHash: row.sms_pending_code_hash ?? undefined,
 	smsPhone: row.sms_phone ?? undefined,
 	smsVerified: row.sms_verified,
+	totpFailedAttempts: row.totp_failed_attempts,
 	totpSecretCiphertext: row.totp_secret_ciphertext ?? undefined,
 	totpVerified: row.totp_verified,
 	updatedAt: row.updated_at_ms,
@@ -87,6 +91,7 @@ export const createPostgresMfaStore = <DB extends AnyPgDatabase>(
 			sms_pending_code_hash: enrollment.smsPendingCodeHash ?? null,
 			sms_phone: enrollment.smsPhone ?? null,
 			sms_verified: enrollment.smsVerified,
+			totp_failed_attempts: enrollment.totpFailedAttempts ?? 0,
 			totp_secret_ciphertext: enrollment.totpSecretCiphertext ?? null,
 			totp_verified: enrollment.totpVerified,
 			updated_at_ms: enrollment.updatedAt,
