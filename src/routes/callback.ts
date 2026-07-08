@@ -105,8 +105,12 @@ export const callback = <UserType>({
 					if ('error' in resolvedProvider) {
 						return status('Unauthorized', resolvedProvider.error);
 					}
-					const { clientName, providerConfiguration, providerInstance, requiresPKCE } =
-						resolvedProvider.entry;
+					const {
+						clientName,
+						providerConfiguration,
+						providerInstance,
+						requiresPKCE
+					} = resolvedProvider.entry;
 
 					stored_state.remove();
 					const verifier = requiresPKCE

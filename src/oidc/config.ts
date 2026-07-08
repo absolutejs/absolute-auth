@@ -99,6 +99,18 @@ export type OidcProviderConfig<UserType> = {
 	}) => Record<string, unknown> | Promise<Record<string, unknown>>;
 	// Extra id_token claims for a user (email, name, …).
 	getClaims?: (user: UserType) => Record<string, unknown>;
+	// Consent screen: when BOTH are set and needsConsent returns true, /authorize
+	// redirects to `consentUrl?return_to=<authorize url>&client_id=&client_name=&scope=`
+	// instead of issuing a code — your page records the grant (so needsConsent flips
+	// false) and sends the browser back to return_to. Without these, an authenticated
+	// session silently auto-grants — fine for first-party clients only; ANY dynamically
+	// registered third-party client (e.g. an MCP client) should get a consent screen.
+	consentUrl?: string;
+	needsConsent?: (context: {
+		client: { clientId: string; name: string };
+		requestedScopes: string[];
+		user: UserType;
+	}) => boolean | Promise<boolean>;
 	// Consent hook: narrow the requested scopes to what the user has granted (you own the
 	// consent UI / stored grants). Return undefined to deny. Omitted ⇒ auto-grant the
 	// requested ∩ client scopes (fine for first-party clients).

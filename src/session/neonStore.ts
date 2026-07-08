@@ -145,7 +145,9 @@ export const createNeonAuthSessionStore = <UserType>(
 		deleteExpiredUnregistered: async () => {
 			const rows = await db
 				.delete(authUnregisteredSessionsTable)
-				.where(lt(authUnregisteredSessionsTable.expires_at_ms, Date.now()))
+				.where(
+					lt(authUnregisteredSessionsTable.expires_at_ms, Date.now())
+				)
 				.returning({ id: authUnregisteredSessionsTable.id });
 
 			return rows.length;

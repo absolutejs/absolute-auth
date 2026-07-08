@@ -28,9 +28,7 @@ export const mfaEnrollmentsTable = pgTable('auth_mfa_enrollments', {
 	sms_pending_code_hash: text('sms_pending_code_hash'),
 	sms_phone: varchar('sms_phone', { length: PHONE_LENGTH }),
 	sms_verified: boolean('sms_verified').notNull().default(false),
-	totp_failed_attempts: smallint('totp_failed_attempts')
-		.notNull()
-		.default(0),
+	totp_failed_attempts: smallint('totp_failed_attempts').notNull().default(0),
 	totp_secret_ciphertext: text('totp_secret_ciphertext'),
 	totp_verified: boolean('totp_verified').notNull().default(false),
 	updated_at_ms: bigint('updated_at_ms', { mode: 'number' }).notNull(),

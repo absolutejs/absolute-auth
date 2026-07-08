@@ -986,6 +986,43 @@ export const oidcProviderRoutes = <UserType>(
 									.filter((entry) =>
 										client.scopes.includes(entry)
 									);
+					// Consumer-owned consent screen: bounce to it before any code is
+					// issued when the user hasn't approved this client yet.
+					if (
+						config.consentUrl !== undefined &&
+						(await config.needsConsent?.({
+							client: {
+								clientId: client.clientId,
+								name: client.name
+							},
+							requestedScopes: requested,
+							user: userSession.user
+						})) === true
+					) {
+						const consentTarget = new URL(
+							config.consentUrl,
+							issuer
+						);
+						consentTarget.searchParams.set(
+							'return_to',
+							request.url
+						);
+						consentTarget.searchParams.set(
+							'client_id',
+							client.clientId
+						);
+						consentTarget.searchParams.set(
+							'client_name',
+							client.name
+						);
+						consentTarget.searchParams.set(
+							'scope',
+							requested.join(' ')
+						);
+
+						return redirectTo(consentTarget.toString());
+					}
+
 					const granted =
 						getGrantedScopes === undefined
 							? requested
@@ -1787,5 +1824,8 @@ export const oidcProviderRoutes = <UserType>(
 			)
 			.get(jwksRoute, () => ({ keys: [toPublicJwk(signingKey)] }))
 			.get('/.well-known/openid-configuration', () => discovery)
+			// RFC 8414 alias — OAuth 2.0 Authorization Server Metadata. Same document;
+			// MCP clients and plain-OAuth tooling fetch this path instead of the OIDC one.
+			.get('/.well-known/oauth-authorization-server', () => discovery)
 	);
 };
