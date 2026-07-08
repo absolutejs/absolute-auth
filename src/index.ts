@@ -105,6 +105,7 @@ export const auth = async <UserType>({
 	authSessionStore,
 	audit,
 	credentials,
+	customProviders,
 	mfa,
 	passwordless,
 	lockout,
@@ -143,7 +144,8 @@ export const auth = async <UserType>({
 	if (tracing !== undefined) await initTracing(tracing);
 	const clientProviders: ClientProviders = await buildClientProviders(
 		providersConfiguration,
-		createOAuth2Client
+		createOAuth2Client,
+		customProviders
 	);
 	const resolvedCookieSecure = resolveCookieSecure(cookieSecure);
 
@@ -493,6 +495,9 @@ export {
 export type {
 	OAuth2TokenResponse,
 	OAuth2Client,
+	OAuth2ClientForConfig,
+	CustomProviderCredentials,
+	ProviderConfig,
 	ProviderOption,
 	PKCEProvider,
 	OIDCProvider,
@@ -507,6 +512,8 @@ export type {
 export {
 	providers,
 	providerOptions,
+	createCustomOAuth2Client,
+	defineProvider,
 	refreshableProviderOptions,
 	revocableProviderOptions,
 	oidcProviderOptions,

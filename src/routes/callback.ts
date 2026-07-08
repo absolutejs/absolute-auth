@@ -1,4 +1,3 @@
-import { isPKCEProviderOption } from 'citra';
 import { Elysia, t } from 'elysia';
 import { AuthIdentityConflictError } from '../errors';
 import { resolveClientProviderEntry } from '../providers/clients';
@@ -106,12 +105,10 @@ export const callback = <UserType>({
 					if ('error' in resolvedProvider) {
 						return status('Unauthorized', resolvedProvider.error);
 					}
-					const { clientName, providerInstance } =
+					const { clientName, providerConfiguration, providerInstance, requiresPKCE } =
 						resolvedProvider.entry;
 
 					stored_state.remove();
-
-					const requiresPKCE = isPKCEProviderOption(authProvider);
 					const verifier = requiresPKCE
 						? code_verifier.value
 						: undefined;
@@ -196,6 +193,7 @@ export const callback = <UserType>({
 						cookie,
 						currentUser,
 						originUrl,
+						providerConfiguration,
 						providerInstance,
 						redirect,
 						session: callbackSession,

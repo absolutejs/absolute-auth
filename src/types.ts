@@ -1,8 +1,10 @@
 import {
 	CredentialsFor,
+	CustomProviderCredentials,
 	NonEmptyArray,
 	OAuth2Client,
 	OAuth2TokenResponse,
+	ProviderConfig,
 	ProviderOption,
 	ProvidersMap
 } from 'citra';
@@ -47,6 +49,26 @@ export type OAuth2ProviderConfiguration<Provider extends ProviderOption> =
 export type OAuth2ConfigurationOptions = {
 	[Provider in ProviderOption]?: OAuth2ProviderConfiguration<Provider>;
 };
+
+/** One client of a caller-defined (custom) OAuth provider: the full citra
+ *  ProviderConfig plus this app's credentials. Same optional scope /
+ *  searchParams knobs as built-in provider clients. */
+export type CustomProviderClientConfiguration = {
+	credentials: CustomProviderCredentials;
+	providerConfig: ProviderConfig;
+	scope?: string[];
+	searchParams?: [string, string][];
+};
+
+/** Caller-defined providers keyed by YOUR provider name (any key that isn't a
+ *  built-in citra provider). Single client or named client variants — the same
+ *  shape as providersConfiguration. Registered providers get the full route
+ *  set (authorize/callback/refresh/revoke/linked-providers) like built-ins. */
+export type CustomProvidersConfiguration = Record<
+	string,
+	| CustomProviderClientConfiguration
+	| Record<string, CustomProviderClientConfiguration>
+>;
 
 export type UserSessionId = `${string}-${string}-${string}-${string}-${string}`;
 
@@ -156,7 +178,11 @@ export type CallbackCookie = Record<string, Cookie<unknown>> & {
 
 export type CallbackContext<UserType> = {
 	providerInstance: OAuth2Client<ProviderOption>;
-	authProvider: ProviderOption;
+	/** Configured provider name — a built-in citra key or a customProviders key. */
+	authProvider: string;
+	/** The provider's citra config — pass to instantiateUserSession so identity
+	 *  extraction works for custom providers too. */
+	providerConfiguration: ProviderConfig;
 	authClient?: string;
 	authIntent: AuthIntent;
 	tokenResponse: OAuth2TokenResponse;
@@ -179,7 +205,7 @@ export type ResolveAuthIntent<UserType> =
 			userSessionId,
 			currentUser
 	  }: {
-			authProvider: ProviderOption;
+			authProvider: string;
 			authClient?: string;
 			originUrl: string;
 			session: SessionRecord<UserType>;
@@ -386,6 +412,9 @@ export type AuthConfig<UserType> = {
 	 *  `protectRoute`'s context. */
 	getUser: (sub: string) => UserType | null | Promise<UserType | null>;
 	providersConfiguration: OAuth2ConfigurationOptions;
+	/** Bring-your-own OAuth providers (citra createCustomOAuth2Client) — keys
+	 *  must not collide with built-in provider names. */
+	customProviders?: CustomProvidersConfiguration;
 	/** Override the `Secure` attribute on every cookie the package sets (session, OAuth state,
 	 *  code_verifier, SSO nonce, ring, etc.). When omitted, defaults to
 	 *  `process.env.NODE_ENV === 'production'` — matching the convention used by
@@ -542,6 +571,8 @@ export type AuthSettings = Pick<
 >;
 
 export type ClientProviderEntry = {
+	providerConfiguration: ProviderConfig;
+	requiresPKCE: boolean;
 	clientName?: string;
 	providerInstance: OAuth2Client<ProviderOption>;
 	scope?: string[];
@@ -556,7 +587,9 @@ export type ClientProviderGroup = {
 export type ClientProviders = Record<string, ClientProviderGroup>;
 
 export type InsantiateUserSessionProps<UserType> = {
-	authProvider: ProviderOption;
+	authProvider: string;
+	/** Required for custom providers (names outside the citra registry). */
+	providerConfiguration?: ProviderConfig;
 	tokenResponse: OAuth2TokenResponse;
 	session: SessionRecord<UserType>;
 	unregisteredSession: UnregisteredSessionRecord;

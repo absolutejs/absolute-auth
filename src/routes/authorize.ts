@@ -1,8 +1,4 @@
-import {
-	generateCodeVerifier,
-	generateState,
-	isPKCEProviderOption
-} from 'citra';
+import { generateCodeVerifier, generateState } from 'citra';
 import { Elysia, t } from 'elysia';
 import { COOKIE_DURATION } from '../constants';
 import { resolveClientProviderEntry } from '../providers/clients';
@@ -92,8 +88,13 @@ export const authorize = ({
 				return status('Unauthorized', resolvedProvider.error);
 			}
 
-			const { clientName, providerInstance, scope, searchParams } =
-				resolvedProvider.entry;
+			const {
+				clientName,
+				providerInstance,
+				requiresPKCE,
+				scope,
+				searchParams
+			} = resolvedProvider.entry;
 			const referer = parseReferer(headers['referer']);
 			const authIntent = isAuthIntent(intent) ? intent : undefined;
 
@@ -147,7 +148,7 @@ export const authorize = ({
 				value: currentState
 			});
 
-			const codeVerifier = isPKCEProviderOption(provider)
+			const codeVerifier = requiresPKCE
 				? generateCodeVerifier()
 				: undefined;
 

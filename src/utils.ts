@@ -1,8 +1,10 @@
 import {
 	decodeJWT,
+	isValidProviderOption,
 	normalizeProviderIdentity,
 	OAuth2Client,
 	OAuth2TokenResponse,
+	ProviderConfig,
 	ProviderOption,
 	providers
 } from 'citra';
@@ -53,6 +55,7 @@ export const getStatus = async <UserType>(
 };
 export const instantiateUserSession = async <UserType>({
 	authProvider,
+	providerConfiguration,
 	cookieSecure,
 	session,
 	user_session_id,
@@ -69,6 +72,7 @@ export const instantiateUserSession = async <UserType>({
 		resolvedAuthorization ??
 		(await resolveOAuthAuthorization({
 			authProvider,
+			providerConfiguration,
 			providerInstance,
 			tokenResponse
 		}));
@@ -134,15 +138,29 @@ export const resolveCookieSecure = (override?: boolean) =>
 	override ?? process.env.NODE_ENV === 'production';
 export const resolveOAuthAuthorization = async ({
 	authProvider,
+	providerConfiguration,
 	providerInstance,
 	tokenResponse,
 	now = Date.now()
 }: {
-	authProvider: ProviderOption;
+	authProvider: string;
+	providerConfiguration?: ProviderConfig;
 	providerInstance: OAuth2Client<ProviderOption>;
 	tokenResponse: OAuth2TokenResponse;
 	now?: number;
 }): Promise<ResolvedOAuthAuthorization> => {
+	// Custom providers aren't in the citra registry — their config must be
+	// supplied by the caller (the callback context carries it).
+	const meta =
+		providerConfiguration ??
+		(isValidProviderOption(authProvider)
+			? providers[authProvider]
+			: undefined);
+	if (!meta) {
+		throw new Error(
+			`No provider configuration for "${authProvider}" — pass providerConfiguration (custom provider) or resolvedAuthorization`
+		);
+	}
 	let userIdentity;
 	let accessToken = tokenResponse.access_token;
 	let refreshToken = tokenResponse.refresh_token;
@@ -150,17 +168,17 @@ export const resolveOAuthAuthorization = async ({
 	if (tokenResponse.id_token) {
 		userIdentity = normalizeProviderIdentity({
 			identity: decodeJWT(tokenResponse.id_token),
-			providerConfiguration: providers[authProvider],
+			providerConfiguration: meta,
 			source: 'idToken'
 		});
-	} else if (providers[authProvider].subjectBySource?.tokenResponse) {
+	} else if (meta.subjectBySource?.tokenResponse) {
 		// Providers whose connected identity is returned as top-level fields in
 		// the token-exchange response (e.g. GoHighLevel's locationId) rather than
 		// via a profile endpoint. Read the subject straight from the token
 		// response and skip the profile call.
 		userIdentity = normalizeProviderIdentity({
 			identity: tokenResponse,
-			providerConfiguration: providers[authProvider],
+			providerConfiguration: meta,
 			source: 'tokenResponse'
 		});
 	} else if (authProvider === 'withings') {
@@ -175,7 +193,7 @@ export const resolveOAuthAuthorization = async ({
 			identity: await providerInstance.fetchUserProfile(
 				tokenResponse.access_token
 			),
-			providerConfiguration: providers[authProvider],
+			providerConfiguration: meta,
 			source: 'profile'
 		});
 	}

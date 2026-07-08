@@ -7,7 +7,7 @@
       "dependencies": {
         "@absolutejs/linked-providers": "0.0.2",
         "@neondatabase/serverless": "1.0.0",
-        "citra": "0.28.12",
+        "citra": "0.29.1",
       },
       "devDependencies": {
         "@absolutejs/absolute": "^0.19.0-beta.1023",
@@ -266,7 +266,7 @@
 
     "bun-types": ["bun-types@1.2.9", "", { "dependencies": { "@types/node": "*", "@types/ws": "*" } }, "sha512-dk/kOEfQbajENN/D6FyiSgOKEuUi9PWfqKQJEgwKrCMWbjS/S6tEXp178mWvWAcUSYm9ArDlWHZKO3T/4cLXiw=="],
 
-    "citra": ["citra@0.28.12", "", {}, "sha512-KdnCb4xZhO2jndZF5iZNm1NXwxpTvUFWB1sY9p5SMCpnm4EAeutW/GZNZubA1Mn4JAeDvSFeDMAehcWD3tU1sw=="],
+    "citra": ["citra@0.29.1", "", {}, "sha512-DO9XHayTBmY3z9xwF8JHF5S158yCa+FK5nQZvCEniH891G4v8NBiXJZW7UO+eQ41rt1+W9IkKqM6ueT1T1Oj4w=="],
 
     "clsx": ["clsx@2.1.1", "", {}, "sha512-eYm0QWBtUrBWZWG0d386OGAw16Z995PiOVo2B7bjWSbHedGl5e0ZWaq65kOGgUSNesEIDkB9ISbTg/JK9dhCZA=="],
 

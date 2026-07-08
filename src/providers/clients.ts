@@ -2,9 +2,13 @@ import {
 	CredentialsFor,
 	OAuth2Client,
 	ProviderOption,
-	isValidProviderOption
+	createCustomOAuth2Client,
+	isValidProviderOption,
+	providers
 } from 'citra';
 import {
+	CustomProviderClientConfiguration,
+	CustomProvidersConfiguration,
 	OAuth2ConfigurationOptions,
 	OAuth2ProviderClientConfiguration,
 	ClientProviderEntry,
@@ -19,13 +23,97 @@ const isProviderClientConfig = <Provider extends ProviderOption>(
 ): value is OAuth2ProviderClientConfiguration<Provider> =>
 	isRecord(value) && 'credentials' in value;
 
+const isCustomClientConfig = (
+	value: unknown
+): value is CustomProviderClientConfiguration =>
+	isRecord(value) && 'credentials' in value && 'providerConfig' in value;
+
+const normalizeCustomClients = (
+	providerName: string,
+	providerConfig: CustomProvidersConfiguration[string]
+) => {
+	if (isCustomClientConfig(providerConfig)) return { '': providerConfig };
+	if (!isRecord(providerConfig) || Object.keys(providerConfig).length === 0) {
+		throw new Error(
+			`Invalid custom provider configuration for ${providerName}`
+		);
+	}
+	Object.entries(providerConfig).forEach(([clientName, clientConfig]) => {
+		if (!isCustomClientConfig(clientConfig)) {
+			throw new Error(
+				`Invalid custom client configuration for ${providerName}.${clientName}`
+			);
+		}
+	});
+
+	return providerConfig;
+};
+
+const buildCustomProviderGroups = async (
+	customProviders: CustomProvidersConfiguration
+) => {
+	const groups = await Promise.all(
+		Object.entries(customProviders).map(async ([providerName, config]) => {
+			if (isValidProviderOption(providerName)) {
+				throw new Error(
+					`Custom provider "${providerName}" collides with a built-in provider — configure it under providersConfiguration instead`
+				);
+			}
+			const clients = normalizeCustomClients(providerName, config);
+			const entries = await Promise.all(
+				Object.entries(clients).map(
+					async ([clientName, clientConfig]) => {
+						const providerInstance = await createCustomOAuth2Client(
+							clientConfig.providerConfig,
+							clientConfig.credentials
+						);
+
+						return [
+							clientName,
+							{
+								clientName:
+									clientName.length > 0
+										? clientName
+										: undefined,
+								providerConfiguration:
+									clientConfig.providerConfig,
+								providerInstance,
+								requiresPKCE:
+									clientConfig.providerConfig.PKCEMethod !==
+									undefined,
+								scope: clientConfig.scope,
+								searchParams: clientConfig.searchParams
+							} satisfies ClientProviderEntry
+						] as const;
+					}
+				)
+			);
+
+			return [
+				providerName,
+				{
+					entries: Object.fromEntries(entries),
+					isSingleClient:
+						entries.length === 1 && entries[0]?.[0] === ''
+				} satisfies ClientProviderGroup
+			] as const;
+		})
+	);
+
+	return Object.fromEntries(groups);
+};
+
 export const buildClientProviders = async (
 	providersConfiguration: OAuth2ConfigurationOptions,
 	createOAuth2ClientFn: <P extends ProviderOption>(
 		providerName: P,
 		config: CredentialsFor<P>
-	) => Promise<OAuth2Client<P>>
+	) => Promise<OAuth2Client<P>>,
+	customProviders?: CustomProvidersConfiguration
 ) => {
+	const customGroups = customProviders
+		? await buildCustomProviderGroups(customProviders)
+		: {};
 	const normalized = normalizeProvidersConfiguration(providersConfiguration);
 	const groups = await Promise.all(
 		Object.entries(normalized).map(async ([providerName, clients]) => {
@@ -50,7 +138,11 @@ export const buildClientProviders = async (
 									clientName.length > 0
 										? clientName
 										: undefined,
+								providerConfiguration: providers[providerName],
 								providerInstance,
+								requiresPKCE:
+									providers[providerName].PKCEMethod !==
+									undefined,
 								scope: providerConfig.scope,
 								searchParams: providerConfig.searchParams
 							} satisfies ClientProviderEntry
@@ -70,7 +162,7 @@ export const buildClientProviders = async (
 		})
 	);
 
-	return Object.fromEntries(groups);
+	return { ...customGroups, ...Object.fromEntries(groups) };
 };
 const normalizeClientConfig = (
 	providerName: string,

@@ -1,4 +1,3 @@
-import { isValidProviderOption, providers } from 'citra';
 import { t } from 'elysia';
 
 export const authClientOption = t.Optional(t.String());
@@ -9,13 +8,10 @@ export const authIntentOption = t.Optional(
 		t.Literal('link_connector')
 	])
 );
-export const authProviderOption = t.Enum(
-	Object.fromEntries(
-		Object.keys(providers)
-			.filter(isValidProviderOption)
-			.map((key) => [key, key])
-	)
-);
+// Any configured provider name — built-in OR customProviders key. The real
+// gate is resolveClientProviderEntry (unknown names 404); a static enum of
+// citra built-ins would wrongly reject caller-defined providers.
+export const authProviderOption = t.String({ minLength: 1 });
 export const userSessionIdTypebox = t.Optional(
 	t.TemplateLiteral('${string}-${string}-${string}-${string}-${string}')
 );
