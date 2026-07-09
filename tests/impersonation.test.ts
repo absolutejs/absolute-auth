@@ -256,7 +256,12 @@ describe('admin impersonation', () => {
 	test('readOnly (ghost) flag is stamped on the impersonation session', async () => {
 		const login = await send(app, '/login-admin', 'POST', '');
 		const adminCookie = cookieFrom(login);
-		const impersonate = await send(app, '/impersonate', 'POST', adminCookie);
+		const impersonate = await send(
+			app,
+			'/impersonate',
+			'POST',
+			adminCookie
+		);
 		const imperCookie = cookieFrom(impersonate);
 
 		const mode = await (
@@ -275,7 +280,12 @@ describe('admin impersonation', () => {
 		).json();
 		expect(adminStatus).toEqual({ actorId: null, email: admin.email });
 
-		const impersonate = await send(app, '/impersonate', 'POST', adminCookie);
+		const impersonate = await send(
+			app,
+			'/impersonate',
+			'POST',
+			adminCookie
+		);
 		const imperCookie = cookieFrom(impersonate);
 		const imperStatus = await (
 			await send(app, '/status', 'GET', imperCookie)
@@ -316,7 +326,12 @@ describe('admin impersonation', () => {
 	test('nested impersonation is refused by default', async () => {
 		const login = await send(app, '/login-admin', 'POST', '');
 		const adminCookie = cookieFrom(login);
-		const impersonate = await send(app, '/impersonate', 'POST', adminCookie);
+		const impersonate = await send(
+			app,
+			'/impersonate',
+			'POST',
+			adminCookie
+		);
 		const imperCookie = cookieFrom(impersonate);
 
 		const nested = await send(

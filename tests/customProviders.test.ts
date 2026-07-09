@@ -44,7 +44,8 @@ describe('buildClientProviders with customProviders', () => {
 					credentials: {
 						clientId: 'gh',
 						clientSecret: 'gh-secret',
-						redirectUri: 'https://app.example.test/auth/github/callback'
+						redirectUri:
+							'https://app.example.test/auth/github/callback'
 					}
 				}
 			},
@@ -52,17 +53,14 @@ describe('buildClientProviders with customProviders', () => {
 			customProviders
 		);
 
-		expect(Object.keys(clientProviders).sort()).toEqual([
-			'acme',
-			'github'
-		]);
+		expect(Object.keys(clientProviders).sort()).toEqual(['acme', 'github']);
 		const { acme } = clientProviders;
 		expect(acme?.isSingleClient).toBe(true);
 		expect(acme?.entries['']?.requiresPKCE).toBe(true);
 		expect(acme?.entries['']?.scope).toEqual(['openid', 'profile']);
-		expect(
-			acme?.entries['']?.providerConfiguration.authorizationUrl
-		).toBe('https://auth.acme.test/oauth2/authorize');
+		expect(acme?.entries['']?.providerConfiguration.authorizationUrl).toBe(
+			'https://auth.acme.test/oauth2/authorize'
+		);
 
 		const { github } = clientProviders;
 		expect(github?.entries['']?.requiresPKCE).toBe(false);
