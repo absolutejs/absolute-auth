@@ -31,13 +31,25 @@ const DEFAULT_ACCESS_TOKEN_TTL_MS = MILLISECONDS_IN_AN_HOUR;
 const DEFAULT_ID_TOKEN_TTL_MS = MILLISECONDS_IN_AN_HOUR;
 const DEFAULT_REFRESH_TOKEN_TTL_MS = MILLISECONDS_IN_A_DAY * REFRESH_TTL_DAYS;
 
+const resolveAccessTtl = (
+	ttl: number | ((context: { scopes: string[] }) => number) | undefined,
+	scopes: string[]
+) => {
+	if (typeof ttl === 'function') return ttl({ scopes });
+
+	return ttl ?? DEFAULT_ACCESS_TOKEN_TTL_MS;
+};
+
 // The OAuth2/OIDC provider — makes your app an identity provider ("Sign in with <yourapp>").
 // authorization_code + mandatory PKCE, ES256 JWTs signed by a key you own (self-hosted JWKS,
 // no api.workos.com), refresh-token rotation, and optional DPoP (RFC 9449) sender-constrained
 // tokens. The authorize endpoint reuses the package's own session, so the IdP login gets
 // passkeys / MFA / SSO for free.
 export type OidcProviderConfig<UserType> = {
-	accessTokenTtlMs?: number;
+	// Number, or a per-grant function of the granted scopes — lets high-privilege
+	// scopes (e.g. an admin scope) get short-lived tokens while normal grants
+	// keep the default hour.
+	accessTokenTtlMs?: number | ((context: { scopes: string[] }) => number);
 	// RFC 9470 — values the IdP can issue + advertise in discovery. Common shapes:
 	// `urn:mace:incommon:iap:silver` (single-factor), `urn:mace:incommon:iap:gold`
 	// (MFA), or custom strings like `phr` / `phrh`. The consumer maps their session
@@ -327,7 +339,7 @@ export const exchangeToken = async <UserType>({
 		return { error: 'invalid_scope', ok: false };
 	}
 	const scopes = narrowScopes(available, requestedScopes);
-	const ttl = config.accessTokenTtlMs ?? DEFAULT_ACCESS_TOKEN_TTL_MS;
+	const ttl = resolveAccessTtl(config.accessTokenTtlMs, scopes);
 	const extraClaims = await config.getAccessTokenClaims?.({
 		audience,
 		clientId: actorClientId,
@@ -384,7 +396,7 @@ export const issueTokenSet = async <UserType>({
 	scopes: string[];
 	sub: string;
 }) => {
-	const accessTtl = config.accessTokenTtlMs ?? DEFAULT_ACCESS_TOKEN_TTL_MS;
+	const accessTtl = resolveAccessTtl(config.accessTokenTtlMs, scopes);
 	const idTtl = config.idTokenTtlMs ?? DEFAULT_ID_TOKEN_TTL_MS;
 	const refreshTtl = config.refreshTokenTtlMs ?? DEFAULT_REFRESH_TOKEN_TTL_MS;
 	const accessExtra = await config.getAccessTokenClaims?.({
