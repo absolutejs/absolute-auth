@@ -84,6 +84,22 @@ const oauthError = (status: number, error: string) =>
 
 const tokenResponse = (tokens: TokenSet) => jsonResponse(tokens, HTTP_OK);
 
+// Behind a TLS-terminating proxy (nginx/Caddy/ALB) the runtime sees the
+// request as http://, so raw request.url must never be used to build
+// return_to links — rebase its origin onto the configured issuer.
+const canonicalizeRequestUrl = (requestUrl: string, issuer: string) => {
+	try {
+		const url = new URL(requestUrl);
+		const base = new URL(issuer);
+		url.protocol = base.protocol;
+		url.host = base.host;
+
+		return url.toString();
+	} catch {
+		return requestUrl;
+	}
+};
+
 const redirectTo = (url: string) =>
 	new Response(null, { headers: { location: url }, status: HTTP_FOUND });
 
@@ -974,7 +990,7 @@ export const oidcProviderRoutes = <UserType>(
 									HTTP_UNAUTHORIZED
 								)
 							: redirectTo(
-									`${loginUrl}?return_to=${encodeURIComponent(request.url)}`
+									`${loginUrl}?return_to=${encodeURIComponent(canonicalizeRequestUrl(request.url, issuer))}`
 								);
 					}
 
@@ -1005,7 +1021,7 @@ export const oidcProviderRoutes = <UserType>(
 						);
 						consentTarget.searchParams.set(
 							'return_to',
-							request.url
+							canonicalizeRequestUrl(request.url, issuer)
 						);
 						consentTarget.searchParams.set(
 							'client_id',
