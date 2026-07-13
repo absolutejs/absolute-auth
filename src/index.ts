@@ -435,6 +435,7 @@ export { AuthIdentityConflictError } from './errors';
 export { sessionStore } from './session/state';
 export { createInMemoryAuthSessionStore } from './session/inMemoryStore';
 export { createNeonAuthSessionStore } from './session/neonStore';
+export { providersFromEnv, type ProviderSelection } from './providersFromEnv';
 export {
 	createRedisAuthSessionStore,
 	type RedisSessionClient
