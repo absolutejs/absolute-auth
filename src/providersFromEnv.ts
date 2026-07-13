@@ -24,8 +24,8 @@ const envKey = (provider: string, suffix: string) =>
 export const providersFromEnv = (
 	selection: ProviderSelection,
 	env: Record<string, string | undefined> = process.env
-): OAuth2ConfigurationOptions =>
-	Object.fromEntries(
+) => {
+	const configured: OAuth2ConfigurationOptions = Object.fromEntries(
 		Object.entries(selection).map(([provider, options]) => [
 			provider,
 			{
@@ -36,4 +36,7 @@ export const providersFromEnv = (
 				}
 			}
 		])
-	) as OAuth2ConfigurationOptions;
+	);
+
+	return configured;
+};

@@ -161,20 +161,20 @@ export const manifest = defineManifest<AuthConfig<unknown>, never>()({
 	],
 	lifecycle: [
 		{
+			// The CLI falls back to the DATABASE_URL env var for --db.
+			command: 'bunx absolute-auth migrate',
 			id: 'migrate',
 			idempotent: true,
 			kind: 'migration',
 			title: 'Set up the sign-in tables in your database',
-			// The CLI falls back to the DATABASE_URL env var for --db.
-			command: 'bunx absolute-auth migrate',
 			when: 'after-install'
 		},
 		{
+			command: 'bunx absolute-auth migrate',
 			id: 'migrate-upgrade',
 			idempotent: true,
 			kind: 'migration',
 			title: 'Apply new sign-in tables after upgrading',
-			command: 'bunx absolute-auth migrate',
 			when: 'after-upgrade'
 		}
 	],
@@ -221,6 +221,7 @@ export const manifest = defineManifest<AuthConfig<unknown>, never>()({
 			capabilities: ['read', 'glob'],
 			description:
 				'List which sign-in providers this project has configured, and which are missing credentials.',
+			input: Type.Object({}),
 			handler: async (_input, workspace) => {
 				const files = (await workspace.glob?.('**/auth.config.ts')) ?? [];
 				const [file] = files;
@@ -241,8 +242,7 @@ export const manifest = defineManifest<AuthConfig<unknown>, never>()({
 				return providers.length === 0
 					? 'no sign-in providers configured'
 					: `configured providers: ${providers.join(', ')}`;
-			},
-			input: Type.Object({})
+			}
 		})
 	},
 	wiring: [
@@ -276,5 +276,3 @@ export const manifest = defineManifest<AuthConfig<unknown>, never>()({
 		}
 	]
 });
-
-export default manifest;
