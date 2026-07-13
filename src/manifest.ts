@@ -23,6 +23,25 @@ const COMMON_PROVIDERS = [
 	'twitch'
 ] as const;
 
+/* Where to actually create the OAuth app for each provider — real developer
+ * console deep-links, so a "Create credentials" affordance lands the user on
+ * the right page instead of our README. */
+const PROVIDER_CONSOLE_URLS: Record<
+	(typeof COMMON_PROVIDERS)[number],
+	string
+> = {
+	discord: 'https://discord.com/developers/applications',
+	facebook: 'https://developers.facebook.com/apps',
+	github: 'https://github.com/settings/developers',
+	google: 'https://console.cloud.google.com/apis/credentials',
+	linkedin: 'https://www.linkedin.com/developers/apps',
+	microsoft:
+		'https://portal.azure.com/#blade/Microsoft_AAD_RegisteredApps/ApplicationsListBlade',
+	slack: 'https://api.slack.com/apps',
+	spotify: 'https://developer.spotify.com/dashboard',
+	twitch: 'https://dev.twitch.tv/console/apps'
+};
+
 const providerEnv = COMMON_PROVIDERS.flatMap((provider) => {
 	const upper = provider.toUpperCase();
 	const title = provider.charAt(0).toUpperCase() + provider.slice(1);
@@ -30,13 +49,13 @@ const providerEnv = COMMON_PROVIDERS.flatMap((provider) => {
 	return [
 		{
 			description: `${title} OAuth client id`,
-			docsUrl: 'https://github.com/absolutejs/auth#providers',
+			docsUrl: PROVIDER_CONSOLE_URLS[provider],
 			key: `${upper}_CLIENT_ID`,
 			when: `providersConfiguration.${provider}`
 		},
 		{
 			description: `${title} OAuth client secret`,
-			docsUrl: 'https://github.com/absolutejs/auth#providers',
+			docsUrl: PROVIDER_CONSOLE_URLS[provider],
 			key: `${upper}_CLIENT_SECRET`,
 			secret: true,
 			when: `providersConfiguration.${provider}`
