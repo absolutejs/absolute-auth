@@ -1,5 +1,5 @@
 {
-	"version": "0.53.1",
+	"version": "0.53.2",
 	"name": "@absolutejs/auth",
 	"description": "An authorization library for absolutejs",
 	"repository": {
@@ -75,7 +75,7 @@
 	"dependencies": {
 		"@absolutejs/linked-providers": "0.0.2",
 		"@neondatabase/serverless": "1.0.0",
-		"citra": "0.29.1",
+		"citra": "0.29.3",
 		"@absolutejs/manifest": "^0.1.0",
 		"@sinclair/typebox": "^0.34.0"
 	},
