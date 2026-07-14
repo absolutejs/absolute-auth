@@ -204,7 +204,9 @@ const performRecordCleanup = async <UserType>({
 
 	try {
 		await onSessionCleanup?.({
+			removedSessionCount: removedSessions.size,
 			removedSessions,
+			removedUnregisteredSessionCount: removedUnregisteredSessions.size,
 			removedUnregisteredSessions
 		});
 	} catch (err) {
@@ -281,8 +283,8 @@ const performStoreCleanup = async <UserType>({
 	// Fast path: a store that can delete expired rows in one indexed query
 	// avoids loading EVERY session just to check expiry (the per-hour DB storm).
 	// We can't hand the removed session objects to onSessionCleanup here (they
-	// were deleted in-store, never loaded), so it fires with empty maps; the
-	// removed COUNT is logged instead. Overflow eviction is the load-all path
+	// were deleted in-store, never loaded), so it fires with empty maps and the
+	// exact counts. Overflow eviction is the load-all path
 	// below — deleteExpired stores cap per-user sessions at creation time.
 	if (authSessionStore.deleteExpired) {
 		const removedSessionCount = await authSessionStore.deleteExpired();
@@ -295,7 +297,9 @@ const performStoreCleanup = async <UserType>({
 		}
 		try {
 			await onSessionCleanup?.({
+				removedSessionCount,
 				removedSessions: new Map(),
+				removedUnregisteredSessionCount: removedUnregisteredCount,
 				removedUnregisteredSessions: new Map()
 			});
 		} catch (err) {
@@ -370,7 +374,9 @@ const performStoreCleanup = async <UserType>({
 
 	try {
 		await onSessionCleanup?.({
+			removedSessionCount: removedSessions.size,
 			removedSessions,
+			removedUnregisteredSessionCount: removedUnregisteredSessions.size,
 			removedUnregisteredSessions
 		});
 	} catch (err) {

@@ -388,10 +388,16 @@ export type OnSignOut<UserType> =
 
 export type OnSessionCleanup<UserType> =
 	| (({
+			removedSessionCount,
 			removedSessions,
+			removedUnregisteredSessionCount,
 			removedUnregisteredSessions
 	  }: {
+			/** Total removed, including SQL fast-path rows whose values were never loaded. */
+			removedSessionCount: number;
 			removedSessions: Map<UserSessionId, SessionData<UserType>>;
+			/** Total unregistered sessions removed, including SQL fast-path rows. */
+			removedUnregisteredSessionCount: number;
 			removedUnregisteredSessions: Map<
 				UserSessionId,
 				UnregisteredSessionData
