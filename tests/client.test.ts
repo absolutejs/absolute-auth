@@ -97,6 +97,24 @@ describe('createAuthClient', () => {
 		expect(calls[0]).toBe('https://idp.example/auth/login');
 	});
 
+	test('mfa status and disable use the management endpoint', async () => {
+		const calls: { method?: string; url: string }[] = [];
+		const client = createAuthClient({
+			fetch: stub((url, init) => {
+				calls.push({ method: init.method, url });
+
+				return new Response('{}');
+			})
+		});
+
+		await client.mfa.status();
+		await client.mfa.disable();
+		expect(calls).toEqual([
+			{ method: 'GET', url: '/auth/mfa' },
+			{ method: 'DELETE', url: '/auth/mfa' }
+		]);
+	});
+
 	test('passkeys.remove URL-encodes the credential id', async () => {
 		const calls: { method?: string; url: string }[] = [];
 		const client = createAuthClient({

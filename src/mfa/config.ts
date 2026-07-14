@@ -40,6 +40,7 @@ export type MfaConfig<UserType> = {
 	// secret is stored as-is — set it in any real deployment.
 	encryptionKey?: string;
 	issuer?: string;
+	managementRoute?: RouteString;
 	onMfaChallengeError?: (context: {
 		error: unknown;
 		userId?: string;

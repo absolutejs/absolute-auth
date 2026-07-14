@@ -23,6 +23,7 @@ export type AuthClientRoutes = {
 	magicLinkRequest?: string;
 	magicLinkVerify?: string;
 	mfaChallenge?: string;
+	mfaManagement?: string;
 	mfaSetup?: string;
 	mfaVerifySetup?: string;
 	passkeyAuthenticateOptions?: string;
@@ -45,6 +46,7 @@ const DEFAULT_ROUTES: Required<AuthClientRoutes> = {
 	magicLinkRequest: '/auth/passwordless/magic-link',
 	magicLinkVerify: '/auth/passwordless/magic-link/verify',
 	mfaChallenge: '/auth/mfa/totp/challenge',
+	mfaManagement: '/auth/mfa',
 	mfaSetup: '/auth/mfa/totp/setup',
 	mfaVerifySetup: '/auth/mfa/totp/verify',
 	passkeyAuthenticateOptions: '/auth/webauthn/authenticate/options',
@@ -145,8 +147,14 @@ export const createAuthClient = ({
 					resolvedRoutes.mfaChallenge,
 					body
 				),
+			disable: () =>
+				del<{ status: 'disabled' }>(resolvedRoutes.mfaManagement),
 			setup: () =>
 				post<{ secret: string; uri: string }>(resolvedRoutes.mfaSetup),
+			status: () =>
+				get<import('../mfa/management').MfaStatus>(
+					resolvedRoutes.mfaManagement
+				),
 			verifySetup: (body: { code: string }) =>
 				post<{ backupCodes: string[] }>(
 					resolvedRoutes.mfaVerifySetup,
