@@ -5,6 +5,7 @@ import type {
 	OnRevocationSuccess,
 	OnSignOut
 } from '../types';
+import { isStatusResponse } from '../typeGuards';
 import type { AuditEmitter } from './config';
 
 // Each `compose*Audit` wraps the consumer's lifecycle hooks so a structured audit event
@@ -19,13 +20,20 @@ export const composeCallbackAudit =
 	async (
 		context: Parameters<NonNullable<OnCallbackSuccess<UserType>>>[0]
 	) => {
+		const result = await onCallbackSuccess?.(context);
+		const failed =
+			(result instanceof Response && result.status >= 400) ||
+			(isStatusResponse(result) &&
+				Number(Reflect.get(result, 'status')) >= 400);
+		if (failed) return result;
+
 		await emit({
 			at: Date.now(),
 			metadata: { authProvider: context.authProvider },
 			type: 'oauth_login'
 		});
 
-		return onCallbackSuccess?.(context);
+		return result;
 	};
 export const composeCredentialsAudit = <UserType>(
 	credentials: CredentialsConfig<UserType>,
