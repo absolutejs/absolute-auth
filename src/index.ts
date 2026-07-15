@@ -1,6 +1,7 @@
 import { createOAuth2Client } from 'citra';
 import { Elysia } from 'elysia';
 import { apiKeysRoutes } from './apikeys/routes';
+import { agentAuthPlugin } from './agents/routes';
 import { createAuditEmitter } from './audit/config';
 import {
 	composeCallbackAudit,
@@ -85,8 +86,11 @@ type MergeAuthContext<Base, Extra> =
 		: never;
 
 export type AuthInstance<UserType> = MergeAuthContext<
-	ReturnType<typeof protectRoutePlugin<UserType>>,
-	ReturnType<typeof stepUpPlugin<UserType>>
+	MergeAuthContext<
+		ReturnType<typeof protectRoutePlugin<UserType>>,
+		ReturnType<typeof stepUpPlugin<UserType>>
+	>,
+	ReturnType<typeof agentAuthPlugin>
 >;
 
 export const auth = async <UserType>({
@@ -113,6 +117,7 @@ export const auth = async <UserType>({
 	sso,
 	scim,
 	apikeys,
+	agentAuth,
 	oidc,
 	organizations,
 	roles,
@@ -165,6 +170,82 @@ export const auth = async <UserType>({
 				})
 			: undefined;
 	const lockoutGuard = lockout ? createLockoutGuard(lockout) : undefined;
+	const oidcConfig = oidc
+		? {
+				...oidc,
+				onClientRegistered: async (
+					context: Parameters<
+						NonNullable<typeof oidc.onClientRegistered>
+					>[0]
+				) => {
+					await oidc.onClientRegistered?.(context);
+					if (agentAuth?.registerDynamicClients !== true) return;
+					const now = Date.now();
+					await agentAuth.registrationStore.saveRegistration({
+						agentId: context.client.clientId,
+						allowedScopes: context.client.scopes.filter((scope) =>
+							agentAuth.scopes.includes(scope)
+						),
+						clientId: context.client.clientId,
+						createdAt: now,
+						name: context.client.name,
+						status: 'active',
+						updatedAt: now
+					});
+					await auditEmit?.({
+						at: now,
+						metadata: { agentId: context.client.clientId },
+						type: 'agent_registered'
+					});
+				},
+				onDeviceAuthorizationApproved: async (
+					context: Parameters<
+						NonNullable<typeof oidc.onDeviceAuthorizationApproved>
+					>[0]
+				) => {
+					await oidc.onDeviceAuthorizationApproved?.(context);
+					if (agentAuth === undefined) return;
+					const registration =
+						await agentAuth.registrationStore.findByClientId(
+							context.clientId
+						);
+					if (
+						registration === undefined ||
+						registration.status !== 'active'
+					) {
+						return;
+					}
+					const now = Date.now();
+					const existing =
+						await agentAuth.delegationStore.findActiveDelegation({
+							agentId: registration.agentId,
+							now,
+							userId: context.userSub
+						});
+					await agentAuth.delegationStore.saveDelegation({
+						agentId: registration.agentId,
+						createdAt: existing?.createdAt ?? now,
+						delegationId:
+							existing?.delegationId ??
+							`agd_${crypto.randomUUID()}`,
+						scopes: context.scopes.filter(
+							(scope) =>
+								registration.allowedScopes.includes(scope) &&
+								agentAuth.scopes.includes(scope)
+						),
+						status: 'active',
+						updatedAt: now,
+						userId: context.userSub
+					});
+					await auditEmit?.({
+						at: now,
+						metadata: { agentId: registration.agentId },
+						type: 'agent_delegated',
+						userId: context.userSub
+					});
+				}
+			}
+		: undefined;
 
 	// When both blocks are configured, default the login MFA gate to the MFAStore
 	// enrollment check unless the consumer supplied their own.
@@ -327,8 +408,11 @@ export const auth = async <UserType>({
 		.use(scim ? scimRoutes(scim) : new Elysia())
 		.use(apikeys ? apiKeysRoutes(apikeys) : new Elysia())
 		.use(
-			oidc
-				? oidcProviderRoutes<UserType>({ ...oidc, authSessionStore })
+			oidcConfig
+				? oidcProviderRoutes<UserType>({
+						...oidcConfig,
+						authSessionStore
+					})
 				: new Elysia()
 		)
 		.use(
@@ -398,6 +482,14 @@ export const auth = async <UserType>({
 				: new Elysia()
 		);
 
+	// Collapse the configurable route graph before adding the final stable agent
+	// context; otherwise declaration emit tries to represent the full cross-product
+	// of every route plus `protectAgent` and hits TS2590.
+	// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- deliberately erase an intractable Elysia route union before composing the stable agent context
+	const authWithAgent = (composedAuth as unknown as Elysia).use(
+		agentAuthPlugin(agentAuth)
+	);
+
 	// One concentrated assertion (full rationale on AuthInstance above): the
 	// chain mounts ~28 route plugins whose configurable paths make their route
 	// keys `string`, so there is no precise route type to preserve and letting
@@ -406,7 +498,7 @@ export const auth = async <UserType>({
 	// `UserType`-typed `protectRoute` context as the public type. Sound because
 	// runtime behaviour is unchanged and the routes are reached by path.
 	// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- see comment above
-	return composedAuth as unknown as AuthInstance<UserType>;
+	return authWithAgent as unknown as AuthInstance<UserType>;
 };
 
 export * from './actions';
@@ -695,6 +787,23 @@ export {
 export * from './apikeys/config';
 export * from './apikeys/types';
 export { apiKeysRoutes } from './apikeys/routes';
+export * from './agents/config';
+export * from './agents/types';
+export { agentAuthPlugin, agentAuthChallenge } from './agents/routes';
+export { resolveAgentPrincipal, agentHasScopes } from './agents/principal';
+export { createOidcAgentCredentialVerifier } from './agents/oidcAdapter';
+export {
+	createInMemoryAgentDelegationStore,
+	createInMemoryAgentRegistrationStore
+} from './agents/inMemoryStores';
+export {
+	agentDelegationsTable,
+	agentRegistrationsTable,
+	createNeonAgentDelegationStore,
+	createNeonAgentRegistrationStore,
+	createPostgresAgentDelegationStore,
+	createPostgresAgentRegistrationStore
+} from './agents/postgresStores';
 export {
 	createInMemoryAccessTokenStore,
 	createInMemoryApiClientStore,

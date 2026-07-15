@@ -21,6 +21,7 @@ const CLIENT_ID_BYTES = 16;
 export type ClientRegistrationMetadata = {
 	backchannel_logout_uri?: string;
 	client_name?: string;
+	grant_types?: string[];
 	jwks?: JsonWebKey[];
 	jwks_uri?: string;
 	post_logout_redirect_uris?: string[];
@@ -37,6 +38,11 @@ export type ClientRegistrationDecision =
 export type OnClientRegistration = (context: {
 	metadata: ClientRegistrationMetadata;
 }) => ClientRegistrationDecision | Promise<ClientRegistrationDecision>;
+
+export type OnClientRegistered = (context: {
+	client: OAuthClient;
+	metadata: ClientRegistrationMetadata;
+}) => void | Promise<void>;
 
 // Build a freshly-generated reg-access-token pair (plain to return to the client, hash to
 // persist) so subsequent management calls can be authenticated without storing the
@@ -66,6 +72,7 @@ const metadataToClient = (
 	const base: OAuthClient = {
 		backchannelLogoutUri: metadata.backchannel_logout_uri,
 		clientId,
+		grantTypes: metadata.grant_types,
 		jwks: metadata.jwks,
 		jwksUri: metadata.jwks_uri,
 		name: metadata.client_name ?? clientId,
@@ -83,6 +90,7 @@ const clientToMetadata = (
 	backchannel_logout_uri: client.backchannelLogoutUri,
 	client_id: client.clientId,
 	client_name: client.name,
+	grant_types: client.grantTypes,
 	jwks: client.jwks,
 	jwks_uri: client.jwksUri,
 	post_logout_redirect_uris: client.postLogoutRedirectUris,
@@ -199,6 +207,7 @@ export const registerClient = async ({
 	initialAccessTokenStore,
 	metadata,
 	onClientRegistration,
+	onClientRegistered,
 	presentedInitialAccessToken,
 	registrationBaseUrl,
 	registrationTokenStore
@@ -207,6 +216,7 @@ export const registerClient = async ({
 	initialAccessTokenStore?: InitialAccessTokenStore;
 	metadata: ClientRegistrationMetadata;
 	onClientRegistration?: OnClientRegistration;
+	onClientRegistered?: OnClientRegistered;
 	presentedInitialAccessToken?: string;
 	// Absolute URL prefix for the per-client management URI, e.g. `https://idp.example/oauth2/register`.
 	registrationBaseUrl: string;
@@ -233,9 +243,13 @@ export const registerClient = async ({
 			return { body: { error: 'invalid_token' }, ok: false, status: 401 };
 		}
 	}
+	const requiresRedirect =
+		metadata.grant_types === undefined ||
+		metadata.grant_types.includes('authorization_code');
 	if (
-		!Array.isArray(metadata.redirect_uris) ||
-		metadata.redirect_uris.length === 0
+		requiresRedirect &&
+		(!Array.isArray(metadata.redirect_uris) ||
+			metadata.redirect_uris.length === 0)
 	) {
 		return {
 			body: { error: 'invalid_redirect_uri' },
@@ -264,6 +278,7 @@ export const registerClient = async ({
 
 	const regToken = await mintRegistrationToken(clientId);
 	await registrationTokenStore.saveToken(regToken.record);
+	await onClientRegistered?.({ client, metadata });
 
 	return {
 		body: {
@@ -318,9 +333,13 @@ export const updateRegisteredClient = async ({
 			status: 403
 		} as const;
 	}
+	const requiresRedirect =
+		metadata.grant_types === undefined ||
+		metadata.grant_types.includes('authorization_code');
 	if (
-		!Array.isArray(metadata.redirect_uris) ||
-		metadata.redirect_uris.length === 0
+		requiresRedirect &&
+		(!Array.isArray(metadata.redirect_uris) ||
+			metadata.redirect_uris.length === 0)
 	) {
 		return {
 			body: { error: 'invalid_redirect_uri' },

@@ -2,6 +2,10 @@ import type { OrganizationId } from '../tenancy';
 
 export type AuditEventType =
 	| 'account_deleted'
+	| 'agent_credential_issued'
+	| 'agent_delegated'
+	| 'agent_registered'
+	| 'agent_revoked'
 	| 'authorization_denied'
 	| 'credentials_login'
 	| 'credentials_login_failed'

@@ -1,5 +1,5 @@
 {
-	"version": "0.54.5",
+	"version": "0.54.6",
 	"name": "@absolutejs/auth",
 	"description": "An authorization library for absolutejs",
 	"repository": {
@@ -17,7 +17,7 @@
 	"license": "BSL-1.1",
 	"author": "Alex Kahn",
 	"scripts": {
-		"build": "rm -rf dist && bun build src/index.ts src/saml.ts src/webauthn.ts src/htmx/index.ts src/client/index.ts src/client/react.ts src/client/vue.ts src/client/solid.ts src/client/svelte.ts src/plugins/index.ts src/providers/index.ts src/manifest.ts --root src --outdir dist --sourcemap --target=bun --external elysia --external react --external vue --external solid-js --external svelte --external @opentelemetry/api --external @simplewebauthn/server --external @node-saml/node-saml && bun build src/cli/migrate.ts --outdir dist/cli --sourcemap --target=bun --external @neondatabase/serverless --external drizzle-orm && bun build src/fingerprint-client/index.ts --outdir dist/fingerprint-client --sourcemap --target=browser && tsc --emitDeclarationOnly --project tsconfig.json && chmod +x dist/cli/migrate.js && absolute-manifest emit",
+		"build": "rm -rf dist && bun build src/index.ts src/agents/index.ts src/saml.ts src/webauthn.ts src/htmx/index.ts src/client/index.ts src/client/react.ts src/client/vue.ts src/client/solid.ts src/client/svelte.ts src/plugins/index.ts src/providers/index.ts src/manifest.ts --root src --outdir dist --sourcemap --target=bun --external elysia --external react --external vue --external solid-js --external svelte --external @opentelemetry/api --external @simplewebauthn/server --external @node-saml/node-saml && bun build src/cli/migrate.ts --outdir dist/cli --sourcemap --target=bun --external @neondatabase/serverless --external drizzle-orm && bun build src/fingerprint-client/index.ts --outdir dist/fingerprint-client --sourcemap --target=browser && tsc --emitDeclarationOnly --project tsconfig.json && chmod +x dist/cli/migrate.js && absolute-manifest emit",
 		"config": "absolute config",
 		"test": "bun test",
 		"format": "absolute prettier --write",
@@ -116,6 +116,11 @@
 			"types": "./dist/client/index.d.ts",
 			"require": "./dist/client/index.js"
 		},
+		"./agents": {
+			"import": "./dist/agents/index.js",
+			"types": "./dist/agents/index.d.ts",
+			"require": "./dist/agents/index.js"
+		},
 		"./htmx": {
 			"import": "./dist/htmx/index.js",
 			"types": "./dist/htmx/index.d.ts",
@@ -180,6 +185,9 @@
 	],
 	"typesVersions": {
 		"*": {
+			"agents": [
+				"dist/agents/index.d.ts"
+			],
 			"saml": [
 				"dist/saml.d.ts"
 			],

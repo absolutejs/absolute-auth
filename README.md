@@ -75,6 +75,64 @@ The concrete SimpleWebAuthn adapter follows the same boundary:
 import { createSimpleWebAuthnAdapter } from '@absolutejs/auth/webauthn';
 ```
 
+### Delegated AI agents
+
+The `agentAuth` block provides a standards-first agent identity layer without
+depending on a vendor registration protocol. It publishes RFC 9728 protected
+resource metadata, records agent registrations and user delegations, and adds a
+scoped `protectAgent` guard. Protocol-specific credentials are normalized by a
+verifier adapter:
+
+```ts
+import {
+	createInMemoryAgentDelegationStore,
+	createInMemoryAgentRegistrationStore,
+	createOidcAgentCredentialVerifier
+} from '@absolutejs/auth/agents';
+
+const registrationStore = createInMemoryAgentRegistrationStore();
+const delegationStore = createInMemoryAgentDelegationStore();
+
+const authPlugin = await auth({
+	agentAuth: {
+		authorizationServer: 'https://auth.example.com',
+		delegationStore,
+		registerDynamicClients: true,
+		registrationStore,
+		resource: 'https://api.example.com',
+		scopes: ['documents:read', 'documents:write'],
+		verifyCredential: createOidcAgentCredentialVerifier({
+			issuer: 'https://auth.example.com',
+			publicJwk: signingKey.publicJwk,
+			resource: 'https://api.example.com'
+		})
+	},
+	oidc: {
+		// Enable RFC 7591 dynamic client registration and RFC 8628 device auth.
+		clientRegistrationTokenStore,
+		deviceAuthorizationStore
+		// ...the normal OIDC provider configuration
+	}
+});
+```
+
+With `registerDynamicClients` enabled, an RFC 7591 client becomes an agent
+registration. Approval through the existing RFC 8628 device flow creates the
+user-to-agent delegation. The agent can then use RFC 8693 token exchange to get
+a narrowed, audience-bound access token for the protected API.
+
+```ts
+app.get('/documents', ({ protectAgent }) =>
+	protectAgent(['documents:read'], (agent) => ({
+		agentId: agent.agentId,
+		actingFor: agent.userId
+	}))
+);
+```
+
+Postgres and Neon registration/delegation stores are exported alongside the
+in-memory stores. Include the `agents` migration block in production.
+
 ### Features
 
 - **Authorization**: Handles the authorization process by generating the authorization URL and redirecting the user to the authentication provider.

@@ -4,6 +4,9 @@ export type OAuthClient = {
 	// `logout_token` POSTs whenever a user with active refresh tokens for it signs out.
 	backchannelLogoutUri?: string;
 	clientId: string;
+	/** Grant types this dynamically registered client declared. Undefined preserves
+	 * the historical authorization-code default for statically configured clients. */
+	grantTypes?: string[];
 	// SHA-256 hash of the client secret. Omitted for public (PKCE-only) clients.
 	hashedSecret?: string;
 	// Inline JWKS for `private_key_jwt` client auth (RFC 7521/7523). The client signs a

@@ -11,6 +11,7 @@ import {
 import { Cookie, status as statusType, redirect as redirectType } from 'elysia';
 import { ElysiaCustomStatusResponse } from 'elysia/error';
 import type { ApiKeysConfig } from './apikeys/config';
+import type { AgentAuthConfig } from './agents/config';
 import type { AuditConfig } from './audit/config';
 import type { AuthorizationConfig } from './authorization/config';
 import type { ComplianceConfig } from './compliance/config';
@@ -487,6 +488,10 @@ export type AuthConfig<UserType> = {
 	 *  Pair with the exported `createApiKey` / `resolveApiPrincipal` / `hasScopes`
 	 *  helpers to issue and guard with static keys. */
 	apikeys?: ApiKeysConfig;
+	/** Standards-first delegated agent authorization. Mounts RFC 9728 protected-resource
+	 * metadata and contributes `protectAgent`, while protocol adapters normalize verified
+	 * credentials into durable agent registrations + user delegations. */
+	agentAuth?: AgentAuthConfig;
 	/** OAuth2 / OIDC provider — makes your app an identity provider ("Sign in with
 	 *  <yourapp>"). Mounts `{oidcRoute}/authorize` + `/token` + `/jwks` and
 	 *  `/.well-known/openid-configuration`: authorization_code + mandatory PKCE, ES256

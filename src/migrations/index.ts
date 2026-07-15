@@ -12,6 +12,10 @@ import {
 	apiClientsTable,
 	apiKeysTable
 } from '../apikeys/postgresStores';
+import {
+	agentDelegationsTable,
+	agentRegistrationsTable
+} from '../agents/postgresStores';
 import { auditEventsTable } from '../audit/postgresAuditStore';
 import {
 	credentialResetTokensTable,
@@ -65,6 +69,7 @@ import type { BlockMigrations, Migration } from './types';
 
 export type BlockName =
 	| 'adaptive'
+	| 'agents'
 	| 'apikeys'
 	| 'audit'
 	| 'credentials'
@@ -117,6 +122,10 @@ const mfaTotpLockoutMigration: Migration = {
 
 export const blockMigrations: Record<BlockName, BlockMigrations> = {
 	adaptive: initMigration('adaptive', [knownDevicesTable, loginHistoryTable]),
+	agents: initMigration('agents', [
+		agentRegistrationsTable,
+		agentDelegationsTable
+	]),
 	apikeys: initMigration('apikeys', [
 		accessTokensTable,
 		apiClientsTable,

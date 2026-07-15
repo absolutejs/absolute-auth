@@ -616,6 +616,7 @@ export const oidcProviderRoutes = <UserType>(
 
 	const discovery: Record<string, boolean | string | string[]> = {
 		authorization_endpoint: `${issuer}${authorizeRoute}`,
+		authorization_response_iss_parameter_supported: true,
 		backchannel_logout_session_supported: false,
 		backchannel_logout_supported: true,
 		code_challenge_methods_supported: ['S256'],
@@ -630,7 +631,6 @@ export const oidcProviderRoutes = <UserType>(
 		request_object_signing_alg_values_supported: ['ES256'],
 		request_parameter_supported: true,
 		require_signed_request_object_supported: true,
-		authorization_response_iss_parameter_supported: true,
 		response_modes_supported: ['query', 'form_post'],
 		response_types_supported: ['code'],
 		revocation_endpoint: `${issuer}${revokeRoute}`,
@@ -1654,6 +1654,7 @@ export const oidcProviderRoutes = <UserType>(
 						clientStore,
 						initialAccessTokenStore: config.initialAccessTokenStore,
 						metadata: body,
+						onClientRegistered: config.onClientRegistered,
 						onClientRegistration: config.onClientRegistration,
 						presentedInitialAccessToken: presented,
 						registrationBaseUrl,
@@ -1670,6 +1671,7 @@ export const oidcProviderRoutes = <UserType>(
 					body: t.Object({
 						backchannel_logout_uri: t.Optional(t.String()),
 						client_name: t.Optional(t.String()),
+						grant_types: t.Optional(t.Array(t.String())),
 						jwks: t.Optional(t.Any()),
 						jwks_uri: t.Optional(t.String()),
 						post_logout_redirect_uris: t.Optional(
@@ -1734,6 +1736,7 @@ export const oidcProviderRoutes = <UserType>(
 					body: t.Object({
 						backchannel_logout_uri: t.Optional(t.String()),
 						client_name: t.Optional(t.String()),
+						grant_types: t.Optional(t.Array(t.String())),
 						jwks: t.Optional(t.Any()),
 						jwks_uri: t.Optional(t.String()),
 						post_logout_redirect_uris: t.Optional(

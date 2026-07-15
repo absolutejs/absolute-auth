@@ -6,7 +6,7 @@ import {
 import { generateSecureToken, hashToken } from '../crypto';
 import type { RouteString } from '../types';
 import { signJwt, verifyJwt, type SigningKey } from './keys';
-import type { OnClientRegistration } from './registration';
+import type { OnClientRegistered, OnClientRegistration } from './registration';
 import type { VciConfig } from './vci';
 import type {
 	AuthorizationCodeStore,
@@ -184,6 +184,14 @@ export type OidcProviderConfig<UserType> = {
 	// the client store. Without it, every well-formed registration is accepted (subject
 	// to the `initialAccessTokenStore` gate if configured).
 	onClientRegistration?: OnClientRegistration;
+	/** Fires after RFC 7591 registration has been persisted and has a generated client id. */
+	onClientRegistered?: OnClientRegistered;
+	/** Fires after the authenticated user approves an RFC 8628 device request. */
+	onDeviceAuthorizationApproved?: (context: {
+		clientId: string;
+		scopes: string[];
+		userSub: string;
+	}) => void | Promise<void>;
 	// Optional — when set, the Pushed Authorization Request endpoint (RFC 9126) is mounted
 	// at `/oauth2/par` + `/authorize` accepts `request_uri`. Clients that opt into
 	// `requirePushedAuthorizationRequests` must use PAR. Without this store, PAR is off.
@@ -285,12 +293,13 @@ const buildAccessClaims = ({
 	if (act !== undefined) claims.act = act;
 	// `cnf` carries both bindings when present: DPoP (jkt) + RFC 8705 mTLS (x5t#S256).
 	// In practice consumers use one or the other, but the JWT format supports both.
-	if (dpopJkt !== undefined || clientCertThumbprint !== undefined) {
-		const cnf: Record<string, string> = {};
-		if (dpopJkt !== undefined) cnf.jkt = dpopJkt;
-		if (clientCertThumbprint !== undefined) {
-			cnf['x5t#S256'] = clientCertThumbprint;
-		}
+	const cnf: Record<string, string> = {
+		...(dpopJkt === undefined ? {} : { jkt: dpopJkt }),
+		...(clientCertThumbprint === undefined
+			? {}
+			: { 'x5t#S256': clientCertThumbprint })
+	};
+	if (Object.keys(cnf).length > 0) {
 		claims.cnf = cnf;
 	}
 
@@ -671,6 +680,13 @@ const decideDeviceAuthorization = async <UserType>(
 		approval.status,
 		approval.userSub
 	);
+	if (approval.status === 'approved' && approval.userSub !== undefined) {
+		await config.onDeviceAuthorizationApproved?.({
+			clientId: record.clientId,
+			scopes: record.scopes,
+			userSub: approval.userSub
+		});
+	}
 
 	return { ok: true };
 };
