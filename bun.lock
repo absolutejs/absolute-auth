@@ -6,7 +6,7 @@
       "name": "@absolutejs/auth",
       "dependencies": {
         "@absolutejs/linked-providers": "0.0.2",
-        "@absolutejs/manifest": "^0.1.0",
+        "@absolutejs/manifest": "^0.2.0",
         "@neondatabase/serverless": "1.0.0",
         "@sinclair/typebox": "^0.34.0",
         "citra": "0.29.7",
@@ -65,7 +65,7 @@
 
     "@absolutejs/linked-providers": ["@absolutejs/linked-providers@0.0.2", "", {}, "sha512-MNUIQBzUFWIqsrC33PO8YpWzT8tW0S3QWpcLZuLrt+nhyffU8w8aDNni/6jrGh36WGqauHWIsaz2gn7hLS+5Sw=="],
 
-    "@absolutejs/manifest": ["@absolutejs/manifest@0.1.0", "", { "peerDependencies": { "@sinclair/typebox": "^0.34.0" }, "bin": { "absolute-manifest": "dist/cli.js" } }, "sha512-Hf9mGkT42kwRCcEfXAG2sHzZwqlNpZH/Clsta/LJCxi1X/70tRp8n8O4EPlRvmM27VAiotDxpDbcx2IrG18XiQ=="],
+    "@absolutejs/manifest": ["@absolutejs/manifest@0.2.0", "", { "peerDependencies": { "@sinclair/typebox": "^0.34.0" }, "bin": { "absolute-manifest": "dist/cli.js" } }, "sha512-m6xxlaFu4pb63KL/8e0nREu/TTCDbUElwvfeMXL4sA1t93B9HMrGpnoOvw+YyEUqFKxs90iDrf2UTjVxq1cfyw=="],
 
     "@absolutejs/native-darwin-arm64": ["@absolutejs/native-darwin-arm64@0.19.0-beta.1008", "", { "os": "darwin", "cpu": "arm64" }, "sha512-bztRSnYXrD2O5UL9IUTP/Bc2Pd36sxmEd8elxjBPkgcB4iW9RmGUhCBGOMvGTKuEzHjWaJVVa1na6L9q12AxdA=="],
 
