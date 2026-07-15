@@ -164,6 +164,18 @@ export const resolveOAuthAuthorization = async ({
 	let userIdentity;
 	let accessToken = tokenResponse.access_token;
 	let refreshToken = tokenResponse.refresh_token;
+	if (authProvider === 'withings' && !accessToken) {
+		const body = Reflect.get(tokenResponse, 'body');
+		if (body && typeof body === 'object') {
+			const nestedAccessToken = Reflect.get(body, 'access_token');
+			if (typeof nestedAccessToken === 'string') {
+				accessToken = nestedAccessToken;
+			}
+		}
+	}
+	if (typeof accessToken !== 'string' || accessToken.length === 0) {
+		throw new Error('OAuth authorization response contains no access_token');
+	}
 
 	if (tokenResponse.id_token) {
 		userIdentity = normalizeProviderIdentity({
@@ -190,9 +202,7 @@ export const resolveOAuthAuthorization = async ({
 		refreshToken = tokenResponse.body.refresh_token;
 	} else {
 		userIdentity = normalizeProviderIdentity({
-			identity: await providerInstance.fetchUserProfile(
-				tokenResponse.access_token
-			),
+			identity: await providerInstance.fetchUserProfile(accessToken),
 			providerConfiguration: meta,
 			source: 'profile'
 		});

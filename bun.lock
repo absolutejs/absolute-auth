@@ -9,7 +9,7 @@
         "@absolutejs/manifest": "^0.1.0",
         "@neondatabase/serverless": "1.0.0",
         "@sinclair/typebox": "^0.34.0",
-        "citra": "0.29.6",
+        "citra": "0.29.7",
         "drizzle-orm": "1.0.0-rc.3",
       },
       "devDependencies": {
@@ -269,7 +269,7 @@
 
     "bun-types": ["bun-types@1.2.9", "", { "dependencies": { "@types/node": "*", "@types/ws": "*" } }, "sha512-dk/kOEfQbajENN/D6FyiSgOKEuUi9PWfqKQJEgwKrCMWbjS/S6tEXp178mWvWAcUSYm9ArDlWHZKO3T/4cLXiw=="],
 
-    "citra": ["citra@0.29.6", "", {}, "sha512-UiOab+GB+PB50OjHHfpsECn3dNrL2KaS0glDtT6yliuXrKSvGNIWst+JozitVUyWlGP2AdQ6NU6hkQQyWskkaw=="],
+    "citra": ["citra@0.29.7", "", {}, "sha512-jq9lrggebCD3Rv4k2uCb3U4dAP7/h7CpODntC2jCs/JZJI3JSA/i8Dh/sMUhsXDAMqKDR8fnTnU+BD6JZ2muUQ=="],
 
     "clsx": ["clsx@2.1.1", "", {}, "sha512-eYm0QWBtUrBWZWG0d386OGAw16Z995PiOVo2B7bjWSbHedGl5e0ZWaq65kOGgUSNesEIDkB9ISbTg/JK9dhCZA=="],
 

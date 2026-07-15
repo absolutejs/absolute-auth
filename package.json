@@ -1,5 +1,5 @@
 {
-	"version": "0.54.4",
+	"version": "0.54.5",
 	"name": "@absolutejs/auth",
 	"description": "An authorization library for absolutejs",
 	"repository": {
@@ -74,7 +74,7 @@
 	"dependencies": {
 		"@absolutejs/linked-providers": "0.0.2",
 		"@neondatabase/serverless": "1.0.0",
-		"citra": "0.29.6",
+		"citra": "0.29.7",
 		"@absolutejs/manifest": "^0.1.0",
 		"@sinclair/typebox": "^0.34.0",
 		"drizzle-orm": "1.0.0-rc.3"
