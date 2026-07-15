@@ -1,10 +1,9 @@
 import { Elysia, t } from 'elysia';
-import { createSessionCompatibilityLayer } from '../session/access';
 import { sessionStore } from '../session/state';
 import type { AuthSessionStore } from '../session/types';
 import { withSpan } from '../telemetry/tracing';
 import { authProviderOption } from '../typebox';
-import { OnSignOut, RouteString } from '../types';
+import { OnSignOut, RouteString, type SessionRecord } from '../types';
 
 type SignOutProps<UserType> = {
 	authSessionStore?: AuthSessionStore<UserType>;
@@ -62,16 +61,15 @@ export const signout = <UserType>({
 					// Prior versions hard-failed here, which 401'd every non-OAuth signout
 					// (issue #7).
 
-					const compatibilityLayer =
-						await createSessionCompatibilityLayer({
-							authSessionStore,
-							userSessionId: user_session_id.value
-						});
-					const signoutSession = authSessionStore
-						? compatibilityLayer.session
-						: session;
-					const currentSession =
-						signoutSession[user_session_id.value];
+					const currentSession = authSessionStore
+						? await authSessionStore.getSession(
+								user_session_id.value
+							)
+						: session[user_session_id.value];
+					const signoutSession: SessionRecord<UserType> =
+						currentSession === undefined
+							? {}
+							: { [user_session_id.value]: currentSession };
 
 					if (currentSession !== undefined) {
 						const signedOut = await runSignOut(onSignOut, {
@@ -87,15 +85,15 @@ export const signout = <UserType>({
 						}
 					}
 
-					delete signoutSession[user_session_id.value];
 					if (authSessionStore) {
-						await compatibilityLayer.persist();
-						await authSessionStore.removeSession(
-							user_session_id.value
-						);
-						await authSessionStore.removeUnregisteredSession(
-							user_session_id.value
-						);
+						await Promise.all([
+							authSessionStore.removeSession(
+								user_session_id.value
+							),
+							authSessionStore.removeUnregisteredSession(
+								user_session_id.value
+							)
+						]);
 					} else {
 						delete session[user_session_id.value];
 					}

@@ -5,6 +5,7 @@ import { credentialsLogin } from '../src/credentials/login';
 import { credentialsRegister } from '../src/credentials/register';
 import { createInMemoryCredentialStore } from '../src/credentials/inMemoryCredentialStore';
 import { signout } from '../src/routes/signout';
+import type { AuthSessionStore } from '../src/session/types';
 
 // Repros issue #7: `DELETE /oauth2/signout` 401'd on credentials sessions because the
 // handler hard-failed when the `auth_provider` cookie was missing. But `auth_provider`
@@ -73,6 +74,56 @@ const sessionCookieFrom = (response: Response) => {
 };
 
 describe('credentials signout (issue #7)', () => {
+	test('removes registered and unregistered records without redundant store calls', async () => {
+		const sessionId = '111e4567-e89b-42d3-a456-426614174001';
+		const calls = {
+			get: 0,
+			getUnregistered: 0,
+			remove: 0,
+			removeUnregistered: 0
+		};
+		const store: AuthSessionStore<TestUser> = {
+			getSession: async () => {
+				calls.get += 1;
+
+				return {
+					expiresAt: Date.now() + 60_000,
+					user: { email: 'a@b.com', sub: 'user:a@b.com' }
+				};
+			},
+			getUnregisteredSession: async () => {
+				calls.getUnregistered += 1;
+
+				return undefined;
+			},
+			removeSession: async () => {
+				calls.remove += 1;
+			},
+			removeUnregisteredSession: async () => {
+				calls.removeUnregistered += 1;
+			},
+			setSession: async () => undefined,
+			setUnregisteredSession: async () => undefined
+		};
+		const app = new Elysia().use(
+			signout({ authSessionStore: store, onSignOut: undefined })
+		);
+		const response = await app.handle(
+			new Request('http://localhost/oauth2/signout', {
+				headers: { cookie: `user_session_id=${sessionId}` },
+				method: 'DELETE'
+			})
+		);
+
+		expect(response.status).toBe(204);
+		expect(calls).toEqual({
+			get: 1,
+			getUnregistered: 0,
+			remove: 1,
+			removeUnregistered: 1
+		});
+	});
+
 	test('signs out a credentials session even without auth_provider cookie', async () => {
 		const app = buildApp();
 		await postJson(app, '/auth/register', {

@@ -67,6 +67,21 @@ describe('createAuthClient', () => {
 		expect(result.error?.message).toBe('boom');
 	});
 
+	test('signOut deletes the universal signout route', async () => {
+		const calls: { method?: string; url: string }[] = [];
+		const client = createAuthClient({
+			fetch: stub((url, init) => {
+				calls.push({ method: init.method, url });
+
+				return new Response(null, { status: 204 });
+			})
+		});
+
+		const result = await client.signOut();
+		expect(result.error).toBeNull();
+		expect(calls).toEqual([{ method: 'DELETE', url: '/oauth2/signout' }]);
+	});
+
 	test('routes overrides change the URL the client posts to', async () => {
 		const calls: string[] = [];
 		const client = createAuthClient({
