@@ -3,12 +3,35 @@ import { sessionStore } from '../session/state';
 import type { AuthSessionStore } from '../session/types';
 import { withSpan } from '../telemetry/tracing';
 import { authProviderOption } from '../typebox';
-import { OnSignOut, RouteString, type SessionRecord } from '../types';
+import {
+	OnSignOut,
+	RouteString,
+	type SessionData,
+	type SessionRecord,
+	type UserSessionId
+} from '../types';
 
 type SignOutProps<UserType> = {
 	authSessionStore?: AuthSessionStore<UserType>;
 	signoutRoute?: RouteString;
 	onSignOut: OnSignOut<UserType>;
+};
+
+const sessionForSignOut = <UserType>({
+	authSessionStore,
+	currentSession,
+	session,
+	userSessionId
+}: {
+	authSessionStore?: AuthSessionStore<UserType>;
+	currentSession?: SessionData<UserType>;
+	session: SessionRecord<UserType>;
+	userSessionId: UserSessionId;
+}) => {
+	if (!authSessionStore) return session;
+	if (!currentSession) return {};
+
+	return { [userSessionId]: currentSession };
 };
 
 const runSignOut = async <UserType>(
@@ -66,10 +89,12 @@ export const signout = <UserType>({
 								user_session_id.value
 							)
 						: session[user_session_id.value];
-					const signoutSession: SessionRecord<UserType> =
-						currentSession === undefined
-							? {}
-							: { [user_session_id.value]: currentSession };
+					const signoutSession = sessionForSignOut({
+						authSessionStore,
+						currentSession,
+						session,
+						userSessionId: user_session_id.value
+					});
 
 					if (currentSession !== undefined) {
 						const signedOut = await runSignOut(onSignOut, {
