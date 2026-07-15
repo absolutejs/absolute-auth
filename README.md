@@ -36,6 +36,27 @@ grants — against one shared Elysia server.
 
 ## Authentication System
 
+### Expired browser sessions
+
+Long-lived application tabs can install the framework-agnostic session guard
+once during client boot. It checks the package status route when a tab becomes
+active, intercepts `401` responses from explicitly protected same-origin paths,
+and returns the person to the page they were using after sign-in:
+
+```ts
+import { installSessionExpiryGuard } from '@absolutejs/auth/client';
+
+installSessionExpiryGuard({
+	protectedPaths: ['/v1/'],
+	signInPath: '/signin'
+});
+```
+
+The defaults use `/oauth2/status`, `/signin`, `reason=session_expired`, and a
+`returnUrl` query parameter. Use `onExpired` when a router or application shell
+should own navigation. The returned guard exposes `check()` for an immediate
+status check and `dispose()` for cleanup.
+
 ### Optional SAML adapter
 
 SAML route types and wiring are available from the main package. The concrete

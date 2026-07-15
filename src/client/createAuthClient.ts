@@ -37,6 +37,7 @@ export type AuthClientRoutes = {
 	register?: string;
 	sessions?: string;
 	signout?: string;
+	status?: string;
 };
 
 const DEFAULT_ROUTES: Required<AuthClientRoutes> = {
@@ -59,7 +60,8 @@ const DEFAULT_ROUTES: Required<AuthClientRoutes> = {
 	passwordResetRequest: '/auth/reset-password/request',
 	register: '/auth/register',
 	sessions: '/auth/sessions',
-	signout: '/auth/signout'
+	signout: '/auth/signout',
+	status: '/oauth2/status'
 };
 
 export type AuthClientConfig = {
@@ -222,7 +224,11 @@ export const createAuthClient = ({
 					| { status: 'verification_required' }
 				>(resolvedRoutes.register, body)
 		},
-		signOut: () => post<{ ok: true } | null>(resolvedRoutes.signout)
+		signOut: () => post<{ ok: true } | null>(resolvedRoutes.signout),
+		status: () =>
+			get<{ impersonator?: unknown; user: unknown | null }>(
+				resolvedRoutes.status
+			)
 	};
 };
 

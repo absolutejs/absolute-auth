@@ -82,6 +82,22 @@ describe('createAuthClient', () => {
 		expect(calls[0]).toBe('/api/v2/login');
 	});
 
+	test('status reads the configurable session status route', async () => {
+		const calls: { method?: string; url: string }[] = [];
+		const client = createAuthClient({
+			fetch: stub((url, init) => {
+				calls.push({ method: init.method, url });
+
+				return new Response(JSON.stringify({ user: null }));
+			}),
+			routes: { status: '/api/session' }
+		});
+
+		const result = await client.status();
+		expect(result.data).toEqual({ user: null });
+		expect(calls).toEqual([{ method: 'GET', url: '/api/session' }]);
+	});
+
 	test('baseUrl prefixes every request', async () => {
 		const calls: string[] = [];
 		const client = createAuthClient({
