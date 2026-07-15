@@ -35,6 +35,18 @@ grants — against one shared Elysia server.
 
 ## Authentication System
 
+### Optional SAML adapter
+
+SAML route types and wiring are available from the main package. The concrete
+`@node-saml/node-saml` adapter is isolated so applications that do not use SAML do
+not install or bundle its XML/crypto dependencies:
+
+```ts
+import { createNodeSamlAdapter } from '@absolutejs/auth/saml';
+```
+
+Install `@node-saml/node-saml` only in applications that use this adapter.
+
 ### Features
 
 - **Authorization**: Handles the authorization process by generating the authorization URL and redirecting the user to the authentication provider.

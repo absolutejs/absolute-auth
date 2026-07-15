@@ -1,3 +1,4 @@
+import 'reflect-metadata';
 import type { SamlAdapter, SamlProfile } from './config';
 import type { SamlConnection } from './types';
 

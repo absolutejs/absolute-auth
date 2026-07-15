@@ -858,10 +858,6 @@ export { ssoDiscoveryRoute } from './sso/discoveryRoute';
 export { oidcSsoRoutes } from './sso/oidcRoutes';
 export { samlIdpRoutes } from './sso/samlIdpRoutes';
 export { samlSsoRoutes } from './sso/samlRoutes';
-export {
-	createNodeSamlAdapter,
-	type NodeSamlAdapterOptions
-} from './sso/nodeSamlAdapter';
 export { createInMemorySamlServiceProviderStore } from './sso/inMemorySamlServiceProviderStore';
 export { createInMemorySsoConnectionStore } from './sso/inMemorySsoConnectionStore';
 export {
