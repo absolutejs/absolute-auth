@@ -874,7 +874,6 @@ export * from './webauthn/adapter';
 export * from './webauthn/config';
 export * from './webauthn/types';
 export { webauthnRoutes } from './webauthn/routes';
-export { createSimpleWebAuthnAdapter } from './webauthn/simpleWebAuthnAdapter';
 export { createInMemoryWebAuthnCredentialStore } from './webauthn/inMemoryWebAuthnCredentialStore';
 export {
 	createNeonWebAuthnCredentialStore,

@@ -8,20 +8,21 @@ Absolute Auth is a TypeScript-based authentication system that provides a compre
 
 ### Prerequisites
 
-- [Elysia](https://elysiajs.com/) 
+- [Elysia](https://elysiajs.com/)
 
 ### Steps to Install Dependencies
 
 1. Clone the repository:
-   ```bash
-   git clone https://github.com/alexkahndev/absolute-auth.git
-   cd absolute-auth
-   ```
+
+    ```bash
+    git clone https://github.com/alexkahndev/absolute-auth.git
+    cd absolute-auth
+    ```
 
 2. Install the dependencies:
-   ```bash
-   bun install
-   ```
+    ```bash
+    bun install
+    ```
 
 ## Usage
 
@@ -46,6 +47,12 @@ import { createNodeSamlAdapter } from '@absolutejs/auth/saml';
 ```
 
 Install `@node-saml/node-saml` only in applications that use this adapter.
+
+The concrete SimpleWebAuthn adapter follows the same boundary:
+
+```ts
+import { createSimpleWebAuthnAdapter } from '@absolutejs/auth/webauthn';
+```
 
 ### Features
 

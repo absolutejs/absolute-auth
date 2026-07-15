@@ -1,5 +1,5 @@
 {
-	"version": "0.54.0",
+	"version": "0.54.1",
 	"name": "@absolutejs/auth",
 	"description": "An authorization library for absolutejs",
 	"repository": {
@@ -17,7 +17,7 @@
 	"license": "BSL-1.1",
 	"author": "Alex Kahn",
 	"scripts": {
-		"build": "rm -rf dist && bun build src/index.ts src/saml.ts src/htmx/index.ts src/client/index.ts src/client/react.ts src/client/vue.ts src/client/solid.ts src/client/svelte.ts src/plugins/index.ts src/providers/index.ts src/manifest.ts --root src --outdir dist --sourcemap --target=bun --external elysia --external react --external vue --external solid-js --external svelte --external @opentelemetry/api --external @simplewebauthn/server --external @node-saml/node-saml && bun build src/cli/migrate.ts --outdir dist/cli --sourcemap --target=bun --external @neondatabase/serverless --external drizzle-orm && bun build src/fingerprint-client/index.ts --outdir dist/fingerprint-client --sourcemap --target=browser && tsc --emitDeclarationOnly --project tsconfig.json && chmod +x dist/cli/migrate.js && absolute-manifest emit",
+		"build": "rm -rf dist && bun build src/index.ts src/saml.ts src/webauthn.ts src/htmx/index.ts src/client/index.ts src/client/react.ts src/client/vue.ts src/client/solid.ts src/client/svelte.ts src/plugins/index.ts src/providers/index.ts src/manifest.ts --root src --outdir dist --sourcemap --target=bun --external elysia --external react --external vue --external solid-js --external svelte --external @opentelemetry/api --external @simplewebauthn/server --external @node-saml/node-saml && bun build src/cli/migrate.ts --outdir dist/cli --sourcemap --target=bun --external @neondatabase/serverless --external drizzle-orm && bun build src/fingerprint-client/index.ts --outdir dist/fingerprint-client --sourcemap --target=browser && tsc --emitDeclarationOnly --project tsconfig.json && chmod +x dist/cli/migrate.js && absolute-manifest emit",
 		"config": "absolute config",
 		"test": "bun test",
 		"format": "absolute prettier --write",
@@ -141,6 +141,11 @@
 			"types": "./dist/saml.d.ts",
 			"require": "./dist/saml.js"
 		},
+		"./webauthn": {
+			"import": "./dist/webauthn.js",
+			"types": "./dist/webauthn.d.ts",
+			"require": "./dist/webauthn.js"
+		},
 		"./react": {
 			"import": "./dist/client/react.js",
 			"types": "./dist/client/react.d.ts",
@@ -177,6 +182,9 @@
 		"*": {
 			"saml": [
 				"dist/saml.d.ts"
+			],
+			"webauthn": [
+				"dist/webauthn.d.ts"
 			],
 			"*": [
 				"dist/index.d.ts"
