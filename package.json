@@ -1,5 +1,5 @@
 {
-	"version": "0.54.8",
+	"version": "0.54.9",
 	"name": "@absolutejs/auth",
 	"description": "An authorization library for absolutejs",
 	"repository": {
@@ -98,6 +98,7 @@
 		"eslint-plugin-security": "^4.0.0",
 		"globals": "^17.4.0",
 		"prettier": "3.5.3",
+		"react": "^19.2.7",
 		"solid-js": "^1.9.13",
 		"svelte": "^5.55.9",
 		"typescript": "5.8.3",
