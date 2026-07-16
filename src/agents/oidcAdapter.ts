@@ -1,4 +1,5 @@
 import { verifyJwt } from '../oidc/keys';
+import { verifyDpopProof } from '../oidc/dpop';
 import type { AgentCredentialVerifier } from './types';
 
 const BEARER_PREFIX = 'Bearer ';
@@ -21,22 +22,31 @@ const readAudience = (audience: unknown) => {
  * agent identity while retaining `sub` as the authorizing user. */
 export const createOidcAgentCredentialVerifier = ({
 	issuer,
+	isUsedDpopJti,
+	maxDpopAgeMs,
 	publicJwk,
+	requireDpop = false,
 	resource
 }: {
 	issuer: string;
+	isUsedDpopJti?: (jti: string) => boolean | Promise<boolean>;
+	maxDpopAgeMs?: number;
 	publicJwk: JsonWebKey;
+	requireDpop?: boolean;
 	resource: string;
 }) => {
 	const verifier: AgentCredentialVerifier = async (request) => {
 		const authorization = request.headers.get('authorization');
 		if (
 			authorization === null ||
-			!authorization.startsWith(BEARER_PREFIX)
+			(!authorization.startsWith(BEARER_PREFIX) &&
+				!authorization.startsWith('DPoP '))
 		) {
 			return undefined;
 		}
-		const token = authorization.slice(BEARER_PREFIX.length).trim();
+		const token = authorization
+			.slice(authorization.indexOf(' ') + 1)
+			.trim();
 		if (token.length === 0) return undefined;
 		const verified = await verifyJwt(token, publicJwk);
 		const payload = verified?.payload;
@@ -49,6 +59,32 @@ export const createOidcAgentCredentialVerifier = ({
 			typeof payload.client_id !== 'string'
 		) {
 			return undefined;
+		}
+		const confirmation = payload.cnf;
+		const boundJkt =
+			typeof confirmation === 'object' &&
+			confirmation !== null &&
+			typeof (confirmation as { jkt?: unknown }).jkt === 'string'
+				? (confirmation as { jkt: string }).jkt
+				: undefined;
+		if (boundJkt !== undefined || requireDpop) {
+			if (!authorization.startsWith('DPoP ')) return undefined;
+			const proof = await verifyDpopProof({
+				accessToken: token,
+				htm: request.method,
+				htu: request.url,
+				isUsedJti: isUsedDpopJti,
+				...(maxDpopAgeMs === undefined
+					? {}
+					: { maxAgeMs: maxDpopAgeMs }),
+				proof: request.headers.get('dpop') ?? undefined
+			});
+			if (
+				proof === undefined ||
+				boundJkt === undefined ||
+				proof.jkt !== boundJkt
+			)
+				return undefined;
 		}
 
 		return {

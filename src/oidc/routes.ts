@@ -218,12 +218,15 @@ export const oidcProviderRoutes = <UserType>(
 	const userinfoRoute: RouteString = `${oidcRoute}/userinfo`;
 	const registrationBaseUrl = `${issuer}${registrationRoute}`;
 	const tokenUrl = `${issuer}${oidcRoute}/token`;
+	const resolveClient = async (clientId: string) =>
+		(await clientStore.findClient(clientId)) ??
+		(await config.resolveClientIdMetadata?.(clientId));
 
 	const authenticateClient = async (
 		clientId: string,
 		clientSecret: string | undefined
 	) => {
-		const client = await clientStore.findClient(clientId);
+		const client = await resolveClient(clientId);
 		if (client === undefined) return undefined;
 		if (client.hashedSecret === undefined) return client;
 		if (clientSecret === undefined) return undefined;
@@ -293,7 +296,7 @@ export const oidcProviderRoutes = <UserType>(
 				assertion: bodyClientAssertion,
 				expectedAudience: tokenUrl,
 				jtiStore: config.clientAssertionJtiStore,
-				resolveClient: clientStore.findClient
+				resolveClient
 			});
 
 			return client === undefined
@@ -303,7 +306,7 @@ export const oidcProviderRoutes = <UserType>(
 		const clientId = bodyClientId ?? basicClientId;
 		if (clientId === undefined) return undefined;
 
-		const candidate = await clientStore.findClient(clientId);
+		const candidate = await resolveClient(clientId);
 		// RFC 8705 self_signed_tls_client_auth: client registered cert thumbprints AND a
 		// cert is forwarded by the reverse proxy. Match its SHA-256 thumbprint against the
 		// registered list; on hit, return the client + the thumbprint for cnf binding.
@@ -620,6 +623,8 @@ export const oidcProviderRoutes = <UserType>(
 		backchannel_logout_session_supported: false,
 		backchannel_logout_supported: true,
 		code_challenge_methods_supported: ['S256'],
+		client_id_metadata_document_supported:
+			config.resolveClientIdMetadata !== undefined,
 		dpop_signing_alg_values_supported: ['ES256'],
 		end_session_endpoint: `${issuer}${endSessionRoute}`,
 		grant_types_supported: grantTypes,
@@ -706,9 +711,7 @@ export const oidcProviderRoutes = <UserType>(
 					});
 		const clientId = hint?.audClientId ?? query.client_id;
 		const client =
-			clientId === undefined
-				? undefined
-				: await config.clientStore.findClient(clientId);
+			clientId === undefined ? undefined : await resolveClient(clientId);
 		// Best-effort: pull the logged-in user's sub from the session as a fallback
 		// when no id_token_hint was supplied, so we can still fan out back-channel
 		// pushes for the active session.
@@ -803,7 +806,7 @@ export const oidcProviderRoutes = <UserType>(
 					const initialClient =
 						initialClientId === undefined
 							? undefined
-							: await clientStore.findClient(initialClientId);
+							: await resolveClient(initialClientId);
 
 					// RFC 9101 — if the caller passed `request=<jwt>`, the signed JWT's
 					// payload REPLACES every other authorize param. We can only verify the

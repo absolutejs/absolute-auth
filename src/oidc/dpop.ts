@@ -114,6 +114,7 @@ const normalizeHtu = (value: unknown) => {
 // Verify a DPoP proof for a request. Returns the key thumbprint (`jkt`) to bind to the token,
 // or undefined if the proof is missing/invalid/stale/replayed.
 export const verifyDpopProof = async ({
+	accessToken,
 	htm,
 	htu,
 	isUsedJti,
@@ -121,6 +122,7 @@ export const verifyDpopProof = async ({
 	now = Date.now(),
 	proof
 }: {
+	accessToken?: string;
 	htm: string;
 	htu: string;
 	isUsedJti?: (jti: string) => boolean | Promise<boolean>;
@@ -145,6 +147,15 @@ export const verifyDpopProof = async ({
 	if (verified === undefined) return undefined;
 
 	const { payload } = verified;
+	if (accessToken !== undefined) {
+		const expectedAth = Buffer.from(
+			await crypto.subtle.digest(
+				'SHA-256',
+				new TextEncoder().encode(accessToken)
+			)
+		).toString('base64url');
+		if (payload.ath !== expectedAth) return undefined;
+	}
 	const iatMs =
 		typeof payload.iat === 'number' ? payload.iat * SECONDS_TO_MS : 0;
 	if (

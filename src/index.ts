@@ -821,6 +821,7 @@ export {
 	createPostgresApiKeyStore
 } from './apikeys/postgresStores';
 export * from './oidc/config';
+export * from './oidc/clientIdMetadata';
 export * from './oidc/types';
 export { oidcProviderRoutes } from './oidc/routes';
 export {

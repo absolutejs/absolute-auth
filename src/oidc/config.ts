@@ -68,6 +68,12 @@ export type OidcProviderConfig<UserType> = {
 	// management token is persisted here (hashed) and rotates on every PUT.
 	clientRegistrationTokenStore?: ClientRegistrationTokenStore;
 	clientStore: OAuthClientStore;
+	// IETF Client ID Metadata Documents: resolve an HTTPS URL client_id without
+	// pre-registration. Use createClientIdMetadataResolver with an egress-guarded
+	// fetch. Static clients always win over dynamically resolved metadata.
+	resolveClientIdMetadata?: (
+		clientId: string
+	) => Promise<OAuthClient | undefined>;
 	// Optional — enables the RFC 8628 device-authorization flow. When set, `/device_authorization`
 	// + the `urn:ietf:params:oauth:grant-type:device_code` token grant are mounted, and
 	// `approveDeviceAuthorization` becomes callable from your verification UI.
@@ -833,7 +839,9 @@ export const issueBackchannelAuth = async <UserType>({
 	if (!config.backchannelAuthStore || !config.resolveBackchannelUser) {
 		return { error: 'invalid_request', ok: false };
 	}
-	const client = await config.clientStore.findClient(clientId);
+	const client =
+		(await config.clientStore.findClient(clientId)) ??
+		(await config.resolveClientIdMetadata?.(clientId));
 	if (!client) return { error: 'invalid_client', ok: false };
 	const resolved = await config.resolveBackchannelUser({
 		client,
