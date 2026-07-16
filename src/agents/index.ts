@@ -1,18 +1,25 @@
 export * from './config';
 export * from './types';
+export * from './registration';
+export * from './registrationClient';
+export * from './idJag';
 export * from '../oidc/clientIdMetadata';
 export { createOidcAgentCredentialVerifier } from './oidcAdapter';
 export { agentHasScopes, resolveAgentPrincipal } from './principal';
 export { agentAuthChallenge, agentAuthPlugin } from './routes';
 export {
 	createInMemoryAgentDelegationStore,
+	createInMemoryAgentIdentityRegistrationStore,
 	createInMemoryAgentRegistrationStore
 } from './inMemoryStores';
 export {
 	agentDelegationsTable,
+	agentIdentityRegistrationsTable,
 	agentRegistrationsTable,
 	createNeonAgentDelegationStore,
+	createNeonAgentIdentityRegistrationStore,
 	createNeonAgentRegistrationStore,
 	createPostgresAgentDelegationStore,
+	createPostgresAgentIdentityRegistrationStore,
 	createPostgresAgentRegistrationStore
 } from './postgresStores';

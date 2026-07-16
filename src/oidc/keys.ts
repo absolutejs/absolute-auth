@@ -23,8 +23,24 @@ const fromBase64Url = (value: string) =>
 const encodeSegment = (value: unknown) =>
 	Buffer.from(JSON.stringify(value)).toString('base64url');
 
-const decodeSegment = (segment: string) =>
-	JSON.parse(Buffer.from(segment, 'base64url').toString('utf8'));
+const decodeSegment = (segment: string) => {
+	try {
+		const value: unknown = JSON.parse(
+			Buffer.from(segment, 'base64url').toString('utf8')
+		);
+		if (
+			typeof value !== 'object' ||
+			value === null ||
+			Array.isArray(value)
+		) {
+			return undefined;
+		}
+
+		return Object.fromEntries(Object.entries(value));
+	} catch {
+		return undefined;
+	}
+};
 
 // Generate an ES256 signing key. Persist `privateJwk` (it signs tokens); `publicJwk` is served
 // from JWKS. `kid` is the JWK thumbprint.
@@ -56,7 +72,8 @@ export const jwkThumbprint = async (jwk: JsonWebKey) => {
 // Sign a compact ES256 JWT.
 export const signJwt = async (
 	payload: Record<string, unknown>,
-	signing: SigningKey
+	signing: SigningKey,
+	typ = 'JWT'
 ) => {
 	const key = await crypto.subtle.importKey(
 		'jwk',
@@ -65,7 +82,7 @@ export const signJwt = async (
 		false,
 		['sign']
 	);
-	const input = `${encodeSegment({ alg: 'ES256', kid: signing.kid, typ: 'JWT' })}.${encodeSegment(payload)}`;
+	const input = `${encodeSegment({ alg: 'ES256', kid: signing.kid, typ })}.${encodeSegment(payload)}`;
 	const signature = await crypto.subtle.sign(
 		ES256,
 		key,
@@ -111,9 +128,12 @@ export const verifyJwt = async (token: string, publicJwk: JsonWebKey) => {
 		ENCODER.encode(`${headerSegment}.${payloadSegment}`)
 	);
 	if (!valid) return undefined;
+	const header = decodeSegment(headerSegment);
+	const payload = decodeSegment(payloadSegment);
+	if (header === undefined || payload === undefined) return undefined;
 
 	return {
-		header: decodeSegment(headerSegment),
-		payload: decodeSegment(payloadSegment)
+		header,
+		payload
 	};
 };

@@ -14,6 +14,7 @@ import {
 } from '../apikeys/postgresStores';
 import {
 	agentDelegationsTable,
+	agentIdentityRegistrationsTable,
 	agentRegistrationsTable
 } from '../agents/postgresStores';
 import { auditEventsTable } from '../audit/postgresAuditStore';
@@ -122,10 +123,20 @@ const mfaTotpLockoutMigration: Migration = {
 
 export const blockMigrations: Record<BlockName, BlockMigrations> = {
 	adaptive: initMigration('adaptive', [knownDevicesTable, loginHistoryTable]),
-	agents: initMigration('agents', [
-		agentRegistrationsTable,
-		agentDelegationsTable
-	]),
+	agents: {
+		block: 'agents',
+		migrations: [
+			...initMigration('agents', [
+				agentRegistrationsTable,
+				agentDelegationsTable,
+				agentIdentityRegistrationsTable
+			]).migrations,
+			{
+				id: '0002_identity_registration',
+				sql: tablesToInitSql([agentIdentityRegistrationsTable])
+			}
+		]
+	},
 	apikeys: initMigration('apikeys', [
 		accessTokensTable,
 		apiClientsTable,

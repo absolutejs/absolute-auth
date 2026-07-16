@@ -1,9 +1,22 @@
 import type {
 	AgentDelegation,
 	AgentDelegationStore,
+	AgentIdentityRegistration,
+	AgentIdentityRegistrationStore,
 	AgentRegistration,
 	AgentRegistrationStore
 } from './types';
+
+const cloneIdentityRegistration = (
+	value: AgentIdentityRegistration
+): AgentIdentityRegistration => ({
+	...value,
+	claimAttempt:
+		value.claimAttempt === undefined
+			? undefined
+			: { ...value.claimAttempt },
+	upstream: value.upstream === undefined ? undefined : { ...value.upstream }
+});
 
 const cloneRegistration = (value: AgentRegistration): AgentRegistration => ({
 	...value,
@@ -62,6 +75,103 @@ export const createInMemoryAgentDelegationStore = (): AgentDelegationStore => {
 		}
 	};
 };
+export const createInMemoryAgentIdentityRegistrationStore =
+	(): AgentIdentityRegistrationStore => {
+		const registrations = new Map<string, AgentIdentityRegistration>();
+
+		return {
+			create: async (registration) => {
+				const conflicts = [...registrations.values()].some(
+					(existing) =>
+						existing.registrationId ===
+							registration.registrationId ||
+						existing.agentId === registration.agentId ||
+						existing.claimTokenHash ===
+							registration.claimTokenHash ||
+						(existing.claimAttempt !== undefined &&
+							existing.claimAttempt.tokenHash ===
+								registration.claimAttempt?.tokenHash) ||
+						(existing.upstream !== undefined &&
+							registration.upstream !== undefined &&
+							existing.upstream.clientId ===
+								registration.upstream.clientId &&
+							existing.upstream.issuer ===
+								registration.upstream.issuer &&
+							existing.upstream.subject ===
+								registration.upstream.subject)
+				);
+				if (conflicts) return false;
+				registrations.set(
+					registration.registrationId,
+					cloneIdentityRegistration(registration)
+				);
+
+				return true;
+			},
+			findByAgentId: async (agentId) => {
+				const value = [...registrations.values()].find(
+					(registration) => registration.agentId === agentId
+				);
+
+				return value === undefined
+					? undefined
+					: cloneIdentityRegistration(value);
+			},
+			findByAttemptTokenHash: async (attemptTokenHash) => {
+				const value = [...registrations.values()].find(
+					(registration) =>
+						registration.claimAttempt?.tokenHash ===
+						attemptTokenHash
+				);
+
+				return value === undefined
+					? undefined
+					: cloneIdentityRegistration(value);
+			},
+			findByClaimTokenHash: async (claimTokenHash) => {
+				const value = [...registrations.values()].find(
+					(registration) =>
+						registration.claimTokenHash === claimTokenHash
+				);
+
+				return value === undefined
+					? undefined
+					: cloneIdentityRegistration(value);
+			},
+			findByRegistrationId: async (registrationId) => {
+				const value = registrations.get(registrationId);
+
+				return value === undefined
+					? undefined
+					: cloneIdentityRegistration(value);
+			},
+			findByUpstreamIdentity: async ({ clientId, issuer, subject }) => {
+				const value = [...registrations.values()].find(
+					(registration) =>
+						registration.upstream?.clientId === clientId &&
+						registration.upstream?.issuer === issuer &&
+						registration.upstream.subject === subject
+				);
+
+				return value === undefined
+					? undefined
+					: cloneIdentityRegistration(value);
+			},
+			replace: async (registration, expectedVersion) => {
+				const current = registrations.get(registration.registrationId);
+				if (current?.version !== expectedVersion) return false;
+				registrations.set(
+					registration.registrationId,
+					cloneIdentityRegistration({
+						...registration,
+						version: expectedVersion + 1
+					})
+				);
+
+				return true;
+			}
+		};
+	};
 export const createInMemoryAgentRegistrationStore =
 	(): AgentRegistrationStore => {
 		const registrations = new Map<string, AgentRegistration>();

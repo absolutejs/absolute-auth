@@ -77,11 +77,13 @@ import { createSimpleWebAuthnAdapter } from '@absolutejs/auth/webauthn';
 
 ### Delegated AI agents
 
-The `agentAuth` block provides a standards-first agent identity layer without
-depending on a vendor registration protocol. It publishes RFC 9728 protected
-resource metadata, records agent registrations and user delegations, and adds a
-scoped `protectAgent` guard. Protocol-specific credentials are normalized by a
-verifier adapter:
+The `agentAuth` block provides a standards-first agent identity layer. It
+publishes RFC 9728 metadata, records registrations and user delegations, and
+adds a scoped `protectAgent` guard. It can also serve a generated `/auth.md`
+registration guide and matching structured OAuth metadata. This is native to
+`@absolutejs/auth`; no WorkOS service or separate package is required.
+
+Protocol-specific credentials are normalized by verifier adapters:
 
 ```ts
 import {
@@ -132,6 +134,18 @@ app.get('/documents', ({ protectAgent }) =>
 
 Postgres and Neon registration/delegation stores are exported alongside the
 in-memory stores. Include the `agents` migration block in production.
+
+For agents that need to create or link an account, configure
+`agentAuth.agentRegistration` with an identity-registration store, access-token
+store, signing key, authenticated-user resolver, and post-claim scopes. Enable
+`service_auth` or anonymous registration explicitly; anonymous registration
+also requires an idempotent callback that revokes every pre-claim token before
+ownership changes. Absolute exposes provider and consumer helpers from
+`@absolutejs/auth/agents`, including ID-JAG issuance and verification, secure
+RFC 9728/RFC 8414 discovery, claim polling, and assertion exchange.
+
+See [the agent-auth interoperability and deployment guide](docs/AGENT-AUTH.md)
+for supported standards, security invariants, and the production checklist.
 
 ### Features
 

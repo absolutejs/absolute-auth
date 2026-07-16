@@ -24,6 +24,11 @@ import type {
 
 export const DEFAULT_OIDC_ROUTE: RouteString = '/oauth2';
 
+export type PublicTokenGrantResult = {
+	body: Record<string, unknown>;
+	status: number;
+};
+
 const MS_PER_SECOND = 1000;
 const TOKEN_BYTES = 32;
 const REFRESH_TTL_DAYS = 30;
@@ -46,6 +51,16 @@ const resolveAccessTtl = (
 // tokens. The authorize endpoint reuses the package's own session, so the IdP login gets
 // passkeys / MFA / SSO for free.
 export type OidcProviderConfig<UserType> = {
+	/** Additional non-conflicting RFC 8414 metadata. Reserved core OAuth keys
+	 * cannot be replaced. Used by profiles such as open agent registration. */
+	additionalDiscoveryMetadata?: Record<string, unknown>;
+	/** Public extension grants whose bearer material is carried in their body
+	 * (for example an agent claim_token). They run before OAuth client auth. */
+	publicTokenGrantTypes?: string[];
+	handlePublicTokenGrant?: (context: {
+		body: Record<string, string | undefined>;
+		request: Request;
+	}) => Promise<PublicTokenGrantResult | undefined>;
 	// Number, or a per-grant function of the granted scopes — lets high-privilege
 	// scopes (e.g. an admin scope) get short-lived tokens while normal grants
 	// keep the default hour.

@@ -2,6 +2,12 @@ import { createOAuth2Client } from 'citra';
 import { Elysia } from 'elysia';
 import { apiKeysRoutes } from './apikeys/routes';
 import { agentAuthPlugin } from './agents/routes';
+import {
+	AGENT_CLAIM_GRANT_TYPE,
+	AGENT_IDENTITY_ASSERTION_GRANT_TYPE,
+	agentRegistrationDiscoveryMetadata,
+	handleAgentTokenGrant
+} from './agents/registration';
 import { createAuditEmitter } from './audit/config';
 import {
 	composeCallbackAudit,
@@ -146,6 +152,56 @@ export const auth = async <UserType>({
 	onRevocationError,
 	onSessionCleanup
 }: AuthConfig<UserType>) => {
+	if (agentAuth?.agentRegistration !== undefined) {
+		if (oidc === undefined) {
+			throw new Error(
+				'agentAuth.agentRegistration requires the OIDC provider'
+			);
+		}
+		if (agentAuth.authorizationServer !== oidc.issuer) {
+			throw new Error(
+				'agentAuth.authorizationServer must equal oidc.issuer'
+			);
+		}
+		const registration = agentAuth.agentRegistration;
+		const unknownScopes = [
+			...(registration.preClaimScopes ?? []),
+			...registration.postClaimScopes
+		].filter((scope) => !agentAuth.scopes.includes(scope));
+		if (unknownScopes.length > 0) {
+			throw new Error(
+				`Agent registration uses undeclared scopes: ${[...new Set(unknownScopes)].join(', ')}`
+			);
+		}
+		if (
+			registration.allowAnonymous === true &&
+			registration.revokeAccessTokens === undefined
+		) {
+			throw new Error(
+				'Anonymous agent registration requires revokeAccessTokens'
+			);
+		}
+		/* eslint-disable absolute/max-depth-extended -- startup validation reports the precise invalid option */
+		for (const [name, value] of Object.entries({
+			assertionTtlMs: registration.assertionTtlMs,
+			attemptTtlMs: registration.attemptTtlMs,
+			claimTtlMs: registration.claimTtlMs,
+			maxAuthenticationAgeMs: registration.maxAuthenticationAgeMs,
+			maxCodeAttempts: registration.maxCodeAttempts,
+			pollIntervalSeconds: registration.pollIntervalSeconds,
+			tokenTtlMs: registration.tokenTtlMs
+		})) {
+			if (
+				value !== undefined &&
+				(!Number.isFinite(value) || value <= 0)
+			) {
+				throw new Error(
+					`agentAuth.agentRegistration.${name} must be positive`
+				);
+			}
+		}
+		/* eslint-enable absolute/max-depth-extended */
+	}
 	if (tracing !== undefined) await initTracing(tracing);
 	const clientProviders: ClientProviders = await buildClientProviders(
 		providersConfiguration,
@@ -170,9 +226,53 @@ export const auth = async <UserType>({
 				})
 			: undefined;
 	const lockoutGuard = lockout ? createLockoutGuard(lockout) : undefined;
+	const resolvedAgentAuth =
+		agentAuth === undefined
+			? undefined
+			: {
+					...agentAuth,
+					oidcRoute: agentAuth.oidcRoute ?? oidc?.oidcRoute
+				};
 	const oidcConfig = oidc
 		? {
 				...oidc,
+				additionalDiscoveryMetadata: {
+					...oidc.additionalDiscoveryMetadata,
+					...(resolvedAgentAuth?.agentRegistration === undefined
+						? {}
+						: {
+								agent_auth:
+									agentRegistrationDiscoveryMetadata(
+										resolvedAgentAuth
+									)
+							})
+				},
+				publicTokenGrantTypes: [
+					...(oidc.publicTokenGrantTypes ?? []),
+					...(resolvedAgentAuth?.agentRegistration === undefined
+						? []
+						: [
+								AGENT_CLAIM_GRANT_TYPE,
+								AGENT_IDENTITY_ASSERTION_GRANT_TYPE
+							])
+				],
+				handlePublicTokenGrant: async (
+					context: Parameters<
+						NonNullable<typeof oidc.handlePublicTokenGrant>
+					>[0]
+				) => {
+					const consumerResult =
+						await oidc.handlePublicTokenGrant?.(context);
+					if (consumerResult !== undefined) return consumerResult;
+					if (resolvedAgentAuth?.agentRegistration === undefined) {
+						return undefined;
+					}
+
+					return handleAgentTokenGrant(
+						resolvedAgentAuth,
+						context.body
+					);
+				},
 				onClientRegistered: async (
 					context: Parameters<
 						NonNullable<typeof oidc.onClientRegistered>
@@ -487,7 +587,7 @@ export const auth = async <UserType>({
 	// of every route plus `protectAgent` and hits TS2590.
 	// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- deliberately erase an intractable Elysia route union before composing the stable agent context
 	const authWithAgent = (composedAuth as unknown as Elysia).use(
-		agentAuthPlugin(agentAuth)
+		agentAuthPlugin(resolvedAgentAuth)
 	);
 
 	// One concentrated assertion (full rationale on AuthInstance above): the
@@ -789,19 +889,26 @@ export * from './apikeys/types';
 export { apiKeysRoutes } from './apikeys/routes';
 export * from './agents/config';
 export * from './agents/types';
+export * from './agents/registration';
+export * from './agents/registrationClient';
+export * from './agents/idJag';
 export { agentAuthPlugin, agentAuthChallenge } from './agents/routes';
 export { resolveAgentPrincipal, agentHasScopes } from './agents/principal';
 export { createOidcAgentCredentialVerifier } from './agents/oidcAdapter';
 export {
 	createInMemoryAgentDelegationStore,
+	createInMemoryAgentIdentityRegistrationStore,
 	createInMemoryAgentRegistrationStore
 } from './agents/inMemoryStores';
 export {
 	agentDelegationsTable,
+	agentIdentityRegistrationsTable,
 	agentRegistrationsTable,
 	createNeonAgentDelegationStore,
+	createNeonAgentIdentityRegistrationStore,
 	createNeonAgentRegistrationStore,
 	createPostgresAgentDelegationStore,
+	createPostgresAgentIdentityRegistrationStore,
 	createPostgresAgentRegistrationStore
 } from './agents/postgresStores';
 export {

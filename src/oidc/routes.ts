@@ -220,7 +220,7 @@ export const oidcProviderRoutes = <UserType>(
 	const tokenUrl = `${issuer}${oidcRoute}/token`;
 	const resolveClient = async (clientId: string) =>
 		(await clientStore.findClient(clientId)) ??
-		(await config.resolveClientIdMetadata?.(clientId));
+		config.resolveClientIdMetadata?.(clientId);
 
 	const authenticateClient = async (
 		clientId: string,
@@ -616,15 +616,18 @@ export const oidcProviderRoutes = <UserType>(
 	if (config.vciConfig !== undefined) {
 		grantTypes.push(PRE_AUTHORIZED_CODE_GRANT);
 	}
+	for (const grantType of config.publicTokenGrantTypes ?? []) {
+		if (!grantTypes.includes(grantType)) grantTypes.push(grantType);
+	}
 
-	const discovery: Record<string, boolean | string | string[]> = {
+	const discovery: Record<string, unknown> = {
 		authorization_endpoint: `${issuer}${authorizeRoute}`,
 		authorization_response_iss_parameter_supported: true,
 		backchannel_logout_session_supported: false,
 		backchannel_logout_supported: true,
-		code_challenge_methods_supported: ['S256'],
 		client_id_metadata_document_supported:
 			config.resolveClientIdMetadata !== undefined,
+		code_challenge_methods_supported: ['S256'],
 		dpop_signing_alg_values_supported: ['ES256'],
 		end_session_endpoint: `${issuer}${endSessionRoute}`,
 		grant_types_supported: grantTypes,
@@ -682,6 +685,12 @@ export const oidcProviderRoutes = <UserType>(
 		config.acrValuesSupported.length > 0
 	) {
 		discovery.acr_values_supported = config.acrValuesSupported;
+	}
+	const reservedDiscoveryKeys = new Set(Object.keys(discovery));
+	for (const [key, value] of Object.entries(
+		config.additionalDiscoveryMetadata ?? {}
+	)) {
+		if (!reservedDiscoveryKeys.has(key)) discovery[key] = value;
 	}
 
 	const handleEndSession = async ({
@@ -1167,6 +1176,21 @@ export const oidcProviderRoutes = <UserType>(
 							HTTP_OK
 						);
 					}
+					if (
+						typeof body.grant_type === 'string' &&
+						config.publicTokenGrantTypes?.includes(
+							body.grant_type
+						) === true &&
+						config.handlePublicTokenGrant !== undefined
+					) {
+						const result = await config.handlePublicTokenGrant({
+							body,
+							request
+						});
+						if (result !== undefined) {
+							return jsonResponse(result.body, result.status);
+						}
+					}
 					const basic = readBasicAuth(headers.authorization);
 					const auth = await authenticateTokenClient({
 						basicClientId: basic.clientId,
@@ -1230,8 +1254,10 @@ export const oidcProviderRoutes = <UserType>(
 				},
 				{
 					body: t.Object({
+						assertion: t.Optional(t.String()),
 						audience: t.Optional(t.String()),
 						auth_req_id: t.Optional(t.String()),
+						claim_token: t.Optional(t.String()),
 						client_assertion: t.Optional(t.String()),
 						client_assertion_type: t.Optional(t.String()),
 						client_id: t.Optional(t.String()),

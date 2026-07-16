@@ -1,10 +1,10 @@
 {
-	"version": "0.54.9",
+	"version": "0.55.0",
 	"name": "@absolutejs/auth",
 	"description": "An authorization library for absolutejs",
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/absolutejs/absolute-auth.git"
+		"url": "git+https://github.com/absolutejs/absolute-auth.git"
 	},
 	"homepage": "https://github.com/absolutejs/absolute-auth",
 	"bugs": {
@@ -12,7 +12,7 @@
 	},
 	"main": "./dist/index.js",
 	"bin": {
-		"absolute-auth": "./dist/cli/migrate.js"
+		"absolute-auth": "dist/cli/migrate.js"
 	},
 	"license": "BSL-1.1",
 	"author": "Alex Kahn",
@@ -30,6 +30,8 @@
 		"authorization",
 		"authentication",
 		"absolutejs",
+		"agent-auth",
+		"auth.md",
 		"elysia",
 		"oauth"
 	],
@@ -73,10 +75,10 @@
 	},
 	"dependencies": {
 		"@absolutejs/linked-providers": "0.0.2",
+		"@absolutejs/manifest": "^0.3.0",
 		"@neondatabase/serverless": "1.0.0",
-		"citra": "0.29.7",
-		"@absolutejs/manifest": "^0.2.0",
 		"@sinclair/typebox": "^0.34.0",
+		"citra": "0.29.7",
 		"drizzle-orm": "1.0.0-rc.3"
 	},
 	"devDependencies": {
@@ -182,6 +184,7 @@
 	"type": "module",
 	"files": [
 		"dist",
+		"docs",
 		"README.md"
 	],
 	"typesVersions": {

@@ -81,3 +81,81 @@ export type AgentPrincipal = {
 	trust: 'delegated' | 'registered';
 	userId?: string;
 };
+
+export type AgentIdentityRegistrationKind =
+	| 'anonymous'
+	| 'identity_assertion'
+	| 'service_auth';
+export type AgentIdentityRegistrationStatus = 'claimed' | 'pending' | 'revoked';
+
+export type AgentClaimAttempt = {
+	attempts: number;
+	email: string;
+	expiresAt: number;
+	tokenHash: string;
+	userCodeHash: string;
+};
+
+/** Durable state for the open auth.md registration profile. Secrets are
+ * represented only by hashes; plaintext claim and attempt tokens are returned
+ * once to the agent and never persisted. `version` is used for compare-and-swap
+ * updates so claim completion is safe across multiple application instances. */
+export type AgentIdentityRegistration = {
+	agentId: string;
+	claimAttempt?: AgentClaimAttempt;
+	claimExpiresAt: number;
+	claimTokenHash: string;
+	createdAt: number;
+	expiresAt: number;
+	kind: AgentIdentityRegistrationKind;
+	loginHint?: string;
+	lastPolledAt?: number;
+	registrationId: string;
+	status: AgentIdentityRegistrationStatus;
+	updatedAt: number;
+	upstream?: {
+		clientId: string;
+		issuer: string;
+		subject: string;
+	};
+	userId?: string;
+	version: number;
+};
+
+export type AgentIdentityRegistrationStore = {
+	create: (registration: AgentIdentityRegistration) => Promise<boolean>;
+	findByClaimTokenHash: (
+		claimTokenHash: string
+	) => Promise<AgentIdentityRegistration | undefined>;
+	findByAgentId: (
+		agentId: string
+	) => Promise<AgentIdentityRegistration | undefined>;
+	findByRegistrationId: (
+		registrationId: string
+	) => Promise<AgentIdentityRegistration | undefined>;
+	findByUpstreamIdentity: (query: {
+		clientId: string;
+		issuer: string;
+		subject: string;
+	}) => Promise<AgentIdentityRegistration | undefined>;
+	findByAttemptTokenHash: (
+		attemptTokenHash: string
+	) => Promise<AgentIdentityRegistration | undefined>;
+	/** Replaces a record only when its current version equals expectedVersion. */
+	replace: (
+		registration: AgentIdentityRegistration,
+		expectedVersion: number
+	) => Promise<boolean>;
+};
+
+export type VerifiedAgentIdentityAssertion = {
+	authenticatedAt: number;
+	clientId: string;
+	email?: string;
+	emailVerified?: boolean;
+	issuer: string;
+	name?: string;
+	phoneNumber?: string;
+	phoneNumberVerified?: boolean;
+	subject: string;
+};

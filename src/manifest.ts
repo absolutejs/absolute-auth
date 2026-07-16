@@ -26,21 +26,19 @@ const COMMON_PROVIDERS = [
 /* Where to actually create the OAuth app for each provider — real developer
  * console deep-links, so a "Create credentials" affordance lands the user on
  * the right page instead of our README. */
-const PROVIDER_CONSOLE_URLS: Record<
-	(typeof COMMON_PROVIDERS)[number],
-	string
-> = {
-	discord: 'https://discord.com/developers/applications',
-	facebook: 'https://developers.facebook.com/apps',
-	github: 'https://github.com/settings/developers',
-	google: 'https://console.cloud.google.com/apis/credentials',
-	linkedin: 'https://www.linkedin.com/developers/apps',
-	microsoft:
-		'https://portal.azure.com/#blade/Microsoft_AAD_RegisteredApps/ApplicationsListBlade',
-	slack: 'https://api.slack.com/apps',
-	spotify: 'https://developer.spotify.com/dashboard',
-	twitch: 'https://dev.twitch.tv/console/apps'
-};
+const PROVIDER_CONSOLE_URLS: Record<(typeof COMMON_PROVIDERS)[number], string> =
+	{
+		discord: 'https://discord.com/developers/applications',
+		facebook: 'https://developers.facebook.com/apps',
+		github: 'https://github.com/settings/developers',
+		google: 'https://console.cloud.google.com/apis/credentials',
+		linkedin: 'https://www.linkedin.com/developers/apps',
+		microsoft:
+			'https://portal.azure.com/#blade/Microsoft_AAD_RegisteredApps/ApplicationsListBlade',
+		slack: 'https://api.slack.com/apps',
+		spotify: 'https://developer.spotify.com/dashboard',
+		twitch: 'https://dev.twitch.tv/console/apps'
+	};
 
 const providerEnv = COMMON_PROVIDERS.flatMap((provider) => {
 	const upper = provider.toUpperCase();
@@ -131,10 +129,10 @@ export const manifest = defineManifest<AuthConfig<unknown>, never>()({
 		accent: '#6366f1',
 		category: 'auth',
 		description:
-			'OAuth/OIDC sign-in for 60+ providers, email/password, magic links, passkeys, MFA, enterprise SSO/SCIM, organizations, roles, and API keys — one Elysia plugin backed by your Postgres database.',
+			'OAuth/OIDC sign-in for people and AI agents, including open auth.md registration, scoped delegation, agent account linking, 60+ providers, passkeys, MFA, enterprise SSO/SCIM, organizations, roles, and API keys.',
 		docsUrl: 'https://github.com/absolutejs/auth',
 		name: '@absolutejs/auth',
-		tagline: 'Let people create accounts and sign in.'
+		tagline: 'Let people and agents create accounts and sign in.'
 	},
 	implements: [
 		defineImplementation<never>()({
@@ -209,7 +207,8 @@ export const manifest = defineManifest<AuthConfig<unknown>, never>()({
 	requires: {
 		env: [
 			{
-				description: 'Postgres connection string (sign-in tables live here)',
+				description:
+					'Postgres connection string (sign-in tables live here)',
 				example: 'postgres://user:pass@host/db',
 				key: 'DATABASE_URL',
 				secret: true
@@ -242,14 +241,13 @@ export const manifest = defineManifest<AuthConfig<unknown>, never>()({
 				'List which sign-in providers this project has configured, and which are missing credentials.',
 			input: Type.Object({}),
 			handler: async (_input, workspace) => {
-				const files = (await workspace.glob?.('**/auth.config.ts')) ?? [];
+				const files =
+					(await workspace.glob?.('**/auth.config.ts')) ?? [];
 				const [file] = files;
 				if (file === undefined)
 					return 'auth is not configured yet — no auth.config.ts found';
 				const source = (await workspace.read(file)) ?? '';
-				const providers = [
-					...source.matchAll(/(\w+):\s*\{/g)
-				]
+				const providers = [...source.matchAll(/(\w+):\s*\{/g)]
 					.map((match) => match[1])
 					.filter(
 						(name) =>
