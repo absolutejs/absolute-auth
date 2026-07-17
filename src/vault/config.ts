@@ -21,8 +21,16 @@ export const createVault = ({
 	get: async (ownerId, name) => {
 		const entry = await store.getEntry(ownerId, name);
 		if (entry === undefined) return undefined;
+		const plaintext = await cipher.decrypt(entry.encryptedValue);
+		if (cipher.needsReencryption?.(entry.encryptedValue)) {
+			await store.saveEntry({
+				...entry,
+				encryptedValue: await cipher.encrypt(plaintext),
+				updatedAt: Date.now()
+			});
+		}
 
-		return cipher.decrypt(entry.encryptedValue);
+		return plaintext;
 	},
 	list: async (ownerId) =>
 		(await store.listEntries(ownerId)).map((entry) => entry.name),
@@ -58,14 +66,12 @@ export const rotateVaultKey = async ({
 	const newCipher = createSecretCipher(newKey);
 	const entries = await store.listAllEntries();
 	const now = Date.now();
-	for (const entry of entries) {
-		// eslint-disable-next-line no-await-in-loop -- sequential per-entry re-encrypt is the safe rotation
+	await entries.reduce(async (pending, entry) => {
+		await pending;
 		const plaintext = await oldCipher.decrypt(entry.encryptedValue);
-		// eslint-disable-next-line no-await-in-loop -- sequential per-entry re-encrypt is the safe rotation
 		const encryptedValue = await newCipher.encrypt(plaintext);
-		// eslint-disable-next-line no-await-in-loop -- sequential per-entry re-encrypt is the safe rotation
 		await store.saveEntry({ ...entry, encryptedValue, updatedAt: now });
-	}
+	}, Promise.resolve());
 
 	return { rotated: entries.length };
 };

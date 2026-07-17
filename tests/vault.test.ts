@@ -1,8 +1,14 @@
 import { describe, expect, test } from 'bun:test';
-import { createSecretCipher } from '../src/compliance/cipher';
+import {
+	createSecretCipher,
+	createVersionedSecretCipher
+} from '../src/compliance/cipher';
 import { generateEncryptionKey } from '../src/crypto';
 import { createVault, rotateVaultKey } from '../src/vault/config';
 import { createInMemoryVaultStore } from '../src/vault/inMemoryVaultStore';
+
+const UPDATE_DELAY_MS = 5;
+const ROTATED_ENTRY_COUNT = 3;
 
 describe('vault', () => {
 	test('put/get/list/delete round-trips an encrypted blob per owner', async () => {
@@ -41,7 +47,7 @@ describe('vault', () => {
 
 		await vault.put('user-1', 'k', 'v1');
 		const first = await store.getEntry('user-1', 'k');
-		await Bun.sleep(5);
+		await Bun.sleep(UPDATE_DELAY_MS);
 		await vault.put('user-1', 'k', 'v2');
 		const second = await store.getEntry('user-1', 'k');
 
@@ -63,7 +69,7 @@ describe('vault', () => {
 		await oldVault.put('user-2', 'c', 'gamma');
 
 		const result = await rotateVaultKey({ newKey, oldKey, store });
-		expect(result.rotated).toBe(3);
+		expect(result.rotated).toBe(ROTATED_ENTRY_COUNT);
 
 		// Old key can no longer decrypt; new key can.
 		const stillOld = createVault({
@@ -79,5 +85,57 @@ describe('vault', () => {
 		expect(await newVault.get('user-1', 'a')).toBe('alpha');
 		expect(await newVault.get('user-1', 'b')).toBe('beta');
 		expect(await newVault.get('user-2', 'c')).toBe('gamma');
+	});
+});
+
+describe('versioned vault encryption', () => {
+	test('lazily re-encrypts an older key version after a successful read', async () => {
+		const oldKey = generateEncryptionKey();
+		const currentKey = generateEncryptionKey();
+		const store = createInMemoryVaultStore();
+		const oldVault = createVault({
+			cipher: createVersionedSecretCipher({
+				currentVersion: 1,
+				keys: { 1: oldKey }
+			}),
+			store
+		});
+		await oldVault.put('user-1', 'github-token', 'secret');
+		const before = await store.getEntry('user-1', 'github-token');
+		const currentVault = createVault({
+			cipher: createVersionedSecretCipher({
+				currentVersion: 2,
+				keys: { 1: oldKey, 2: currentKey }
+			}),
+			store
+		});
+
+		expect(await currentVault.get('user-1', 'github-token')).toBe('secret');
+		const after = await store.getEntry('user-1', 'github-token');
+		expect(before?.encryptedValue).toStartWith('absolute-vault:1:');
+		expect(after?.encryptedValue).toStartWith('absolute-vault:2:');
+	});
+
+	test('fails closed when a ciphertext key version is unavailable', async () => {
+		const store = createInMemoryVaultStore();
+		const oldVault = createVault({
+			cipher: createVersionedSecretCipher({
+				currentVersion: 1,
+				keys: { 1: generateEncryptionKey() }
+			}),
+			store
+		});
+		await oldVault.put('user-1', 'github-token', 'secret');
+		const currentVault = createVault({
+			cipher: createVersionedSecretCipher({
+				currentVersion: 2,
+				keys: { 2: generateEncryptionKey() }
+			}),
+			store
+		});
+
+		expect(currentVault.get('user-1', 'github-token')).rejects.toThrow(
+			'Vault key version 1 is unavailable'
+		);
 	});
 });
