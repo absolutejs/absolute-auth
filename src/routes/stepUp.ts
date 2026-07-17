@@ -1,8 +1,9 @@
 import { Elysia, t } from 'elysia';
 import { loadSessionFromSource } from '../session/access';
 import { sessionStore } from '../session/state';
-import type { AuthSessionStore } from '../session/types';
+import type { AuthSessionSource } from '../session/types';
 import { userSessionIdTypebox } from '../typebox';
+import { pluginDependencySeed } from '../pluginIdentity';
 
 type ReauthFailError = {
 	readonly code: 'Unauthorized';
@@ -15,9 +16,12 @@ type ReauthFailError = {
 export const stepUpPlugin = <UserType>({
 	authSessionStore
 }: {
-	authSessionStore?: AuthSessionStore<UserType>;
+	authSessionStore?: AuthSessionSource<UserType>;
 } = {}) =>
-	new Elysia()
+	new Elysia({
+		name: '@absolutejs/auth/step-up',
+		seed: pluginDependencySeed(authSessionStore)
+	})
 		.use(sessionStore<UserType>())
 		.guard({ cookie: t.Cookie({ user_session_id: userSessionIdTypebox }) })
 		.derive(

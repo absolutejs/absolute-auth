@@ -1,8 +1,9 @@
 import { Elysia, t } from 'elysia';
 import { getStatusFromSource } from '../session/access';
 import { sessionStore } from '../session/state';
-import type { AuthSessionStore } from '../session/types';
+import type { AuthSessionSource } from '../session/types';
 import { userSessionIdTypebox } from '../typebox';
+import { pluginDependencySeed } from '../pluginIdentity';
 
 type AuthFailError =
 	| {
@@ -17,9 +18,12 @@ type AuthFailError =
 export const protectRoutePlugin = <UserType>({
 	authSessionStore
 }: {
-	authSessionStore?: AuthSessionStore<UserType>;
+	authSessionStore?: AuthSessionSource<UserType>;
 } = {}) =>
-	new Elysia()
+	new Elysia({
+		name: '@absolutejs/auth/protect-route',
+		seed: pluginDependencySeed(authSessionStore)
+	})
 		.use(sessionStore<UserType>())
 		.guard({ cookie: t.Cookie({ user_session_id: userSessionIdTypebox }) })
 		.derive(

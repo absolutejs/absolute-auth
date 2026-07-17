@@ -2,6 +2,7 @@ import { Elysia, t } from 'elysia';
 import { getStatusFromSource } from '../session/access';
 import { sessionStore } from '../session/state';
 import { userSessionIdTypebox } from '../typebox';
+import { pluginDependencySeed } from '../pluginIdentity';
 import type { AuthorizationPluginProps, PermissionCheck } from './config';
 
 type PermissionFailError =
@@ -27,7 +28,10 @@ export const protectPermissionPlugin = <UserType>({
 	emit,
 	hasPermission
 }: AuthorizationPluginProps<UserType>) =>
-	new Elysia()
+	new Elysia({
+		name: '@absolutejs/auth/permission',
+		seed: pluginDependencySeed(hasPermission)
+	})
 		.use(sessionStore<UserType>())
 		.guard({ cookie: t.Cookie({ user_session_id: userSessionIdTypebox }) })
 		.derive(

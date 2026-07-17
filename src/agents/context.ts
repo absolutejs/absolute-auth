@@ -5,6 +5,7 @@ import {
 } from './config';
 import { agentHasScopes, resolveAgentPrincipal } from './principal';
 import type { AgentPrincipal } from './types';
+import { pluginDependencySeed } from '../pluginIdentity';
 
 type AgentAuthFailure = {
 	code: 'Forbidden' | 'Unauthorized';
@@ -92,52 +93,59 @@ const failureResponse = (
 	);
 
 export const agentAuthContextPlugin = (config?: AgentAuthConfig) =>
-	new Elysia().derive(({ request }) => ({
-		protectAgent: async <AuthReturn, AuthFailReturn>(
-			requiredScopes: string[],
-			handleAuth: (
-				principal: AgentPrincipal
-			) => AuthReturn | Promise<AuthReturn>,
-			handleAuthFail?: (
-				error: AgentAuthFailure
-			) => AuthFailReturn | Promise<AuthFailReturn>
-		) => {
-			if (config === undefined) {
-				const failure: AgentAuthFailure = {
-					code: 'Unauthorized',
-					message: 'Agent is not authenticated'
-				};
+	new Elysia({
+		name: '@absolutejs/auth/agent-context',
+		seed: pluginDependencySeed(config)
+	})
+		.derive(({ request }) => ({
+			protectAgent: async <AuthReturn, AuthFailReturn>(
+				requiredScopes: string[],
+				handleAuth: (
+					principal: AgentPrincipal
+				) => AuthReturn | Promise<AuthReturn>,
+				handleAuthFail?: (
+					error: AgentAuthFailure
+				) => AuthFailReturn | Promise<AuthFailReturn>
+			) => {
+				if (config === undefined) {
+					const failure: AgentAuthFailure = {
+						code: 'Unauthorized',
+						message: 'Agent is not authenticated'
+					};
 
-				return (
-					(await handleAuthFail?.(failure)) ??
-					new Response(failure.message, { status: HTTP_UNAUTHORIZED })
-				);
+					return (
+						(await handleAuthFail?.(failure)) ??
+						new Response(failure.message, {
+							status: HTTP_UNAUTHORIZED
+						})
+					);
+				}
+
+				const principal = await resolveAgentPrincipal(request, config);
+				if (principal === undefined) {
+					const failure: AgentAuthFailure = {
+						code: 'Unauthorized',
+						message: 'Agent is not authenticated'
+					};
+
+					return (
+						(await handleAuthFail?.(failure)) ??
+						failureResponse(config, failure, requiredScopes)
+					);
+				}
+				if (!agentHasScopes(principal, requiredScopes)) {
+					const failure: AgentAuthFailure = {
+						code: 'Forbidden',
+						message: 'Insufficient agent scopes'
+					};
+
+					return (
+						(await handleAuthFail?.(failure)) ??
+						failureResponse(config, failure, requiredScopes)
+					);
+				}
+
+				return handleAuth(principal);
 			}
-
-			const principal = await resolveAgentPrincipal(request, config);
-			if (principal === undefined) {
-				const failure: AgentAuthFailure = {
-					code: 'Unauthorized',
-					message: 'Agent is not authenticated'
-				};
-
-				return (
-					(await handleAuthFail?.(failure)) ??
-					failureResponse(config, failure, requiredScopes)
-				);
-			}
-			if (!agentHasScopes(principal, requiredScopes)) {
-				const failure: AgentAuthFailure = {
-					code: 'Forbidden',
-					message: 'Insufficient agent scopes'
-				};
-
-				return (
-					(await handleAuthFail?.(failure)) ??
-					failureResponse(config, failure, requiredScopes)
-				);
-			}
-
-			return handleAuth(principal);
-		}
-	}));
+		}))
+		.as('global');

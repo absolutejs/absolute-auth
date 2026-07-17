@@ -1,7 +1,7 @@
 import { createOAuth2Client } from 'citra';
 import { Elysia } from 'elysia';
 import { apiKeysRoutes } from './apikeys/routes';
-import { agentAuthPlugin } from './agents/routes';
+import { agentAuthRoutes } from './agents/routes';
 import {
 	AGENT_CLAIM_GRANT_TYPE,
 	AGENT_IDENTITY_ASSERTION_GRANT_TYPE,
@@ -16,10 +16,10 @@ import {
 	composeRevocationAudit,
 	composeSignOutAudit
 } from './audit/wrap';
-import { protectPermissionPlugin } from './authorization/protectPermission';
+import { createAuthContext } from './authContext';
 import { complianceRoutes } from './compliance/routes';
 import { credentialRoutes } from './credentials/routes';
-import { createAuthHtmxRoutes } from './htmx/routes';
+import { createConfiguredAuthHtmxRoutes } from './htmx/configuredRoutes';
 import { createLockoutGuard } from './lockout/config';
 import { createMfaGate } from './mfa/gate';
 import { mfaRoutes } from './mfa/routes';
@@ -28,84 +28,94 @@ import { organizationRoutes } from './organizations/routes';
 import { passwordlessRoutes } from './passwordless/routes';
 import { portalRoutes } from './portal/routes';
 import { roleRoutes } from './roles/routes';
-import type { AuthHtmxConfig, AuthHtmxUser } from './htmx/types';
+import { pluginDependencySeed } from './pluginIdentity';
 import { buildClientProviders } from './providers/clients';
 import { authorize } from './routes/authorize';
 import { callback } from './routes/callback';
 import { profile } from './routes/profile';
-import { protectRoutePlugin } from './routes/protectRoute';
 import { refresh } from './routes/refresh';
 import { revoke } from './routes/revoke';
 import { sessionRoutes } from './routes/sessions';
-import { stepUpPlugin } from './routes/stepUp';
 import { signout } from './routes/signout';
 import { userStatus } from './routes/userStatus';
 import { scimRoutes } from './scim/routes';
 import { sessionCleanup } from './session/cleanup';
-import type { AuthSessionStore } from './session/types';
 import { ssoDiscoveryRoute } from './sso/discoveryRoute';
 import { oidcSsoRoutes } from './sso/oidcRoutes';
 import { samlSsoRoutes } from './sso/samlRoutes';
 import { webauthnRoutes } from './webauthn/routes';
 import { createWebhookDispatcher } from './webhooks/dispatcher';
 import { initTracing } from './telemetry/tracing';
-import { AuthConfig, ClientProviders } from './types';
+import type { AuthConfig, ClientProviders } from './types';
 import { resolveCookieSecure } from './utils';
-import type { AuthInstance } from './authInstance';
 
-export const auth = async <UserType>({
-	providersConfiguration,
-	authorizeRoute,
-	cookieSecure,
-	callbackRoute,
-	profileRoute,
-	signoutRoute,
-	statusRoute,
-	refreshRoute,
-	revokeRoute,
-	cleanupIntervalMs,
-	maxSessions,
-	sessionDurationMs,
-	authSessionStore,
-	audit,
-	credentials,
-	customProviders,
-	mfa,
-	passwordless,
-	lockout,
-	sessions,
-	sso,
-	scim,
-	apikeys,
-	agentAuth,
-	oidc,
-	organizations,
-	roles,
-	portal,
-	authorization,
-	compliance,
-	webauthn,
-	webhooks,
-	htmx,
-	tracing,
-	resolveAuthIntent,
-	onAuthorizeSuccess,
-	onAuthorizeError,
-	onProfileSuccess,
-	onProfileError,
-	onCallbackSuccess,
-	onLinkIdentity,
-	onLinkIdentityConflict,
-	onLinkConnector,
-	onCallbackError,
-	onStatus,
-	onRefreshSuccess,
-	onRefreshError,
-	onSignOut,
-	onRevocationSuccess,
-	onRevocationError,
-	onSessionCleanup
-}: AuthConfig<UserType>) => {
+const validatePositiveOptions = (
+	prefix: string,
+	options: Record<string, number | undefined>
+) => {
+	for (const [name, value] of Object.entries(options)) {
+		if (value !== undefined && (!Number.isFinite(value) || value <= 0)) {
+			throw new Error(`${prefix}.${name} must be positive`);
+		}
+	}
+};
+
+const buildAuthApplications = async <UserType>(
+	configuration: AuthConfig<UserType>
+) => {
+	const {
+		providersConfiguration,
+		authorizeRoute,
+		cookieSecure,
+		callbackRoute,
+		profileRoute,
+		signoutRoute,
+		statusRoute,
+		refreshRoute,
+		revokeRoute,
+		cleanupIntervalMs,
+		maxSessions,
+		sessionDurationMs,
+		authSessionStore,
+		audit,
+		credentials,
+		customProviders,
+		mfa,
+		passwordless,
+		lockout,
+		sessions,
+		sso,
+		scim,
+		apikeys,
+		agentAuth,
+		oidc,
+		organizations,
+		roles,
+		portal,
+		authorization,
+		compliance,
+		webauthn,
+		webhooks,
+		htmx,
+		tracing,
+		resolveAuthIntent,
+		onAuthorizeSuccess,
+		onAuthorizeError,
+		onProfileSuccess,
+		onProfileError,
+		onCallbackSuccess,
+		onLinkIdentity,
+		onLinkIdentityConflict,
+		onLinkConnector,
+		onCallbackError,
+		onStatus,
+		onRefreshSuccess,
+		onRefreshError,
+		onSignOut,
+		onRevocationSuccess,
+		onRevocationError,
+		onSessionCleanup
+	} = configuration;
 	if (agentAuth?.agentRegistration !== undefined) {
 		if (oidc === undefined) {
 			throw new Error(
@@ -135,8 +145,7 @@ export const auth = async <UserType>({
 				'Anonymous agent registration requires revokeAccessTokens'
 			);
 		}
-		/* eslint-disable absolute/max-depth-extended -- startup validation reports the precise invalid option */
-		for (const [name, value] of Object.entries({
+		validatePositiveOptions('agentAuth.agentRegistration', {
 			assertionTtlMs: registration.assertionTtlMs,
 			attemptTtlMs: registration.attemptTtlMs,
 			claimTtlMs: registration.claimTtlMs,
@@ -144,17 +153,7 @@ export const auth = async <UserType>({
 			maxCodeAttempts: registration.maxCodeAttempts,
 			pollIntervalSeconds: registration.pollIntervalSeconds,
 			tokenTtlMs: registration.tokenTtlMs
-		})) {
-			if (
-				value !== undefined &&
-				(!Number.isFinite(value) || value <= 0)
-			) {
-				throw new Error(
-					`agentAuth.agentRegistration.${name} must be positive`
-				);
-			}
-		}
-		/* eslint-enable absolute/max-depth-extended */
+		});
 	}
 	if (tracing !== undefined) await initTracing(tracing);
 	const clientProviders: ClientProviders = await buildClientProviders(
@@ -330,233 +329,194 @@ export const auth = async <UserType>({
 		? composeSignOutAudit(onSignOut, auditEmit)
 		: onSignOut;
 
-	const composedAuth = new Elysia()
-		.use(
-			sessionCleanup<UserType>({
-				authSessionStore,
-				cleanupIntervalMs,
-				maxSessions,
-				onSessionCleanup
-			})
-		)
-		.use(
-			signout({
-				authSessionStore,
-				onSignOut: auditedOnSignOut,
-				signoutRoute
-			})
-		)
-		.use(
-			revoke({
-				authSessionStore,
-				clientProviders,
-				onRevocationError,
-				onRevocationSuccess: auditedOnRevocationSuccess,
-				revokeRoute
-			})
-		)
-		.use(userStatus<UserType>({ authSessionStore, onStatus, statusRoute }))
-		.use(
-			refresh({
-				authSessionStore,
-				clientProviders,
-				onRefreshError,
-				onRefreshSuccess,
-				refreshRoute,
-				sessionDurationMs
-			})
-		)
-		.use(
-			authorize({
-				authorizeRoute,
-				clientProviders,
-				cookieSecure: resolvedCookieSecure,
-				onAuthorizeError,
-				onAuthorizeSuccess
-			})
-		)
-		.use(
-			callback<UserType>({
-				authSessionStore,
-				callbackRoute,
-				clientProviders,
-				onCallbackError,
-				onCallbackSuccess: auditedOnCallbackSuccess,
-				onLinkConnector,
-				onLinkIdentity,
-				onLinkIdentityConflict,
-				resolveAuthIntent
-			})
-		)
-		.use(
-			profile({
-				clientProviders,
-				onProfileError,
-				onProfileSuccess,
-				profileRoute
-			})
-		)
-		.use(
-			auditedCredentials
-				? credentialRoutes<UserType>({
-						...auditedCredentials,
-						authSessionStore,
-						cookieSecure: resolvedCookieSecure,
-						lockoutGuard
-					})
-				: new Elysia()
-		)
-		.use(
-			auditedMfa
-				? mfaRoutes<UserType>({
-						...auditedMfa,
-						authSessionStore,
-						cookieSecure: resolvedCookieSecure
-					})
-				: new Elysia()
-		)
-		.use(
-			passwordless
-				? passwordlessRoutes<UserType>({
-						...passwordless,
-						authSessionStore,
-						cookieSecure: resolvedCookieSecure,
-						emit: auditEmit
-					})
-				: new Elysia()
-		)
-		.use(
-			sessions
-				? sessionRoutes<UserType>({ ...sessions, authSessionStore })
-				: new Elysia()
-		)
-		.use(
-			sso
-				? oidcSsoRoutes<UserType>({
-						...sso,
-						authSessionStore,
-						cookieSecure: resolvedCookieSecure
-					})
-				: new Elysia()
-		)
-		.use(
-			sso && sso.samlAdapter
-				? samlSsoRoutes<UserType>({
-						...sso,
-						authSessionStore,
-						cookieSecure: resolvedCookieSecure,
-						samlAdapter: sso.samlAdapter
-					})
-				: new Elysia()
-		)
-		.use(
-			sso && sso.getOrganizationByEmailDomain
-				? ssoDiscoveryRoute({
-						getOrganizationByEmailDomain:
-							sso.getOrganizationByEmailDomain,
-						ssoConnectionStore: sso.ssoConnectionStore,
-						ssoRoute: sso.ssoRoute
-					})
-				: new Elysia()
-		)
-		.use(scim ? scimRoutes(scim) : new Elysia())
-		.use(apikeys ? apiKeysRoutes(apikeys) : new Elysia())
-		.use(
-			oidcConfig
-				? oidcProviderRoutes<UserType>({
-						...oidcConfig,
-						authSessionStore
-					})
-				: new Elysia()
-		)
-		.use(
-			organizations
-				? organizationRoutes<UserType>({
-						...organizations,
-						authSessionStore,
-						emit: auditEmit
-					})
-				: new Elysia()
-		)
-		.use(
-			roles
-				? roleRoutes<UserType>({
-						...roles,
-						authSessionStore,
-						emit: auditEmit
-					})
-				: new Elysia()
-		)
-		.use(
-			portal ? portalRoutes({ ...portal, emit: auditEmit }) : new Elysia()
-		)
-		.use(
-			webauthn
-				? webauthnRoutes<UserType>({
-						...webauthn,
-						authSessionStore,
-						cookieSecure: resolvedCookieSecure,
-						emit: auditEmit
-					})
-				: new Elysia()
-		)
-		.use(
-			compliance
-				? complianceRoutes<UserType>({
-						...compliance,
-						authSessionStore,
-						emit: auditEmit
-					})
-				: new Elysia()
-		)
-		.use(protectRoutePlugin<UserType>({ authSessionStore }))
-		.use(stepUpPlugin<UserType>({ authSessionStore }))
-		.use(
-			authorization
-				? protectPermissionPlugin<UserType>({
-						...authorization,
-						authSessionStore,
-						emit: auditEmit
-					})
-				: new Elysia()
-		)
-		.use(
-			// `htmx` is gated to `UserType extends AuthHtmxUser` at the public
-			// API (AuthConfig), so this bridge is sound — TS just can't
-			// re-derive the bound inside an unconstrained generic body.
-			htmx
-				? createAuthHtmxRoutes<UserType & AuthHtmxUser>({
-						// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- sound at the public API; TS can't re-derive the bound in this unconstrained generic body
-						...(htmx as AuthHtmxConfig),
-						// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- sound at the public API; TS can't re-derive the bound in this unconstrained generic body
-						authSessionStore: authSessionStore as
-							| AuthSessionStore<UserType & AuthHtmxUser>
-							| undefined
-					})
-				: new Elysia()
-		);
+	const pluginSeed = pluginDependencySeed(configuration);
+	const coreRoutes = new Elysia({
+		name: '@absolutejs/auth/core-routes',
+		seed: pluginSeed
+	}).use([
+		sessionCleanup<UserType>({
+			authSessionStore,
+			cleanupIntervalMs,
+			maxSessions,
+			onSessionCleanup
+		}),
+		signout({
+			authSessionStore,
+			onSignOut: auditedOnSignOut,
+			signoutRoute
+		}),
+		revoke({
+			authSessionStore,
+			clientProviders,
+			onRevocationError,
+			onRevocationSuccess: auditedOnRevocationSuccess,
+			revokeRoute
+		}),
+		userStatus<UserType>({ authSessionStore, onStatus, statusRoute }),
+		refresh({
+			authSessionStore,
+			clientProviders,
+			onRefreshError,
+			onRefreshSuccess,
+			refreshRoute,
+			sessionDurationMs
+		}),
+		authorize({
+			authorizeRoute,
+			clientProviders,
+			cookieSecure: resolvedCookieSecure,
+			onAuthorizeError,
+			onAuthorizeSuccess
+		}),
+		callback<UserType>({
+			authSessionStore,
+			callbackRoute,
+			clientProviders,
+			onCallbackError,
+			onCallbackSuccess: auditedOnCallbackSuccess,
+			onLinkConnector,
+			onLinkIdentity,
+			onLinkIdentityConflict,
+			resolveAuthIntent
+		}),
+		profile({
+			clientProviders,
+			onProfileError,
+			onProfileSuccess,
+			profileRoute
+		})
+	]);
 
-	// Collapse the configurable route graph before adding the final stable agent
-	// context; otherwise declaration emit tries to represent the full cross-product
-	// of every route plus `protectAgent` and hits TS2590.
-	// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- deliberately erase an intractable Elysia route union before composing the stable agent context
-	const authWithAgent = (composedAuth as unknown as Elysia).use(
-		agentAuthPlugin(resolvedAgentAuth)
-	);
+	const featureRoutes = new Elysia({
+		name: '@absolutejs/auth/feature-routes',
+		seed: pluginSeed
+	}).use([
+		auditedCredentials
+			? credentialRoutes<UserType>({
+					...auditedCredentials,
+					authSessionStore,
+					cookieSecure: resolvedCookieSecure,
+					lockoutGuard
+				})
+			: new Elysia(),
+		auditedMfa
+			? mfaRoutes<UserType>({
+					...auditedMfa,
+					authSessionStore,
+					cookieSecure: resolvedCookieSecure
+				})
+			: new Elysia(),
+		passwordless
+			? passwordlessRoutes<UserType>({
+					...passwordless,
+					authSessionStore,
+					cookieSecure: resolvedCookieSecure,
+					emit: auditEmit
+				})
+			: new Elysia(),
+		sessions
+			? sessionRoutes<UserType>({ ...sessions, authSessionStore })
+			: new Elysia(),
+		sso
+			? oidcSsoRoutes<UserType>({
+					...sso,
+					authSessionStore,
+					cookieSecure: resolvedCookieSecure
+				})
+			: new Elysia(),
+		sso && sso.samlAdapter
+			? samlSsoRoutes<UserType>({
+					...sso,
+					authSessionStore,
+					cookieSecure: resolvedCookieSecure,
+					samlAdapter: sso.samlAdapter
+				})
+			: new Elysia(),
+		sso && sso.getOrganizationByEmailDomain
+			? ssoDiscoveryRoute({
+					getOrganizationByEmailDomain:
+						sso.getOrganizationByEmailDomain,
+					ssoConnectionStore: sso.ssoConnectionStore,
+					ssoRoute: sso.ssoRoute
+				})
+			: new Elysia(),
+		scim ? scimRoutes(scim) : new Elysia(),
+		apikeys ? apiKeysRoutes(apikeys) : new Elysia(),
+		oidcConfig
+			? oidcProviderRoutes<UserType>({
+					...oidcConfig,
+					authSessionStore
+				})
+			: new Elysia(),
+		organizations
+			? organizationRoutes<UserType>({
+					...organizations,
+					authSessionStore,
+					emit: auditEmit
+				})
+			: new Elysia(),
+		roles
+			? roleRoutes<UserType>({
+					...roles,
+					authSessionStore,
+					emit: auditEmit
+				})
+			: new Elysia(),
+		portal ? portalRoutes({ ...portal, emit: auditEmit }) : new Elysia(),
+		webauthn
+			? webauthnRoutes<UserType>({
+					...webauthn,
+					authSessionStore,
+					cookieSecure: resolvedCookieSecure,
+					emit: auditEmit
+				})
+			: new Elysia(),
+		compliance
+			? complianceRoutes<UserType>({
+					...compliance,
+					authSessionStore,
+					emit: auditEmit
+				})
+			: new Elysia(),
+		createConfiguredAuthHtmxRoutes({ authSessionStore, config: htmx }),
+		agentAuthRoutes(resolvedAgentAuth)
+	]);
 
-	// One concentrated assertion (full rationale on AuthInstance above): the
-	// chain mounts ~28 route plugins whose configurable paths make their route
-	// keys `string`, so there is no precise route type to preserve and letting
-	// TS serialize the whole inferred chain trips TS7056. The runtime instance
-	// IS this context plus those routes; the cast just declares the stable,
-	// `UserType`-typed `protectRoute` context as the public type. Sound because
-	// runtime behaviour is unchanged and the routes are reached by path.
-	// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- see comment above
-	return authWithAgent as unknown as AuthInstance<UserType>;
+	const authContext = createAuthContext<UserType>({
+		agentAuth: resolvedAgentAuth,
+		authorization,
+		authSessionStore,
+		emit: auditEmit,
+		seedSource: configuration
+	});
+
+	return { authContext, coreRoutes, featureRoutes };
 };
 
+export const auth = async <UserType>(configuration: AuthConfig<UserType>) => {
+	const { authContext, coreRoutes, featureRoutes } =
+		await buildAuthApplications(configuration);
+	const application = new Elysia({
+		name: '@absolutejs/auth',
+		seed: pluginDependencySeed(configuration)
+	});
+
+	application.use(coreRoutes);
+	application.use(featureRoutes);
+
+	return application.use(authContext);
+};
+
+export const createAuthApplications = async <UserType>(
+	configuration: AuthConfig<UserType>
+) => buildAuthApplications(configuration);
+
 export * from './actions';
-export type { AuthInstance } from './authInstance';
+export type AuthApplications<UserType> = Awaited<
+	ReturnType<typeof createAuthApplications<UserType>>
+>;
+export { createAuthContext } from './authContext';
+export type { AuthInstance } from './authContext';
 export * from './types';
 export * from './typebox';
 export * from './vault/config';

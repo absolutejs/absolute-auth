@@ -1,7 +1,7 @@
 import { isValidProviderOption } from 'citra';
 import { Elysia } from 'elysia';
 import { protectRoutePlugin } from '../routes/protectRoute';
-import type { AuthSessionStore } from '../session/types';
+import type { AuthSessionSource } from '../session/types';
 import { isUserSessionId } from '../typeGuards';
 import { resolveAuthHtmxRenderers } from './renderers';
 import type { AuthHtmxConfig, AuthHtmxUser } from './types';
@@ -21,7 +21,7 @@ const signInPrompt = `<section class="auth-content"><h1 class="page-heading">Not
  * config so the auth package stays agnostic of your storage schema. */
 export const createAuthHtmxRoutes = <UserType extends AuthHtmxUser>(
 	config: AuthHtmxConfig & {
-		authSessionStore?: AuthSessionStore<UserType>;
+		authSessionStore?: AuthSessionSource<UserType>;
 	}
 ) => {
 	const renderers = resolveAuthHtmxRenderers(config);

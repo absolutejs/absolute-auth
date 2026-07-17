@@ -5,7 +5,12 @@ Server applications should import the primary authentication contract from
 session types, route protection, provider configuration, and the other core
 server utilities without loading declarations for every optional Auth feature.
 The root entry point remains available for applications that need the complete
-feature export surface.
+feature export surface. `auth()` exposes the complete reusable request context
+(`protectRoute`, `requireRecentAuth`, optional `protectPermission`, and
+`protectAgent`) while keeping its declaration bounded. Consumers that need the
+typed configurable route applications themselves can call
+`createAuthApplications()` from the root entry point and compose its
+`coreRoutes`, `featureRoutes`, and `authContext` applications independently.
 
 ## Overview
 

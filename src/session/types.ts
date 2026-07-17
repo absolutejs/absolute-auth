@@ -33,3 +33,8 @@ export type AuthSessionStore<UserType> = {
 	deleteExpired?: () => Promise<number>;
 	deleteExpiredUnregistered?: () => Promise<number>;
 };
+
+export type AuthSessionSource<UserType> = Pick<
+	AuthSessionStore<UserType>,
+	'getSession' | 'removeSession'
+>;

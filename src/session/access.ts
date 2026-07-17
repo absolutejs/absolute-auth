@@ -7,7 +7,7 @@ import type {
 	UnregisteredSessionRecord,
 	UserSessionId
 } from '../types';
-import type { AuthSessionStore } from './types';
+import type { AuthSessionSource, AuthSessionStore } from './types';
 
 const collectSessionEntries = <UserType>(session: SessionRecord<UserType>) =>
 	Object.entries(session).filter(
@@ -115,7 +115,7 @@ const removeSessionFromSource = async <UserType>({
 	session,
 	userSessionId
 }: {
-	authSessionStore?: AuthSessionStore<UserType>;
+	authSessionStore?: AuthSessionSource<UserType>;
 	session?: SessionRecord<UserType>;
 	userSessionId: UserSessionId;
 }) => {
@@ -134,7 +134,7 @@ export const getStatusFromSource = async <UserType>({
 	session,
 	user_session_id
 }: {
-	authSessionStore?: AuthSessionStore<UserType>;
+	authSessionStore?: AuthSessionSource<UserType>;
 	session?: SessionRecord<UserType>;
 	user_session_id: Cookie<UserSessionId | undefined>;
 }) => {
@@ -173,7 +173,7 @@ export const loadSessionFromSource = async <UserType>({
 	userSessionId,
 	removeExpired = true
 }: {
-	authSessionStore?: AuthSessionStore<UserType>;
+	authSessionStore?: AuthSessionSource<UserType>;
 	session?: SessionRecord<UserType>;
 	userSessionId?: UserSessionId;
 	removeExpired?: boolean;

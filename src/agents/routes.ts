@@ -1,12 +1,11 @@
+import { Elysia } from 'elysia';
+import { pluginDependencySeed } from '../pluginIdentity';
 import {
 	agentProtectedResourceMetadata,
 	DEFAULT_AGENT_RESOURCE_METADATA_ROUTE,
 	type AgentAuthConfig
 } from './config';
-import {
-	agentAuthChallenge,
-	agentAuthContextPlugin
-} from './context';
+import { agentAuthChallenge, agentAuthContextPlugin } from './context';
 import {
 	AGENT_IDENTITY_ASSERTION_TYPE,
 	agentRegistrationDiscoveryMetadata,
@@ -130,8 +129,20 @@ const escapeHtml = (value: string) =>
 
 export { agentAuthChallenge, agentRegistrationDiscoveryMetadata };
 
-export const agentAuthPlugin = (config?: AgentAuthConfig) => {
-	const plugin = agentAuthContextPlugin(config);
+export const agentAuthPlugin = (config?: AgentAuthConfig) =>
+	new Elysia({
+		name: '@absolutejs/auth/agent',
+		seed: pluginDependencySeed(config)
+	})
+		.use(agentAuthContextPlugin(config))
+		.use(agentAuthRoutes(config))
+		.as('global');
+
+export const agentAuthRoutes = (config?: AgentAuthConfig) => {
+	const plugin = new Elysia({
+		name: '@absolutejs/auth/agent-routes',
+		seed: pluginDependencySeed(config)
+	});
 
 	if (config === undefined) return plugin.as('global');
 
