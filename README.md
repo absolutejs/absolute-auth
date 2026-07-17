@@ -1,5 +1,12 @@
 # Absolute Auth
 
+Server applications should import the primary authentication contract from
+`@absolutejs/auth/server`. This declaration-stable entry point exposes `auth`,
+session types, route protection, provider configuration, and the other core
+server utilities without loading declarations for every optional Auth feature.
+The root entry point remains available for applications that need the complete
+feature export surface.
+
 ## Overview
 
 Absolute Auth is a TypeScript-based authentication system that provides a comprehensive solution for handling user authentication in web applications. It supports multiple authentication providers and offers features such as authorization, callback handling, token refresh, token revocation, and session management.

@@ -23,6 +23,14 @@ import {
 	UserSessionId
 } from './types';
 
+const MILLISECONDS_IN_A_SECOND = 1000;
+
+const readOptionalString = (value: object, property: string) => {
+	const candidate: unknown = Reflect.get(value, property);
+
+	return typeof candidate === 'string' ? candidate : undefined;
+};
+
 export const defineAuthConfig = <UserType>(
 	configuration: AuthConfig<UserType>
 ) => configuration;
@@ -145,7 +153,7 @@ export const resolveOAuthAuthorization = async ({
 }: {
 	authProvider: string;
 	providerConfiguration?: ProviderConfig;
-	providerInstance: OAuth2Client<ProviderOption>;
+	providerInstance: Pick<OAuth2Client<ProviderOption>, 'fetchUserProfile'>;
 	tokenResponse: OAuth2TokenResponse;
 	now?: number;
 }): Promise<ResolvedOAuthAuthorization> => {
@@ -164,17 +172,20 @@ export const resolveOAuthAuthorization = async ({
 	let userIdentity;
 	let accessToken = tokenResponse.access_token;
 	let refreshToken = tokenResponse.refresh_token;
-	if (authProvider === 'withings' && !accessToken) {
-		const body = Reflect.get(tokenResponse, 'body');
-		if (body && typeof body === 'object') {
-			const nestedAccessToken = Reflect.get(body, 'access_token');
-			if (typeof nestedAccessToken === 'string') {
-				accessToken = nestedAccessToken;
-			}
-		}
+	const withingsBody: unknown = Reflect.get(tokenResponse, 'body');
+	const withingsAccessToken =
+		authProvider === 'withings' &&
+		withingsBody !== null &&
+		typeof withingsBody === 'object'
+			? readOptionalString(withingsBody, 'access_token')
+			: undefined;
+	if (!accessToken && withingsAccessToken !== undefined) {
+		accessToken = withingsAccessToken;
 	}
 	if (typeof accessToken !== 'string' || accessToken.length === 0) {
-		throw new Error('OAuth authorization response contains no access_token');
+		throw new Error(
+			'OAuth authorization response contains no access_token'
+		);
 	}
 
 	if (tokenResponse.id_token) {
@@ -194,12 +205,13 @@ export const resolveOAuthAuthorization = async ({
 			source: 'tokenResponse'
 		});
 	} else if (authProvider === 'withings') {
-		// @ts-expect-error TODO: Withings is its own case edit the validate response to accept this case
-		userIdentity = { userid: tokenResponse.body.userid };
-		// @ts-expect-error TODO: Withings is its own case edit the validate response to accept this case
-		accessToken = tokenResponse.body.access_token;
-		// @ts-expect-error TODO: Withings is its own case edit the validate response to accept this case
-		refreshToken = tokenResponse.body.refresh_token;
+		if (withingsBody === null || typeof withingsBody !== 'object') {
+			throw new Error('Withings OAuth response contains no body');
+		}
+		userIdentity = { userid: Reflect.get(withingsBody, 'userid') };
+		accessToken = readOptionalString(withingsBody, 'access_token') ?? accessToken;
+		refreshToken =
+			readOptionalString(withingsBody, 'refresh_token') ?? refreshToken;
 	} else {
 		userIdentity = normalizeProviderIdentity({
 			identity: await providerInstance.fetchUserProfile(accessToken),
@@ -241,7 +253,7 @@ export const resolveOAuthTokenExpiresAt = (
 		return undefined;
 	}
 
-	return now + expiresInSeconds * 1000;
+	return now + expiresInSeconds * MILLISECONDS_IN_A_SECOND;
 };
 
 type ValidateSessionProps<

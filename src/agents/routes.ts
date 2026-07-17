@@ -21,12 +21,22 @@ type AgentAuthFailure = {
 	message: 'Agent is not authenticated' | 'Insufficient agent scopes';
 };
 
+const DELETE_CODE_POINT = 127;
+const HTTP_BAD_REQUEST = 400;
+const HTTP_FORBIDDEN = 403;
+const HTTP_OK = 200;
+const HTTP_UNAUTHORIZED = 401;
+const MINIMUM_PRINTABLE_CODE_POINT = 32;
+
 const quoteHeaderValue = (value: string) => {
 	const printable = [...value]
 		.filter((character) => {
 			const codePoint = character.codePointAt(0) ?? 0;
 
-			return codePoint >= 32 && codePoint !== 127;
+			return (
+				codePoint >= MINIMUM_PRINTABLE_CODE_POINT &&
+				codePoint !== DELETE_CODE_POINT
+			);
 		})
 		.join('');
 
@@ -85,11 +95,14 @@ const failureResponse = (
 					requiredScopes
 				})
 			},
-			status: failure.code === 'Forbidden' ? 403 : 401
+			status:
+				failure.code === 'Forbidden'
+					? HTTP_FORBIDDEN
+					: HTTP_UNAUTHORIZED
 		}
 	);
 
-const json = (value: unknown, status = 200) =>
+const json = (value: unknown, status = HTTP_OK) =>
 	new Response(JSON.stringify(value), {
 		headers: {
 			'cache-control': 'no-store',
@@ -152,7 +165,7 @@ const registrationResponse = (
 				error_description:
 					'Authenticate at the service and confirm the account link.'
 			},
-			401
+			HTTP_UNAUTHORIZED
 		);
 	}
 
@@ -197,8 +210,8 @@ const escapeHtml = (value: string) =>
 		.replaceAll('"', '&quot;');
 
 export { agentRegistrationDiscoveryMetadata };
-export const agentAuthPlugin = (config?: AgentAuthConfig) => {
-	const plugin = new Elysia().derive(({ request }) => ({
+export const agentAuthContextPlugin = (config?: AgentAuthConfig) =>
+	new Elysia().derive(({ request }) => ({
 		protectAgent: async <AuthReturn, AuthFailReturn>(
 			requiredScopes: string[],
 			handleAuth: (
@@ -247,6 +260,9 @@ export const agentAuthPlugin = (config?: AgentAuthConfig) => {
 			return handleAuth(principal);
 		}
 	}));
+
+export const agentAuthPlugin = (config?: AgentAuthConfig) => {
+	const plugin = agentAuthContextPlugin(config);
 
 	if (config === undefined) return plugin.as('global');
 
@@ -304,11 +320,11 @@ export const agentAuthPlugin = (config?: AgentAuthConfig) => {
 		.post(identityRoute, async ({ body }) => {
 			const value = recordBody(body);
 			if (value === undefined || typeof value.type !== 'string') {
-				return json({ error: 'invalid_request' }, 400);
+				return json({ error: 'invalid_request' }, HTTP_BAD_REQUEST);
 			}
 			const input = parseRegistrationInput(value);
 			if (input === undefined)
-				return json({ error: 'invalid_request' }, 400);
+				return json({ error: 'invalid_request' }, HTTP_BAD_REQUEST);
 			const result = await startAgentRegistration(config, input);
 			if ('error' in result) {
 				return json(
@@ -331,7 +347,7 @@ export const agentAuthPlugin = (config?: AgentAuthConfig) => {
 				typeof value.claim_token !== 'string' ||
 				typeof value.email !== 'string'
 			) {
-				return json({ error: 'invalid_request' }, 400);
+				return json({ error: 'invalid_request' }, HTTP_BAD_REQUEST);
 			}
 			const result = await beginAgentClaim(config, {
 				claimToken: value.claim_token,
@@ -352,7 +368,7 @@ export const agentAuthPlugin = (config?: AgentAuthConfig) => {
 				typeof value.claim_attempt_token !== 'string' ||
 				typeof value.user_code !== 'string'
 			) {
-				return json({ error: 'invalid_request' }, 400);
+				return json({ error: 'invalid_request' }, HTTP_BAD_REQUEST);
 			}
 			const result = await completeAgentClaim(config, {
 				attemptToken: value.claim_attempt_token,
