@@ -1,6 +1,6 @@
 import { auth as createAuth } from './index';
 import type { AuthInstance } from './authInstance';
-import type { AuthConfig } from './types';
+import type { ServerAuthConfig } from './serverConfig';
 
 /**
  * Create the complete AbsoluteJS auth application through a declaration-stable
@@ -8,7 +8,7 @@ import type { AuthConfig } from './types';
  * does not need to load declarations for every optional Auth feature.
  */
 export const auth: <UserType>(
-	config: AuthConfig<UserType>
+	config: ServerAuthConfig<UserType>
 ) => Promise<AuthInstance<UserType>> = createAuth;
 
 export type { AuthInstance } from './authInstance';
@@ -18,12 +18,12 @@ export type { AuthSessionStore } from './session/types';
 export { isUserSessionId } from './typeGuards';
 export { userSessionIdTypebox } from './typebox';
 export type {
-	AuthConfig,
 	OAuth2ConfigurationOptions,
 	SessionData,
 	UnregisteredSessionData,
 	UserSessionId
 } from './types';
+export type { ServerAuthConfig as AuthConfig } from './serverConfig';
 export { instantiateUserSession } from './utils';
 export type { OAuth2TokenResponse, ProviderOption } from 'citra';
 export {
