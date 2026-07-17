@@ -159,6 +159,12 @@ RFC 9728/RFC 8414 discovery, claim polling, and assertion exchange.
 See [the agent-auth interoperability and deployment guide](docs/AGENT-AUTH.md)
 for supported standards, security invariants, and the production checklist.
 
+OIDC and agent-registration signing accepts either a local ES256 `privateJwk`
+or a `sign(input)` adapter with the public JWK and key ID. Production adapters
+can therefore keep private key material non-exportable in a KMS or HSM. The
+adapter must return the 64-byte JOSE ES256 signature (`r || s`); DER conversion
+belongs at the KMS boundary.
+
 ### Features
 
 - **Authorization**: Handles the authorization process by generating the authorization URL and redirecting the user to the authentication provider.

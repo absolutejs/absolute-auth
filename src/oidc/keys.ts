@@ -2,15 +2,27 @@
 // dependency, consistent with the rest of the package's WebCrypto-only crypto. Used to sign
 // id_tokens and access tokens, serve JWKS, and verify DPoP proofs.
 
-export type SigningKey = {
+type SigningKeyIdentity = {
 	kid: string;
-	privateJwk: JsonWebKey;
 	publicJwk: JsonWebKey;
 };
+
+/** ES256 signing material can remain local for development or be delegated to
+ * a non-exportable KMS/HSM adapter. External signers return the 64-byte JOSE
+ * ECDSA signature (r || s), not an ASN.1 DER envelope. */
+export type SigningKey = SigningKeyIdentity &
+	(
+		| { privateJwk: JsonWebKey; sign?: never }
+		| {
+				privateJwk?: never;
+				sign: (input: Uint8Array) => Promise<Uint8Array>;
+		  }
+	);
 
 const ENCODER = new TextEncoder();
 const ES256 = { hash: 'SHA-256', name: 'ECDSA' } as const;
 const KEY_PARAMS = { name: 'ECDSA', namedCurve: 'P-256' } as const;
+const ES256_JOSE_SIGNATURE_BYTES = 64;
 
 const toBase64Url = (bytes: ArrayBuffer | Uint8Array) =>
 	Buffer.from(
@@ -75,19 +87,24 @@ export const signJwt = async (
 	signing: SigningKey,
 	typ = 'JWT'
 ) => {
-	const key = await crypto.subtle.importKey(
-		'jwk',
-		signing.privateJwk,
-		KEY_PARAMS,
-		false,
-		['sign']
-	);
 	const input = `${encodeSegment({ alg: 'ES256', kid: signing.kid, typ })}.${encodeSegment(payload)}`;
-	const signature = await crypto.subtle.sign(
-		ES256,
-		key,
-		ENCODER.encode(input)
-	);
+	const encoded = ENCODER.encode(input);
+	let signature: ArrayBuffer | Uint8Array;
+	if (signing.sign !== undefined) {
+		signature = await signing.sign(encoded);
+	} else {
+		const key = await crypto.subtle.importKey(
+			'jwk',
+			signing.privateJwk,
+			KEY_PARAMS,
+			false,
+			['sign']
+		);
+		signature = await crypto.subtle.sign(ES256, key, encoded);
+	}
+	if (signature.byteLength !== ES256_JOSE_SIGNATURE_BYTES) {
+		throw new Error('ES256 signer must return a 64-byte JOSE signature');
+	}
 
 	return `${input}.${toBase64Url(signature)}`;
 };
