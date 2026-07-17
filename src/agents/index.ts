@@ -6,7 +6,8 @@ export * from './idJag';
 export * from '../oidc/clientIdMetadata';
 export { createOidcAgentCredentialVerifier } from './oidcAdapter';
 export { agentHasScopes, resolveAgentPrincipal } from './principal';
-export { agentAuthChallenge, agentAuthPlugin } from './routes';
+export { agentAuthChallenge, agentAuthContextPlugin } from './context';
+export { agentAuthPlugin } from './routes';
 export {
 	createInMemoryAgentDelegationStore,
 	createInMemoryAgentIdentityRegistrationStore,

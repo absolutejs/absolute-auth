@@ -1,5 +1,5 @@
 import type { Elysia } from 'elysia';
-import type { agentAuthContextPlugin } from './agents/routes';
+import type { agentAuthContextPlugin } from './agents/context';
 import type { protectRoutePlugin } from './routes/protectRoute';
 import type { stepUpPlugin } from './routes/stepUp';
 
