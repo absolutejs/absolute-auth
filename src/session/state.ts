@@ -1,9 +1,12 @@
 import { Elysia } from 'elysia';
-import { SessionRecord, UnregisteredSessionRecord } from '../types';
+import type {
+	InternalSessionRecord,
+	InternalUnregisteredSessionRecord
+} from './internalData';
 
 export const sessionStore = <UserType>() => {
-	const initialSession: SessionRecord<UserType> = {};
-	const initialUnregisteredSession: UnregisteredSessionRecord = {};
+	const initialSession: InternalSessionRecord<UserType> = {};
+	const initialUnregisteredSession: InternalUnregisteredSessionRecord = {};
 
 	return new Elysia({ name: 'sessionStore' }).state({
 		session: initialSession,
