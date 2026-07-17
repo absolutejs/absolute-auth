@@ -550,6 +550,11 @@ export {
 export { createLinkedProviderCredentialResolver } from './linkedProviders/resolver';
 export { createOAuthLinkedProviderCredentialResolver } from './linkedProviders/oauthResolver';
 export {
+	createOAuthAccountLinkedProviderCredentialResolver,
+	type OAuthLinkedProviderAccount,
+	type OAuthLinkedProviderAccountStore
+} from './linkedProviders/oauthAccountResolver';
+export {
 	createNeonLinkedProviderStores,
 	createNeonOAuthLinkedProviderCredentialResolver
 } from './linkedProviders/neonStores';

@@ -313,21 +313,13 @@ export const createLinkedProviderCredentialResolver = ({
 					binding.externalAccountId === input.externalAccountId)
 		);
 
-		for (const binding of bindings) {
-			// Sequential by design: bindings are sorted newest-first and the
-			// first usable credential wins, so we must stop at the first match
-			// rather than fetch every grant in parallel.
-			// eslint-disable-next-line no-await-in-loop
-			const credential = await resolveBindingCredential(
-				grantStore,
-				binding,
-				input
-			);
-			if (credential) {
-				return credential;
-			}
-		}
+		return bindings.reduce<
+			Promise<ResolvedLinkedProviderCredential | null>
+		>(async (pendingCredential, binding) => {
+			const credential = await pendingCredential;
+			if (credential) return credential;
 
-		return null;
+			return resolveBindingCredential(grantStore, binding, input);
+		}, Promise.resolve(null));
 	}
 });
