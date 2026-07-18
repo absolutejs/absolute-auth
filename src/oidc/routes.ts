@@ -394,6 +394,9 @@ export const oidcProviderRoutes = <UserType>(
 		) {
 			return oauthError(HTTP_BAD_REQUEST, 'invalid_grant');
 		}
+		if (body.resource !== undefined && body.resource !== record.audience) {
+			return oauthError(HTTP_BAD_REQUEST, 'invalid_target');
+		}
 		const dpopResult =
 			dpop === undefined
 				? undefined
@@ -409,6 +412,7 @@ export const oidcProviderRoutes = <UserType>(
 		return tokenResponse(
 			await issueTokenSet({
 				acr: record.acr,
+				audience: record.audience,
 				claims: record.claims,
 				clientCertThumbprint,
 				clientId: client.clientId,
@@ -441,6 +445,9 @@ export const oidcProviderRoutes = <UserType>(
 		) {
 			return oauthError(HTTP_BAD_REQUEST, 'invalid_grant');
 		}
+		if (body.resource !== undefined && body.resource !== record.audience) {
+			return oauthError(HTTP_BAD_REQUEST, 'invalid_target');
+		}
 		if (record.dpopJkt !== undefined) {
 			const proof = await verifyDpopProof({
 				htm: 'POST',
@@ -455,6 +462,7 @@ export const oidcProviderRoutes = <UserType>(
 		return tokenResponse(
 			await issueTokenSet({
 				acr: record.acr,
+				audience: record.audience,
 				claims: record.claims,
 				clientCertThumbprint,
 				clientId: client.clientId,
@@ -1093,6 +1101,7 @@ export const oidcProviderRoutes = <UserType>(
 					const code = generateSecureToken(TOKEN_BYTES);
 					await authorizationCodeStore.saveCode({
 						acr: userAcr,
+						audience: effectiveQuery.resource,
 						claims: getClaims?.(userSession.user),
 						clientId: client.clientId,
 						codeChallenge,
@@ -1131,6 +1140,7 @@ export const oidcProviderRoutes = <UserType>(
 						redirect_uri: t.Optional(t.String()),
 						request: t.Optional(t.String()),
 						request_uri: t.Optional(t.String()),
+						resource: t.Optional(t.String()),
 						response_mode: t.Optional(t.String()),
 						response_type: t.Optional(t.String()),
 						scope: t.Optional(t.String()),

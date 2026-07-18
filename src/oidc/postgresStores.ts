@@ -35,6 +35,32 @@ const URL_LENGTH = 2048;
 const DEFAULT_LIST_LIMIT = 100;
 
 const ID_LENGTH = 255;
+const BACKCHANNEL_AUTH_STATUSES = new Set<BackchannelAuthStatus>([
+	'approved',
+	'denied',
+	'pending'
+]);
+const DEVICE_AUTHORIZATION_STATUSES = new Set<DeviceAuthorizationStatus>([
+	'approved',
+	'denied',
+	'pending'
+]);
+
+const backchannelAuthStatus = (value: string) => {
+	for (const status of BACKCHANNEL_AUTH_STATUSES)
+		if (status === value) return status;
+
+	throw new Error(
+		`Invalid persisted backchannel authorization status: ${value}`
+	);
+};
+
+const deviceAuthorizationStatus = (value: string) => {
+	for (const status of DEVICE_AUTHORIZATION_STATUSES)
+		if (status === value) return status;
+
+	throw new Error(`Invalid persisted device authorization status: ${value}`);
+};
 
 export const oauthBackchannelAuthRequestsTable = pgTable(
 	'auth_oauth_backchannel_auth_requests',
@@ -91,6 +117,7 @@ export const oauthClientsTable = pgTable('auth_oauth_clients', {
 });
 export const oauthCodesTable = pgTable('auth_oauth_codes', {
 	acr: varchar('acr', { length: ID_LENGTH }),
+	audience: varchar('audience', { length: URL_LENGTH }),
 	claims_json: jsonb('claims_json').$type<Record<string, unknown>>(),
 	client_id: varchar('client_id', { length: ID_LENGTH }).notNull(),
 	code_challenge: varchar('code_challenge', { length: ID_LENGTH }).notNull(),
@@ -157,6 +184,7 @@ export const oauthPushedAuthorizationRequestsTable = pgTable(
 );
 export const oauthRefreshTokensTable = pgTable('auth_oauth_refresh_tokens', {
 	acr: varchar('acr', { length: ID_LENGTH }),
+	audience: varchar('audience', { length: URL_LENGTH }),
 	claims_json: jsonb('claims_json').$type<Record<string, unknown>>(),
 	client_id: varchar('client_id', { length: ID_LENGTH }).notNull(),
 	created_at_ms: bigint('created_at_ms', { mode: 'number' }).notNull(),
@@ -202,6 +230,7 @@ const toLogoutDelivery = (row: LogoutDeliveryRow): LogoutDelivery => ({
 
 const toCode = (row: CodeRow): AuthorizationCode => ({
 	acr: row.acr ?? undefined,
+	audience: row.audience ?? undefined,
 	claims: row.claims_json ?? undefined,
 	clientId: row.client_id,
 	codeChallenge: row.code_challenge,
@@ -219,6 +248,7 @@ const toCodeValues = (
 	code: AuthorizationCode
 ): typeof oauthCodesTable.$inferInsert => ({
 	acr: code.acr ?? null,
+	audience: code.audience ?? null,
 	claims_json: code.claims ?? null,
 	client_id: code.clientId,
 	code_challenge: code.codeChallenge,
@@ -239,14 +269,14 @@ const toDeviceAuth = (row: DeviceAuthRow): DeviceAuthorization => ({
 	expiresAt: row.expires_at_ms,
 	intervalSeconds: row.interval_seconds,
 	scopes: row.scopes,
-	// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- deserialization boundary: status was persisted from DeviceAuthorizationStatus
-	status: row.status as DeviceAuthorizationStatus,
+	status: deviceAuthorizationStatus(row.status),
 	userCode: row.user_code,
 	userSub: row.user_sub ?? undefined
 });
 
 const toRefresh = (row: RefreshRow): OidcRefreshToken => ({
 	acr: row.acr ?? undefined,
+	audience: row.audience ?? undefined,
 	claims: row.claims_json ?? undefined,
 	clientId: row.client_id,
 	createdAt: row.created_at_ms,
@@ -261,6 +291,7 @@ const toRefreshValues = (
 	token: OidcRefreshToken
 ): typeof oauthRefreshTokensTable.$inferInsert => ({
 	acr: token.acr ?? null,
+	audience: token.audience ?? null,
 	claims_json: token.claims ?? null,
 	client_id: token.clientId,
 	created_at_ms: token.createdAt,
@@ -628,8 +659,7 @@ const toBackchannelAuth = (
 	intervalSeconds: row.interval_seconds,
 	lastPolledAt: row.last_polled_at_ms ?? undefined,
 	scopes: row.scopes,
-	// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- deserialization boundary: status was persisted from BackchannelAuthStatus
-	status: row.status as BackchannelAuthStatus,
+	status: backchannelAuthStatus(row.status),
 	userSub: row.user_sub ?? undefined
 });
 

@@ -110,6 +110,7 @@ export type AuthorizationCode = {
 	// RFC 9470 — ACR value the user satisfied at /authorize time. Propagated as the
 	// `acr` claim in the id_token (and access_token when present).
 	acr?: string;
+	audience?: string;
 	claims?: Record<string, unknown>;
 	clientId: string;
 	codeChallenge: string;
@@ -134,6 +135,7 @@ export type OidcRefreshToken = {
 	// RFC 9470 — ACR satisfied at issuance time. Preserved across refresh so the new
 	// id_token carries the same `acr` claim (the user hasn't re-authenticated since).
 	acr?: string;
+	audience?: string;
 	claims?: Record<string, unknown>;
 	clientId: string;
 	createdAt: number;

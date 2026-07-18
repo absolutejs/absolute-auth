@@ -121,6 +121,14 @@ const mfaTotpLockoutMigration: Migration = {
 	sql: 'ALTER TABLE "auth_mfa_enrollments" ADD COLUMN IF NOT EXISTS "totp_failed_attempts" smallint NOT NULL DEFAULT 0;'
 };
 
+const oidcResourceAudienceMigration: Migration = {
+	id: '0002_resource_audience',
+	sql: [
+		'ALTER TABLE "auth_oauth_codes" ADD COLUMN IF NOT EXISTS "audience" varchar(2048);',
+		'ALTER TABLE "auth_oauth_refresh_tokens" ADD COLUMN IF NOT EXISTS "audience" varchar(2048);'
+	].join('\n')
+};
+
 export const blockMigrations: Record<BlockName, BlockMigrations> = {
 	adaptive: initMigration('adaptive', [knownDevicesTable, loginHistoryTable]),
 	agents: {
@@ -162,18 +170,24 @@ export const blockMigrations: Record<BlockName, BlockMigrations> = {
 			mfaTotpLockoutMigration
 		]
 	},
-	oidc: initMigration('oidc', [
-		oauthBackchannelAuthRequestsTable,
-		oauthClientAssertionJtisTable,
-		oauthClientRegistrationTokensTable,
-		oauthClientsTable,
-		oauthCodesTable,
-		oauthDeviceAuthorizationsTable,
-		oauthInitialAccessTokensTable,
-		oauthLogoutDeliveriesTable,
-		oauthPushedAuthorizationRequestsTable,
-		oauthRefreshTokensTable
-	]),
+	oidc: {
+		block: 'oidc',
+		migrations: [
+			...initMigration('oidc', [
+				oauthBackchannelAuthRequestsTable,
+				oauthClientAssertionJtisTable,
+				oauthClientRegistrationTokensTable,
+				oauthClientsTable,
+				oauthCodesTable,
+				oauthDeviceAuthorizationsTable,
+				oauthInitialAccessTokensTable,
+				oauthLogoutDeliveriesTable,
+				oauthPushedAuthorizationRequestsTable,
+				oauthRefreshTokensTable
+			]).migrations,
+			oidcResourceAudienceMigration
+		]
+	},
 	organizations: initMigration('organizations', [
 		organizationsTable,
 		organizationMembershipsTable,

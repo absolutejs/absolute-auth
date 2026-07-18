@@ -12,6 +12,9 @@ import { createInMemoryAuthSessionStore } from '../src/session/inMemoryStore';
 import type { UserSessionId } from '../src/types';
 
 type TestUser = { email: string; sub: string };
+type TestApplication = {
+	handle: (request: Request) => Promise<Response>;
+};
 
 const HOUR_MS = 3_600_000;
 const SESSION_ID: UserSessionId = '11111111-1111-4111-8111-111111111111';
@@ -52,12 +55,12 @@ const buildApp = async (
 					? createInMemoryDeviceAuthorizationStore()
 					: undefined,
 			getAccessTokenClaims: extras.getAccessTokenClaims,
-			getClaims: (user) => ({ email: user.email }),
-			getUserId: (user) => user.sub,
 			issuer: ISSUER,
 			refreshTokenStore: createInMemoryOidcRefreshTokenStore(),
 			signingKey,
-			strictFapi: extras.strictFapi
+			strictFapi: extras.strictFapi,
+			getClaims: (user) => ({ email: user.email }),
+			getUserId: (user) => user.sub
 		},
 		providersConfiguration: {}
 	});
@@ -73,7 +76,8 @@ const buildApp = async (
 const authorize = (
 	app: { handle: (request: Request) => Promise<Response> },
 	challenge: string,
-	cookie: string
+	cookie: string,
+	resource?: string
 ) => {
 	const params = new URLSearchParams({
 		client_id: 'app1',
@@ -85,6 +89,7 @@ const authorize = (
 		scope: 'openid profile',
 		state: 'state-xyz'
 	});
+	if (resource !== undefined) params.set('resource', resource);
 
 	return app.handle(
 		new Request(`http://localhost/oauth2/authorize?${params.toString()}`, {
@@ -113,7 +118,7 @@ const codeFromRedirect = (response: Response) => {
 };
 
 describe('OIDC provider', () => {
-	let app = { handle: async () => new Response() };
+	let app: TestApplication = { handle: async () => new Response() };
 
 	beforeEach(async () => {
 		app = await buildApp();
@@ -152,6 +157,47 @@ describe('OIDC provider', () => {
 
 		const accessToken = await verifyJwt(tokens.access_token, jwks.keys[0]);
 		expect(accessToken?.payload.scope).toBe('openid profile');
+	});
+
+	test('binds authorization-code and refreshed access tokens to the RFC 8707 resource', async () => {
+		const resource = 'https://api.example.test/mcp';
+		const challenge = await hashToken(VERIFIER);
+		const code = codeFromRedirect(
+			await authorize(
+				app,
+				challenge,
+				`user_session_id=${SESSION_ID}`,
+				resource
+			)
+		);
+		const tokens = await (
+			await token(app, {
+				client_id: 'app1',
+				code,
+				code_verifier: VERIFIER,
+				grant_type: 'authorization_code',
+				redirect_uri: REDIRECT_URI,
+				resource
+			})
+		).json();
+		const refreshed = await (
+			await token(app, {
+				client_id: 'app1',
+				grant_type: 'refresh_token',
+				refresh_token: tokens.refresh_token,
+				resource
+			})
+		).json();
+		const jwks = await (
+			await app.handle(new Request('http://localhost/oauth2/jwks'))
+		).json();
+
+		expect(
+			(await verifyJwt(tokens.access_token, jwks.keys[0]))?.payload.aud
+		).toBe(resource);
+		expect(
+			(await verifyJwt(refreshed.access_token, jwks.keys[0]))?.payload.aud
+		).toBe(resource);
 	});
 
 	test('getAccessTokenClaims merges custom claims; reserved claims are protected', async () => {
@@ -398,9 +444,9 @@ describe('OIDC provider', () => {
 				body: new URLSearchParams({
 					client_id: 'app1',
 					client_secret: 'nope',
-					grant_type: 'authorization_code',
 					code: 'whatever',
 					code_verifier: VERIFIER,
+					grant_type: 'authorization_code',
 					redirect_uri: REDIRECT_URI
 				}),
 				method: 'POST'
@@ -495,7 +541,7 @@ describe('OIDC provider', () => {
 const TOKEN_EXCHANGE = 'urn:ietf:params:oauth:grant-type:token-exchange';
 
 describe('OIDC token exchange (RFC 8693) — AI-agent / MCP delegation', () => {
-	let app = { handle: async () => new Response() };
+	let app: TestApplication = { handle: async () => new Response() };
 
 	beforeEach(async () => {
 		app = await buildApp();

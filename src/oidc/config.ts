@@ -405,6 +405,7 @@ export const exchangeToken = async <UserType>({
 // `cnf.x5t#S256` and the resource server must verify the inbound TLS client cert matches.
 export const issueTokenSet = async <UserType>({
 	acr,
+	audience,
 	claims,
 	clientCertThumbprint,
 	clientId,
@@ -416,6 +417,7 @@ export const issueTokenSet = async <UserType>({
 	sub
 }: {
 	acr?: string;
+	audience?: string;
 	claims?: Record<string, unknown>;
 	clientCertThumbprint?: string;
 	clientId: string;
@@ -430,12 +432,14 @@ export const issueTokenSet = async <UserType>({
 	const idTtl = config.idTokenTtlMs ?? DEFAULT_ID_TOKEN_TTL_MS;
 	const refreshTtl = config.refreshTokenTtlMs ?? DEFAULT_REFRESH_TOKEN_TTL_MS;
 	const accessExtra = await config.getAccessTokenClaims?.({
+		audience,
 		clientId,
 		scopes,
 		sub
 	});
 
 	const accessPayload = buildAccessClaims({
+		audience,
 		clientCertThumbprint,
 		clientId,
 		dpopJkt,
@@ -461,6 +465,7 @@ export const issueTokenSet = async <UserType>({
 	const refreshToken = generateSecureToken(TOKEN_BYTES);
 	await config.refreshTokenStore.saveToken({
 		acr,
+		audience,
 		claims,
 		clientId,
 		createdAt: now,
