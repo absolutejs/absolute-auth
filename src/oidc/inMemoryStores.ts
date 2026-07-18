@@ -32,6 +32,17 @@ export const createInMemoryAuthorizationCodeStore =
 
 				return record;
 			},
+			deleteForUserClient: async (userId, clientId) => {
+				let deleted = 0;
+				for (const [hash, code] of codes) {
+					if (code.userId !== userId || code.clientId !== clientId)
+						continue;
+					codes.delete(hash);
+					deleted += 1;
+				}
+
+				return deleted;
+			},
 			saveCode: async (code) => {
 				codes.set(code.codeHash, { ...code });
 			}
@@ -107,6 +118,20 @@ export const createInMemoryDeviceAuthorizationStore =
 		return {
 			deleteByDeviceCodeHash: async (deviceCodeHash) => {
 				byDeviceCode.delete(deviceCodeHash);
+			},
+			deleteForUserClient: async (userId, clientId) => {
+				let deleted = 0;
+				for (const [hash, authorization] of byDeviceCode) {
+					if (
+						authorization.userSub !== userId ||
+						authorization.clientId !== clientId
+					)
+						continue;
+					byDeviceCode.delete(hash);
+					deleted += 1;
+				}
+
+				return deleted;
 			},
 			findByDeviceCodeHash: async (deviceCodeHash) =>
 				byDeviceCode.get(deviceCodeHash),

@@ -335,6 +335,19 @@ export const createPostgresAuthorizationCodeStore = <DB extends AnyPgDatabase>(
 
 		return row ? toCode(row) : undefined;
 	},
+	deleteForUserClient: async (userId, clientId) => {
+		const deleted = await db
+			.delete(oauthCodesTable)
+			.where(
+				and(
+					eq(oauthCodesTable.user_id, userId),
+					eq(oauthCodesTable.client_id, clientId)
+				)
+			)
+			.returning({ codeHash: oauthCodesTable.code_hash });
+
+		return deleted.length;
+	},
 	saveCode: async (code) => {
 		await db.insert(oauthCodesTable).values(toCodeValues(code));
 	}
@@ -417,6 +430,22 @@ export const createPostgresDeviceAuthorizationStore = <
 					deviceCodeHash
 				)
 			);
+	},
+	deleteForUserClient: async (userId, clientId) => {
+		const deleted = await db
+			.delete(oauthDeviceAuthorizationsTable)
+			.where(
+				and(
+					eq(oauthDeviceAuthorizationsTable.user_sub, userId),
+					eq(oauthDeviceAuthorizationsTable.client_id, clientId)
+				)
+			)
+			.returning({
+				deviceCodeHash:
+					oauthDeviceAuthorizationsTable.device_code_hash
+			});
+
+		return deleted.length;
 	},
 	findByDeviceCodeHash: async (deviceCodeHash) => {
 		const [row] = await db

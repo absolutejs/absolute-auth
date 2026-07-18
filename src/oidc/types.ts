@@ -127,6 +127,7 @@ export type AuthorizationCode = {
 export type AuthorizationCodeStore = {
 	// Atomically fetch and delete (codes are single-use).
 	consumeCode: (codeHash: string) => Promise<AuthorizationCode | undefined>;
+	deleteForUserClient: (userId: string, clientId: string) => Promise<number>;
 	saveCode: (code: AuthorizationCode) => Promise<void>;
 };
 
@@ -202,6 +203,7 @@ export type LogoutDeliveryStore = {
 
 export type DeviceAuthorizationStore = {
 	deleteByDeviceCodeHash: (deviceCodeHash: string) => Promise<void>;
+	deleteForUserClient: (userId: string, clientId: string) => Promise<number>;
 	findByDeviceCodeHash: (
 		deviceCodeHash: string
 	) => Promise<DeviceAuthorization | undefined>;
