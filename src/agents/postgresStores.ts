@@ -1,8 +1,8 @@
 import { and, desc, eq, gt, isNull, or } from 'drizzle-orm';
 import {
 	bigint,
+	customType,
 	integer,
-	jsonb,
 	pgTable,
 	uniqueIndex,
 	varchar
@@ -25,9 +25,19 @@ const ID_LENGTH = 255;
 const NAME_LENGTH = 255;
 const STATUS_LENGTH = 16;
 
+// Drizzle 1.0's built-in JSONB codec is not yet serialized by Bun SQL. This
+// package-owned custom type preserves one portable boundary for Bun SQL,
+// postgres.js, and Neon while `$type<T>()` retains each column's exact shape.
+const portableJsonb = customType<{ data: unknown; driverData: unknown }>({
+	dataType: () => 'jsonb',
+	fromDriver: (value) =>
+		typeof value === 'string' ? JSON.parse(value) : value,
+	toDriver: (value) => JSON.stringify(value)
+});
+
 export const agentDelegationsTable = pgTable('auth_agent_delegations', {
 	agent_id: varchar('agent_id', { length: ID_LENGTH }).notNull(),
-	authorization_details: jsonb('authorization_details').$type<
+	authorization_details: portableJsonb('authorization_details').$type<
 		Record<string, unknown>[]
 	>(),
 	created_at_ms: bigint('created_at_ms', { mode: 'number' }).notNull(),
@@ -36,7 +46,7 @@ export const agentDelegationsTable = pgTable('auth_agent_delegations', {
 	}).primaryKey(),
 	expires_at_ms: bigint('expires_at_ms', { mode: 'number' }),
 	organization_id: varchar('organization_id', { length: ID_LENGTH }),
-	scopes: jsonb('scopes').$type<string[]>().notNull().default([]),
+	scopes: portableJsonb('scopes').$type<string[]>().notNull().default([]),
 	status: varchar('status', { length: STATUS_LENGTH })
 		.$type<AgentDelegationStatus>()
 		.notNull(),
@@ -48,7 +58,7 @@ export const agentIdentityRegistrationsTable = pgTable(
 	{
 		agent_id: varchar('agent_id', { length: ID_LENGTH }).notNull().unique(),
 		claim_attempt:
-			jsonb('claim_attempt').$type<
+			portableJsonb('claim_attempt').$type<
 				AgentIdentityRegistration['claimAttempt']
 			>(),
 		claim_attempt_token_hash: varchar('claim_attempt_token_hash', {
@@ -94,13 +104,13 @@ export const agentIdentityRegistrationsTable = pgTable(
 );
 export const agentRegistrationsTable = pgTable('auth_agent_registrations', {
 	agent_id: varchar('agent_id', { length: ID_LENGTH }).primaryKey(),
-	allowed_scopes: jsonb('allowed_scopes')
+	allowed_scopes: portableJsonb('allowed_scopes')
 		.$type<string[]>()
 		.notNull()
 		.default([]),
 	client_id: varchar('client_id', { length: ID_LENGTH }).unique(),
 	created_at_ms: bigint('created_at_ms', { mode: 'number' }).notNull(),
-	metadata: jsonb('metadata').$type<Record<string, unknown>>(),
+	metadata: portableJsonb('metadata').$type<Record<string, unknown>>(),
 	name: varchar('name', { length: NAME_LENGTH }).notNull(),
 	status: varchar('status', { length: STATUS_LENGTH })
 		.$type<AgentRegistrationStatus>()
