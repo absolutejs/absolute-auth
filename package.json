@@ -1,5 +1,5 @@
 {
-	"version": "0.56.4",
+	"version": "0.56.5",
 	"name": "@absolutejs/auth",
 	"description": "An authorization library for absolutejs",
 	"repository": {
@@ -22,9 +22,9 @@
 		"test": "bun test",
 		"format": "absolute prettier --write",
 		"lint": "absolute eslint",
-		"prepublishOnly": "bun run build",
+		"prepack": "bun -e \"for (const path of ['dist/oidc/config.d.ts','dist/oidc/types.d.ts','dist/oidc/postgresStores.d.ts']) if (!(await Bun.file(path).exists())) throw new Error('Run bun run build before packing: missing ' + path)\"",
 		"typecheck": "absolute typecheck",
-		"release": "bun run format && bun run build && bun publish"
+		"release": "bun run format && bun run build && npm publish"
 	},
 	"keywords": [
 		"authorization",
