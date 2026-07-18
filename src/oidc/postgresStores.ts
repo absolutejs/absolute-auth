@@ -572,6 +572,19 @@ export const createPostgresOidcRefreshTokenStore = <DB extends AnyPgDatabase>(
 			.delete(oauthRefreshTokensTable)
 			.where(eq(oauthRefreshTokensTable.user_id, userId));
 	},
+	deleteForUserClient: async (userId, clientId) => {
+		const deleted = await db
+			.delete(oauthRefreshTokensTable)
+			.where(
+				and(
+					eq(oauthRefreshTokensTable.user_id, userId),
+					eq(oauthRefreshTokensTable.client_id, clientId)
+				)
+			)
+			.returning({ tokenHash: oauthRefreshTokensTable.token_hash });
+
+		return deleted.length;
+	},
 	getToken: async (tokenHash) => {
 		const [row] = await db
 			.select()

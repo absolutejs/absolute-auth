@@ -199,6 +199,17 @@ export const createInMemoryOidcRefreshTokenStore =
 					if (token.userId === userId) tokens.delete(hash);
 				}
 			},
+			deleteForUserClient: async (userId, clientId) => {
+				let deleted = 0;
+				for (const [hash, token] of tokens) {
+					if (token.userId !== userId || token.clientId !== clientId)
+						continue;
+					tokens.delete(hash);
+					deleted += 1;
+				}
+
+				return deleted;
+			},
 			getToken: async (tokenHash) => tokens.get(tokenHash),
 			listClientIdsForUser: async (userId) => {
 				const now = Date.now();

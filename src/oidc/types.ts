@@ -150,6 +150,9 @@ export type OidcRefreshTokenStore = {
 	// Atomically fetch and delete (rotation: each refresh token is used once).
 	consumeToken: (tokenHash: string) => Promise<OidcRefreshToken | undefined>;
 	deleteForUser: (userId: string) => Promise<void>;
+	// Removes every refresh-token family member for one relying party connection.
+	// Hosts use this for per-client disconnect controls without revoking unrelated apps.
+	deleteForUserClient: (userId: string, clientId: string) => Promise<number>;
 	// Non-consuming lookup — only used by the introspection endpoint (RFC 7662).
 	getToken: (tokenHash: string) => Promise<OidcRefreshToken | undefined>;
 	// Distinct client ids holding non-expired refresh tokens for the user. Used by
