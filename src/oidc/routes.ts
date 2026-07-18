@@ -1099,6 +1099,12 @@ export const oidcProviderRoutes = <UserType>(
 					}
 
 					const code = generateSecureToken(TOKEN_BYTES);
+					const userSub = getUserId(userSession.user);
+					await config.onAuthorizationCodeApproved?.({
+						clientId: client.clientId,
+						scopes: granted,
+						userSub
+					});
 					await authorizationCodeStore.saveCode({
 						acr: userAcr,
 						audience: effectiveQuery.resource,
@@ -1111,7 +1117,7 @@ export const oidcProviderRoutes = <UserType>(
 						nonce,
 						redirectUri,
 						scopes: granted,
-						userId: getUserId(userSession.user)
+						userId: userSub
 					});
 
 					const params: Record<string, string> = {

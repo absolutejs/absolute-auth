@@ -207,6 +207,13 @@ export type OidcProviderConfig<UserType> = {
 	onClientRegistration?: OnClientRegistration;
 	/** Fires after RFC 7591 registration has been persisted and has a generated client id. */
 	onClientRegistered?: OnClientRegistered;
+	/** Fires after an authenticated user authorizes an OAuth authorization-code
+	 * request and the final granted scopes are known, before the code is issued. */
+	onAuthorizationCodeApproved?: (context: {
+		clientId: string;
+		scopes: string[];
+		userSub: string;
+	}) => void | Promise<void>;
 	/** Fires after the authenticated user approves an RFC 8628 device request. */
 	onDeviceAuthorizationApproved?: (context: {
 		clientId: string;

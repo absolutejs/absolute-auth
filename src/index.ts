@@ -2,13 +2,14 @@ import { createOAuth2Client } from 'citra';
 import { Elysia } from 'elysia';
 import { apiKeysRoutes } from './apikeys/routes';
 import { agentAuthRoutes } from './agents/routes';
+import type { AgentAuthConfig } from './agents/config';
 import {
 	AGENT_CLAIM_GRANT_TYPE,
 	AGENT_IDENTITY_ASSERTION_GRANT_TYPE,
 	agentRegistrationDiscoveryMetadata,
 	handleAgentTokenGrant
 } from './agents/registration';
-import { createAuditEmitter } from './audit/config';
+import { createAuditEmitter, type AuditEmitter } from './audit/config';
 import {
 	composeCallbackAudit,
 	composeCredentialsAudit,
@@ -58,6 +59,43 @@ const validatePositiveOptions = (
 			throw new Error(`${prefix}.${name} must be positive`);
 		}
 	}
+};
+
+const delegateAgentAuthorization = async (
+	agentAuth: AgentAuthConfig | undefined,
+	context: { clientId: string; scopes: string[]; userSub: string },
+	auditEmit: AuditEmitter | undefined
+) => {
+	if (agentAuth === undefined) return;
+	const registration = await agentAuth.registrationStore.findByClientId(
+		context.clientId
+	);
+	if (registration === undefined || registration.status !== 'active') return;
+	const now = Date.now();
+	const existing = await agentAuth.delegationStore.findActiveDelegation({
+		agentId: registration.agentId,
+		now,
+		userId: context.userSub
+	});
+	await agentAuth.delegationStore.saveDelegation({
+		agentId: registration.agentId,
+		createdAt: existing?.createdAt ?? now,
+		delegationId: existing?.delegationId ?? `agd_${crypto.randomUUID()}`,
+		scopes: context.scopes.filter(
+			(scope) =>
+				registration.allowedScopes.includes(scope) &&
+				agentAuth.scopes.includes(scope)
+		),
+		status: 'active',
+		updatedAt: now,
+		userId: context.userSub
+	});
+	await auditEmit?.({
+		at: now,
+		metadata: { agentId: registration.agentId },
+		type: 'agent_delegated',
+		userId: context.userSub
+	});
 };
 
 const buildAuthApplications = async <UserType>(
@@ -226,6 +264,18 @@ const buildAuthApplications = async <UserType>(
 						context.body
 					);
 				},
+				onAuthorizationCodeApproved: async (
+					context: Parameters<
+						NonNullable<typeof oidc.onAuthorizationCodeApproved>
+					>[0]
+				) => {
+					await oidc.onAuthorizationCodeApproved?.(context);
+					await delegateAgentAuthorization(
+						agentAuth,
+						context,
+						auditEmit
+					);
+				},
 				onClientRegistered: async (
 					context: Parameters<
 						NonNullable<typeof oidc.onClientRegistered>
@@ -257,45 +307,11 @@ const buildAuthApplications = async <UserType>(
 					>[0]
 				) => {
 					await oidc.onDeviceAuthorizationApproved?.(context);
-					if (agentAuth === undefined) return;
-					const registration =
-						await agentAuth.registrationStore.findByClientId(
-							context.clientId
-						);
-					if (
-						registration === undefined ||
-						registration.status !== 'active'
-					) {
-						return;
-					}
-					const now = Date.now();
-					const existing =
-						await agentAuth.delegationStore.findActiveDelegation({
-							agentId: registration.agentId,
-							now,
-							userId: context.userSub
-						});
-					await agentAuth.delegationStore.saveDelegation({
-						agentId: registration.agentId,
-						createdAt: existing?.createdAt ?? now,
-						delegationId:
-							existing?.delegationId ??
-							`agd_${crypto.randomUUID()}`,
-						scopes: context.scopes.filter(
-							(scope) =>
-								registration.allowedScopes.includes(scope) &&
-								agentAuth.scopes.includes(scope)
-						),
-						status: 'active',
-						updatedAt: now,
-						userId: context.userSub
-					});
-					await auditEmit?.({
-						at: now,
-						metadata: { agentId: registration.agentId },
-						type: 'agent_delegated',
-						userId: context.userSub
-					});
+					await delegateAgentAuthorization(
+						agentAuth,
+						context,
+						auditEmit
+					);
 				}
 			}
 		: undefined;

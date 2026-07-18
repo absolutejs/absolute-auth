@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { Elysia } from 'elysia';
+import { hashToken } from '../src/crypto';
 import {
 	agentAuthPlugin,
 	auth,
@@ -143,6 +144,87 @@ describe('agent auth resource and guard', () => {
 });
 
 describe('standards-based agent onboarding', () => {
+	test('authorization-code approval creates the same durable delegation', async () => {
+		type User = { sub: string };
+		const signingKey = await generateSigningKey();
+		const registrationStore = createInMemoryAgentRegistrationStore();
+		const delegationStore = createInMemoryAgentDelegationStore();
+		const authSessionStore = createInMemoryAuthSessionStore<User>();
+		const now = Date.now();
+		await registrationStore.saveRegistration({
+			agentId: 'authorization-code-agent',
+			allowedScopes: ['documents:read'],
+			clientId: 'authorization-code-agent',
+			createdAt: now,
+			name: 'Authorization Code Agent',
+			status: 'active',
+			updatedAt: now
+		});
+		await authSessionStore.setSession(SESSION_ID, {
+			authenticatedAt: now,
+			expiresAt: now + 60_000,
+			user: { sub: 'user-1' }
+		});
+		const app = await auth<User>({
+			agentAuth: {
+				authorizationServer: ISSUER,
+				delegationStore,
+				registrationStore,
+				resource: RESOURCE,
+				scopes: ['documents:read'],
+				verifyCredential: createOidcAgentCredentialVerifier({
+					issuer: ISSUER,
+					publicJwk: signingKey.publicJwk,
+					resource: RESOURCE
+				})
+			},
+			authSessionStore,
+			oidc: {
+				authorizationCodeStore: createInMemoryAuthorizationCodeStore(),
+				clientStore: createInMemoryOAuthClientStore([
+					{
+						clientId: 'authorization-code-agent',
+						name: 'Authorization Code Agent',
+						redirectUris: ['https://agent.example/callback'],
+						scopes: ['documents:read']
+					}
+				]),
+				issuer: ISSUER,
+				refreshTokenStore: createInMemoryOidcRefreshTokenStore(),
+				signingKey,
+				getUserId: (user) => user.sub
+			},
+			providersConfiguration: {},
+			getUser: async (sub) => ({ sub })
+		});
+		const verifier = 'agent-auth-pkce-verifier-012345678901234567890';
+		const query = new URLSearchParams({
+			client_id: 'authorization-code-agent',
+			code_challenge: await hashToken(verifier),
+			code_challenge_method: 'S256',
+			redirect_uri: 'https://agent.example/callback',
+			resource: RESOURCE,
+			response_type: 'code',
+			scope: 'documents:read'
+		});
+		const response = await app.handle(
+			new Request(
+				`http://localhost/oauth2/authorize?${query.toString()}`,
+				{
+					headers: { cookie: `user_session_id=${SESSION_ID}` }
+				}
+			)
+		);
+
+		expect(response.status).toBe(302);
+		expect(
+			await delegationStore.findActiveDelegation({
+				agentId: 'authorization-code-agent',
+				userId: 'user-1'
+			})
+		).toMatchObject({ scopes: ['documents:read'], status: 'active' });
+	});
+
 	test('DCR registers an agent and device approval creates its delegation', async () => {
 		type User = { sub: string };
 		const signingKey = await generateSigningKey();
