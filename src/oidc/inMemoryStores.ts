@@ -14,6 +14,7 @@ import type {
 	OAuthClient,
 	OAuthClientStore,
 	OidcRefreshToken,
+	OidcRefreshTokenConnection,
 	OidcRefreshTokenStore,
 	PushedAuthorizationRequest,
 	PushedAuthorizationRequestStore
@@ -245,6 +246,26 @@ export const createInMemoryOidcRefreshTokenStore =
 				return Array.from(
 					new Set(active.map((token) => token.clientId))
 				);
+			},
+			listConnections: async () => {
+				const now = Date.now();
+				const connections = new Map<
+					string,
+					OidcRefreshTokenConnection
+				>();
+				for (const token of tokens.values()) {
+					if (token.expiresAt <= now) continue;
+					const connection: OidcRefreshTokenConnection = {
+						clientId: token.clientId,
+						userId: token.userId
+					};
+					connections.set(
+						`${connection.userId}\0${connection.clientId}`,
+						connection
+					);
+				}
+
+				return Array.from(connections.values());
 			},
 			saveToken: async (token) => {
 				tokens.set(token.tokenHash, { ...token });

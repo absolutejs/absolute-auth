@@ -38,5 +38,6 @@ export type {
 	InitialAccessTokenStore,
 	OAuthClient,
 	OAuthClientStore,
+	OidcRefreshTokenConnection,
 	OidcRefreshTokenStore
 } from './types';

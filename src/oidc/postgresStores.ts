@@ -441,8 +441,7 @@ export const createPostgresDeviceAuthorizationStore = <
 				)
 			)
 			.returning({
-				deviceCodeHash:
-					oauthDeviceAuthorizationsTable.device_code_hash
+				deviceCodeHash: oauthDeviceAuthorizationsTable.device_code_hash
 			});
 
 		return deleted.length;
@@ -635,6 +634,17 @@ export const createPostgresOidcRefreshTokenStore = <DB extends AnyPgDatabase>(
 			);
 
 		return rows.map((row) => row.client_id);
+	},
+	listConnections: async () => {
+		const rows = await db
+			.selectDistinct({
+				clientId: oauthRefreshTokensTable.client_id,
+				userId: oauthRefreshTokensTable.user_id
+			})
+			.from(oauthRefreshTokensTable)
+			.where(gt(oauthRefreshTokensTable.expires_at_ms, Date.now()));
+
+		return rows;
 	},
 	saveToken: async (token) => {
 		await db.insert(oauthRefreshTokensTable).values(toRefreshValues(token));

@@ -33,6 +33,11 @@ describe('OIDC refresh-token store', () => {
 				})
 			)
 		);
+		expect(await store.listConnections()).toEqual([
+			{ clientId: 'client-a', userId: 'alice' },
+			{ clientId: 'client-b', userId: 'alice' },
+			{ clientId: 'client-a', userId: 'bob' }
+		]);
 
 		expect(await store.deleteForUserClient('alice', 'client-a')).toBe(2);
 		expect(await store.getToken('alice-a-1')).toBeUndefined();
@@ -98,8 +103,6 @@ describe('OIDC refresh-token store', () => {
 		expect(
 			await devices.findByDeviceCodeHash('alice-device')
 		).toBeUndefined();
-		expect(
-			await devices.findByDeviceCodeHash('bob-device')
-		).toBeDefined();
+		expect(await devices.findByDeviceCodeHash('bob-device')).toBeDefined();
 	});
 });

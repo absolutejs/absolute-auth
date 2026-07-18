@@ -1,9 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import type {
-	OAuth2Client,
-	OAuth2TokenResponse,
-	ProviderOption
-} from 'citra';
+import type { OAuth2Client, OAuth2TokenResponse, ProviderOption } from 'citra';
 import { resolveOAuthAuthorization } from '../src/utils';
 
 describe('OAuth authorization resolution', () => {

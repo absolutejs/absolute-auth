@@ -147,6 +147,11 @@ export type OidcRefreshToken = {
 	userId: string;
 };
 
+export type OidcRefreshTokenConnection = {
+	clientId: string;
+	userId: string;
+};
+
 export type OidcRefreshTokenStore = {
 	// Atomically fetch and delete (rotation: each refresh token is used once).
 	consumeToken: (tokenHash: string) => Promise<OidcRefreshToken | undefined>;
@@ -159,6 +164,9 @@ export type OidcRefreshTokenStore = {
 	// Distinct client ids holding non-expired refresh tokens for the user. Used by
 	// OIDC back-channel logout to know which RPs to push a `logout_token` to.
 	listClientIdsForUser: (userId: string) => Promise<string[]>;
+	// Batch posture for operator connection inventories. Returns public ids only;
+	// token hashes and credential material never cross this boundary.
+	listConnections: () => Promise<OidcRefreshTokenConnection[]>;
 	saveToken: (token: OidcRefreshToken) => Promise<void>;
 };
 

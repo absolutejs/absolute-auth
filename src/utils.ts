@@ -209,7 +209,8 @@ export const resolveOAuthAuthorization = async ({
 			throw new Error('Withings OAuth response contains no body');
 		}
 		userIdentity = { userid: Reflect.get(withingsBody, 'userid') };
-		accessToken = readOptionalString(withingsBody, 'access_token') ?? accessToken;
+		accessToken =
+			readOptionalString(withingsBody, 'access_token') ?? accessToken;
 		refreshToken =
 			readOptionalString(withingsBody, 'refresh_token') ?? refreshToken;
 	} else {
