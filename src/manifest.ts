@@ -124,7 +124,24 @@ const settings = Type.Object({
 });
 
 export const manifest = defineManifest<AuthConfig<unknown>, never>()({
-	contract: 1,
+	contract: 2,
+	discovery: {
+		audiences: ['applications', 'agent-hosts'],
+		intents: [
+			'authenticate people and agents',
+			'issue scoped agent delegations',
+			'publish OAuth discovery'
+		],
+		keywords: [
+			'auth',
+			'oauth',
+			'oidc',
+			'agents',
+			'delegation',
+			'device-flow'
+		],
+		protocols: ['OAuth 2.0', 'OpenID Connect', 'ID-JAG']
+	},
 	identity: {
 		accent: '#6366f1',
 		category: 'auth',
