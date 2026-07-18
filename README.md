@@ -4,6 +4,8 @@ Server applications should import the primary authentication contract from
 `@absolutejs/auth/server`. This declaration-stable entry point exposes `auth`,
 session types, route protection, provider configuration, and the other core
 server utilities without loading declarations for every optional Auth feature.
+OIDC provider integrations should likewise import signing keys, token
+verification, provider stores, and provider types from `@absolutejs/auth/oidc`.
 The root entry point remains available for applications that need the complete
 feature export surface. `auth()` exposes the complete reusable request context
 (`protectRoute`, `requireRecentAuth`, optional `protectPermission`, and
