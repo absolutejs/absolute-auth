@@ -77,9 +77,7 @@ describe.skipIf(!databaseUrl)('Postgres agent stores', () => {
 			expect(
 				await delegations.findByDelegationId(delegationId)
 			).toMatchObject({
-				authorizationDetails: [
-					{ type: 'project', value: 'project-1' }
-				],
+				authorizationDetails: [{ type: 'project', value: 'project-1' }],
 				scopes: ['a2a:owner:read']
 			});
 			expect(

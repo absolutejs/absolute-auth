@@ -335,6 +335,14 @@ export const createPostgresAuthorizationCodeStore = <DB extends AnyPgDatabase>(
 
 		return row ? toCode(row) : undefined;
 	},
+	deleteForClient: async (clientId) => {
+		const deleted = await db
+			.delete(oauthCodesTable)
+			.where(eq(oauthCodesTable.client_id, clientId))
+			.returning({ codeHash: oauthCodesTable.code_hash });
+
+		return deleted.length;
+	},
 	deleteForUserClient: async (userId, clientId) => {
 		const deleted = await db
 			.delete(oauthCodesTable)
@@ -387,6 +395,16 @@ export const createPostgresClientRegistrationTokenStore = <
 			.delete(oauthClientRegistrationTokensTable)
 			.where(eq(oauthClientRegistrationTokensTable.client_id, clientId));
 	},
+	deleteForClient: async (clientId) => {
+		const deleted = await db
+			.delete(oauthClientRegistrationTokensTable)
+			.where(eq(oauthClientRegistrationTokensTable.client_id, clientId))
+			.returning({
+				tokenHash: oauthClientRegistrationTokensTable.token_hash
+			});
+
+		return deleted.length;
+	},
 	findByTokenHash: async (tokenHash) => {
 		const [row] = await db
 			.select()
@@ -430,6 +448,16 @@ export const createPostgresDeviceAuthorizationStore = <
 					deviceCodeHash
 				)
 			);
+	},
+	deleteForClient: async (clientId) => {
+		const deleted = await db
+			.delete(oauthDeviceAuthorizationsTable)
+			.where(eq(oauthDeviceAuthorizationsTable.client_id, clientId))
+			.returning({
+				deviceCodeHash: oauthDeviceAuthorizationsTable.device_code_hash
+			});
+
+		return deleted.length;
 	},
 	deleteForUserClient: async (userId, clientId) => {
 		const deleted = await db
@@ -594,6 +622,14 @@ export const createPostgresOidcRefreshTokenStore = <DB extends AnyPgDatabase>(
 			.returning();
 
 		return row ? toRefresh(row) : undefined;
+	},
+	deleteForClient: async (clientId) => {
+		const deleted = await db
+			.delete(oauthRefreshTokensTable)
+			.where(eq(oauthRefreshTokensTable.client_id, clientId))
+			.returning({ tokenHash: oauthRefreshTokensTable.token_hash });
+
+		return deleted.length;
 	},
 	deleteForUser: async (userId) => {
 		await db

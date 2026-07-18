@@ -14,6 +14,7 @@ export {
 	verifyJwt,
 	type SigningKey
 } from './keys';
+export { revokeOAuthClientCredentials } from './operator';
 export {
 	createNeonAuthorizationCodeStore,
 	createNeonClientAssertionJtiStore,

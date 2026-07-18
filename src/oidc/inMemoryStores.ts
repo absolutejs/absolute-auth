@@ -33,6 +33,16 @@ export const createInMemoryAuthorizationCodeStore =
 
 				return record;
 			},
+			deleteForClient: async (clientId) => {
+				let deleted = 0;
+				for (const [hash, code] of codes) {
+					if (code.clientId !== clientId) continue;
+					codes.delete(hash);
+					deleted += 1;
+				}
+
+				return deleted;
+			},
 			deleteForUserClient: async (userId, clientId) => {
 				let deleted = 0;
 				for (const [hash, code] of codes) {
@@ -101,6 +111,16 @@ export const createInMemoryClientRegistrationTokenStore =
 					if (token.clientId === clientId) byHash.delete(hash);
 				}
 			},
+			deleteForClient: async (clientId) => {
+				let deleted = 0;
+				for (const [hash, token] of byHash) {
+					if (token.clientId !== clientId) continue;
+					byHash.delete(hash);
+					deleted += 1;
+				}
+
+				return deleted;
+			},
 			findByTokenHash: async (tokenHash) => byHash.get(tokenHash),
 			saveToken: async (token) => {
 				// One reg token per client — replace any prior token on rotation.
@@ -119,6 +139,16 @@ export const createInMemoryDeviceAuthorizationStore =
 		return {
 			deleteByDeviceCodeHash: async (deviceCodeHash) => {
 				byDeviceCode.delete(deviceCodeHash);
+			},
+			deleteForClient: async (clientId) => {
+				let deleted = 0;
+				for (const [hash, authorization] of byDeviceCode) {
+					if (authorization.clientId !== clientId) continue;
+					byDeviceCode.delete(hash);
+					deleted += 1;
+				}
+
+				return deleted;
 			},
 			deleteForUserClient: async (userId, clientId) => {
 				let deleted = 0;
@@ -219,6 +249,16 @@ export const createInMemoryOidcRefreshTokenStore =
 				tokens.delete(tokenHash);
 
 				return record;
+			},
+			deleteForClient: async (clientId) => {
+				let deleted = 0;
+				for (const [hash, token] of tokens) {
+					if (token.clientId !== clientId) continue;
+					tokens.delete(hash);
+					deleted += 1;
+				}
+
+				return deleted;
 			},
 			deleteForUser: async (userId) => {
 				for (const [hash, token] of tokens) {

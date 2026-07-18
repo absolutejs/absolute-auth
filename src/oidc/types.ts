@@ -91,6 +91,8 @@ export type ClientRegistrationToken = {
 
 export type ClientRegistrationTokenStore = {
 	deleteByClientId: (clientId: string) => Promise<void>;
+	// Optional evidence-bearing operator variant. Package-owned stores implement it.
+	deleteForClient?: (clientId: string) => Promise<number>;
 	findByTokenHash: (
 		tokenHash: string
 	) => Promise<ClientRegistrationToken | undefined>;
@@ -127,6 +129,8 @@ export type AuthorizationCode = {
 export type AuthorizationCodeStore = {
 	// Atomically fetch and delete (codes are single-use).
 	consumeCode: (codeHash: string) => Promise<AuthorizationCode | undefined>;
+	// Optional operator boundary for globally revoking one client registration.
+	deleteForClient?: (clientId: string) => Promise<number>;
 	deleteForUserClient: (userId: string, clientId: string) => Promise<number>;
 	saveCode: (code: AuthorizationCode) => Promise<void>;
 };
@@ -156,6 +160,8 @@ export type OidcRefreshTokenStore = {
 	// Atomically fetch and delete (rotation: each refresh token is used once).
 	consumeToken: (tokenHash: string) => Promise<OidcRefreshToken | undefined>;
 	deleteForUser: (userId: string) => Promise<void>;
+	// Optional operator boundary for globally revoking one client registration.
+	deleteForClient?: (clientId: string) => Promise<number>;
 	// Removes every refresh-token family member for one relying party connection.
 	// Hosts use this for per-client disconnect controls without revoking unrelated apps.
 	deleteForUserClient: (userId: string, clientId: string) => Promise<number>;
@@ -211,6 +217,8 @@ export type LogoutDeliveryStore = {
 
 export type DeviceAuthorizationStore = {
 	deleteByDeviceCodeHash: (deviceCodeHash: string) => Promise<void>;
+	// Includes pending device authorizations that are not yet user-bound.
+	deleteForClient?: (clientId: string) => Promise<number>;
 	deleteForUserClient: (userId: string, clientId: string) => Promise<number>;
 	findByDeviceCodeHash: (
 		deviceCodeHash: string
