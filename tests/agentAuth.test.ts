@@ -153,12 +153,21 @@ describe('standards-based agent onboarding', () => {
 		const now = Date.now();
 		await registrationStore.saveRegistration({
 			agentId: 'authorization-code-agent',
-			allowedScopes: ['documents:read'],
+			allowedScopes: ['documents:read', 'documents:search'],
 			clientId: 'authorization-code-agent',
 			createdAt: now,
 			name: 'Authorization Code Agent',
 			status: 'active',
 			updatedAt: now
+		});
+		await delegationStore.saveDelegation({
+			agentId: 'authorization-code-agent',
+			createdAt: now,
+			delegationId: 'existing-delegation',
+			scopes: ['documents:search'],
+			status: 'active',
+			updatedAt: now,
+			userId: 'user-1'
 		});
 		await authSessionStore.setSession(SESSION_ID, {
 			authenticatedAt: now,
@@ -171,7 +180,7 @@ describe('standards-based agent onboarding', () => {
 				delegationStore,
 				registrationStore,
 				resource: RESOURCE,
-				scopes: ['documents:read'],
+				scopes: ['documents:read', 'documents:search'],
 				verifyCredential: createOidcAgentCredentialVerifier({
 					issuer: ISSUER,
 					publicJwk: signingKey.publicJwk,
@@ -186,7 +195,7 @@ describe('standards-based agent onboarding', () => {
 						clientId: 'authorization-code-agent',
 						name: 'Authorization Code Agent',
 						redirectUris: ['https://agent.example/callback'],
-						scopes: ['documents:read']
+						scopes: ['documents:read', 'documents:search']
 					}
 				]),
 				issuer: ISSUER,
@@ -222,7 +231,11 @@ describe('standards-based agent onboarding', () => {
 				agentId: 'authorization-code-agent',
 				userId: 'user-1'
 			})
-		).toMatchObject({ scopes: ['documents:read'], status: 'active' });
+		).toMatchObject({
+			delegationId: 'existing-delegation',
+			scopes: ['documents:search', 'documents:read'],
+			status: 'active'
+		});
 	});
 
 	test('DCR registers an agent and device approval creates its delegation', async () => {

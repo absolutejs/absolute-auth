@@ -77,15 +77,16 @@ const delegateAgentAuthorization = async (
 		now,
 		userId: context.userSub
 	});
+	const grantedScopes = context.scopes.filter(
+		(scope) =>
+			registration.allowedScopes.includes(scope) &&
+			agentAuth.scopes.includes(scope)
+	);
 	await agentAuth.delegationStore.saveDelegation({
 		agentId: registration.agentId,
 		createdAt: existing?.createdAt ?? now,
 		delegationId: existing?.delegationId ?? `agd_${crypto.randomUUID()}`,
-		scopes: context.scopes.filter(
-			(scope) =>
-				registration.allowedScopes.includes(scope) &&
-				agentAuth.scopes.includes(scope)
-		),
+		scopes: [...new Set([...(existing?.scopes ?? []), ...grantedScopes])],
 		status: 'active',
 		updatedAt: now,
 		userId: context.userSub
