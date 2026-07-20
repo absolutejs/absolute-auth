@@ -28,7 +28,7 @@ export const protectRoutePlugin = <UserType>({
 		.guard({ cookie: t.Cookie({ user_session_id: userSessionIdTypebox }) })
 		.derive(
 			({ store: { session }, cookie: { user_session_id }, status }) => ({
-				protectRoute: <AuthReturn, AuthFailReturn>(
+				protectRoute: <AuthReturn, AuthFailReturn = never>(
 					handleAuth: (
 						user: UserType
 					) => AuthReturn | Promise<AuthReturn>,
