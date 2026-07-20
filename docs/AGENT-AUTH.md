@@ -5,6 +5,13 @@ no separate `auth-md` package and no WorkOS service dependency. `/auth.md` is a
 wire-compatible, generated companion document; OAuth metadata remains the
 authoritative machine-readable contract.
 
+For applications that use ordinary OAuth dynamic client registration rather
+than the claim/ID-JAG profile, `agentAuth.oauthGuide` publishes the same native
+`/auth.md` surface from an exact list of enabled protected resources, metadata
+URLs, and scopes. RFC 8414 discovery links it through
+`service_documentation`. The guide never creates a second credential type or
+changes the application's audience-bound OAuth verification.
+
 ## Interoperability contract
 
 The implementation composes existing standards wherever they already define the

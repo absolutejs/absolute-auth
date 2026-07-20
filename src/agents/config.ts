@@ -5,6 +5,7 @@ import type {
 	AgentRegistrationStore
 } from './types';
 import type { AgentRegistrationProtocolConfig } from './registration';
+import type { AgentOAuthGuideConfig } from './oauthGuide';
 
 export const DEFAULT_AGENT_RESOURCE_METADATA_ROUTE: RouteString =
 	'/.well-known/oauth-protected-resource';
@@ -24,6 +25,10 @@ export type AgentAuthConfig = {
 	/** Open auth.md agent-registration support. Implemented natively by Absolute
 	 * Auth and projected through OAuth discovery; no WorkOS service is required. */
 	agentRegistration?: AgentRegistrationProtocolConfig;
+	/** Agent-readable OAuth onboarding derived from the same protected resources
+	 * and scopes the application actually enables. This is separate from the
+	 * optional claim/ID-JAG registration profile. */
+	oauthGuide?: AgentOAuthGuideConfig;
 	authorizationServer: string;
 	delegationStore: AgentDelegationStore;
 	logoUri?: string;

@@ -9,6 +9,10 @@ import {
 	agentRegistrationDiscoveryMetadata,
 	handleAgentTokenGrant
 } from './agents/registration';
+import {
+	agentOAuthGuideUrl,
+	generateAgentOAuthGuide
+} from './agents/oauthGuide';
 import { createAuditEmitter, type AuditEmitter } from './audit/config';
 import {
 	composeCallbackAudit,
@@ -194,6 +198,39 @@ const buildAuthApplications = async <UserType>(
 			tokenTtlMs: registration.tokenTtlMs
 		});
 	}
+	if (agentAuth?.oauthGuide !== undefined) {
+		if (oidc === undefined)
+			throw new Error('agentAuth.oauthGuide requires the OIDC provider');
+		if (agentAuth.authorizationServer !== oidc.issuer)
+			throw new Error(
+				'agentAuth.authorizationServer must equal oidc.issuer'
+			);
+		if (
+			agentAuth.oauthGuide.authorizationServer !==
+			agentAuth.authorizationServer
+		)
+			throw new Error(
+				'agentAuth.oauthGuide.authorizationServer must equal agentAuth.authorizationServer'
+			);
+		const unknownGuideScopes = agentAuth.oauthGuide.resources
+			.flatMap(({ scopes }) => scopes)
+			.filter((scope) => !agentAuth.scopes.includes(scope));
+		if (unknownGuideScopes.length > 0)
+			throw new Error(
+				`Agent OAuth guide uses undeclared scopes: ${[
+					...new Set(unknownGuideScopes)
+				].join(', ')}`
+			);
+		if (
+			agentAuth.agentRegistration !== undefined &&
+			(agentAuth.agentRegistration.guideRoute ?? '/auth.md') ===
+				(agentAuth.oauthGuide.route ?? '/auth.md')
+		)
+			throw new Error(
+				'Agent OAuth and registration guides cannot use the same route'
+			);
+		generateAgentOAuthGuide(agentAuth.oauthGuide);
+	}
 	if (tracing !== undefined) await initTracing(tracing);
 	const clientProviders: ClientProviders = await buildClientProviders(
 		providersConfiguration,
@@ -230,6 +267,13 @@ const buildAuthApplications = async <UserType>(
 				...oidc,
 				additionalDiscoveryMetadata: {
 					...oidc.additionalDiscoveryMetadata,
+					...(resolvedAgentAuth?.oauthGuide === undefined
+						? {}
+						: {
+								service_documentation: agentOAuthGuideUrl(
+									resolvedAgentAuth.oauthGuide
+								)
+							}),
 					...(resolvedAgentAuth?.agentRegistration === undefined
 						? {}
 						: {
@@ -829,6 +873,7 @@ export * from './agents/types';
 export * from './agents/registration';
 export * from './agents/registrationClient';
 export * from './agents/idJag';
+export * from './agents/oauthGuide';
 export { agentAuthPlugin, agentAuthChallenge } from './agents/routes';
 export { resolveAgentPrincipal, agentHasScopes } from './agents/principal';
 export { createOidcAgentCredentialVerifier } from './agents/oidcAdapter';

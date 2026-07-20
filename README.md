@@ -97,6 +97,12 @@ adds a scoped `protectAgent` guard. It can also serve a generated `/auth.md`
 registration guide and matching structured OAuth metadata. This is native to
 `@absolutejs/auth`; no WorkOS service or separate package is required.
 
+Applications using ordinary OAuth dynamic client registration can publish an
+agent-readable `/auth.md` without enabling the separate claim/ID-JAG profile.
+Set `agentAuth.oauthGuide` to the exact enabled protected resources, metadata
+URLs, and scopes. Auth serves the guide and advertises it through RFC 8414
+`service_documentation`; the structured OAuth metadata remains authoritative.
+
 Protocol-specific credentials are normalized by verifier adapters:
 
 ```ts

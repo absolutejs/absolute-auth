@@ -6,6 +6,7 @@ import {
 	type AgentAuthConfig
 } from './config';
 import { agentAuthChallenge, agentAuthContextPlugin } from './context';
+import { agentOAuthGuideRoute, generateAgentOAuthGuide } from './oauthGuide';
 import {
 	AGENT_IDENTITY_ASSERTION_TYPE,
 	agentRegistrationDiscoveryMetadata,
@@ -147,12 +148,25 @@ export const agentAuthRoutes = (config?: AgentAuthConfig) => {
 	if (config === undefined) return plugin.as('global');
 
 	if (config.agentRegistration === undefined) {
-		return plugin
-			.get(
-				config.metadataRoute ?? DEFAULT_AGENT_RESOURCE_METADATA_ROUTE,
-				() => agentProtectedResourceMetadata(config)
-			)
-			.as('global');
+		plugin.get(
+			config.metadataRoute ?? DEFAULT_AGENT_RESOURCE_METADATA_ROUTE,
+			() => agentProtectedResourceMetadata(config)
+		);
+		const { oauthGuide } = config;
+		if (oauthGuide === undefined) return plugin.as('global');
+		const guide = generateAgentOAuthGuide(oauthGuide);
+		plugin.get(
+			agentOAuthGuideRoute(oauthGuide),
+			() =>
+				new Response(guide, {
+					headers: {
+						'cache-control': 'public, max-age=300',
+						'content-type': 'text/markdown; charset=utf-8'
+					}
+				})
+		);
+
+		return plugin.as('global');
 	}
 	const registration = config.agentRegistration;
 	const identityRoute = registration.identityRoute ?? '/agent/identity';

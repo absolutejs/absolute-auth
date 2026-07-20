@@ -3,6 +3,7 @@ export * from './types';
 export * from './registration';
 export * from './registrationClient';
 export * from './idJag';
+export * from './oauthGuide';
 export * from '../oidc/clientIdMetadata';
 export { createOidcAgentCredentialVerifier } from './oidcAdapter';
 export { agentHasScopes, resolveAgentPrincipal } from './principal';
