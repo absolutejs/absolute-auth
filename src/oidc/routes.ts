@@ -32,7 +32,7 @@ import {
 	verifyDpopNonce,
 	verifyDpopProof
 } from './dpop';
-import { toPublicJwk } from './keys';
+import { signingVerificationKeys, toPublicJwk } from './keys';
 import {
 	fanOutBackchannelLogout,
 	resolvePostLogoutRedirect,
@@ -1886,7 +1886,12 @@ export const oidcProviderRoutes = <UserType>(
 					})
 				}
 			)
-			.get(jwksRoute, () => ({ keys: [toPublicJwk(signingKey)] }))
+			.get(jwksRoute, () => ({
+				keys: signingVerificationKeys(
+					signingKey,
+					config.previousSigningKeys
+				).map(toPublicJwk)
+			}))
 			.get('/.well-known/openid-configuration', () => discovery)
 			// RFC 8414 alias — OAuth 2.0 Authorization Server Metadata. Same document;
 			// MCP clients and plain-OAuth tooling fetch this path instead of the OIDC one.

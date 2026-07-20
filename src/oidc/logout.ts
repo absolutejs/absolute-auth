@@ -15,7 +15,7 @@
 // back-channel path already covers the common "RPs need to know" use case server-side.
 
 import { MILLISECONDS_IN_A_SECOND } from '../constants';
-import { signJwt, verifyJwt } from './keys';
+import { signJwt, signingVerificationKeys, verifyJwtWithKeys } from './keys';
 import type { OidcProviderConfig } from './config';
 import type { LogoutDelivery, OAuthClient } from './types';
 
@@ -69,7 +69,10 @@ export const verifyIdTokenHint = async <UserType>({
 	config: OidcProviderConfig<UserType>;
 	idTokenHint: string;
 }) => {
-	const verified = await verifyJwt(idTokenHint, config.signingKey.publicJwk);
+	const verified = await verifyJwtWithKeys(
+		idTokenHint,
+		signingVerificationKeys(config.signingKey, config.previousSigningKeys)
+	);
 	const payload = verified?.payload;
 	if (
 		payload === undefined ||

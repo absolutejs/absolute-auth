@@ -5,7 +5,13 @@ import {
 } from '../constants';
 import { generateSecureToken, hashToken } from '../crypto';
 import type { RouteString } from '../types';
-import { signJwt, verifyJwt, type SigningKey } from './keys';
+import {
+	signJwt,
+	signingVerificationKeys,
+	verifyJwtWithKeys,
+	type SigningKey,
+	type SigningKeyIdentity
+} from './keys';
 import type { OnClientRegistered, OnClientRegistration } from './registration';
 import type { VciConfig } from './vci';
 import type {
@@ -227,6 +233,10 @@ export type OidcProviderConfig<UserType> = {
 	pushedAuthorizationRequestTtlMs?: number;
 	refreshTokenStore: OidcRefreshTokenStore;
 	refreshTokenTtlMs?: number;
+	/** Previous public signing identities retained only for the bounded token
+	 * overlap window after rotation. The active `signingKey` always signs new
+	 * tokens and is published first. Private material does not belong here. */
+	previousSigningKeys?: readonly SigningKeyIdentity[];
 	signingKey: SigningKey;
 	// FAPI 2.0 baseline switch. When `true`, the OIDC routes (a) reject any
 	// `/token` request that authenticates with `client_secret_basic` or
@@ -359,7 +369,10 @@ export const exchangeToken = async <UserType>({
 	requestedScopes?: string[];
 	subjectToken: string;
 }): Promise<TokenExchangeResult> => {
-	const verified = await verifyJwt(subjectToken, config.signingKey.publicJwk);
+	const verified = await verifyJwtWithKeys(
+		subjectToken,
+		signingVerificationKeys(config.signingKey, config.previousSigningKeys)
+	);
 	const payload = verified?.payload;
 	if (
 		payload === undefined ||
@@ -546,7 +559,13 @@ export const introspectToken = async <UserType>({
 	token: string;
 }) => {
 	if (hint !== 'refresh_token') {
-		const verified = await verifyJwt(token, config.signingKey.publicJwk);
+		const verified = await verifyJwtWithKeys(
+			token,
+			signingVerificationKeys(
+				config.signingKey,
+				config.previousSigningKeys
+			)
+		);
 		const payload = verified?.payload;
 		if (
 			payload !== undefined &&

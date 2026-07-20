@@ -7,7 +7,7 @@
 //
 // `WWW-Authenticate: Bearer` headers on errors so RP clients can react per RFC 6750.
 
-import { verifyJwt } from './keys';
+import { signingVerificationKeys, verifyJwtWithKeys } from './keys';
 import type { OidcProviderConfig } from './config';
 
 const BEARER_PREFIX = 'Bearer ';
@@ -52,7 +52,10 @@ export const fetchUserInfo = async <UserType>({
 			ok: false
 		};
 	}
-	const verified = await verifyJwt(token, config.signingKey.publicJwk);
+	const verified = await verifyJwtWithKeys(
+		token,
+		signingVerificationKeys(config.signingKey, config.previousSigningKeys)
+	);
 	if (verified === undefined) {
 		return {
 			body: { error: 'invalid_token' },

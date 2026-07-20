@@ -10,9 +10,12 @@ export {
 	generateSigningKey,
 	jwkThumbprint,
 	signJwt,
+	signingVerificationKeys,
 	toPublicJwk,
 	verifyJwt,
-	type SigningKey
+	verifyJwtWithKeys,
+	type SigningKey,
+	type SigningKeyIdentity
 } from './keys';
 export { revokeOAuthClientCredentials } from './operator';
 export {

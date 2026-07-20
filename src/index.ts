@@ -872,10 +872,12 @@ export {
 	generateSigningKey,
 	jwkThumbprint,
 	signJwt,
+	signingVerificationKeys,
 	toPublicJwk,
-	verifyJwt
+	verifyJwt,
+	verifyJwtWithKeys
 } from './oidc/keys';
-export type { SigningKey } from './oidc/keys';
+export type { SigningKey, SigningKeyIdentity } from './oidc/keys';
 export {
 	extractDpopNonceClaim,
 	mintDpopNonce,

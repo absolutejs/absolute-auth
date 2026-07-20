@@ -1,9 +1,20 @@
-import { verifyJwt } from '../oidc/keys';
+import {
+	verifyJwt,
+	verifyJwtWithKeys,
+	type SigningKeyIdentity
+} from '../oidc/keys';
 import { verifyDpopProof } from '../oidc/dpop';
 import type { AgentCredentialVerifier } from './types';
 
 const BEARER_PREFIX = 'Bearer ';
 const MS_PER_SECOND = 1000;
+
+type OidcAgentCredentialVerifierKeys =
+	| { publicJwk: JsonWebKey; publicKeys?: never }
+	| {
+			publicJwk?: never;
+			publicKeys: readonly SigningKeyIdentity[];
+	  };
 
 const readAudience = (audience: unknown) => {
 	if (typeof audience === 'string') return [audience];
@@ -25,16 +36,16 @@ export const createOidcAgentCredentialVerifier = ({
 	isUsedDpopJti,
 	maxDpopAgeMs,
 	publicJwk,
+	publicKeys,
 	requireDpop = false,
 	resource
 }: {
 	issuer: string;
 	isUsedDpopJti?: (jti: string) => boolean | Promise<boolean>;
 	maxDpopAgeMs?: number;
-	publicJwk: JsonWebKey;
 	requireDpop?: boolean;
 	resource: string;
-}) => {
+} & OidcAgentCredentialVerifierKeys) => {
 	const verifier: AgentCredentialVerifier = async (request) => {
 		const authorization = request.headers.get('authorization');
 		if (
@@ -48,7 +59,9 @@ export const createOidcAgentCredentialVerifier = ({
 			.slice(authorization.indexOf(' ') + 1)
 			.trim();
 		if (token.length === 0) return undefined;
-		const verified = await verifyJwt(token, publicJwk);
+		const verified = publicKeys
+			? await verifyJwtWithKeys(token, publicKeys)
+			: await verifyJwt(token, publicJwk);
 		const payload = verified?.payload;
 		if (
 			payload === undefined ||
@@ -61,12 +74,12 @@ export const createOidcAgentCredentialVerifier = ({
 			return undefined;
 		}
 		const confirmation = payload.cnf;
-		const boundJkt =
-			typeof confirmation === 'object' &&
-			confirmation !== null &&
-			typeof (confirmation as { jkt?: unknown }).jkt === 'string'
-				? (confirmation as { jkt: string }).jkt
+		const boundJktValue =
+			typeof confirmation === 'object' && confirmation !== null
+				? Reflect.get(confirmation, 'jkt')
 				: undefined;
+		const boundJkt =
+			typeof boundJktValue === 'string' ? boundJktValue : undefined;
 		if (boundJkt !== undefined || requireDpop) {
 			if (!authorization.startsWith('DPoP ')) return undefined;
 			const proof = await verifyDpopProof({

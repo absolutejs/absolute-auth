@@ -2,7 +2,7 @@
 // dependency, consistent with the rest of the package's WebCrypto-only crypto. Used to sign
 // id_tokens and access tokens, serve JWKS, and verify DPoP proofs.
 
-type SigningKeyIdentity = {
+export type SigningKeyIdentity = {
 	kid: string;
 	publicJwk: JsonWebKey;
 };
@@ -56,7 +56,7 @@ const decodeSegment = (segment: string) => {
 
 // Generate an ES256 signing key. Persist `privateJwk` (it signs tokens); `publicJwk` is served
 // from JWKS. `kid` is the JWK thumbprint.
-export const generateSigningKey = async (): Promise<SigningKey> => {
+const generateSigningKey = async (): Promise<SigningKey> => {
 	const pair = await crypto.subtle.generateKey(KEY_PARAMS, true, [
 		'sign',
 		'verify'
@@ -68,7 +68,7 @@ export const generateSigningKey = async (): Promise<SigningKey> => {
 };
 
 // RFC 7638 JWK thumbprint over an EC key's required members, in lexicographic order.
-export const jwkThumbprint = async (jwk: JsonWebKey) => {
+const jwkThumbprint = async (jwk: JsonWebKey) => {
 	const canonical = JSON.stringify({
 		crv: jwk.crv,
 		kty: jwk.kty,
@@ -82,7 +82,7 @@ export const jwkThumbprint = async (jwk: JsonWebKey) => {
 };
 
 // Sign a compact ES256 JWT.
-export const signJwt = async (
+const signJwt = async (
 	payload: Record<string, unknown>,
 	signing: SigningKey,
 	typ = 'JWT'
@@ -110,7 +110,7 @@ export const signJwt = async (
 };
 
 // The public JWK as served from the JWKS endpoint (adds kid/use/alg).
-export const toPublicJwk = (key: SigningKey) => ({
+const toPublicJwk = (key: SigningKeyIdentity) => ({
 	alg: 'ES256',
 	crv: key.publicJwk.crv,
 	kid: key.kid,
@@ -122,7 +122,7 @@ export const toPublicJwk = (key: SigningKey) => ({
 
 // Verify a compact ES256 JWT against a public JWK; returns the decoded header + payload, or
 // undefined if the signature is invalid or malformed. (Expiry/claims are checked by callers.)
-export const verifyJwt = async (token: string, publicJwk: JsonWebKey) => {
+const verifyJwt = async (token: string, publicJwk: JsonWebKey) => {
 	const [headerSegment, payloadSegment, signatureSegment] = token.split('.');
 	if (
 		headerSegment === undefined ||
@@ -153,4 +153,47 @@ export const verifyJwt = async (token: string, publicJwk: JsonWebKey) => {
 		header,
 		payload
 	};
+};
+
+/** Resolves the active signing identity followed by still-valid previous
+ * public identities. Duplicate key IDs fail closed because a JWT `kid` must
+ * identify exactly one verification key during an overlap window. */
+const signingVerificationKeys = (
+	active: SigningKeyIdentity,
+	previous: readonly SigningKeyIdentity[] = []
+) => {
+	const keys = [active, ...previous];
+	const keyIds = new Set(keys.map(({ kid }) => kid));
+	if (keyIds.size !== keys.length)
+		throw new Error('OIDC signing key IDs must be unique');
+
+	return keys;
+};
+
+/** Verifies an Absolute Auth JWT against the exact public identity named by
+ * its protected `kid` header. This keeps already-issued tokens valid while a
+ * previous public key remains in the configured overlap window. */
+const verifyJwtWithKeys = async (
+	token: string,
+	keys: readonly SigningKeyIdentity[]
+) => {
+	const [headerSegment] = token.split('.');
+	if (!headerSegment) return undefined;
+	const header = decodeSegment(headerSegment);
+	const kid = header?.kid;
+	if (typeof kid !== 'string' || kid.length === 0) return undefined;
+	const key = keys.find((candidate) => candidate.kid === kid);
+	if (!key) return undefined;
+
+	return verifyJwt(token, key.publicJwk);
+};
+
+export {
+	generateSigningKey,
+	jwkThumbprint,
+	signingVerificationKeys,
+	signJwt,
+	toPublicJwk,
+	verifyJwt,
+	verifyJwtWithKeys
 };

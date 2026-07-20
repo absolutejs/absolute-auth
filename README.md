@@ -167,6 +167,14 @@ can therefore keep private key material non-exportable in a KMS or HSM. The
 adapter must return the 64-byte JOSE ES256 signature (`r || s`); DER conversion
 belongs at the KMS boundary.
 
+OIDC providers can retain bounded `previousSigningKeys` containing public
+identity only. The JWKS endpoint publishes the active key first and the
+previous keys behind it, while every new token remains signed exclusively by
+the active key. Provider token exchange, introspection, userinfo, logout hints,
+and agent credential verification select the exact verification key named by
+the JWT `kid`. Remove each previous key only after the longest issued token
+using it has expired; duplicate key IDs fail closed.
+
 ### Features
 
 - **Authorization**: Handles the authorization process by generating the authorization URL and redirecting the user to the authentication provider.
