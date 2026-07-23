@@ -105,6 +105,34 @@ describe.skipIf(!databaseUrl)('Postgres agent stores', () => {
 					email: 'agent@example.test'
 				}
 			});
+			const shapes = await client`
+				select jsonb_typeof(allowed_scopes) as allowed_scopes,
+				       jsonb_typeof(metadata) as metadata
+				from auth_agent_registrations
+				where agent_id = ${agentId}
+			`;
+			const delegationShapes = await client`
+				select jsonb_typeof(authorization_details) as authorization_details,
+				       jsonb_typeof(scopes) as scopes
+				from auth_agent_delegations
+				where delegation_id = ${delegationId}
+			`;
+			const identityShapes = await client`
+				select jsonb_typeof(claim_attempt) as claim_attempt
+				from auth_agent_identity_registrations
+				where registration_id = ${registrationId}
+			`;
+			expect(shapes[0]).toMatchObject({
+				allowed_scopes: 'array',
+				metadata: 'object'
+			});
+			expect(delegationShapes[0]).toMatchObject({
+				authorization_details: 'array',
+				scopes: 'array'
+			});
+			expect(identityShapes[0]).toMatchObject({
+				claim_attempt: 'object'
+			});
 		} finally {
 			await db
 				.delete(agentDelegationsTable)

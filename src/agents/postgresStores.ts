@@ -1,4 +1,4 @@
-import { and, desc, eq, gt, isNull, or } from 'drizzle-orm';
+import { and, desc, eq, gt, isNull, or, sql } from 'drizzle-orm';
 import {
 	bigint,
 	customType,
@@ -34,6 +34,8 @@ const portableJsonb = customType<{ data: unknown; driverData: unknown }>({
 		typeof value === 'string' ? JSON.parse(value) : value,
 	toDriver: (value) => JSON.stringify(value)
 });
+const encodedJsonb = <Value>(value: Value) =>
+	sql<Value>`${JSON.stringify(value)}::text::jsonb`;
 
 export const agentDelegationsTable = pgTable('auth_agent_delegations', {
 	agent_id: varchar('agent_id', { length: ID_LENGTH }).notNull(),
@@ -119,13 +121,9 @@ export const agentRegistrationsTable = pgTable('auth_agent_registrations', {
 });
 
 type RegistrationRow = typeof agentRegistrationsTable.$inferSelect;
-type RegistrationInsert = typeof agentRegistrationsTable.$inferInsert;
 type DelegationRow = typeof agentDelegationsTable.$inferSelect;
-type DelegationInsert = typeof agentDelegationsTable.$inferInsert;
 type IdentityRegistrationRow =
 	typeof agentIdentityRegistrationsTable.$inferSelect;
-type IdentityRegistrationInsert =
-	typeof agentIdentityRegistrationsTable.$inferInsert;
 
 const toRegistration = (row: RegistrationRow): AgentRegistration => ({
 	agentId: row.agent_id,
@@ -182,9 +180,12 @@ const toIdentityRegistration = (
 
 const identityRegistrationValues = (
 	registration: AgentIdentityRegistration
-): IdentityRegistrationInsert => ({
+) => ({
 	agent_id: registration.agentId,
-	claim_attempt: registration.claimAttempt ?? null,
+	claim_attempt:
+		registration.claimAttempt === undefined
+			? null
+			: encodedJsonb(registration.claimAttempt),
 	claim_attempt_token_hash: registration.claimAttempt?.tokenHash ?? null,
 	claim_expires_at_ms: registration.claimExpiresAt,
 	claim_token_hash: registration.claimTokenHash,
@@ -264,14 +265,17 @@ export const createDrizzleAgentDelegationStore = <DB extends AnyPgDatabase>(
 		return rows.map(toDelegation);
 	},
 	saveDelegation: async (delegation) => {
-		const values: DelegationInsert = {
+		const values = {
 			agent_id: delegation.agentId,
-			authorization_details: delegation.authorizationDetails ?? null,
+			authorization_details:
+				delegation.authorizationDetails === undefined
+					? null
+					: encodedJsonb(delegation.authorizationDetails),
 			created_at_ms: delegation.createdAt,
 			delegation_id: delegation.delegationId,
 			expires_at_ms: delegation.expiresAt ?? null,
 			organization_id: delegation.organizationId ?? null,
-			scopes: delegation.scopes,
+			scopes: encodedJsonb(delegation.scopes),
 			status: delegation.status,
 			updated_at_ms: delegation.updatedAt,
 			user_id: delegation.userId
@@ -427,12 +431,15 @@ export const createPostgresAgentRegistrationStore = <DB extends AnyPgDatabase>(
 		return rows.map(toRegistration);
 	},
 	saveRegistration: async (registration) => {
-		const values: RegistrationInsert = {
+		const values = {
 			agent_id: registration.agentId,
-			allowed_scopes: registration.allowedScopes,
+			allowed_scopes: encodedJsonb(registration.allowedScopes),
 			client_id: registration.clientId ?? null,
 			created_at_ms: registration.createdAt,
-			metadata: registration.metadata ?? null,
+			metadata:
+				registration.metadata === undefined
+					? null
+					: encodedJsonb(registration.metadata),
 			name: registration.name,
 			status: registration.status,
 			updated_at_ms: registration.updatedAt
