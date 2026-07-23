@@ -253,6 +253,12 @@ export const manifest = defineManifest<AuthConfig<unknown>, never>()({
 	tools: {
 		list_sign_in_providers: tool.workspace({
 			annotations: { readOnlyHint: true },
+			authorization: {
+				approval: 'never',
+				audience: 'admin',
+				effects: ['read'],
+				requiredScopes: ['auth:inspect']
+			},
 			capabilities: ['read', 'glob'],
 			description:
 				'List which sign-in providers this project has configured, and which are missing credentials.',
