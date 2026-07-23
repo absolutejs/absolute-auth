@@ -204,14 +204,14 @@ const identityRegistrationValues = (
 });
 
 export const createNeonAgentDelegationStore = (databaseUrl: string) =>
-	createPostgresAgentDelegationStore(createNeonDatabase(databaseUrl));
+	createDrizzleAgentDelegationStore(createNeonDatabase(databaseUrl));
 export const createNeonAgentIdentityRegistrationStore = (databaseUrl: string) =>
 	createPostgresAgentIdentityRegistrationStore(
 		createNeonDatabase(databaseUrl)
 	);
 export const createNeonAgentRegistrationStore = (databaseUrl: string) =>
 	createPostgresAgentRegistrationStore(createNeonDatabase(databaseUrl));
-export const createPostgresAgentDelegationStore = <DB extends AnyPgDatabase>(
+export const createDrizzleAgentDelegationStore = <DB extends AnyPgDatabase>(
 	db: DB
 ): AgentDelegationStore => ({
 	findActiveDelegation: async ({
@@ -285,6 +285,9 @@ export const createPostgresAgentDelegationStore = <DB extends AnyPgDatabase>(
 			});
 	}
 });
+/** @deprecated Use createDrizzleAgentDelegationStore. */
+export const createPostgresAgentDelegationStore =
+	createDrizzleAgentDelegationStore;
 export const createPostgresAgentIdentityRegistrationStore = <
 	DB extends AnyPgDatabase
 >(

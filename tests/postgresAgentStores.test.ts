@@ -6,7 +6,7 @@ import {
 	agentDelegationsTable,
 	agentIdentityRegistrationsTable,
 	agentRegistrationsTable,
-	createPostgresAgentDelegationStore,
+	createDrizzleAgentDelegationStore,
 	createPostgresAgentIdentityRegistrationStore,
 	createPostgresAgentRegistrationStore
 } from '../src/agents/postgresStores';
@@ -14,17 +14,34 @@ import {
 const databaseUrl =
 	process.env.AUTH_TEST_DATABASE_URL ?? process.env.DATABASE_URL;
 const MINUTE_MS = 60_000;
+const CONNECTION_ATTEMPTS = 8;
+const RETRY_DELAY_MS = 500;
+type OpenClient = (databaseUrl: string, attempt?: number) => Promise<SQL>;
+const openClient: OpenClient = async (url, attempt = 1) => {
+	const client = new SQL({ max: 1, prepare: false, url });
+	try {
+		await client`select 1`;
+
+		return client;
+	} catch (error) {
+		await client.close().catch(() => undefined);
+		if (attempt === CONNECTION_ATTEMPTS) throw error;
+		await Bun.sleep(RETRY_DELAY_MS * attempt);
+
+		return openClient(url, attempt + 1);
+	}
+};
 
 describe.skipIf(!databaseUrl)('Postgres agent stores', () => {
 	test('round-trips typed JSON through the Bun SQL driver', async () => {
 		if (!databaseUrl) throw new Error('A database URL is required');
-		const client = new SQL({ max: 1, url: databaseUrl });
+		const client = await openClient(databaseUrl);
 		const db = drizzle({ client });
 		const agentId = `auth-store-test-${crypto.randomUUID()}`;
 		const delegationId = crypto.randomUUID();
 		const registrationId = crypto.randomUUID();
 		const now = Date.now();
-		const delegations = createPostgresAgentDelegationStore(db);
+		const delegations = createDrizzleAgentDelegationStore(db);
 		const identities = createPostgresAgentIdentityRegistrationStore(db);
 		const registrations = createPostgresAgentRegistrationStore(db);
 

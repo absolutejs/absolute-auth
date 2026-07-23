@@ -889,6 +889,7 @@ export {
 	createNeonAgentDelegationStore,
 	createNeonAgentIdentityRegistrationStore,
 	createNeonAgentRegistrationStore,
+	createDrizzleAgentDelegationStore,
 	createPostgresAgentDelegationStore,
 	createPostgresAgentIdentityRegistrationStore,
 	createPostgresAgentRegistrationStore
