@@ -10,7 +10,6 @@
         "@neondatabase/serverless": "1.0.0",
         "@sinclair/typebox": "^0.34.0",
         "citra": "0.29.7",
-        "drizzle-orm": "1.0.0-rc.4",
       },
       "devDependencies": {
         "@absolutejs/absolute": "^0.19.0-beta.1023",
@@ -24,6 +23,7 @@
         "@types/bun": "1.2.9",
         "@types/react": "^19.0.0",
         "@typescript-eslint/parser": "^8.57.2",
+        "drizzle-orm": "1.0.0-rc.4",
         "elysia": "1.4.26",
         "eslint": "^10.1.0",
         "eslint-plugin-absolute": "^0.11.0",
@@ -43,6 +43,7 @@
         "@opentelemetry/api": ">=1.7",
         "@simplewebauthn/browser": ">=13",
         "@simplewebauthn/server": ">=13",
+        "drizzle-orm": ">=1.0.0-rc.4 <2",
         "elysia": ">= 1.4.26",
         "react": ">=18 <20",
         "solid-js": ">=1.8",
