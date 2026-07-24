@@ -157,9 +157,9 @@ export type ResolvedOAuthAuthorization = {
 	tokenType?: string;
 };
 
-export type StatusReturn = ElysiaCustomStatusResponse<
-	number | keyof StatusMap,
-	unknown
+export type StatusReturn = Pick<
+	ElysiaCustomStatusResponse<number | keyof StatusMap, unknown>,
+	'code' | 'response'
 >;
 
 export type OnNewUser<UserType> = (
