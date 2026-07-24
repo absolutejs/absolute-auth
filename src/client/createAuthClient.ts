@@ -4,6 +4,11 @@
 // HTMX is the special case (declarative server fragments via `./htmx`); for every other UI
 // framework the natural primitive is this client + your framework's reactivity.
 
+import type {
+	PublicKeyCredentialCreationOptionsJSON,
+	PublicKeyCredentialRequestOptionsJSON
+} from '@simplewebauthn/browser';
+
 export type AuthClientError = {
 	body: unknown;
 	message: string;
@@ -108,12 +113,11 @@ export const createAuthClient = ({
 				...init
 			});
 			const text = await response.text();
-			const body: unknown = text === '' ? null : safeJson(text);
-			if (!response.ok) return fail(errorFor(response, body));
+			if (!response.ok) return fail(errorFor(response, safeJson(text)));
 
-			// Trust the caller's expectation at the deserialization boundary.
-			// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- HTTP response is unknown until parsed; the call site declares the expected T
-			return succeed(body as T);
+			const data: T = JSON.parse(text === '' ? 'null' : text);
+
+			return succeed(data);
 		} catch (caught) {
 			const message =
 				caught instanceof Error ? caught.message : 'network';
@@ -165,7 +169,9 @@ export const createAuthClient = ({
 		},
 		passkeys: {
 			authenticateOptions: () =>
-				post<unknown>(resolvedRoutes.passkeyAuthenticateOptions),
+				post<PublicKeyCredentialRequestOptionsJSON>(
+					resolvedRoutes.passkeyAuthenticateOptions
+				),
 			authenticateVerify: (response: unknown) =>
 				post<{ status: 'authenticated' }>(
 					resolvedRoutes.passkeyAuthenticateVerify,
@@ -173,7 +179,9 @@ export const createAuthClient = ({
 				),
 			list: () => get<unknown[]>(resolvedRoutes.passkeyList),
 			registerOptions: () =>
-				post<unknown>(resolvedRoutes.passkeyRegisterOptions),
+				post<PublicKeyCredentialCreationOptionsJSON>(
+					resolvedRoutes.passkeyRegisterOptions
+				),
 			registerVerify: (response: unknown) =>
 				post<{ ok: true }>(
 					resolvedRoutes.passkeyRegisterVerify,
@@ -234,8 +242,7 @@ export const createAuthClient = ({
 
 const safeJson = (text: string) => {
 	try {
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- deserialization boundary
-		return JSON.parse(text) as unknown;
+		return JSON.parse(text);
 	} catch {
 		return text;
 	}

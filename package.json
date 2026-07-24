@@ -1,5 +1,5 @@
 {
-	"version": "0.56.18",
+	"version": "0.56.19",
 	"name": "@absolutejs/auth",
 	"description": "An authorization library for absolutejs",
 	"repository": {
@@ -17,7 +17,7 @@
 	"license": "BSL-1.1",
 	"author": "Alex Kahn",
 	"scripts": {
-		"build": "rm -rf dist && bun build src/index.ts src/server.ts src/agents/index.ts src/oidc/index.ts src/saml.ts src/webauthn.ts src/htmx/index.ts src/client/index.ts src/client/react.ts src/client/vue.ts src/client/solid.ts src/client/svelte.ts src/plugins/index.ts src/providers/index.ts src/linkedProviders/index.ts src/vault/index.ts src/manifest.ts --root src --outdir dist --sourcemap --target=bun --external elysia --external react --external vue --external solid-js --external svelte --external @opentelemetry/api --external @simplewebauthn/server --external @node-saml/node-saml && bun build src/cli/migrate.ts --outdir dist/cli --sourcemap --target=bun --external @neondatabase/serverless --external drizzle-orm && bun build src/fingerprint-client/index.ts --outdir dist/fingerprint-client --sourcemap --target=browser && tsc --emitDeclarationOnly --project tsconfig.json && chmod +x dist/cli/migrate.js && absolute-manifest emit",
+		"build": "rm -rf dist && bun build src/index.ts src/server.ts src/agents/index.ts src/oidc/index.ts src/saml.ts src/webauthn.ts src/htmx/index.ts src/client/index.ts src/client/react.ts src/client/vue.ts src/client/solid.ts src/client/svelte.ts src/plugins/index.ts src/providers/index.ts src/linkedProviders/index.ts src/vault/index.ts src/manifest.ts --root src --outdir dist --sourcemap --target=bun --external elysia --external react --external vue --external solid-js --external svelte --external @opentelemetry/api --external @simplewebauthn/browser --external @simplewebauthn/server --external @node-saml/node-saml && bun build src/cli/migrate.ts --outdir dist/cli --sourcemap --target=bun --external @neondatabase/serverless --external drizzle-orm && bun build src/fingerprint-client/index.ts --outdir dist/fingerprint-client --sourcemap --target=browser && tsc --emitDeclarationOnly --project tsconfig.json && chmod +x dist/cli/migrate.js && absolute-manifest emit",
 		"config": "absolute config",
 		"test": "bun test",
 		"format": "absolute prettier --write",
@@ -38,7 +38,7 @@
 	"types": "./dist/index.d.ts",
 	"peerDependencies": {
 		"@opentelemetry/api": ">=1.7",
-		"@simplewebauthn/browser": ">=13",
+		"@simplewebauthn/browser": ">=13.3.0 <14",
 		"@simplewebauthn/server": ">=13",
 		"elysia": ">= 1.4.26",
 		"react": ">=18 <20",
@@ -76,7 +76,7 @@
 	},
 	"dependencies": {
 		"@absolutejs/linked-providers": "0.0.5",
-		"@absolutejs/manifest": "^0.4.0",
+		"@absolutejs/manifest": "^0.6.1",
 		"@neondatabase/serverless": "1.0.0",
 		"@sinclair/typebox": "^0.34.0",
 		"citra": "0.29.7"
@@ -87,7 +87,7 @@
 		"@node-saml/node-saml": "^5.1.0",
 		"@opentelemetry/api": "^1.9.1",
 		"@opentelemetry/sdk-trace-base": "^2.7.1",
-		"@simplewebauthn/browser": "^13.3.0",
+		"@simplewebauthn/browser": "13.3.0",
 		"@simplewebauthn/server": "^13",
 		"@stylistic/eslint-plugin": "^5.10.0",
 		"@types/bun": "1.2.9",
@@ -229,6 +229,15 @@
 	},
 	"build": null,
 	"absolutejs": {
-		"manifestContract": 2
+		"manifestContract": 2,
+		"runtimePeers": {
+			"@simplewebauthn/browser": {
+				"artifactImports": ["@simplewebauthn/browser"],
+				"buildExternals": ["@simplewebauthn/browser"],
+				"optional": true,
+				"range": ">=13.3.0 <14",
+				"tested": "13.3.0"
+			}
+		}
 	}
 }

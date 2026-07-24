@@ -6,7 +6,7 @@
       "name": "@absolutejs/auth",
       "dependencies": {
         "@absolutejs/linked-providers": "0.0.5",
-        "@absolutejs/manifest": "^0.4.0",
+        "@absolutejs/manifest": "^0.6.1",
         "@neondatabase/serverless": "1.0.0",
         "@sinclair/typebox": "^0.34.0",
         "citra": "0.29.7",
@@ -17,7 +17,7 @@
         "@node-saml/node-saml": "^5.1.0",
         "@opentelemetry/api": "^1.9.1",
         "@opentelemetry/sdk-trace-base": "^2.7.1",
-        "@simplewebauthn/browser": "^13.3.0",
+        "@simplewebauthn/browser": "13.3.0",
         "@simplewebauthn/server": "^13",
         "@stylistic/eslint-plugin": "^5.10.0",
         "@types/bun": "1.2.9",
@@ -41,7 +41,7 @@
       "peerDependencies": {
         "@node-saml/node-saml": ">=5",
         "@opentelemetry/api": ">=1.7",
-        "@simplewebauthn/browser": ">=13",
+        "@simplewebauthn/browser": ">=13.3.0 <14",
         "@simplewebauthn/server": ">=13",
         "drizzle-orm": ">=1.0.0-rc.4 <2",
         "elysia": ">= 1.4.26",
@@ -67,7 +67,7 @@
 
     "@absolutejs/linked-providers": ["@absolutejs/linked-providers@0.0.5", "", {}, "sha512-eFRurm91OnxWU31/Lyl/wzuiPpSHnzaz3+j7/o7GJLHJzEEveKMzGeA8Al6fy7gKQ+AmB86fwV5DRG1aKvDduQ=="],
 
-    "@absolutejs/manifest": ["@absolutejs/manifest@0.4.0", "", { "peerDependencies": { "@sinclair/typebox": "^0.34.0" }, "bin": { "absolute-manifest": "dist/cli.js" } }, "sha512-hhgUMB2Q9+m2BxL7D9fITQfCtYJTwA1IC1jZIFFvz6ESUz4FV2OlvR8q95Dk3xn+TVrSihTitia9VIXD2hD5QA=="],
+    "@absolutejs/manifest": ["@absolutejs/manifest@0.6.1", "", { "peerDependencies": { "@sinclair/typebox": ">=0.34.0 <0.35.0" }, "bin": { "absolute-manifest": "dist/cli.js" } }, "sha512-DA6qJ88QZlZJKVoktRW8L6e2f1Y/eEyTkaG9b59tmEoJtKmSd+mtTLYW+7ShktNWmLiMvxUybR8zwUvZQdIAIg=="],
 
     "@absolutejs/native-darwin-arm64": ["@absolutejs/native-darwin-arm64@0.19.0-beta.1008", "", { "os": "darwin", "cpu": "arm64" }, "sha512-bztRSnYXrD2O5UL9IUTP/Bc2Pd36sxmEd8elxjBPkgcB4iW9RmGUhCBGOMvGTKuEzHjWaJVVa1na6L9q12AxdA=="],
 
