@@ -172,7 +172,13 @@ export type OnNewUser<UserType> = (
 
 export type GetUser<UserType> = (
 	userIdentity: Record<string, unknown>
-) => UserType | null | undefined | Promise<UserType | null | undefined>;
+) =>
+	| UserType
+	| StatusReturn
+	| Response
+	| null
+	| undefined
+	| Promise<UserType | StatusReturn | Response | null | undefined>;
 
 export type CallbackCookie = Record<string, Cookie<unknown>> & {
 	auth_client: Cookie<string | undefined>;
@@ -609,8 +615,8 @@ export type InsantiateUserSessionProps<UserType> = {
 	unregisteredSession: UnregisteredSessionRecord;
 	providerInstance: OAuth2Client<ProviderOption>;
 	user_session_id: Cookie<UserSessionId | undefined>;
-	onNewUser: OnNewUser<UserType>;
-	getUser: GetUser<UserType>;
+	onNewUser: OnNewUser<NoInfer<UserType>>;
+	getUser: GetUser<NoInfer<UserType>>;
 	cookieSecure?: boolean;
 	resolvedAuthorization?: ResolvedOAuthAuthorization;
 	sessionDurationMs?: number;
