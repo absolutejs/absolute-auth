@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import { hashToken } from '../src/crypto';
 import { auth } from '../src/index';
 import {
@@ -41,13 +41,13 @@ const buildApp = async ({
 					scopes: ['openid', 'profile']
 				}
 			]),
-			getClaims: (user) => ({ email: user.email }),
-			getUserId: (user) => user.sub,
 			getUserInfo,
 			issuer: ISSUER,
 			loginUrl: 'https://idp.example/signin',
 			refreshTokenStore: createInMemoryOidcRefreshTokenStore(),
-			signingKey: await generateSigningKey()
+			signingKey: await generateSigningKey(),
+			getClaims: (user) => ({ email: user.email }),
+			getUserId: (user) => user.sub
 		},
 		providersConfiguration: {}
 	});
@@ -202,12 +202,6 @@ describe('OIDC provider — /userinfo', () => {
 
 	test('rejects an expired access token', async () => {
 		const app = await buildApp();
-		const redirect = await getCode(app);
-		const code =
-			new URL(redirect.headers.get('location') ?? '').searchParams.get(
-				'code'
-			) ?? '';
-		const tokens = await exchangeForTokens(app, code);
 
 		// Force-clock the userinfo check past the access token's expiry.
 		// Easier here than asynchronously: just sign a fresh token with exp in the past.
@@ -311,15 +305,9 @@ describe('OIDC provider — prompt + max_age + id_token_hint', () => {
 		const app = await buildApp();
 		// Build an id_token_hint for a DIFFERENT sub, signed by the same signing key
 		// the app uses (so verifyIdTokenHint accepts it).
-		const otherUserHint = await (async () => {
-			// Easiest path: issue a real id_token to learn the signing setup, then
-			// re-sign with a different sub. We need the signing key — pull it from
-			// the discovery JWKS isn't enough (private half not exposed). Instead,
-			// fall back to the simpler test: an unsigned/wrong-iss hint should be
-			// IGNORED (no mismatch detected). The MATCH case below covers the
-			// positive path.
-			return 'not.a.valid.signed.jwt';
-		})();
+		// Invalid hints are ignored; the matching signed-hint case below covers
+		// the positive verification path.
+		const otherUserHint = 'not.a.valid.signed.jwt';
 		const response = await getCode(app, { id_token_hint: otherUserHint });
 		// Invalid hint is silently ignored (verifyIdTokenHint returns undefined →
 		// hintSub stays undefined → hintMismatch is false → session is fine).

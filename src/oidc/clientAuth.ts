@@ -46,12 +46,18 @@ const fetchJwksUri = async (jwksUri: string) => {
 			signal: AbortSignal.timeout(JWKS_FETCH_TIMEOUT_MS)
 		});
 		if (!response.ok) return undefined;
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- the JWKS endpoint contract is JWKS {keys: JWK[]} per RFC 7517 §5
-		const body = (await response.json()) as { keys?: JsonWebKey[] };
-		if (!Array.isArray(body.keys)) return undefined;
-		jwksCache.set(jwksUri, { fetchedAt: Date.now(), jwks: body.keys });
+			const body: unknown = await response.json();
+			if (typeof body !== 'object' || body === null) return undefined;
+			const keys: unknown = Reflect.get(body, 'keys');
+			if (!Array.isArray(keys)) return undefined;
+			const jwks = keys.filter(
+				(key): key is JsonWebKey =>
+					typeof key === 'object' && key !== null
+			);
+			if (jwks.length !== keys.length) return undefined;
+			jwksCache.set(jwksUri, { fetchedAt: Date.now(), jwks });
 
-		return body.keys;
+			return jwks;
 	} catch {
 		return undefined;
 	}
@@ -72,7 +78,6 @@ const verifyAgainstAny = async (
 	candidates: JsonWebKey[]
 ) => {
 	for (const jwk of candidates) {
-		// eslint-disable-next-line no-await-in-loop -- early-exit on the first match
 		const verified = await verifyJwt(assertion, jwk);
 		if (verified !== undefined) return verified;
 	}
@@ -113,9 +118,15 @@ export const verifyClientAssertion = async ({
 		const parsed: unknown = JSON.parse(
 			Buffer.from(payloadSegment, 'base64url').toString('utf8')
 		);
-		if (typeof parsed !== 'object' || parsed === null) return undefined;
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- deserialization boundary: validated above as a non-null object, fields type-checked individually below
-		payload = parsed as Record<string, unknown>;
+			if (
+				typeof parsed !== 'object' ||
+				parsed === null ||
+				Array.isArray(parsed)
+			)
+				return undefined;
+			payload = Object.fromEntries(
+				Object.keys(parsed).map((key) => [key, Reflect.get(parsed, key)])
+			);
 	} catch {
 		return undefined;
 	}

@@ -21,6 +21,7 @@ const buildLoginApp = (cookieSecure?: boolean) => {
 	const users = new Map<string, TestUser>();
 	const config: CredentialsConfig<TestUser> = {
 		credentialStore,
+		passwordPolicy: { minLength: 8 },
 		getUserByEmail: (email) => users.get(email) ?? null,
 		onCreateCredentialUser: ({ email }) => {
 			const user: TestUser = { email, sub: `user:${email}` };
@@ -28,8 +29,9 @@ const buildLoginApp = (cookieSecure?: boolean) => {
 
 			return user;
 		},
-		onSendEmail: (_message: CredentialEmailMessage) => undefined,
-		passwordPolicy: { minLength: 8 }
+		onSendEmail: (message: CredentialEmailMessage) => {
+			void message;
+		}
 	};
 
 	return new Elysia()

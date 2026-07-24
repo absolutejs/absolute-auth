@@ -309,7 +309,7 @@ sessions; audit events fire for all flows; `protectPermission` gates a route.
 ```ts
 const auth = await absoluteAuth<User>({
   providersConfiguration: { google: {…}, microsoft: {…} },   // existing OAuth
-  authSessionStore: createNeonAuthSessionStore<User>(dbUrl),
+  authSessionStore: createNeonAuthSessionStore(dbUrl, decodeUser),
 
   credentials: { credentialStore, passwordPolicy, getUserByEmail,
                  onCreateCredentialUser, onSendEmail, onCredentialsLoginSuccess },

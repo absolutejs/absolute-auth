@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import { hashToken } from '../src/crypto';
 import { auth } from '../src/index';
 import {
@@ -17,7 +17,6 @@ const REDIRECT_URI = 'https://rp.test/cb';
 const SESSION_ID: UserSessionId = '11111111-1111-4111-8111-111111111111';
 const VERIFIER = 'pkce-verifier-0123456789-abcdefghij-0123456789';
 const HOUR_MS = 3_600_000;
-const HTTP_OK = 200;
 const HTTP_FOUND = 302;
 
 const ACR_PWD = 'urn:absolute:pwd';
@@ -38,12 +37,12 @@ const buildApp = async (userAcr: string) => {
 					scopes: ['openid']
 				}
 			]),
-			getAcr: ({ user }) => user.acr,
-			getClaims: (user) => ({ email: user.email }),
-			getUserId: (user) => user.sub,
 			issuer: ISSUER,
 			refreshTokenStore: createInMemoryOidcRefreshTokenStore(),
-			signingKey: await generateSigningKey()
+			signingKey: await generateSigningKey(),
+			getAcr: ({ user }) => user.acr,
+			getClaims: (user) => ({ email: user.email }),
+			getUserId: (user) => user.sub
 		},
 		providersConfiguration: {}
 	});
@@ -190,11 +189,11 @@ describe('OIDC provider — RFC 9470 acr_values', () => {
 						scopes: ['openid']
 					}
 				]),
-				getClaims: (user) => ({ email: user.email }),
-				getUserId: (user) => user.sub,
 				issuer: ISSUER,
 				refreshTokenStore: createInMemoryOidcRefreshTokenStore(),
-				signingKey: await generateSigningKey()
+				signingKey: await generateSigningKey(),
+				getClaims: (user) => ({ email: user.email }),
+				getUserId: (user) => user.sub
 			},
 			providersConfiguration: {}
 		});

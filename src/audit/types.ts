@@ -38,6 +38,50 @@ export type AuditEventType =
 	| 'webauthn_authenticated'
 	| 'webauthn_registered';
 
+export const AUDIT_EVENT_TYPES: readonly AuditEventType[] = [
+	'account_deleted',
+	'agent_credential_issued',
+	'agent_delegated',
+	'agent_registered',
+	'agent_revoked',
+	'authorization_denied',
+	'credentials_login',
+	'credentials_login_failed',
+	'data_exported',
+	'email_verified',
+	'identity_conflict',
+	'impersonation_ended',
+	'impersonation_started',
+	'invitation_accepted',
+	'invitation_created',
+	'logout',
+	'membership_removed',
+	'mfa_challenge',
+	'mfa_challenge_failed',
+	'mfa_enrolled',
+	'oauth_login',
+	'organization_created',
+	'password_reset',
+	'passwordless_login',
+	'register',
+	'role_assigned',
+	'scim_provision',
+	'scim_token_created',
+	'session_revoked',
+	'setup_session_created',
+	'sso_connection_configured',
+	'sso_login',
+	'token_refreshed',
+	'token_revoked',
+	'webauthn_authenticated',
+	'webauthn_registered'
+];
+
+export const isAuditEventType = (
+	value: string
+): value is AuditEventType =>
+	AUDIT_EVENT_TYPES.some((eventType) => eventType === value);
+
 export type AuditEvent = {
 	at: number;
 	ip?: string;

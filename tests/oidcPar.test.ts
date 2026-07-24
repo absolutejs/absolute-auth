@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import { hashToken } from '../src/crypto';
 import { auth } from '../src/index';
 import {
@@ -41,14 +41,14 @@ const buildApp = async ({
 					scopes: ['openid', 'profile']
 				}
 			]),
-			getClaims: (user) => ({ email: user.email }),
-			getUserId: (user) => user.sub,
 			issuer: ISSUER,
 			pushedAuthorizationRequestStore: parEnabled
 				? createInMemoryPushedAuthorizationRequestStore()
 				: undefined,
 			refreshTokenStore: createInMemoryOidcRefreshTokenStore(),
-			signingKey: await generateSigningKey()
+			signingKey: await generateSigningKey(),
+			getClaims: (user) => ({ email: user.email }),
+			getUserId: (user) => user.sub
 		},
 		providersConfiguration: {}
 	});
@@ -179,13 +179,13 @@ describe('OIDC provider — Pushed Authorization Requests (RFC 9126)', () => {
 						scopes: ['openid']
 					}
 				]),
-				getClaims: (user) => ({ email: user.email }),
-				getUserId: (user) => user.sub,
 				issuer: ISSUER,
 				pushedAuthorizationRequestStore:
 					createInMemoryPushedAuthorizationRequestStore(),
 				refreshTokenStore: createInMemoryOidcRefreshTokenStore(),
-				signingKey: await generateSigningKey()
+				signingKey: await generateSigningKey(),
+				getClaims: (user) => ({ email: user.email }),
+				getUserId: (user) => user.sub
 			},
 			providersConfiguration: {}
 		});

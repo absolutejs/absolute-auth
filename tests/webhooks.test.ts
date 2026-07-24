@@ -110,6 +110,7 @@ describe('webhook dispatcher — retry + DLQ', () => {
 		let calls = 0;
 		const dispatch = createWebhookDispatcher({
 			endpoints: [{ secret: SECRET, url: 'https://hooks.test/flaky' }],
+			retry: { attempts: 3, initialDelayMs: 10 },
 			fetch: async (url, init) => {
 				captured.push({
 					body: init.body,
@@ -122,9 +123,8 @@ describe('webhook dispatcher — retry + DLQ', () => {
 					? { ok: false, status: HTTP_SERVER_ERROR }
 					: { ok: true, status: HTTP_OK };
 			},
-			retry: { attempts: 3, initialDelayMs: 10 },
-			sleep: async (ms) => {
-				sleeps.push(ms);
+			sleep: async (delayMs) => {
+				sleeps.push(delayMs);
 			}
 		});
 
@@ -141,10 +141,10 @@ describe('webhook dispatcher — retry + DLQ', () => {
 			deliveryStore: store,
 			endpoints: [{ secret: SECRET, url: 'https://hooks.test/dead' }],
 			fetch: recordingFetch([], false),
+			retry: { attempts: 2, initialDelayMs: 1 },
 			onDeliveryError: ({ error }) => {
 				errors.push(error);
 			},
-			retry: { attempts: 2, initialDelayMs: 1 },
 			sleep: async () => undefined
 		});
 

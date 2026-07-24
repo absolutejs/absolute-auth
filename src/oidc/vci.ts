@@ -217,7 +217,7 @@ export type CredentialIssueInput = {
 	// Wallet's proof-of-possession JWT (RFC-aligned `openid4vci-proof+jwt` typ). Optional but
 	// strongly recommended — without it the issued credential has no holder binding.
 	proofJwt?: string;
-	requestedFormat?: 'vc+sd-jwt';
+	requestedFormat?: string;
 };
 
 export type CredentialIssueResult =

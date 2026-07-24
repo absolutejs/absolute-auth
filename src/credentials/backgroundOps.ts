@@ -61,7 +61,6 @@ export type EmailBreachScanResult = {
 };
 
 const sleep = (delayMs: number) =>
-	// eslint-disable-next-line promise/avoid-new -- minimal sleep helper; setTimeout has no Promise-returning alternative
 	new Promise<void>((resolve) => {
 		setTimeout(resolve, delayMs);
 	});
@@ -130,7 +129,6 @@ const scanPage = async (options: ScanPageOptions) => {
 	let breached = 0;
 	for (const email of options.emails) {
 		scanned += 1;
-		// eslint-disable-next-line no-await-in-loop -- HIBP rate-limit gate enforces serial requests
 		const hit = await scanEmail(
 			email,
 			options.apiKey,
@@ -138,7 +136,6 @@ const scanPage = async (options: ScanPageOptions) => {
 			options.onBreachFound
 		);
 		if (hit) breached += 1;
-		// eslint-disable-next-line no-await-in-loop -- sleep is the rate-limit; awaiting it is the entire point
 		await sleep(options.pauseMs);
 	}
 
@@ -153,9 +150,7 @@ export const runEmailBreachScan = async (input: EmailBreachScanInput) => {
 	let cursor: string | undefined;
 
 	do {
-		// eslint-disable-next-line no-await-in-loop -- pager is intentionally serial; consumer controls batch size
 		const page = await input.iterateEmails(cursor);
-		// eslint-disable-next-line no-await-in-loop -- one page at a time keeps memory and rate-limit predictable
 		const tally = await scanPage({
 			apiKey: input.hibpApiKey,
 			emails: page.emails,
@@ -225,7 +220,6 @@ type PrunePageOptions = {
 const prunePage = async (options: PrunePageOptions) => {
 	const pruned: string[] = [];
 	for (const candidate of options.candidates) {
-		// eslint-disable-next-line no-await-in-loop -- deletes are sequential by design (predictable ordering, kinder to downstream stores)
 		const removed = await pruneCandidate(
 			candidate,
 			options.cutoff,
@@ -248,10 +242,8 @@ export const pruneInactiveUsers = async (input: PruneInactiveUsersInput) => {
 	let cursor: string | undefined;
 
 	do {
-		// eslint-disable-next-line no-await-in-loop -- serial paging; the consumer controls batch size
 		const page = await input.iterateUsers(cursor);
 		scanned += page.users.length;
-		// eslint-disable-next-line no-await-in-loop -- one page at a time so memory & DB pressure stay bounded
 		const removed = await prunePage({
 			candidates: page.users,
 			cutoff,

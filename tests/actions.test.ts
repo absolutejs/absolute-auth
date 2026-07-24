@@ -10,14 +10,14 @@ const tag = (
 	result: 'pass' | 'deny' | 'redirect'
 ): AuthAction<TestUser> => ({
 	event: 'postLogin',
+	name,
 	handler: () => {
 		order.push(name);
 		if (result === 'pass') return { kind: 'pass' };
 		if (result === 'deny') return { kind: 'deny', reason: name };
 
 		return { kind: 'redirect', url: `/x/${name}` };
-	},
-	name
+	}
 });
 
 describe('action pipeline', () => {
@@ -61,21 +61,21 @@ describe('action pipeline', () => {
 		order.length = 0;
 		const both: AuthAction<TestUser> = {
 			event: ['postLogin', 'postRegister'],
+			name: 'both',
 			handler: () => {
 				order.push('both');
 
 				return { kind: 'pass' };
-			},
-			name: 'both'
+			}
 		};
 		const onlyMfa: AuthAction<TestUser> = {
 			event: 'postMfa',
+			name: 'onlyMfa',
 			handler: () => {
 				order.push('mfa');
 
 				return { kind: 'pass' };
-			},
-			name: 'onlyMfa'
+			}
 		};
 
 		const pipeline = createActionPipeline<TestUser>([both, onlyMfa]);

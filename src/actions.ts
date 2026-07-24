@@ -61,7 +61,6 @@ export const createActionPipeline = <UserType>(
 		const fullContext: AuthActionContext<UserType> = { ...context, event };
 		for (const action of actions) {
 			if (!matches(action, event)) continue;
-			// eslint-disable-next-line no-await-in-loop -- pipeline runs sequentially so each action can react to the previous outcome
 			const result = await action.handler(fullContext);
 			if (result.kind !== 'pass') return result;
 		}

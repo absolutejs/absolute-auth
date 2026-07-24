@@ -10,6 +10,7 @@ import {
 } from 'citra';
 import { Cookie, status as statusType, redirect as redirectType } from 'elysia';
 import { ElysiaCustomStatusResponse } from 'elysia/error';
+import type { StatusMap } from 'elysia/utils';
 import type { ApiKeysConfig } from './apikeys/config';
 import type { AgentAuthConfig } from './agents/config';
 import type { AuditConfig } from './audit/config';
@@ -156,8 +157,10 @@ export type ResolvedOAuthAuthorization = {
 	tokenType?: string;
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Add better typing for the Elysia codes
-export type StatusReturn = ElysiaCustomStatusResponse<any, any, any>;
+export type StatusReturn = ElysiaCustomStatusResponse<
+	number | keyof StatusMap,
+	unknown
+>;
 
 export type OnNewUser<UserType> = (
 	userIdentity: Record<string, unknown>

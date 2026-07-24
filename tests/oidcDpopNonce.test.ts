@@ -4,7 +4,7 @@ import {
 	mintDpopNonce,
 	verifyDpopNonce
 } from '../src/oidc/dpop';
-import { generateSigningKey, signJwt, toPublicJwk } from '../src/oidc/keys';
+import { generateSigningKey, toPublicJwk } from '../src/oidc/keys';
 import { auth } from '../src/index';
 import {
 	createInMemoryAuthorizationCodeStore,
@@ -112,11 +112,11 @@ describe('OIDC provider — DPoP nonce enforcement at /token', () => {
 					}
 				]),
 				dpopNonce: { secret: 'nonce-secret' },
-				getClaims: (user) => ({ email: user.email }),
-				getUserId: (user) => user.sub,
 				issuer: ISSUER,
 				refreshTokenStore: createInMemoryOidcRefreshTokenStore(),
-				signingKey: await generateSigningKey()
+				signingKey: await generateSigningKey(),
+				getClaims: (user) => ({ email: user.email }),
+				getUserId: (user) => user.sub
 			},
 			providersConfiguration: {}
 		});

@@ -69,7 +69,6 @@ const matchesSelf = async (
 	resourceId: string,
 	relation: string,
 	depth: number
-	// eslint-disable-next-line absolute/no-explicit-return-type -- mutually recursive; TS needs the annotation
 ): Promise<boolean> => {
 	const warrants = await context.config.warrantStore.listForResource(
 		resourceType,
@@ -108,7 +107,6 @@ const matchesRule = async (
 	relation: string,
 	rule: RelationRule,
 	depth: number
-	// eslint-disable-next-line absolute/no-explicit-return-type -- mutually recursive; TS needs the annotation
 ): Promise<boolean> => {
 	if (rule.kind === 'self') {
 		return matchesSelf(context, resourceType, resourceId, relation, depth);
@@ -157,7 +155,6 @@ const evaluate = async (
 	resourceId: string,
 	relation: string,
 	depth: number
-	// eslint-disable-next-line absolute/no-explicit-return-type -- mutually recursive; TS needs the annotation
 ): Promise<boolean> => {
 	const key = `${resourceType}:${resourceId}#${relation}`;
 	if (depth <= 0 || context.visited.has(key)) return false;
@@ -241,7 +238,6 @@ const expand = async (
 	depth: number,
 	found: Map<string, Subject>,
 	visited: Set<string>
-	// eslint-disable-next-line absolute/no-explicit-return-type -- recursive; TS needs the annotation
 ): Promise<void> => {
 	const key = `${resourceType}:${resourceId}#${relation}`;
 	if (depth <= 0 || visited.has(key)) return;
@@ -268,7 +264,6 @@ const expandRule = async (
 	depth: number,
 	found: Map<string, Subject>,
 	visited: Set<string>
-	// eslint-disable-next-line absolute/no-explicit-return-type -- mutually recursive; TS needs the annotation
 ): Promise<void> => {
 	if (rule.kind === 'computedUserset') {
 		await expand(

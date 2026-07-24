@@ -100,7 +100,6 @@ describe('assessRisk', () => {
 		const now = Date.now();
 		await trustDevice(config, 'user-1', 'dev-1');
 		for (let index = 0; index < 5; index += 1) {
-			// eslint-disable-next-line no-await-in-loop -- sequential history seeding
 			await recordLoginAttempt(config, {
 				deviceId: 'dev-1',
 				now: now - index * 1000,

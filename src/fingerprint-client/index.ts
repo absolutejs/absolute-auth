@@ -93,16 +93,18 @@ const readCanvas = () => {
 	}
 };
 
-type LegacyOfflineCtxGlobal = {
-	webkitOfflineAudioContext?: typeof OfflineAudioContext;
-};
+const isOfflineAudioContextCtor = (
+	value: unknown
+): value is typeof OfflineAudioContext => typeof value === 'function';
 
 const resolveOfflineAudioContextCtor = () => {
 	if (typeof OfflineAudioContext !== 'undefined') return OfflineAudioContext;
-	// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- vendor-prefixed legacy API; no TS type ships for it
-	const legacy = globalThis as LegacyOfflineCtxGlobal;
+	const legacy: unknown = Reflect.get(
+		globalThis,
+		'webkitOfflineAudioContext'
+	);
 
-	return legacy.webkitOfflineAudioContext;
+	return isOfflineAudioContextCtor(legacy) ? legacy : undefined;
 };
 
 const sumAbs = (samples: Float32Array) => {

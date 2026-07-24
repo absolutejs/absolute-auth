@@ -33,10 +33,33 @@ const parse = (raw: string | undefined) => {
 	if (raw === undefined) return undefined;
 	try {
 		const parsed: unknown = JSON.parse(raw);
-		if (typeof parsed !== 'object' || parsed === null) return undefined;
+    if (typeof parsed !== 'object' || parsed === null) return undefined;
+    const accessToken: unknown = Reflect.get(parsed, 'accessToken');
+    const expiresAt: unknown = Reflect.get(parsed, 'expiresAt');
+    const refreshToken: unknown = Reflect.get(parsed, 'refreshToken');
+    const scopes: unknown = Reflect.get(parsed, 'scopes');
+    const storedAt: unknown = Reflect.get(parsed, 'storedAt');
+    const tokenType: unknown = Reflect.get(parsed, 'tokenType');
+    if (
+      typeof accessToken !== 'string' ||
+      typeof storedAt !== 'number' ||
+      (expiresAt !== undefined && typeof expiresAt !== 'number') ||
+      (refreshToken !== undefined && typeof refreshToken !== 'string') ||
+      (tokenType !== undefined && typeof tokenType !== 'string') ||
+      (scopes !== undefined &&
+        (!Array.isArray(scopes) ||
+          !scopes.every((scope) => typeof scope === 'string')))
+    )
+      return undefined;
 
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- deserialization boundary: shape was produced by `save` below
-		return parsed as FederatedTokenSet;
+    return {
+      accessToken,
+      expiresAt,
+      refreshToken,
+      scopes,
+      storedAt,
+      tokenType
+    } satisfies FederatedTokenSet;
 	} catch {
 		return undefined;
 	}

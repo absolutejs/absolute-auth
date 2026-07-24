@@ -14,12 +14,12 @@ describe('fingerprintDevice', () => {
 	test('is deterministic and key-order independent', async () => {
 		const first = await fingerprintDevice(signals);
 		const reordered = await fingerprintDevice({
-			userAgent: 'Mozilla/5.0',
-			timezone: 'America/New_York',
-			screen: '1920x1080',
-			platform: 'MacIntel',
+			canvasHash: 'abc123',
 			language: 'en-US',
-			canvasHash: 'abc123'
+			platform: 'MacIntel',
+			screen: '1920x1080',
+			timezone: 'America/New_York',
+			userAgent: 'Mozilla/5.0'
 		});
 
 		expect(first).toBe(reordered);

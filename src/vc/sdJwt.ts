@@ -196,7 +196,6 @@ export const verifySdJwtVc = async (input: SdJwtVcVerifyInput) => {
 
 	const disclosedClaims: Record<string, unknown> = {};
 	for (const encoded of parsed.disclosures) {
-		// eslint-disable-next-line no-await-in-loop -- SHA-256 is fast; serial keeps memory bounded
 		const hash = await sha256(encoded);
 		if (!acceptedHashes.has(hash)) return undefined;
 		const tuple = decodeDisclosure(encoded);

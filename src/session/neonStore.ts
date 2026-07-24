@@ -13,7 +13,7 @@ import {
 } from 'drizzle-orm/pg-core';
 import { isUserSessionId } from '../typeGuards';
 import type { SessionData, UnregisteredSessionData } from '../types';
-import type { AuthSessionStore } from './types';
+import type { AuthSessionStore, SessionUserDecoder } from './types';
 
 export const authSessionsTable = pgTable(
 	'auth_sessions',
@@ -75,14 +75,14 @@ const cloneRecord = (value?: Record<string, unknown>) =>
 	value ? structuredClone(value) : undefined;
 
 const toSessionData = <UserType>(
-	row: AuthSessionRow
+	row: AuthSessionRow,
+	decodeUser: SessionUserDecoder<UserType>
 ): SessionData<UserType> => ({
 	accessToken: row.access_token ?? undefined,
 	authenticatedAt: row.authenticated_at_ms ?? undefined,
 	expiresAt: row.expires_at_ms,
 	refreshToken: row.refresh_token ?? undefined,
-	// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- deserialization boundary: user_json was persisted from UserType, so reading it back as UserType is sound
-	user: cloneUser(row.user_json as UserType)
+	user: cloneUser(decodeUser(row.user_json))
 });
 
 const toUnregisteredSessionData = (
@@ -96,12 +96,31 @@ const toUnregisteredSessionData = (
 });
 
 export const createNeonAuthSessionStore = <UserType>(
-	databaseUrl: string
+	databaseUrl: string,
+	decodeUser: SessionUserDecoder<UserType>
 ): AuthSessionStore<UserType> => {
 	const sql = neon(databaseUrl);
 	const db: NeonHttpDatabase = drizzle({ client: sql });
 
 	return {
+		deleteExpired: async () => {
+			const rows = await db
+				.delete(authSessionsTable)
+				.where(lt(authSessionsTable.expires_at_ms, Date.now()))
+				.returning({ id: authSessionsTable.id });
+
+			return rows.length;
+		},
+		deleteExpiredUnregistered: async () => {
+			const rows = await db
+				.delete(authUnregisteredSessionsTable)
+				.where(
+					lt(authUnregisteredSessionsTable.expires_at_ms, Date.now())
+				)
+				.returning({ id: authUnregisteredSessionsTable.id });
+
+			return rows.length;
+		},
 		getSession: async (id) => {
 			const [row] = await db
 				.select()
@@ -109,7 +128,7 @@ export const createNeonAuthSessionStore = <UserType>(
 				.where(eq(authSessionsTable.id, id))
 				.limit(1);
 
-			return row ? toSessionData<UserType>(row) : undefined;
+			return row ? toSessionData(row, decodeUser) : undefined;
 		},
 		getUnregisteredSession: async (id) => {
 			const [row] = await db
@@ -133,24 +152,6 @@ export const createNeonAuthSessionStore = <UserType>(
 				.from(authUnregisteredSessionsTable);
 
 			return rows.map((row) => row.id).filter(isUserSessionId);
-		},
-		deleteExpired: async () => {
-			const rows = await db
-				.delete(authSessionsTable)
-				.where(lt(authSessionsTable.expires_at_ms, Date.now()))
-				.returning({ id: authSessionsTable.id });
-
-			return rows.length;
-		},
-		deleteExpiredUnregistered: async () => {
-			const rows = await db
-				.delete(authUnregisteredSessionsTable)
-				.where(
-					lt(authUnregisteredSessionsTable.expires_at_ms, Date.now())
-				)
-				.returning({ id: authUnregisteredSessionsTable.id });
-
-			return rows.length;
 		},
 		removeSession: async (id) => {
 			await db

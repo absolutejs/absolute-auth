@@ -130,7 +130,11 @@ await sql`
 
 ```ts
 import { Elysia } from 'elysia';
-import { auth, createNeonAuthSessionStore } from '@absolutejs/auth';
+import {
+  auth,
+  createNeonAuthSessionStore,
+  decodeSessionUserRecord,
+} from '@absolutejs/auth';
 
 type MyUser = {
   email: string;
@@ -138,7 +142,20 @@ type MyUser = {
   // …whatever your domain user has
 };
 
-const authSessionStore = createNeonAuthSessionStore<MyUser>();
+const decodeMyUser = (value: unknown): MyUser => {
+  // Validate with your schema library here; this example uses the package's
+  // generic record decoder when MyUser has no additional runtime schema.
+  const record = decodeSessionUserRecord(value);
+  if (typeof record.email !== 'string' || typeof record.sub !== 'string') {
+    throw new TypeError('Invalid persisted user');
+  }
+  return { email: record.email, sub: record.sub };
+};
+
+const authSessionStore = createNeonAuthSessionStore(
+  process.env.DATABASE_URL ?? '',
+  decodeMyUser,
+);
 
 const app = await auth<MyUser>({
   authSessionStore,

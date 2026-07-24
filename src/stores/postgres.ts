@@ -1,6 +1,9 @@
 import { neon } from '@neondatabase/serverless';
 import { drizzle } from 'drizzle-orm/neon-http';
-import type { PgAsyncDatabase } from 'drizzle-orm/pg-core';
+import type {
+	PgAsyncDatabase,
+	PgQueryResultHKT
+} from 'drizzle-orm/pg-core';
 
 // Shared scaffolding for the enterprise stores. Every new store ships an
 // in-memory implementation (dev/test) plus a Postgres implementation that accepts
@@ -16,8 +19,7 @@ import type { PgAsyncDatabase } from 'drizzle-orm/pg-core';
 // parameter is bound by `AnyPgDatabase`: `<DB extends AnyPgDatabase>(db: DB)`.
 // The `any`s live ONLY in this bound — `DB` is inferred as the caller's exact
 // database type, so store bodies stay fully typed (this is not `db: any`).
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- constraint bound only; DB infers the caller's exact db type
-export type AnyPgDatabase = PgAsyncDatabase<any, any>;
+export type AnyPgDatabase = PgAsyncDatabase<PgQueryResultHKT>;
 
 export const createNeonDatabase = (databaseUrl: string) =>
 	drizzle({ client: neon(databaseUrl) });

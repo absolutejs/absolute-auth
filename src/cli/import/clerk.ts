@@ -19,7 +19,11 @@
 // this importer. Clerk uses argon2id by default; verbatim copy works.
 
 import { readFile } from 'node:fs/promises';
-import type { ImportResult, Importer } from './types';
+import {
+	detectPasswordHashAlgorithm,
+	type ImportResult,
+	type Importer
+} from './types';
 
 type ClerkEmail = {
 	email_address: string;
@@ -61,9 +65,9 @@ export const clerkImporter: Importer = {
 			.map((raw) => {
 				const primary =
 					raw.email_addresses?.find(
-						(e) =>
-							raw.primary_email_address_id === undefined ||
-							e.email_address.length > 0
+							(email) =>
+								raw.primary_email_address_id === undefined ||
+								email.email_address.length > 0
 					) ?? raw.email_addresses?.[0];
 
 				return {
@@ -74,13 +78,9 @@ export const clerkImporter: Importer = {
 					familyName: raw.last_name,
 					givenName: raw.first_name,
 					passwordHash: raw.password_digest,
-					passwordHashAlgo: raw.password_digest?.startsWith(
-						'$argon2id'
+					passwordHashAlgo: detectPasswordHashAlgorithm(
+						raw.password_digest
 					)
-						? ('argon2id' as const)
-						: raw.password_digest?.startsWith('$2')
-							? ('bcrypt' as const)
-							: undefined
 				};
 			});
 

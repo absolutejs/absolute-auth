@@ -24,7 +24,11 @@
 // Auth0 hashes with bcrypt by default; verbatim copy works.
 
 import { readFile } from 'node:fs/promises';
-import type { ImportResult, Importer } from './types';
+import {
+	detectPasswordHashAlgorithm,
+	type ImportResult,
+	type Importer
+} from './types';
 
 type Auth0Identity = {
 	connection?: string;
@@ -44,17 +48,42 @@ type Auth0User = {
 	user_id: string;
 };
 
-const parseUsersFromText = (text: string): Auth0User[] => {
+const isAuth0Identity = (value: unknown): value is Auth0Identity =>
+	typeof value === 'object' &&
+	value !== null &&
+	typeof Reflect.get(value, 'provider') === 'string' &&
+	typeof Reflect.get(value, 'user_id') === 'string';
+
+const isAuth0User = (value: unknown): value is Auth0User =>
+	typeof value === 'object' &&
+	value !== null &&
+	typeof Reflect.get(value, 'email') === 'string' &&
+	typeof Reflect.get(value, 'user_id') === 'string' &&
+	(Reflect.get(value, 'identities') === undefined ||
+		(Array.isArray(Reflect.get(value, 'identities')) &&
+			Reflect.get(value, 'identities').every(isAuth0Identity)));
+
+const requireAuth0User = (value: unknown) => {
+	if (!isAuth0User(value)) throw new Error('Invalid Auth0 user export record');
+
+	return value;
+};
+
+const parseUsersFromText = (text: string) => {
 	const trimmed = text.trim();
 	if (trimmed.startsWith('[')) {
-		return JSON.parse(trimmed) as Auth0User[];
+		const parsed: unknown = JSON.parse(trimmed);
+		if (!Array.isArray(parsed))
+			throw new Error('Auth0 JSON export must be an array');
+
+		return parsed.map(requireAuth0User);
 	}
 
 	// NDJSON — one user per line.
 	return trimmed
 		.split('\n')
 		.filter((line) => line.length > 0)
-		.map((line) => JSON.parse(line) as Auth0User);
+		.map((line) => requireAuth0User(JSON.parse(line)));
 };
 
 export const auth0Importer: Importer = {
@@ -74,12 +103,7 @@ export const auth0Importer: Importer = {
 			familyName: raw.family_name,
 			givenName: raw.given_name,
 			passwordHash: raw.password_hash,
-			passwordHashAlgo:
-				raw.password_hash?.startsWith('$2b$') ||
-				raw.password_hash?.startsWith('$2a$') ||
-				raw.password_hash?.startsWith('$2y$')
-					? ('bcrypt' as const)
-					: undefined
+				passwordHashAlgo: detectPasswordHashAlgorithm(raw.password_hash)
 		}));
 
 		// Auth0 always has at least one identity (the auth0 connection

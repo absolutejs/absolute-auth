@@ -83,11 +83,23 @@ const cleanMetadata = (metadata?: Record<string, unknown>) => {
 };
 
 const readIntegrity = (event: AuditEvent) => {
-	const raw = event.metadata?.[INTEGRITY_KEY];
-	if (raw === undefined) return undefined;
+  const raw = event.metadata?.[INTEGRITY_KEY];
+  if (typeof raw !== 'object' || raw === null) return undefined;
+  const hash: unknown = Reflect.get(raw, 'hash');
+  const previousHash: unknown = Reflect.get(raw, 'previousHash');
+  const writerId: unknown = Reflect.get(raw, 'writerId');
+  if (
+    typeof hash !== 'string' ||
+    typeof previousHash !== 'string' ||
+    (writerId !== undefined && typeof writerId !== 'string')
+  )
+    return undefined;
 
-	// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- deserialization boundary: this shape was written by createTamperEvidentSink
-	return raw as AuditIntegrity;
+  return {
+    hash,
+    previousHash,
+    writerId
+  } satisfies AuditIntegrity;
 };
 
 const brokenAt = (index: number) => {
@@ -195,7 +207,6 @@ export const verifyAuditChain = async (
 		const integrity = readIntegrity(event);
 		const chain = integrity?.writerId ?? GENESIS;
 		const previousHash = heads.get(chain) ?? GENESIS;
-		// eslint-disable-next-line no-await-in-loop -- chain verification is inherently sequential
 		const expected = await hashAuditEvent(event, previousHash, secret);
 		if (
 			integrity === undefined ||

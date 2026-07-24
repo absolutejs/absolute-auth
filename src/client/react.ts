@@ -64,12 +64,8 @@ const useMutation = <Args, Data>(
 
 export const useMagicLink = (client: AuthClient) =>
 	useMutation(client.passwordless.requestMagicLink);
-
-// Conditional-UI WebAuthn ("passkey autofill"). Mount once on the sign-in page with an
-// `<input autocomplete="username webauthn" />` and call `start()` in an effect; the
-// browser surfaces saved passkeys directly in the autofill dropdown. The result feeds
-// the same authenticate-verify route the click-driven flow uses. `cancel()` aborts an
-// in-flight ceremony (e.g. when the user clicks the password tab).
+export const useMfaChallenge = (client: AuthClient) =>
+	useMutation(client.mfa.challenge);
 export const usePasskeyAutofill = (client: AuthClient) => {
 	const [data, setData] = useState<{ status: 'authenticated' } | null>(null);
 	const [error, setError] = useState<AuthClientError | null>(null);
@@ -102,58 +98,8 @@ export const usePasskeyAutofill = (client: AuthClient) => {
 
 	return { cancel, data, error, isPending, start };
 };
-
-// "Upgrade to passkey" prompt — query whether the signed-in user has registered any
-// passkeys yet; surface `shouldPrompt: true` when they don't, plus a `register()` that
-// runs the registration ceremony and refetches the list. Wire `shouldPrompt` to your CTA
-// component so password users see "save a passkey to this device for next time?" after
-// they sign in.
-export const useUpgradeToPasskey = (client: AuthClient) => {
-	const [passkeys, setPasskeys] = useState<unknown[] | null>(null);
-	const [error, setError] = useState<AuthClientError | null>(null);
-	const [isPending, setIsPending] = useState(true);
-	const mountedRef = useRef(true);
-	useEffect(
-		() => () => {
-			mountedRef.current = false;
-		},
-		[]
-	);
-
-	const refetch = useCallback(async () => {
-		setIsPending(true);
-		const result = await client.passkeys.list();
-		if (mountedRef.current) {
-			setPasskeys(result.data);
-			setError(result.error);
-			setIsPending(false);
-		}
-	}, [client]);
-
-	useEffect(() => {
-		void refetch();
-	}, [refetch]);
-
-	const register = useCallback(async () => {
-		const result = await runPasskeyRegistration(client);
-		if (result.error === null) await refetch();
-
-		return result;
-	}, [client, refetch]);
-
-	const shouldPrompt = passkeys !== null && passkeys.length === 0;
-
-	return { error, isPending, passkeys, refetch, register, shouldPrompt };
-};
-
-export const useMfaChallenge = (client: AuthClient) =>
-	useMutation(client.mfa.challenge);
-
 export const usePasswordReset = (client: AuthClient) =>
 	useMutation(client.passwordReset.request);
-
-// Query hook for the user's active sessions; refetch() reruns it. The shape matches the
-// mutation hooks closely (isPending/error/data) so the consumer can render one way.
 export const useSessions = (client: AuthClient) => {
 	const [data, setData] = useState<unknown[] | null>(null);
 	const [error, setError] = useState<AuthClientError | null>(null);
@@ -192,14 +138,48 @@ export const useSessions = (client: AuthClient) => {
 
 	return { data, error, isPending, refetch, revoke };
 };
-
 export const useSignIn = (client: AuthClient) =>
 	useMutation(client.signIn.email);
-
 export const useSignOut = (client: AuthClient) => useMutation(client.signOut);
-
 export const useSignUp = (client: AuthClient) =>
 	useMutation(client.signUp.email);
+export const useUpgradeToPasskey = (client: AuthClient) => {
+	const [passkeys, setPasskeys] = useState<unknown[] | null>(null);
+	const [error, setError] = useState<AuthClientError | null>(null);
+	const [isPending, setIsPending] = useState(true);
+	const mountedRef = useRef(true);
+	useEffect(
+		() => () => {
+			mountedRef.current = false;
+		},
+		[]
+	);
+
+	const refetch = useCallback(async () => {
+		setIsPending(true);
+		const result = await client.passkeys.list();
+		if (mountedRef.current) {
+			setPasskeys(result.data);
+			setError(result.error);
+			setIsPending(false);
+		}
+	}, [client]);
+
+	useEffect(() => {
+		void refetch();
+	}, [refetch]);
+
+	const register = useCallback(async () => {
+		const result = await runPasskeyRegistration(client);
+		if (result.error === null) await refetch();
+
+		return result;
+	}, [client, refetch]);
+
+	const shouldPrompt = passkeys !== null && passkeys.length === 0;
+
+	return { error, isPending, passkeys, refetch, register, shouldPrompt };
+};
 
 // Drop-in headless components — minimal default markup, fully
 // restyleable via the `classNames` prop. Every element carries a

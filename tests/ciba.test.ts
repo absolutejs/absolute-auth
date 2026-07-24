@@ -117,7 +117,6 @@ describe('CIBA', () => {
 		expect(approval.ok).toBe(true);
 
 		// Sleep past the per-poll interval (1s in this test config) so we don't trip slow_down.
-		// eslint-disable-next-line promise/avoid-new -- short scheduler sleep to clear the poll-rate gate the previous exchange call recorded
 		await new Promise<void>((resolve) => setTimeout(resolve, 1100));
 
 		const tokens = await exchangeBackchannelAuth({

@@ -60,8 +60,8 @@ const useMutation = <Args, Data>(
 
 export const useMagicLink = (client: AuthClient) =>
 	useMutation(client.passwordless.requestMagicLink);
-
-// Conditional-UI WebAuthn — see the React doc for the wire-up pattern.
+export const useMfaChallenge = (client: AuthClient) =>
+	useMutation(client.mfa.challenge);
 export const usePasskeyAutofill = (client: AuthClient) => {
 	const [data, setData] = createSignal<{ status: 'authenticated' } | null>(
 		null
@@ -90,8 +90,43 @@ export const usePasskeyAutofill = (client: AuthClient) => {
 
 	return { cancel, data, error, isPending, start };
 };
+export const usePasswordReset = (client: AuthClient) =>
+	useMutation(client.passwordReset.request);
+export const useSessions = (client: AuthClient) => {
+	const [data, setData] = createSignal<unknown[] | null>(null);
+	const [error, setError] = createSignal<AuthClientError | null>(null);
+	const [isPending, setIsPending] = createSignal(true);
+	let alive = true;
+	onCleanup(() => {
+		alive = false;
+	});
 
-// "Upgrade to passkey" prompt — see the React doc.
+	const refetch = async () => {
+		setIsPending(true);
+		const result = await client.sessions.list();
+		if (alive) {
+			setData(() => result.data);
+			setError(result.error);
+			setIsPending(false);
+		}
+	};
+
+	const revoke = async (sessionId: string) => {
+		const result = await client.sessions.revoke(sessionId);
+		if (result.error === null) await refetch();
+
+		return result;
+	};
+
+	void refetch();
+
+	return { data, error, isPending, refetch, revoke };
+};
+export const useSignIn = (client: AuthClient) =>
+	useMutation(client.signIn.email);
+export const useSignOut = (client: AuthClient) => useMutation(client.signOut);
+export const useSignUp = (client: AuthClient) =>
+	useMutation(client.signUp.email);
 export const useUpgradeToPasskey = (client: AuthClient) => {
 	const [passkeys, setPasskeys] = createSignal<unknown[] | null>(null);
 	const [error, setError] = createSignal<AuthClientError | null>(null);
@@ -127,51 +162,3 @@ export const useUpgradeToPasskey = (client: AuthClient) => {
 
 	return { error, isPending, passkeys, refetch, register, shouldPrompt };
 };
-
-export const useMfaChallenge = (client: AuthClient) =>
-	useMutation(client.mfa.challenge);
-
-export const usePasswordReset = (client: AuthClient) =>
-	useMutation(client.passwordReset.request);
-
-// Query composable for the user's active sessions; refetch() reruns it, revoke(sessionId)
-// kills one and refetches. Same `{ data, error, isPending }` triplet as the mutations so
-// the consumer can render one way.
-export const useSessions = (client: AuthClient) => {
-	const [data, setData] = createSignal<unknown[] | null>(null);
-	const [error, setError] = createSignal<AuthClientError | null>(null);
-	const [isPending, setIsPending] = createSignal(true);
-	let alive = true;
-	onCleanup(() => {
-		alive = false;
-	});
-
-	const refetch = async () => {
-		setIsPending(true);
-		const result = await client.sessions.list();
-		if (alive) {
-			setData(() => result.data);
-			setError(result.error);
-			setIsPending(false);
-		}
-	};
-
-	const revoke = async (sessionId: string) => {
-		const result = await client.sessions.revoke(sessionId);
-		if (result.error === null) await refetch();
-
-		return result;
-	};
-
-	void refetch();
-
-	return { data, error, isPending, refetch, revoke };
-};
-
-export const useSignIn = (client: AuthClient) =>
-	useMutation(client.signIn.email);
-
-export const useSignOut = (client: AuthClient) => useMutation(client.signOut);
-
-export const useSignUp = (client: AuthClient) =>
-	useMutation(client.signUp.email);

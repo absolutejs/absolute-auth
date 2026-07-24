@@ -87,23 +87,18 @@ const buildApp = async ({
 		userId: USER_SUB
 	});
 
-	globalThis.fetch = (async (url: string, init: RequestInit) => ({
-		ok: fetchOk,
-		status: fetchOk ? HTTP_OK : HTTP_INTERNAL_ERROR
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any -- minimal fetch stub
-	})) as any;
-	const recordingFetch = async (url: string, init: RequestInit) => {
+	const recordingFetch: typeof fetch = async (input, init) => {
 		captured.push({
-			body: String(init.body ?? ''),
-			headers: init.headers as Record<string, string>,
-			url
+			body: String(init?.body ?? ''),
+			headers: Object.fromEntries(new Headers(init?.headers).entries()),
+			url: input.toString()
 		});
 
 		return new Response(null, {
 			status: fetchOk ? HTTP_OK : HTTP_INTERNAL_ERROR
 		});
 	};
-	globalThis.fetch = recordingFetch as unknown as typeof globalThis.fetch;
+	globalThis.fetch = recordingFetch;
 
 	const app = await auth<TestUser>({
 		authSessionStore,
@@ -132,12 +127,12 @@ const buildApp = async ({
 					scopes: ['openid']
 				}
 			]),
-			getClaims: (user) => ({ email: user.email }),
-			getUserId: (user) => user.sub,
 			issuer: ISSUER,
 			logoutDeliveryStore: deliveryStore,
 			refreshTokenStore,
-			signingKey
+			signingKey,
+			getClaims: (user) => ({ email: user.email }),
+			getUserId: (user) => user.sub
 		},
 		providersConfiguration: {}
 	});

@@ -47,8 +47,7 @@ export const extractDpopNonceClaim = (proof: string) => {
 			Buffer.from(payloadSegment, 'base64url').toString('utf8')
 		);
 		if (typeof payload !== 'object' || payload === null) return undefined;
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- deserialization boundary: validated above as a non-null object; the `nonce` lookup is typed `unknown` and validated as a string below
-		const value = (payload as { nonce?: unknown }).nonce;
+			const value: unknown = Reflect.get(payload, 'nonce');
 
 		return typeof value === 'string' ? value : undefined;
 	} catch {

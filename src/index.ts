@@ -597,7 +597,11 @@ export type {
 	FederatedTokenSet,
 	FederatedTokenStore
 } from './federation/tokenStore';
-export type { AuthSessionStore } from './session/types';
+export {
+	decodeSessionUserRecord,
+	type AuthSessionStore,
+	type SessionUserDecoder
+} from './session/types';
 export { isAuthIntent, isUserSessionId, isValidUser } from './typeGuards';
 export { AuthIdentityConflictError } from './errors';
 export { sessionStore } from './session/state';

@@ -17,7 +17,6 @@ import type {
 import { withSpan } from '../telemetry/tracing';
 
 const defaultSleep = (delayMs: number) =>
-	// eslint-disable-next-line promise/avoid-new -- a setTimeout-backed delay needs the bare Promise constructor
 	new Promise<void>((resolve) => setTimeout(resolve, delayMs));
 
 const attemptOnce = async ({
@@ -182,7 +181,6 @@ const deliverToEndpoint = async ({
 }) => {
 	let lastError: unknown;
 	for (let attempt = 0; attempt < retry.attempts; attempt++) {
-		// eslint-disable-next-line no-await-in-loop -- retry-with-backoff is inherently sequential
 		const error = await tryDeliverThenBackoff({
 			attempt,
 			endpoint,

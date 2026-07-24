@@ -50,12 +50,38 @@ Options:
 `;
 
 type MigrateArgs = {
-	blocks: BlockName[] | undefined;
+	blocks: string[] | undefined;
 	databaseUrl: string | undefined;
 	help: boolean;
 };
 
-const parseMigrateArgs = (argv: string[]): MigrateArgs => {
+const isBlockName = (value: string): value is BlockName =>
+	Object.hasOwn(blockMigrations, value);
+
+const applyMigrateFlag = (
+	parsed: MigrateArgs,
+	args: string[],
+	flag: string | undefined
+) => {
+	if (flag === '--help' || flag === '-h') {
+		parsed.help = true;
+
+		return;
+	}
+	if (flag === '--db' || flag === '--database-url') {
+		parsed.databaseUrl = args.shift();
+
+		return;
+	}
+	if (flag !== '--blocks') return;
+	const list = args.shift() ?? '';
+	parsed.blocks = list
+		.split(',')
+		.map((entry) => entry.trim())
+		.filter((entry) => entry.length > 0);
+};
+
+const parseMigrateArgs = (argv: string[]) => {
 	const parsed: MigrateArgs = {
 		blocks: undefined,
 		databaseUrl: undefined,
@@ -63,20 +89,7 @@ const parseMigrateArgs = (argv: string[]): MigrateArgs => {
 	};
 	const args = [...argv];
 	while (args.length > 0) {
-		const flag = args.shift();
-		if (flag === '--help' || flag === '-h') {
-			parsed.help = true;
-		} else if (flag === '--db' || flag === '--database-url') {
-			parsed.databaseUrl = args.shift();
-		} else if (flag === '--blocks') {
-			const list = args.shift() ?? '';
-			parsed.blocks = list
-				.split(',')
-				.map((entry) => entry.trim())
-				.filter((entry) => entry.length > 0)
-				// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- validated against blockMigrations keys below
-				.map((entry) => entry as BlockName);
-		}
+		applyMigrateFlag(parsed, args, args.shift());
 	}
 
 	return parsed;
@@ -90,7 +103,32 @@ type ImportArgs = {
 	source: string | undefined;
 };
 
-const parseImportArgs = (argv: string[]): ImportArgs => {
+const applyImportArgument = (
+	parsed: ImportArgs,
+	args: string[],
+	positionals: string[],
+	next: string | undefined
+) => {
+	if (next === undefined) return;
+	if (next === '--help' || next === '-h') {
+		parsed.help = true;
+
+		return;
+	}
+	if (next === '--db' || next === '--database-url') {
+		parsed.databaseUrl = args.shift();
+
+		return;
+	}
+	if (next === '--commit') {
+		parsed.commit = true;
+
+		return;
+	}
+	if (!next.startsWith('--')) positionals.push(next);
+};
+
+const parseImportArgs = (argv: string[]) => {
 	const parsed: ImportArgs = {
 		commit: false,
 		databaseUrl: undefined,
@@ -101,20 +139,11 @@ const parseImportArgs = (argv: string[]): ImportArgs => {
 	const args = [...argv];
 	const positionals: string[] = [];
 	while (args.length > 0) {
-		const next = args.shift();
-		if (next === undefined) break;
-		if (next === '--help' || next === '-h') {
-			parsed.help = true;
-		} else if (next === '--db' || next === '--database-url') {
-			parsed.databaseUrl = args.shift();
-		} else if (next === '--commit') {
-			parsed.commit = true;
-		} else if (!next.startsWith('--')) {
-			positionals.push(next);
-		}
+		applyImportArgument(parsed, args, positionals, args.shift());
 	}
-	parsed.source = positionals[0];
-	parsed.file = positionals[1];
+	const [source, file] = positionals;
+	parsed.source = source;
+	parsed.file = file;
 
 	return parsed;
 };
@@ -145,7 +174,11 @@ const runMigrate = async (argv: string[]) => {
 
 		return;
 	}
-	const result = await runMigrations({ blocks, databaseUrl: resolved });
+	const selectedBlocks = blocks?.filter(isBlockName);
+	const result = await runMigrations({
+		blocks: selectedBlocks,
+		databaseUrl: resolved
+	});
 	process.stdout.write(
 		`\n${result.applied.length} migration(s) applied, ${result.skipped.length} skipped.\n`
 	);

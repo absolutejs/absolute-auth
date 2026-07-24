@@ -28,41 +28,6 @@ const secureUrl = (value: string) => {
 	}
 };
 
-export const validateClientIdMetadataDocument = (
-	document: ClientIdMetadataDocument,
-	expectedClientId: string
-) => {
-	const errors: string[] = [];
-	if (document.client_id !== expectedClientId)
-		errors.push('client_id does not match the metadata document URL');
-	if (!secureUrl(document.client_id)) errors.push('client_id must use HTTPS');
-	if (
-		!Array.isArray(document.redirect_uris) ||
-		document.redirect_uris.length === 0
-	)
-		errors.push('redirect_uris is required');
-	for (const uri of document.redirect_uris ?? []) {
-		try {
-			const parsed = new URL(uri);
-			if (parsed.protocol !== 'https:' && parsed.hostname !== 'localhost')
-				errors.push('redirect URIs must use HTTPS or localhost');
-		} catch {
-			errors.push('redirect URI is invalid');
-		}
-	}
-	for (const [name, value] of [
-		['client_uri', document.client_uri],
-		['logo_uri', document.logo_uri],
-		['policy_uri', document.policy_uri],
-		['tos_uri', document.tos_uri],
-		['jwks_uri', document.jwks_uri]
-	] as const) {
-		if (value !== undefined && !secureUrl(value))
-			errors.push(`${name} must use HTTPS`);
-	}
-	return errors;
-};
-
 export const clientIdMetadataToOAuthClient = (
 	document: ClientIdMetadataDocument
 ): OAuthClient => ({
@@ -74,11 +39,6 @@ export const clientIdMetadataToOAuthClient = (
 	redirectUris: [...document.redirect_uris],
 	scopes: document.scope?.split(' ').filter(Boolean) ?? []
 });
-
-/** Resolve an HTTPS URL client_id into OAuth client metadata without prior
-	registration. Network access is injected so callers can enforce DNS/IP/redirect
-	policy with @absolutejs/egress. Redirects are forbidden and documents are capped
-	at 5 KiB per the IETF Client ID Metadata Document security guidance. */
 export const createClientIdMetadataResolver = ({
 	fetch: fetcher,
 	allow = async () => true,
@@ -93,7 +53,8 @@ export const createClientIdMetadataResolver = ({
 	now?: () => number;
 }) => {
 	const cache = new Map<string, { client: OAuthClient; expiresAt: number }>();
-	return async (clientId: string): Promise<OAuthClient | undefined> => {
+
+	return async (clientId: string) => {
 		if (!secureUrl(clientId) || !(await allow(clientId))) return undefined;
 		const cached = cache.get(clientId);
 		if (cached !== undefined && cached.expiresAt > now())
@@ -119,6 +80,55 @@ export const createClientIdMetadataResolver = ({
 			return undefined;
 		const client = clientIdMetadataToOAuthClient(document);
 		cache.set(clientId, { client, expiresAt: now() + cacheTtlMs });
+
 		return client;
 	};
+};
+
+const validateRedirectUri = (uri: string) => {
+	try {
+		const parsed = new URL(uri);
+		if (parsed.protocol === 'https:' || parsed.hostname === 'localhost')
+			return undefined;
+
+		return 'redirect URIs must use HTTPS or localhost';
+	} catch {
+		return 'redirect URI is invalid';
+	}
+};
+
+const validateSecureMetadataUrl = (
+	name: string,
+	value: string | undefined
+) => (value !== undefined && !secureUrl(value) ? `${name} must use HTTPS` : undefined);
+
+export const validateClientIdMetadataDocument = (
+	document: ClientIdMetadataDocument,
+	expectedClientId: string
+) => {
+	const errors: string[] = [];
+	if (document.client_id !== expectedClientId)
+		errors.push('client_id does not match the metadata document URL');
+	if (!secureUrl(document.client_id)) errors.push('client_id must use HTTPS');
+	if (
+		!Array.isArray(document.redirect_uris) ||
+		document.redirect_uris.length === 0
+	)
+		errors.push('redirect_uris is required');
+	for (const uri of document.redirect_uris ?? []) {
+		const error = validateRedirectUri(uri);
+		if (error !== undefined) errors.push(error);
+	}
+	for (const [name, value] of [
+		['client_uri', document.client_uri],
+		['logo_uri', document.logo_uri],
+		['policy_uri', document.policy_uri],
+		['tos_uri', document.tos_uri],
+		['jwks_uri', document.jwks_uri]
+	] as const) {
+		const error = validateSecureMetadataUrl(name, value);
+		if (error !== undefined) errors.push(error);
+	}
+
+	return errors;
 };

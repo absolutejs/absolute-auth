@@ -9,10 +9,10 @@ type TestUser = { sub: string };
 const unusedStoreMethods = {
 	getSession: async () => undefined,
 	getUnregisteredSession: async () => undefined,
-	removeSession: async () => {},
-	removeUnregisteredSession: async () => {},
-	setSession: async () => {},
-	setUnregisteredSession: async () => {}
+	removeSession: async () => undefined,
+	removeUnregisteredSession: async () => undefined,
+	setSession: async () => undefined,
+	setUnregisteredSession: async () => undefined
 } satisfies AuthSessionStore<TestUser>;
 
 describe('session cleanup lifecycle', () => {

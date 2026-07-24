@@ -3,7 +3,7 @@ import {
 	createRedisAuthSessionStore,
 	type RedisSessionClient
 } from '../src/session/redisStore';
-import type { SessionData, UserSessionId } from '../src/types';
+import type { SessionData } from '../src/types';
 import {
 	listUserSessions,
 	revokeUserSessions
@@ -36,10 +36,25 @@ const session = (userId: string): SessionData<TestUser> => ({
 	user: { id: userId }
 });
 
+const decodeTestUser = (value: unknown) => {
+	if (
+		typeof value !== 'object' ||
+		value === null ||
+		!('id' in value) ||
+		typeof value.id !== 'string'
+	)
+		throw new TypeError('Invalid test user');
+
+	return { id: value.id };
+};
+
 describe('redis auth session store', () => {
 	test('round-trips a session and removes it', async () => {
-		const store = createRedisAuthSessionStore<TestUser>(createFakeRedis());
-		const id = crypto.randomUUID() as UserSessionId;
+		const store = createRedisAuthSessionStore(
+			createFakeRedis(),
+			decodeTestUser
+		);
+		const id = crypto.randomUUID();
 
 		await store.setSession(id, session('alice'));
 		expect((await store.getSession(id))?.user.id).toBe('alice');
@@ -49,9 +64,12 @@ describe('redis auth session store', () => {
 	});
 
 	test('lists session ids (device management)', async () => {
-		const store = createRedisAuthSessionStore<TestUser>(createFakeRedis());
-		const idA = crypto.randomUUID() as UserSessionId;
-		const idB = crypto.randomUUID() as UserSessionId;
+		const store = createRedisAuthSessionStore(
+			createFakeRedis(),
+			decodeTestUser
+		);
+		const idA = crypto.randomUUID();
+		const idB = crypto.randomUUID();
 
 		await store.setSession(idA, session('alice'));
 		await store.setSession(idB, session('bob'));
@@ -61,11 +79,14 @@ describe('redis auth session store', () => {
 	});
 
 	test('listUserSessions / revokeUserSessions scope to one user', async () => {
-		const store = createRedisAuthSessionStore<TestUser>(createFakeRedis());
+		const store = createRedisAuthSessionStore(
+			createFakeRedis(),
+			decodeTestUser
+		);
 		const getUserId = (user: TestUser) => user.id;
-		const first = crypto.randomUUID() as UserSessionId;
-		const second = crypto.randomUUID() as UserSessionId;
-		const other = crypto.randomUUID() as UserSessionId;
+		const first = crypto.randomUUID();
+		const second = crypto.randomUUID();
+		const other = crypto.randomUUID();
 
 		await store.setSession(first, session('alice'));
 		await store.setSession(second, session('alice'));

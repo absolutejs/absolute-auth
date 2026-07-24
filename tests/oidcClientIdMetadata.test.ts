@@ -9,8 +9,8 @@ const document = {
 	client_id: clientId,
 	client_name: 'Example Agent',
 	redirect_uris: ['https://agent.example/callback'],
-	token_endpoint_auth_method: 'none' as const,
-	scope: 'agent.read agent.write'
+	scope: 'agent.read agent.write',
+	token_endpoint_auth_method: 'none' as const
 };
 
 describe('OAuth Client ID Metadata Documents', () => {
@@ -35,6 +35,7 @@ describe('OAuth Client ID Metadata Documents', () => {
 			fetch: async (_input, init) => {
 				calls += 1;
 				expect(init?.redirect).toBe('error');
+
 				return new Response(JSON.stringify(document));
 			}
 		});

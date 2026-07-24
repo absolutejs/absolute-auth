@@ -3,6 +3,21 @@
 // neutral records. Keeps the per-source code small + lets us add new
 // sources without refactoring the writer.
 
+export const detectPasswordHashAlgorithm: (
+	hash?: string
+) => ImportedUser['passwordHashAlgo'] = (hash) => {
+	if (hash?.startsWith('$argon2id')) return 'argon2id';
+	if (
+		hash?.startsWith('$2b$') ||
+		hash?.startsWith('$2a$') ||
+		hash?.startsWith('$2y$') ||
+		hash?.startsWith('$2')
+	)
+		return 'bcrypt';
+
+	return undefined;
+};
+
 export type ImportedUser = {
 	createdAtMs: number;
 	email: string;

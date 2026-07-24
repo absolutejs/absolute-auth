@@ -6,12 +6,12 @@ import {
 	getOrRefreshFederatedTokens,
 	type FederatedTokenSet
 } from '../src/federation/tokenStore';
-import { createVault, type Vault } from '../src/vault/config';
+import { createVault } from '../src/vault/config';
 import { createInMemoryVaultStore } from '../src/vault/inMemoryVaultStore';
 
 const CIPHER_KEY = generateEncryptionKey();
 
-const buildVault = (): Vault =>
+const buildVault = () =>
 	createVault({
 		cipher: createSecretCipher(CIPHER_KEY),
 		store: createInMemoryVaultStore()
@@ -105,13 +105,13 @@ describe('getOrRefreshFederatedTokens', () => {
 		let refreshCalls = 0;
 		const got = await getOrRefreshFederatedTokens({
 			provider: 'google',
+			store,
+			userId: 'user-a',
 			refresh: async () => {
 				refreshCalls += 1;
 
 				return { access_token: 'should-not-refresh' };
-			},
-			store,
-			userId: 'user-a'
+			}
 		});
 		expect(got?.accessToken).toBe('fresh');
 		expect(refreshCalls).toBe(0);
@@ -127,6 +127,8 @@ describe('getOrRefreshFederatedTokens', () => {
 
 		const got = await getOrRefreshFederatedTokens({
 			provider: 'google',
+			store,
+			userId: 'user-a',
 			refresh: async (refreshToken) => {
 				expect(refreshToken).toBe('r1');
 
@@ -136,9 +138,7 @@ describe('getOrRefreshFederatedTokens', () => {
 					refresh_token: 'r2',
 					token_type: 'Bearer'
 				};
-			},
-			store,
-			userId: 'user-a'
+			}
 		});
 
 		expect(got?.accessToken).toBe('new-access');
@@ -183,13 +183,13 @@ describe('getOrRefreshFederatedTokens', () => {
 		});
 		const got = await getOrRefreshFederatedTokens({
 			provider: 'google',
+			store,
+			userId: 'user-a',
 			refresh: async () => ({
 				access_token: 'fresh',
 				expires_in: 3600
 				// no refresh_token returned
-			}),
-			store,
-			userId: 'user-a'
+			})
 		});
 		expect(got?.refreshToken).toBe('r-prior');
 	});

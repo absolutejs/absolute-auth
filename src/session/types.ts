@@ -4,6 +4,15 @@ import type {
 	UserSessionId
 } from '../types';
 
+export type SessionUserDecoder<UserType> = (value: unknown) => UserType;
+
+export const decodeSessionUserRecord = (value: unknown) => {
+	if (typeof value !== 'object' || value === null || Array.isArray(value))
+		throw new TypeError('Persisted session user must be an object');
+
+	return value;
+};
+
 export type AuthSessionStore<UserType> = {
 	getSession: (
 		id: UserSessionId

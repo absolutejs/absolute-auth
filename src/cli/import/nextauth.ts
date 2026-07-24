@@ -26,7 +26,11 @@
 //     "passwordsByUserId": { "user_id_1": "$argon2id$…" } }
 
 import { readFile } from 'node:fs/promises';
-import type { ImportResult, Importer } from './types';
+import {
+	detectPasswordHashAlgorithm,
+	type ImportResult,
+	type Importer
+} from './types';
 
 type NextAuthUser = {
 	email: string;
@@ -82,11 +86,8 @@ export const nextauthImporter: Importer = {
 				familyName: split.familyName,
 				givenName: split.givenName,
 				passwordHash,
-				passwordHashAlgo: passwordHash?.startsWith('$argon2id')
-					? ('argon2id' as const)
-					: passwordHash?.startsWith('$2')
-						? ('bcrypt' as const)
-						: undefined
+					passwordHashAlgo:
+						detectPasswordHashAlgorithm(passwordHash)
 			};
 		});
 

@@ -1,5 +1,3 @@
-/* eslint-disable no-await-in-loop -- bounded compare-and-swap retries are intentionally sequential */
-/* eslint-disable absolute/max-depth-extended -- protocol state validation uses guarded bounded retry loops */
 
 import type { AccessTokenStore } from '../apikeys/types';
 import {

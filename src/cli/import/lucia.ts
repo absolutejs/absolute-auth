@@ -16,7 +16,11 @@
 // works.
 
 import { readFile } from 'node:fs/promises';
-import type { ImportResult, Importer } from './types';
+import {
+	detectPasswordHashAlgorithm,
+	type ImportResult,
+	type Importer
+} from './types';
 
 type LuciaUser = {
 	created_at?: number | string;
@@ -42,6 +46,22 @@ const toMs = (value: number | string | undefined) => {
 	return Date.parse(value);
 };
 
+const classifyLuciaKey = (
+	key: LuciaKey,
+	passwordByUserId: Map<string, string | undefined>,
+	oauthKeys: LuciaKey[]
+) => {
+	const separator = key.id.indexOf(':');
+	if (separator < 0) return;
+	const provider = key.id.slice(0, separator);
+	if (provider === 'email' || provider === 'username') {
+		passwordByUserId.set(key.user_id, key.hashed_password);
+
+		return;
+	}
+	oauthKeys.push(key);
+};
+
 export const luciaImporter: Importer = {
 	source: 'lucia',
 	parse: async (path: string): Promise<ImportResult> => {
@@ -54,14 +74,7 @@ export const luciaImporter: Importer = {
 		const passwordByUserId = new Map<string, string | undefined>();
 		const oauthKeys: LuciaKey[] = [];
 		for (const key of parsed.keys ?? []) {
-			const separator = key.id.indexOf(':');
-			if (separator < 0) continue;
-			const provider = key.id.slice(0, separator);
-			if (provider === 'email' || provider === 'username') {
-				passwordByUserId.set(key.user_id, key.hashed_password);
-			} else {
-				oauthKeys.push(key);
-			}
+			classifyLuciaKey(key, passwordByUserId, oauthKeys);
 		}
 
 		const users = parsed.users.map((raw) => ({
@@ -70,13 +83,9 @@ export const luciaImporter: Importer = {
 			emailVerified: true,
 			externalId: raw.id,
 			passwordHash: passwordByUserId.get(raw.id),
-			passwordHashAlgo: passwordByUserId
-				.get(raw.id)
-				?.startsWith('$argon2id')
-				? ('argon2id' as const)
-				: passwordByUserId.get(raw.id)?.startsWith('$2')
-					? ('bcrypt' as const)
-					: undefined
+				passwordHashAlgo: detectPasswordHashAlgorithm(
+					passwordByUserId.get(raw.id)
+				)
 		}));
 
 		const identities = oauthKeys.map((key) => {

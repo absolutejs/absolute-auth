@@ -222,6 +222,8 @@ describe('passwordVerifier override + rehashOnLogin (end-to-end)', () => {
 			authSessionStore,
 			credentials: {
 				credentialStore,
+				passwordPolicy: { minLength: 4 },
+				rehashOnLogin,
 				getUserByEmail: (email) => users.get(email) ?? null,
 				onCreateCredentialUser: ({ email }) => {
 					const user = { email, sub: `u:${email}` };
@@ -230,7 +232,6 @@ describe('passwordVerifier override + rehashOnLogin (end-to-end)', () => {
 					return user;
 				},
 				onSendEmail: () => undefined,
-				passwordPolicy: { minLength: 4 },
 				passwordVerifier: async (password, storedHash) => {
 					if (storedHash.startsWith('auth0_pbkdf2:')) {
 						return verifyAuth0Pbkdf2(password, storedHash);
@@ -238,10 +239,10 @@ describe('passwordVerifier override + rehashOnLogin (end-to-end)', () => {
 					if (storedHash.startsWith('cognito_sha256:')) {
 						return verifyCognitoSha256(password, storedHash);
 					}
+
 					// argon2id + bcrypt — fall through to Bun's native verify.
 					return Bun.password.verify(password, storedHash);
-				},
-				rehashOnLogin
+				}
 			},
 			providersConfiguration: {}
 		});
@@ -343,11 +344,11 @@ describe('rehashCredentialPassword direct call', () => {
 		const before =
 			await credentialStore.getCredentialByEmail('rehash@example.com');
 		expect(before?.passwordHash.startsWith('auth0_pbkdf2:')).toBe(true);
+		if (before === undefined) throw new Error('Credential was not stored');
 
 		await rehashCredentialPassword({
 			credentialStore,
-			// eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- just saved above
-			current: before!,
+			current: before,
 			plainPassword: 'newPlainText'
 		});
 

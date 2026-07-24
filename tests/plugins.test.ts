@@ -18,17 +18,39 @@ const originalFetch = globalThis.fetch;
 
 const installFetchSpy = () => {
 	const recorded: RecordedRequest[] = [];
-	globalThis.fetch = (async (url: string, init: RequestInit) => {
+	const fetchSpy: typeof fetch = async (input, init) => {
 		recorded.push({
-			body: JSON.parse(String(init.body ?? '{}')),
-			url
+			body: JSON.parse(String(init?.body ?? '{}')),
+			url: input.toString()
 		});
 
 		return new Response(null, { status: 200 });
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any -- minimal fetch stub
-	}) as any;
+	};
+	globalThis.fetch = fetchSpy;
 
 	return recorded;
+};
+
+const requireBodyRecord = (
+	request: RecordedRequest | undefined
+) => {
+	if (
+		request === undefined ||
+		typeof request.body !== 'object' ||
+		request.body === null ||
+		Array.isArray(request.body)
+	)
+		throw new TypeError('Expected a recorded JSON object');
+
+	return request.body;
+};
+
+const requireString = (record: Record<string, unknown>, key: string) => {
+	const value = record[key];
+	if (typeof value !== 'string')
+		throw new TypeError(`Expected ${key} to be a string`);
+
+	return value;
 };
 
 afterEach(() => {
@@ -50,7 +72,7 @@ describe('plugin: slackAlertPlugin', () => {
 		await sink.append(sampleEvent);
 		expect(recorded).toHaveLength(1);
 		expect(recorded[0]?.url).toBe('https://hooks.slack/x');
-		expect((recorded[0]?.body as { text: string }).text).toContain(
+		expect(requireString(requireBodyRecord(recorded[0]), 'text')).toContain(
 			'credentials_login'
 		);
 	});
@@ -71,7 +93,9 @@ describe('plugin: discordAlertPlugin', () => {
 		const recorded = installFetchSpy();
 		const sink = discordAlertPlugin({ webhookUrl: 'https://discord/x' });
 		await sink.append(sampleEvent);
-		expect((recorded[0]?.body as { content: string }).content).toContain(
+		expect(
+			requireString(requireBodyRecord(recorded[0]), 'content')
+		).toContain(
 			'credentials_login'
 		);
 	});
@@ -87,15 +111,15 @@ describe('plugin: pagerdutyAlertPlugin', () => {
 		});
 		await sink.append(sampleEvent);
 		expect(recorded[0]?.url).toContain('events.pagerduty.com');
-		const body = recorded[0]?.body as {
-			event_action: string;
-			payload: { severity: string; summary: string };
-			routing_key: string;
-		};
-		expect(body.event_action).toBe('trigger');
-		expect(body.routing_key).toBe('INTEGRATION_KEY_XYZ');
-		expect(body.payload.severity).toBe('critical');
-		expect(body.payload.summary).toContain('credentials_login');
+		const body = requireBodyRecord(recorded[0]);
+		const payload = requireBodyRecord({
+			body: body['payload'],
+			url: recorded[0]?.url ?? ''
+		});
+		expect(requireString(body, 'event_action')).toBe('trigger');
+		expect(requireString(body, 'routing_key')).toBe('INTEGRATION_KEY_XYZ');
+		expect(requireString(payload, 'severity')).toBe('critical');
+		expect(requireString(payload, 'summary')).toContain('credentials_login');
 	});
 });
 
@@ -144,16 +168,19 @@ describe('plugin: posthogIdentifyPlugin', () => {
 		});
 		await sink.append(sampleEvent);
 		expect(recorded[0]?.url).toContain('us.i.posthog.com');
-		const body = recorded[0]?.body as {
-			api_key: string;
-			distinct_id: string;
-			event: string;
-			properties: { $set: Record<string, unknown> };
-		};
-		expect(body.api_key).toBe('phc_TEST');
-		expect(body.distinct_id).toBe('user-alice');
-		expect(body.event).toBe('$identify');
-		expect(body.properties.$set.email).toBe('alice@example.com');
+		const body = requireBodyRecord(recorded[0]);
+		const properties = requireBodyRecord({
+			body: body['properties'],
+			url: recorded[0]?.url ?? ''
+		});
+		const setProperties = requireBodyRecord({
+			body: properties['$set'],
+			url: recorded[0]?.url ?? ''
+		});
+		expect(requireString(body, 'api_key')).toBe('phc_TEST');
+		expect(requireString(body, 'distinct_id')).toBe('user-alice');
+		expect(requireString(body, 'event')).toBe('$identify');
+		expect(setProperties['email']).toBe('alice@example.com');
 	});
 
 	test('skips events without a userId', async () => {

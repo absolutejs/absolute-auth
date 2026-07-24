@@ -2,8 +2,7 @@
 // useSignUp + advertises the 12-character minimum-length we enforce
 // at the package level. See SignIn for the design rationale + the
 // data-abs-auth attribute hook system.
-import { createElement, type FormEvent } from 'react';
-import { useState } from 'react';
+import { createElement, type FormEvent, useState } from 'react';
 import type { AuthClient, AuthClientError } from '../../createAuthClient';
 import { useSignUp } from '../../react';
 
@@ -80,11 +79,11 @@ export const SignUp = ({
 				autoComplete: 'email',
 				className: classNames?.input,
 				name: 'email',
-				onChange: (event: { currentTarget: HTMLInputElement }) =>
-					setEmail(event.currentTarget.value),
 				required: true,
 				type: 'email',
-				value: email
+				value: email,
+				onChange: (event: { currentTarget: HTMLInputElement }) =>
+					setEmail(event.currentTarget.value)
 			})
 		),
 		createElement(
@@ -100,11 +99,11 @@ export const SignUp = ({
 				className: classNames?.input,
 				minLength: 12,
 				name: 'password',
-				onChange: (event: { currentTarget: HTMLInputElement }) =>
-					setPassword(event.currentTarget.value),
 				required: true,
 				type: 'password',
-				value: password
+				value: password,
+				onChange: (event: { currentTarget: HTMLInputElement }) =>
+					setPassword(event.currentTarget.value)
 			})
 		),
 		errorBanner,

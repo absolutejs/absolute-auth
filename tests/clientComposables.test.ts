@@ -25,10 +25,7 @@ const EXPECTED_API = [
 ] as const;
 
 const stubFetch = (handler: (url: string) => Response) =>
-	// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- test stub for fetch
-	mock(async (input: RequestInfo | URL) =>
-		handler(input.toString())
-	) as unknown as typeof fetch;
+	mock<typeof fetch>(async (input) => handler(input.toString()));
 
 describe('framework composable API parity', () => {
 	test('react/vue/solid/svelte expose the same named composables', () => {

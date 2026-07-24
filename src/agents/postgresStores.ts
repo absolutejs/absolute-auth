@@ -1,4 +1,4 @@
-import { and, desc, eq, gt, isNull, or, sql } from 'drizzle-orm';
+import { and, desc, eq, gt, isNull, or } from 'drizzle-orm';
 import {
 	bigint,
 	customType,
@@ -34,9 +34,6 @@ const portableJsonb = customType<{ data: unknown; driverData: unknown }>({
 		typeof value === 'string' ? JSON.parse(value) : value,
 	toDriver: (value) => JSON.stringify(value)
 });
-const encodedJsonb = <Value>(value: Value) =>
-	sql<Value>`${JSON.stringify(value)}::text::jsonb`;
-
 export const agentDelegationsTable = pgTable('auth_agent_delegations', {
 	agent_id: varchar('agent_id', { length: ID_LENGTH }).notNull(),
 	authorization_details: portableJsonb('authorization_details').$type<
@@ -185,7 +182,7 @@ const identityRegistrationValues = (
 	claim_attempt:
 		registration.claimAttempt === undefined
 			? null
-			: encodedJsonb(registration.claimAttempt),
+			: registration.claimAttempt,
 	claim_attempt_token_hash: registration.claimAttempt?.tokenHash ?? null,
 	claim_expires_at_ms: registration.claimExpiresAt,
 	claim_token_hash: registration.claimTokenHash,
@@ -265,17 +262,17 @@ export const createDrizzleAgentDelegationStore = <DB extends AnyPgDatabase>(
 		return rows.map(toDelegation);
 	},
 	saveDelegation: async (delegation) => {
-		const values = {
+			const values: typeof agentDelegationsTable.$inferInsert = {
 			agent_id: delegation.agentId,
 			authorization_details:
 				delegation.authorizationDetails === undefined
 					? null
-					: encodedJsonb(delegation.authorizationDetails),
+					: delegation.authorizationDetails,
 			created_at_ms: delegation.createdAt,
 			delegation_id: delegation.delegationId,
 			expires_at_ms: delegation.expiresAt ?? null,
 			organization_id: delegation.organizationId ?? null,
-			scopes: encodedJsonb(delegation.scopes),
+			scopes: delegation.scopes,
 			status: delegation.status,
 			updated_at_ms: delegation.updatedAt,
 			user_id: delegation.userId
@@ -431,15 +428,15 @@ export const createPostgresAgentRegistrationStore = <DB extends AnyPgDatabase>(
 		return rows.map(toRegistration);
 	},
 	saveRegistration: async (registration) => {
-		const values = {
+			const values: typeof agentRegistrationsTable.$inferInsert = {
 			agent_id: registration.agentId,
-			allowed_scopes: encodedJsonb(registration.allowedScopes),
+			allowed_scopes: registration.allowedScopes,
 			client_id: registration.clientId ?? null,
 			created_at_ms: registration.createdAt,
 			metadata:
 				registration.metadata === undefined
 					? null
-					: encodedJsonb(registration.metadata),
+					: registration.metadata,
 			name: registration.name,
 			status: registration.status,
 			updated_at_ms: registration.updatedAt

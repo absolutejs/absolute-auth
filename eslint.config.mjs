@@ -23,7 +23,12 @@ export default defineConfig([
 			'**/compiled/**',
 			'.cache/**',
 			'.claude/**'
-		]
+		],
+		linterOptions: {
+			// Inline directives hide repository drift. Structural exceptions belong in
+			// the narrow file-class overrides below so every exception is reviewable.
+			noInlineConfig: true
+		}
 	},
 
 	pluginJs.configs.recommended,
@@ -192,6 +197,53 @@ export default defineConfig([
 			'promise/no-promise-in-callback': 'warn',
 			'promise/no-return-wrap': 'error',
 			'promise/param-names': 'error'
+		}
+	},
+	{
+		files: ['src/fga/config.ts'],
+		rules: {
+			// The FGA parser is mutually recursive; TypeScript requires declared
+			// return contracts to break the inference cycle.
+			'absolute/no-explicit-return-type': 'off'
+		}
+	},
+	{
+		files: [
+			'src/actions.ts',
+			'src/agents/registration.ts',
+			'src/audit/integrity.ts',
+			'src/credentials/backgroundOps.ts',
+			'src/credentials/import.ts',
+			'src/cli/import/index.ts',
+			'src/oidc/clientAuth.ts',
+			'src/organizations/operations.ts',
+			'src/vc/sdJwt.ts',
+			'src/webhooks/dispatcher.ts',
+			'tests/adaptive.test.ts',
+			'tests/mfaIntegration.test.ts'
+		],
+		rules: {
+			// These files implement ordered retry, cryptographic-chain, migration,
+			// or protocol-state workflows where parallelizing loop iterations would
+			// change correctness rather than improve throughput.
+			'no-await-in-loop': 'off'
+		}
+	},
+	{
+		files: ['src/agents/registration.ts'],
+		rules: {
+			// The bounded registration state machine validates nested protocol state;
+			// flattening it would obscure the compare-and-swap invariants.
+			'absolute/max-depth-extended': 'off'
+		}
+	},
+	{
+		files: ['tests/**/*.ts'],
+		rules: {
+			// Test fixtures are intentionally inline and contextually typed, while
+			// mock factories must return fresh objects for isolation between cases.
+			'absolute/explicit-object-types': 'off',
+			'absolute/no-useless-function': 'off'
 		}
 	},
 	{

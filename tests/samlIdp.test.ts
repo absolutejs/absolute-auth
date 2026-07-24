@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
+import { beforeEach, describe, expect, test } from 'bun:test';
 import { Elysia } from 'elysia';
 import { createInMemoryAuthSessionStore } from '../src/session/inMemoryStore';
 import { createInMemorySamlServiceProviderStore } from '../src/sso/inMemorySamlServiceProviderStore';
@@ -10,13 +10,17 @@ type TestUser = { email: string; sub: string };
 
 const HTTP_OK = 200;
 const HTTP_BAD_REQUEST = 400;
-const HTTP_UNAUTHORIZED = 401;
 const HTTP_FOUND = 302;
 
 const SESSION_ID: UserSessionId = '11111111-1111-4111-8111-111111111111';
 const IDP_ENTITY_ID = 'https://idp.example';
 const SP_ENTITY_ID = 'https://sp.example';
 const ACS_URL = 'https://sp.example/saml/acs';
+
+const buildRelayStateInput = (relayState?: string) =>
+	relayState === undefined
+		? ''
+		: `<input name="RelayState" value="${relayState}">`;
 
 // Minimal stub adapter — exercises the routes without real XML or crypto. Encodes the
 // AuthnRequest as `<id>|<issuer>` so the test can vary it inline; verifies signatures
@@ -26,10 +30,8 @@ const stubAdapter: SamlIdpAdapter = {
 	buildAutoPostForm: ({ acsUrl, relayState, samlResponse }) =>
 		`<html><body><form action="${acsUrl}" method="POST">` +
 		`<input name="SAMLResponse" value="${samlResponse}">` +
-		(relayState === undefined
-			? ''
-			: `<input name="RelayState" value="${relayState}">`) +
-		`</form></body></html>`,
+		buildRelayStateInput(relayState) +
+		'</form></body></html>',
 	createSamlResponse: ({
 		acsUrl,
 		audience,
@@ -83,12 +85,12 @@ const buildApp = async () => {
 	const app = new Elysia().use(
 		samlIdpRoutes<TestUser>({
 			authSessionStore,
-			getNameId: (user) => user.email,
-			getSamlAttributes: (user) => ({ sub: user.sub }),
 			idpAdapter: stubAdapter,
 			idpEntityId: IDP_ENTITY_ID,
 			loginUrl: 'https://idp.example/signin',
-			samlServiceProviderStore
+			samlServiceProviderStore,
+			getNameId: (user) => user.email,
+			getSamlAttributes: (user) => ({ sub: user.sub })
 		})
 	);
 
@@ -98,7 +100,8 @@ const buildApp = async () => {
 describe('SAML 2.0 IdP role — SP-initiated', () => {
 	let app: Elysia;
 	beforeEach(async () => {
-		app = (await buildApp()).app;
+		const built = await buildApp();
+		({ app } = built);
 	});
 
 	test('POST /sso/saml/idp/sso → 200 + auto-post form with SAMLResponse', async () => {
@@ -236,7 +239,8 @@ describe('SAML 2.0 IdP role — SP-initiated', () => {
 describe('SAML 2.0 IdP role — IdP-initiated + metadata', () => {
 	let app: Elysia;
 	beforeEach(async () => {
-		app = (await buildApp()).app;
+		const built = await buildApp();
+		({ app } = built);
 	});
 
 	test('GET /sso/saml/idp/sso/initiate?sp= mints a Response without an AuthnRequest', async () => {

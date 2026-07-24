@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import { hashToken } from '../src/crypto';
 import { auth } from '../src/index';
 import {
@@ -19,7 +19,6 @@ const HTTP_NO_CONTENT = 204;
 const HTTP_BAD_REQUEST = 400;
 const HTTP_UNAUTHORIZED = 401;
 const HTTP_FORBIDDEN = 403;
-const HTTP_NOT_FOUND = 404;
 const HTTP_NOT_IMPLEMENTED = 501;
 const ISSUER = 'https://idp.example';
 
@@ -40,8 +39,6 @@ const buildApp = async ({
 				? createInMemoryClientRegistrationTokenStore()
 				: undefined,
 			clientStore: createInMemoryOAuthClientStore([]),
-			getClaims: (user) => ({ email: user.email }),
-			getUserId: (user) => user.sub,
 			initialAccessTokenStore:
 				initialAccessTokenHashes === undefined
 					? undefined
@@ -51,7 +48,9 @@ const buildApp = async ({
 			issuer: ISSUER,
 			onClientRegistration,
 			refreshTokenStore: createInMemoryOidcRefreshTokenStore(),
-			signingKey: await generateSigningKey()
+			signingKey: await generateSigningKey(),
+			getClaims: (user) => ({ email: user.email }),
+			getUserId: (user) => user.sub
 		},
 		providersConfiguration: {}
 	});

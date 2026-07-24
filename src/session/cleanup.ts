@@ -269,6 +269,33 @@ const selectOverflow = <Entry extends [UserSessionId, { expiresAt: number }]>(
 		.slice(0, remainingEntries.length - maxSessions);
 };
 
+const performFastStoreCleanup = async <UserType>(
+	authSessionStore: AuthSessionStore<UserType>,
+	onSessionCleanup?: OnSessionCleanup<UserType>
+) => {
+	const removedSessionCount = await authSessionStore.deleteExpired?.();
+	if (removedSessionCount === undefined) return false;
+	const removedUnregisteredCount =
+		(await authSessionStore.deleteExpiredUnregistered?.()) ?? 0;
+	if (removedSessionCount > 0 || removedUnregisteredCount > 0) {
+		console.info(
+			`[sessionCleanup] deleted expired sessions=${removedSessionCount} unregistered=${removedUnregisteredCount}`
+		);
+	}
+	try {
+		await onSessionCleanup?.({
+			removedSessionCount,
+			removedSessions: new Map(),
+			removedUnregisteredSessionCount: removedUnregisteredCount,
+			removedUnregisteredSessions: new Map()
+		});
+	} catch (err) {
+		console.error('[sessionCleanup] onSessionCleanup handler failed:', err);
+	}
+
+	return true;
+};
+
 const performStoreCleanup = async <UserType>({
 	authSessionStore,
 	maxSessions,
@@ -286,31 +313,11 @@ const performStoreCleanup = async <UserType>({
 	// were deleted in-store, never loaded), so it fires with empty maps and the
 	// exact counts. Overflow eviction is the load-all path
 	// below — deleteExpired stores cap per-user sessions at creation time.
-	if (authSessionStore.deleteExpired) {
-		const removedSessionCount = await authSessionStore.deleteExpired();
-		const removedUnregisteredCount =
-			(await authSessionStore.deleteExpiredUnregistered?.()) ?? 0;
-		if (removedSessionCount > 0 || removedUnregisteredCount > 0) {
-			console.info(
-				`[sessionCleanup] deleted expired sessions=${removedSessionCount} unregistered=${removedUnregisteredCount}`
-			);
-		}
-		try {
-			await onSessionCleanup?.({
-				removedSessionCount,
-				removedSessions: new Map(),
-				removedUnregisteredSessionCount: removedUnregisteredCount,
-				removedUnregisteredSessions: new Map()
-			});
-		} catch (err) {
-			console.error(
-				'[sessionCleanup] onSessionCleanup handler failed:',
-				err
-			);
-		}
-
-		return;
-	}
+	const usedFastPath = await performFastStoreCleanup(
+		authSessionStore,
+		onSessionCleanup
+	);
+	if (usedFastPath) return;
 
 	const sessionEntries = await loadStoreSessions(authSessionStore);
 	const unregisteredEntries =

@@ -31,8 +31,8 @@ describe('OAuth callback', () => {
 					},
 					isSingleClient: true
 				}
-			} as never,
-			onCallbackError: () => {},
+			},
+			onCallbackError: () => undefined,
 			onCallbackSuccess: ({ redirect, userSessionId }) => {
 				issuedSessionId = userSessionId;
 

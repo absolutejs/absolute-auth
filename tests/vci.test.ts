@@ -114,7 +114,6 @@ const buildConfig = (
 			is_over_21: true,
 			user_id: userId
 		}),
-		// eslint-disable-next-line absolute/no-useless-function -- VciConfig hook is a function-typed slot
 		resolveProtectedClaims: () => ({ nbf: 1_700_000_000 })
 	};
 
@@ -467,8 +466,7 @@ describe('VciConfig validation', () => {
 			config,
 			input: {
 				accessToken: exchange.access_token,
-				// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- testing the unsupported_credential_format branch with a deliberately invalid value
-				requestedFormat: 'mso_mdoc' as 'vc+sd-jwt'
+				requestedFormat: 'mso_mdoc'
 			},
 			issuer: ISSUER,
 			signingKey

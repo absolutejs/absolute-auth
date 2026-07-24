@@ -39,7 +39,7 @@ describe('tamper-evident audit', () => {
 		const { events, sink } = captureSink();
 		await append(createTamperEvidentSink({ secret: 'k', sink }));
 
-		const target = events[1];
+		const [, target] = events;
 		if (target) target.type = 'logout'; // tamper
 
 		expect(await verifyAuditChain(events, 'k')).toEqual({
@@ -136,14 +136,16 @@ describe('tamper-evident audit', () => {
 describe('SIEM log stream', () => {
 	test('forwards each event to every endpoint with the right shape', async () => {
 		const calls: { body: string; url: string }[] = [];
-		const fetchMock = mock(async (url: string, init: { body: string }) => {
-			calls.push({ body: init.body, url });
+		const fetchMock: typeof fetch = mock(async (input, init) => {
+			calls.push({
+				body: String(init?.body ?? ''),
+				url: input.toString()
+			});
 
 			return new Response('{}');
 		});
 		const original = globalThis.fetch;
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- test stub for fetch
-		globalThis.fetch = fetchMock as unknown as typeof fetch;
+		globalThis.fetch = fetchMock;
 
 		try {
 			const stream = createSiemLogStream({

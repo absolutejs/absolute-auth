@@ -4,11 +4,10 @@ import { createAuthClient } from '../src/client/createAuthClient';
 const stub = (
 	handler: (url: string, init: RequestInit) => Response | Promise<Response>
 ) =>
-	mock(
+	mock<typeof fetch>(
 		async (input: RequestInfo | URL, init?: RequestInit) =>
 			handler(input.toString(), init ?? {})
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- test stub for fetch
-	) as unknown as typeof fetch;
+	);
 
 describe('createAuthClient', () => {
 	test('signIn.email posts JSON and unwraps the body on 200', async () => {

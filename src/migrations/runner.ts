@@ -35,11 +35,13 @@ type JournalRow = { id: string };
 const isJournalRow = (value: unknown): value is JournalRow =>
 	typeof value === 'object' &&
 	value !== null &&
-	typeof Reflect.get(value, 'id') === 'string';
+  typeof Reflect.get(value, 'id') === 'string';
+
+const isBlockName = (value: string): value is BlockName =>
+  Object.hasOwn(blockMigrations, value);
 
 const allBlockNames = () =>
-	// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Object.keys widens to string[]; the values are typed BlockName by construction of the manifest
-	Object.keys(blockMigrations) as BlockName[];
+  Object.keys(blockMigrations).filter(isBlockName);
 
 const applyOne = async (
 	pool: Pool,

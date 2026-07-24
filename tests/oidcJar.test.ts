@@ -73,11 +73,11 @@ const buildApp = async ({
 					scopes: ['openid', 'profile']
 				}
 			]),
-			getClaims: (user) => ({ email: user.email }),
-			getUserId: (user) => user.sub,
 			issuer: ISSUER,
 			refreshTokenStore: createInMemoryOidcRefreshTokenStore(),
-			signingKey: await generateSigningKey()
+			signingKey: await generateSigningKey(),
+			getClaims: (user) => ({ email: user.email }),
+			getUserId: (user) => user.sub
 		},
 		providersConfiguration: {}
 	});

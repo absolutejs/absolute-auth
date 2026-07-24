@@ -3,13 +3,14 @@ import {
 	check,
 	createFgaEngine,
 	createInMemoryCheckCache,
+	type FgaConfig,
+	type FgaSchema,
 	listObjects,
 	listSubjects,
 	writeWarrant
 } from '../src/fga/config';
 import { createInMemoryWarrantStore } from '../src/fga/inMemoryStores';
 import { parseSchema } from '../src/fga/schema';
-import type { FgaConfig, FgaSchema } from '../src/fga/config';
 
 // owner < editor < viewer (inheritance); a doc also inherits its parent folder's viewers; and
 // usersets (group#member) expand.

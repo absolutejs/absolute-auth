@@ -12,7 +12,7 @@
 // that it compiles. The runtime `expect(true).toBe(true)` keeps the test
 // runner happy so it appears in the pass count.
 import { describe, expect, test } from 'bun:test';
-import type { AuthConfig, SessionRecord } from '../src/types';
+import type { AuthConfig, SessionData } from '../src/types';
 
 type RichUser = {
 	createdAtMs: number;
@@ -27,7 +27,15 @@ type RichUser = {
 // Identity check — if `expectType<X>(value)` compiles, `value` is assignable
 // to `X`. A regression that drops a property from the inferred type would
 // fail this line.
-const expectType = <T>(_value: T): void => undefined;
+const expectType = <Value>(value: Value) => {
+	void value;
+};
+
+const readEmail = (value: Record<string, unknown>) => {
+	const email = Reflect.get(value, 'email');
+
+	return typeof email === 'string' ? email : '';
+};
 
 describe('plugin type-inference matrix', () => {
 	test('AuthConfig<RichUser> preserves the full UserType through every block', () => {
@@ -51,7 +59,7 @@ describe('plugin type-inference matrix', () => {
 	});
 
 	test('SessionRecord<RichUser>.user preserves every custom field', () => {
-		const session: SessionRecord<RichUser> = {
+		const session: SessionData<RichUser> = {
 			accessToken: 'a',
 			authenticatedAt: Date.now(),
 			expiresAt: Date.now() + 60_000,
@@ -85,13 +93,7 @@ describe('plugin type-inference matrix', () => {
 				createdAtMs: Date.now(),
 				// `decoded` is the OAuth decoded token (provider-shaped). We
 				// don't constrain its shape — but we DO constrain the return.
-				email:
-					typeof decoded === 'object' &&
-					decoded !== null &&
-					'email' in decoded &&
-					typeof (decoded as { email: unknown }).email === 'string'
-						? (decoded as { email: string }).email
-						: '',
+				email: readEmail(decoded),
 				givenName: '',
 				primaryAuthIdentityId: null,
 				roles: ['user'],

@@ -1,7 +1,11 @@
 import { desc, eq, lt } from 'drizzle-orm';
 import { bigint, jsonb, pgTable, varchar } from 'drizzle-orm/pg-core';
 import { type AnyPgDatabase, createNeonDatabase } from '../stores/postgres';
-import type { AuditEvent, AuditEventType, AuditSink } from './types';
+import {
+	isAuditEventType,
+	type AuditEvent,
+	type AuditSink
+} from './types';
 
 const ID_LENGTH = 255;
 const IP_LENGTH = 64;
@@ -20,15 +24,19 @@ export const auditEventsTable = pgTable('auth_audit_events', {
 
 type AuditRow = typeof auditEventsTable.$inferSelect;
 
-const toEvent = (row: AuditRow): AuditEvent => ({
-	at: row.at_ms,
-	ip: row.ip ?? undefined,
-	metadata: row.metadata_json ?? undefined,
-	organizationId: row.organization_id ?? undefined,
-	// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- deserialization boundary: `type` was persisted from AuditEventType, so reading it back is sound
-	type: row.type as AuditEventType,
-	userId: row.user_id ?? undefined
-});
+const toEvent = (row: AuditRow): AuditEvent => {
+	if (!isAuditEventType(row.type))
+		throw new Error(`Unknown persisted audit event type: ${row.type}`);
+
+	return {
+		at: row.at_ms,
+		ip: row.ip ?? undefined,
+		metadata: row.metadata_json ?? undefined,
+		organizationId: row.organization_id ?? undefined,
+		type: row.type,
+		userId: row.user_id ?? undefined
+	};
+};
 
 export const createNeonAuditSink = (databaseUrl: string) =>
 	createPostgresAuditSink(createNeonDatabase(databaseUrl));

@@ -72,13 +72,11 @@ export const autoAssignOrgsByEmail = async ({
 	const now = Date.now();
 	const assigned: OrganizationId[] = [];
 	for (const organizationId of orgIds) {
-		// eslint-disable-next-line no-await-in-loop -- per-org membership upsert is sequential by design
 		const existing = await organizationStore.getMembership(
 			organizationId,
 			userId
 		);
 		if (existing !== undefined) continue;
-		// eslint-disable-next-line no-await-in-loop -- per-org membership upsert is sequential by design
 		await organizationStore.saveMembership({
 			createdAt: now,
 			organizationId,

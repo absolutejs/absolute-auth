@@ -65,14 +65,11 @@ const buildCredential = (
 });
 
 // Import one user record. Exported so a consumer can do its own batching/streaming
-// (e.g. reading a multi-GB Auth0 export line-by-line). Explicit return type because
-// the inferred type widens `ok: true | false` to `ok: boolean`, which breaks the
-// discriminated union narrowing on the caller side.
+// (e.g. reading a multi-GB Auth0 export line-by-line).
 export const importUser = async <UserType>(
 	input: ImportableUser<UserType>,
 	options: ImportUsersOptions<UserType>
-	// eslint-disable-next-line absolute/no-explicit-return-type -- ImportUserResult discriminant must stay narrow; inference widens `ok: true | false` to `boolean`
-): Promise<ImportUserResult<UserType>> => {
+) => {
 	try {
 		const created = await options.onCreateUser(input);
 		if (created === null)
@@ -80,11 +77,14 @@ export const importUser = async <UserType>(
 				error: 'onCreateUser returned null',
 				ok: false,
 				user: input.user
-			};
+			} satisfies ImportUserResult<UserType>;
 		const email = normalizeEmail(created.email);
 		const emailVerified = created.emailVerified ?? true;
 		if (input.passwordHash === undefined) {
-			return { ok: true, user: input.user };
+			return {
+				ok: true,
+				user: input.user
+			} satisfies ImportUserResult<UserType>;
 		}
 		const credential = buildCredential(
 			email,
@@ -94,13 +94,17 @@ export const importUser = async <UserType>(
 		);
 		await options.credentialStore.saveCredential(credential);
 
-		return { credential, ok: true, user: input.user };
+		return {
+			credential,
+			ok: true,
+			user: input.user
+		} satisfies ImportUserResult<UserType>;
 	} catch (err) {
 		return {
 			error: err instanceof Error ? err.message : String(err),
 			ok: false,
 			user: input.user
-		};
+		} satisfies ImportUserResult<UserType>;
 	}
 };
 
@@ -114,7 +118,6 @@ export const importUsers = async <UserType>(
 	const results: ImportUserResult<UserType>[] = [];
 	for (let cursor = 0; cursor < inputs.length; cursor += concurrency) {
 		const slice = inputs.slice(cursor, cursor + concurrency);
-		// eslint-disable-next-line no-await-in-loop -- batched-sequential by design (see `concurrency` doc)
 		const batch = await Promise.all(
 			slice.map((input) => importUser(input, options))
 		);

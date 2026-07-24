@@ -89,7 +89,7 @@ export const UserButton = ({
 					className: classNames?.menu,
 					'data-abs-auth': 'menu'
 				},
-				...((items ?? []).map((item) =>
+				...(items ?? []).map((item) =>
 					createElement(
 						'a',
 						{
@@ -100,18 +100,18 @@ export const UserButton = ({
 						},
 						item.label
 					)
-				) as ReturnType<typeof createElement>[]),
+				),
 				createElement(
 					'button',
 					{
 						className: classNames?.signOut,
 						'data-abs-auth': 'sign-out',
+						type: 'button',
 						onClick: async () => {
 							await mutate(undefined);
 							setOpen(false);
 							onSignOut?.();
-						},
-						type: 'button'
+						}
 					},
 					signOutLabel
 				)
@@ -148,8 +148,8 @@ export const UserButton = ({
 				'aria-expanded': open,
 				className: classNames?.toggle,
 				'data-abs-auth': 'user-toggle',
-				onClick: () => setOpen((prev) => !prev),
-				type: 'button'
+				type: 'button',
+				onClick: () => setOpen((prev) => !prev)
 			},
 			avatar,
 			createElement(

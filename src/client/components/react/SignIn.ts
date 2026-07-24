@@ -19,8 +19,7 @@
 // buttons (when `providers` is set) are real anchor links to
 // `/oauth2/authorize?provider=…` — the consumer's existing OAuth
 // roundtrip + onCallbackSuccess hook is what handles the rest.
-import { createElement, type FormEvent } from 'react';
-import { useState } from 'react';
+import { createElement, type FormEvent, useState } from 'react';
 import type { AuthClient, AuthClientError } from '../../createAuthClient';
 import { useSignIn } from '../../react';
 
@@ -137,11 +136,11 @@ export const SignIn = ({
 				autoComplete: 'username webauthn',
 				className: classNames?.input,
 				name: 'email',
-				onChange: (event: { currentTarget: HTMLInputElement }) =>
-					setEmail(event.currentTarget.value),
 				required: true,
 				type: 'email',
-				value: email
+				value: email,
+				onChange: (event: { currentTarget: HTMLInputElement }) =>
+					setEmail(event.currentTarget.value)
 			})
 		),
 		createElement(
@@ -157,11 +156,11 @@ export const SignIn = ({
 				className: classNames?.input,
 				minLength: 12,
 				name: 'password',
-				onChange: (event: { currentTarget: HTMLInputElement }) =>
-					setPassword(event.currentTarget.value),
 				required: true,
 				type: 'password',
-				value: password
+				value: password,
+				onChange: (event: { currentTarget: HTMLInputElement }) =>
+					setPassword(event.currentTarget.value)
 			})
 		),
 		errorBanner,

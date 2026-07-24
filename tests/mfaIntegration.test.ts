@@ -174,7 +174,6 @@ describe('MFA challenge integration', () => {
 		const pending = cookieFrom(login);
 
 		for (let attempt = 0; attempt < 3; attempt += 1) {
-			// eslint-disable-next-line no-await-in-loop
 			const wrong = await post(
 				app,
 				'/auth/mfa/challenge',
@@ -182,7 +181,6 @@ describe('MFA challenge integration', () => {
 				pending
 			);
 			expect(wrong.status).toBe(401);
-			// eslint-disable-next-line no-await-in-loop
 			expect(await wrong.text()).toContain('Invalid MFA code');
 		}
 
@@ -209,7 +207,6 @@ describe('MFA challenge integration', () => {
 
 		// Two failures, then a success — the counter must be back at 0 afterwards.
 		for (let attempt = 0; attempt < 2; attempt += 1) {
-			// eslint-disable-next-line no-await-in-loop
 			await post(
 				app,
 				'/auth/mfa/challenge',
@@ -231,7 +228,6 @@ describe('MFA challenge integration', () => {
 			password: 'supersecret'
 		});
 		const secondPending = cookieFrom(secondLogin);
-		/* eslint-disable no-await-in-loop */
 		for (let attempt = 0; attempt < 2; attempt += 1) {
 			const wrong = await post(
 				app,
@@ -241,6 +237,5 @@ describe('MFA challenge integration', () => {
 			);
 			expect(await wrong.text()).toContain('Invalid MFA code');
 		}
-		/* eslint-enable no-await-in-loop */
 	});
 });

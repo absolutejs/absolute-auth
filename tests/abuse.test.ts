@@ -93,10 +93,10 @@ describe('abuse guard', () => {
 describe('captcha adapters', () => {
 	const stubFetch = (payload: object) => {
 		const original = globalThis.fetch;
-		globalThis.fetch = mock(
+		const fetchMock: typeof fetch = mock(
 			async () => new Response(JSON.stringify(payload))
-			// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- test stub for fetch
-		) as unknown as typeof fetch;
+		);
+		globalThis.fetch = fetchMock;
 
 		return () => {
 			globalThis.fetch = original;

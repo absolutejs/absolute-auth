@@ -230,8 +230,8 @@ describe('organizations', () => {
 describe('autoAssignOrgsByEmail', () => {
 	test('adds the user to every org their domain maps to (idempotent)', async () => {
 		const organizationStore = createInMemoryOrganizationStore();
-		const acmeId = 'org_acme' as OrganizationId;
-		const otherId = 'org_other' as OrganizationId;
+		const acmeId: OrganizationId = 'org_acme';
+		const otherId: OrganizationId = 'org_other';
 		const now = Date.now();
 		await organizationStore.saveOrganization({
 			createdAt: now,

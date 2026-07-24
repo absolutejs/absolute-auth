@@ -1,7 +1,6 @@
 import type { CredentialsConfig } from '../credentials/config';
 import type { MfaConfig } from '../mfa/config';
 import type {
-	OnCallbackSuccess,
 	OnRevocationSuccess,
 	OnSignOut
 } from '../types';
@@ -13,13 +12,13 @@ import type { AuditEmitter } from './config';
 // applies these when an `audit` block is configured.
 
 export const composeCallbackAudit =
-	<UserType>(
-		onCallbackSuccess: OnCallbackSuccess<UserType>,
+	<Context extends { authProvider: string }, Result>(
+		onCallbackSuccess:
+			| ((context: Context) => Promise<Result> | Result)
+			| undefined,
 		emit: AuditEmitter
 	) =>
-	async (
-		context: Parameters<NonNullable<OnCallbackSuccess<UserType>>>[0]
-	) => {
+	async (context: Context) => {
 		const result = await onCallbackSuccess?.(context);
 		const failed =
 			(result instanceof Response && result.status >= 400) ||

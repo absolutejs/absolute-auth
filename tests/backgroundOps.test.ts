@@ -27,10 +27,7 @@ const HTTP_404 = 404;
 const HTTP_500 = 500;
 
 const stubFetch = (handler: (url: string) => Response) =>
-	// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- test stub for fetch
-	mock(async (input: RequestInfo | URL) =>
-		handler(input.toString())
-	) as unknown as typeof fetch;
+	mock<typeof fetch>(async (input) => handler(input.toString()));
 
 const installFetch = (handler: (url: string) => Response) => {
 	const original = globalThis.fetch;
@@ -90,7 +87,6 @@ describe('runEmailBreachScan', () => {
 		const restore = installFetch(
 			() => new Response(null, { status: HTTP_500 })
 		);
-		// eslint-disable-next-line absolute/no-useless-function -- callback signature requires a function
 		const iterateEmails = async () => ({
 			emails: ['a@b.com'],
 			nextCursor: undefined
@@ -112,7 +108,6 @@ describe('runEmailBreachScan', () => {
 describe('pruneInactiveUsers', () => {
 	test('selects users older than the threshold and calls onDelete', async () => {
 		const deletions: string[] = [];
-		// eslint-disable-next-line absolute/no-useless-function -- callback signature requires a function
 		const iterateUsers = async () => ({
 			nextCursor: undefined,
 			users: [
@@ -155,7 +150,6 @@ describe('pruneInactiveUsers', () => {
 
 	test('dryRun reports candidates without calling onDelete', async () => {
 		const deletions: string[] = [];
-		// eslint-disable-next-line absolute/no-useless-function -- callback signature requires a function
 		const iterateUsers = async () => ({
 			nextCursor: undefined,
 			users: [

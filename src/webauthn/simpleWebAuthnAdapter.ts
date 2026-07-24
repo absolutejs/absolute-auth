@@ -5,6 +5,50 @@ import type {
 } from '@simplewebauthn/server';
 import type { WebAuthnAdapter } from './adapter';
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+	typeof value === 'object' && value !== null && !Array.isArray(value);
+
+const hasCredentialEnvelope = (value: unknown) => {
+	if (!isRecord(value)) return false;
+	const response = Reflect.get(value, 'response');
+
+	return (
+		typeof Reflect.get(value, 'id') === 'string' &&
+		typeof Reflect.get(value, 'rawId') === 'string' &&
+		Reflect.get(value, 'type') === 'public-key' &&
+		isRecord(Reflect.get(value, 'clientExtensionResults')) &&
+		isRecord(response) &&
+		typeof Reflect.get(response, 'clientDataJSON') === 'string'
+	);
+};
+
+const isAuthenticationResponse = (
+	value: unknown
+): value is AuthenticationResponseJSON => {
+	if (!isRecord(value) || !hasCredentialEnvelope(value)) return false;
+	const response = Reflect.get(value, 'response');
+	if (!isRecord(response)) return false;
+	const userHandle = Reflect.get(response, 'userHandle');
+
+	return (
+		typeof Reflect.get(response, 'authenticatorData') === 'string' &&
+		typeof Reflect.get(response, 'signature') === 'string' &&
+		(userHandle === undefined || typeof userHandle === 'string')
+	);
+};
+
+const isRegistrationResponse = (
+	value: unknown
+): value is RegistrationResponseJSON => {
+	if (!isRecord(value) || !hasCredentialEnvelope(value)) return false;
+	const response = Reflect.get(value, 'response');
+
+	return (
+		isRecord(response) &&
+		typeof Reflect.get(response, 'attestationObject') === 'string'
+	);
+};
+
 // A ready-made WebAuthnAdapter wrapping @simplewebauthn/server (the vetted
 // attestation/assertion verifier). @simplewebauthn/server is an OPTIONAL peer:
 // it's loaded lazily here so apps that don't use passkeys never pull it in.
@@ -69,6 +113,8 @@ export const createSimpleWebAuthnAdapter =
 				expectedRPID,
 				response
 			}) => {
+				if (!isAuthenticationResponse(response))
+					return { verified: false };
 				const result = await verifyAuthenticationResponse({
 					credential: {
 						counter: credential.counter,
@@ -78,9 +124,7 @@ export const createSimpleWebAuthnAdapter =
 					expectedChallenge,
 					expectedOrigin,
 					expectedRPID,
-					// Opaque browser payload validated by the vetted verifier.
-					// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- unknown→lib input at the crypto boundary
-					response: response as AuthenticationResponseJSON
+					response
 				});
 
 				return {
@@ -94,12 +138,13 @@ export const createSimpleWebAuthnAdapter =
 				expectedRPID,
 				response
 			}) => {
+				if (!isRegistrationResponse(response))
+					return { verified: false };
 				const result = await verifyRegistrationResponse({
 					expectedChallenge,
 					expectedOrigin,
 					expectedRPID,
-					// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- unknown→lib input at the crypto boundary
-					response: response as RegistrationResponseJSON
+					response
 				});
 				if (!result.verified || !result.registrationInfo) {
 					return { verified: false };

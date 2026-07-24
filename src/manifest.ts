@@ -168,11 +168,14 @@ export const manifest = defineManifest<AuthConfig<unknown>, never>()({
 			},
 			title: 'Your Postgres database (recommended)',
 			wiring: {
-				code: 'createNeonAuthSessionStore(${env.DATABASE_URL} ?? "")',
+				code: 'createNeonAuthSessionStore(${env.DATABASE_URL} ?? "", decodeSessionUserRecord)',
 				imports: [
 					{
 						from: '@absolutejs/auth',
-						names: ['createNeonAuthSessionStore']
+						names: [
+							'createNeonAuthSessionStore',
+							'decodeSessionUserRecord'
+						]
 					}
 				]
 			}

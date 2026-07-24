@@ -65,11 +65,11 @@ const buildApp = async (clientPublicJwk: JsonWebKey) => {
 					scopes: ['openid']
 				}
 			]),
-			getClaims: (user) => ({ email: user.email }),
-			getUserId: (user) => user.sub,
 			issuer: ISSUER,
 			refreshTokenStore: createInMemoryOidcRefreshTokenStore(),
-			signingKey
+			signingKey,
+			getClaims: (user) => ({ email: user.email }),
+			getUserId: (user) => user.sub
 		},
 		providersConfiguration: {}
 	});
