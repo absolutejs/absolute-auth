@@ -1,5 +1,5 @@
 {
-	"version": "0.57.2",
+	"version": "0.57.3",
 	"name": "@absolutejs/auth",
 	"description": "An authorization library for absolutejs",
 	"repository": {
@@ -37,15 +37,15 @@
 	],
 	"types": "./dist/index.d.ts",
 	"peerDependencies": {
-		"@opentelemetry/api": ">=1.7",
+		"@opentelemetry/api": ">=1.9.1 <2",
 		"@simplewebauthn/browser": ">=13.3.0 <14",
-		"@simplewebauthn/server": ">=13",
-		"elysia": ">= 1.4.26",
+		"@simplewebauthn/server": ">=13.3.2 <14",
+		"elysia": ">=1.4.29 <2",
 		"react": ">=18 <20",
-		"solid-js": ">=1.8",
-		"svelte": ">=4",
-		"vue": ">=3.4",
-		"@node-saml/node-saml": ">=5",
+		"solid-js": ">=1.9.14 <2",
+		"svelte": ">=5.56.7 <6",
+		"vue": ">=3.5.40 <4",
+		"@node-saml/node-saml": ">=5.1.0 <6",
 		"drizzle-orm": ">=1.0.0-rc.4 <2"
 	},
 	"peerDependenciesMeta": {
@@ -76,7 +76,7 @@
 	},
 	"dependencies": {
 		"@absolutejs/linked-providers": "0.0.5",
-		"@absolutejs/manifest": "^0.6.1",
+		"@absolutejs/manifest": "^0.7.1",
 		"@neondatabase/serverless": "1.0.0",
 		"@sinclair/typebox": "^0.34.0",
 		"citra": "0.29.7"
@@ -84,28 +84,28 @@
 	"devDependencies": {
 		"@absolutejs/absolute": "^0.19.0-beta.1023",
 		"@eslint/js": "^10.0.1",
-		"@node-saml/node-saml": "^5.1.0",
-		"@opentelemetry/api": "^1.9.1",
+		"@node-saml/node-saml": "5.1.0",
+		"@opentelemetry/api": "1.9.1",
 		"@opentelemetry/sdk-trace-base": "^2.7.1",
 		"@simplewebauthn/browser": "13.3.0",
-		"@simplewebauthn/server": "^13",
+		"@simplewebauthn/server": "13.3.2",
 		"@stylistic/eslint-plugin": "^5.10.0",
 		"@types/bun": "1.2.9",
 		"@types/react": "^19.0.0",
 		"@typescript-eslint/parser": "^8.57.2",
-		"elysia": "1.4.26",
+		"elysia": "1.4.29",
 		"eslint": "^10.1.0",
 		"eslint-plugin-absolute": "^0.11.0",
 		"eslint-plugin-promise": "^7.2.1",
 		"eslint-plugin-security": "^4.0.0",
 		"globals": "^17.4.0",
 		"prettier": "3.5.3",
-		"react": "^19.2.7",
-		"solid-js": "^1.9.13",
-		"svelte": "^5.55.9",
+		"react": "19.2.8",
+		"solid-js": "1.9.14",
+		"svelte": "5.56.7",
 		"typescript": "5.8.3",
 		"typescript-eslint": "^8.57.2",
-		"vue": "^3.5.34",
+		"vue": "3.5.40",
 		"drizzle-orm": "1.0.0-rc.4"
 	},
 	"module": "./dist/index.js",
@@ -231,12 +231,77 @@
 	"absolutejs": {
 		"manifestContract": 2,
 		"runtimePeers": {
+			"@node-saml/node-saml": {
+				"artifactImports": ["@node-saml/node-saml"],
+				"buildExternals": ["@node-saml/node-saml"],
+				"optional": true,
+				"range": ">=5.1.0 <6",
+				"tested": "5.1.0"
+			},
+			"@opentelemetry/api": {
+				"artifactImports": ["@opentelemetry/api"],
+				"buildExternals": ["@opentelemetry/api"],
+				"optional": true,
+				"range": ">=1.9.1 <2",
+				"tested": "1.9.1"
+			},
 			"@simplewebauthn/browser": {
 				"artifactImports": ["@simplewebauthn/browser"],
 				"buildExternals": ["@simplewebauthn/browser"],
 				"optional": true,
 				"range": ">=13.3.0 <14",
 				"tested": "13.3.0"
+			},
+			"@simplewebauthn/server": {
+				"artifactImports": ["@simplewebauthn/server"],
+				"buildExternals": ["@simplewebauthn/server"],
+				"optional": true,
+				"range": ">=13.3.2 <14",
+				"tested": "13.3.2"
+			},
+			"drizzle-orm": {
+				"artifactImports": [
+					"drizzle-orm",
+					"drizzle-orm/neon-http",
+					"drizzle-orm/pg-core"
+				],
+				"buildExternals": ["drizzle-orm"],
+				"range": ">=1.0.0-rc.4 <2",
+				"tested": "1.0.0-rc.4"
+			},
+			"elysia": {
+				"artifactImports": ["elysia"],
+				"buildExternals": ["elysia"],
+				"range": ">=1.4.29 <2",
+				"tested": "1.4.29"
+			},
+			"react": {
+				"artifactImports": ["react"],
+				"buildExternals": ["react"],
+				"optional": true,
+				"range": ">=18 <20",
+				"tested": "19.2.8"
+			},
+			"solid-js": {
+				"artifactImports": ["solid-js"],
+				"buildExternals": ["solid-js"],
+				"optional": true,
+				"range": ">=1.9.14 <2",
+				"tested": "1.9.14"
+			},
+			"svelte": {
+				"artifactImports": ["svelte/store"],
+				"buildExternals": ["svelte"],
+				"optional": true,
+				"range": ">=5.56.7 <6",
+				"tested": "5.56.7"
+			},
+			"vue": {
+				"artifactImports": ["vue"],
+				"buildExternals": ["vue"],
+				"optional": true,
+				"range": ">=3.5.40 <4",
+				"tested": "3.5.40"
 			}
 		}
 	}
