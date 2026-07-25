@@ -23,7 +23,9 @@ export default defineConfig([
 			'**/compiled/**',
 			'.cache/**',
 			'.claude/**'
-		],
+		]
+	},
+	{
 		linterOptions: {
 			// Inline directives hide repository drift. Structural exceptions belong in
 			// the narrow file-class overrides below so every exception is reviewable.

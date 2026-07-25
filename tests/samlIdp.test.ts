@@ -28,10 +28,7 @@ const buildRelayStateInput = (relayState?: string) =>
 // the auto-post form embeds verbatim so we can assert on it.
 const stubAdapter: SamlIdpAdapter = {
 	buildAutoPostForm: ({ acsUrl, relayState, samlResponse }) =>
-		`<html><body><form action="${acsUrl}" method="POST">` +
-		`<input name="SAMLResponse" value="${samlResponse}">` +
-		buildRelayStateInput(relayState) +
-		'</form></body></html>',
+		`<html><body><form action="${acsUrl}" method="POST"><input name="SAMLResponse" value="${samlResponse}">${buildRelayStateInput(relayState)}</form></body></html>`,
 	createSamlResponse: ({
 		acsUrl,
 		audience,

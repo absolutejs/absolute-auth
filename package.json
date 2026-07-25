@@ -1,5 +1,5 @@
 {
-	"version": "0.57.3",
+	"version": "0.57.4",
 	"name": "@absolutejs/auth",
 	"description": "An authorization library for absolutejs",
 	"repository": {
@@ -24,7 +24,9 @@
 		"lint": "absolute eslint",
 		"prepack": "bun -e \"for (const path of ['dist/oidc/config.d.ts','dist/oidc/types.d.ts','dist/oidc/postgresStores.d.ts']) if (!(await Bun.file(path).exists())) throw new Error('Run bun run build before packing: missing ' + path)\"",
 		"typecheck": "absolute typecheck",
-		"release": "bun run format && bun run build && npm publish"
+		"verify-package": "absolute-manifest verify-package",
+		"check:package": "bun run typecheck && bun run lint && bun run test && bun run verify-package && bun run build && bun run verify-package --artifacts",
+		"release": "bun run format && bun run check:package && npm publish"
 	},
 	"keywords": [
 		"authorization",
@@ -76,7 +78,7 @@
 	},
 	"dependencies": {
 		"@absolutejs/linked-providers": "0.0.5",
-		"@absolutejs/manifest": "^0.7.1",
+		"@absolutejs/manifest": "^0.7.2",
 		"@neondatabase/serverless": "1.0.0",
 		"@sinclair/typebox": "^0.34.0",
 		"citra": "0.29.7"
