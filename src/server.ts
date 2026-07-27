@@ -14,8 +14,34 @@ export const auth: <UserType>(
 export { createAuthContext } from './authContext';
 export type { AuthInstance } from './authContext';
 export type { AuditSink } from './audit/types';
+export type { PortalConfig } from './portal/config';
+export type {
+	SetupCapability,
+	SetupSession,
+	SetupSessionStore
+} from './portal/types';
+export { createSetupSession } from './portal/operations';
+export { createPostgresSetupSessionStore } from './portal/postgresSetupSessionStore';
 export { protectRoutePlugin } from './routes/protectRoute';
+export type { ScimConfig } from './scim/config';
+export type {
+	ScimFilter,
+	ScimGroup,
+	ScimGroupInput,
+	ScimTokenStore,
+	ScimUser,
+	ScimUserInput
+} from './scim/types';
+export { createPostgresScimTokenStore } from './scim/postgresScimTokenStore';
 export type { AuthSessionStore } from './session/types';
+export type { NodeSamlAdapterOptions } from './sso/nodeSamlAdapter';
+export { createNodeSamlAdapter } from './sso/nodeSamlAdapter';
+export type { SsoIdentity, SSOConfig } from './sso/config';
+export type {
+	SSOConnection,
+	SSOConnectionStore
+} from './sso/types';
+export { createPostgresSsoConnectionStore } from './sso/postgresSsoConnectionStore';
 export { isUserSessionId } from './typeGuards';
 export { userSessionIdTypebox } from './typebox';
 export type {
