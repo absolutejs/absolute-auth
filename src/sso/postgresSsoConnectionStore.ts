@@ -1,6 +1,7 @@
 import { and, desc, eq } from 'drizzle-orm';
 import { bigint, boolean, jsonb, pgTable, varchar } from 'drizzle-orm/pg-core';
 import { type AnyPgDatabase, createNeonDatabase } from '../stores/postgres';
+import type { SecretCipher } from '../compliance/cipher';
 import type {
 	OidcConnection,
 	OidcConnectionConfig,
@@ -85,13 +86,18 @@ const toSamlConfig = (value: object): SamlConnectionConfig | undefined => {
 	};
 };
 
-const toConnection = (row: SsoRow) => {
+const toConnection = async (row: SsoRow, cipher?: SecretCipher) => {
 	if (row.type === 'oidc') {
 		const config = toOidcConfig(row.config);
 		if (config === undefined) return undefined;
 
 		const connection: OidcConnection = {
-			config,
+			config: {
+				...config,
+				clientSecret: cipher
+					? await cipher.decrypt(config.clientSecret)
+					: config.clientSecret
+			},
 			connectionId: row.connection_id,
 			createdAt: row.created_at_ms,
 			enabled: row.enabled,
@@ -119,8 +125,19 @@ const toConnection = (row: SsoRow) => {
 	return connection;
 };
 
-const toValues = (connection: SSOConnection): SsoInsert => ({
-	config: connection.config,
+const toValues = async (
+	connection: SSOConnection,
+	cipher?: SecretCipher
+): Promise<SsoInsert> => ({
+	config:
+		connection.type === 'oidc' && cipher
+			? {
+					...connection.config,
+					clientSecret: await cipher.encrypt(
+						connection.config.clientSecret
+					)
+				}
+			: connection.config,
 	connection_id: connection.connectionId,
 	created_at_ms: connection.createdAt,
 	enabled: connection.enabled,
@@ -133,7 +150,8 @@ export const createNeonSsoConnectionStore = (databaseUrl: string) =>
 	createPostgresSsoConnectionStore(createNeonDatabase(databaseUrl));
 
 export const createPostgresSsoConnectionStore = <DB extends AnyPgDatabase>(
-	db: DB
+	db: DB,
+	cipher?: SecretCipher
 ): SSOConnectionStore => ({
 	deleteConnection: async (connectionId) => {
 		await db
@@ -147,7 +165,7 @@ export const createPostgresSsoConnectionStore = <DB extends AnyPgDatabase>(
 			.where(eq(ssoConnectionsTable.connection_id, connectionId))
 			.limit(1);
 
-		return row ? toConnection(row) : undefined;
+		return row ? toConnection(row, cipher) : undefined;
 	},
 	getConnectionByOrganization: async (organizationId, type) => {
 		const [row] = await db
@@ -165,7 +183,7 @@ export const createPostgresSsoConnectionStore = <DB extends AnyPgDatabase>(
 			.orderBy(desc(ssoConnectionsTable.updated_at_ms))
 			.limit(1);
 
-		return row ? toConnection(row) : undefined;
+		return row ? toConnection(row, cipher) : undefined;
 	},
 	listConnectionsByOrganization: async (organizationId) => {
 		const rows = await db
@@ -174,14 +192,17 @@ export const createPostgresSsoConnectionStore = <DB extends AnyPgDatabase>(
 			.where(eq(ssoConnectionsTable.organization_id, organizationId))
 			.orderBy(desc(ssoConnectionsTable.updated_at_ms));
 
-		return rows.flatMap((row) => {
-			const connection = toConnection(row);
+		const connections = await Promise.all(
+			rows.map((row) => toConnection(row, cipher))
+		);
 
-			return connection === undefined ? [] : [connection];
-		});
+		return connections.filter(
+			(connection): connection is SSOConnection =>
+				connection !== undefined
+		);
 	},
 	saveConnection: async (connection) => {
-		const values = toValues(connection);
+		const values = await toValues(connection, cipher);
 		await db.insert(ssoConnectionsTable).values(values).onConflictDoUpdate({
 			set: values,
 			target: ssoConnectionsTable.connection_id
