@@ -86,8 +86,7 @@ export const nextauthImporter: Importer = {
 				familyName: split.familyName,
 				givenName: split.givenName,
 				passwordHash,
-					passwordHashAlgo:
-						detectPasswordHashAlgorithm(passwordHash)
+				passwordHashAlgo: detectPasswordHashAlgorithm(passwordHash)
 			};
 		});
 

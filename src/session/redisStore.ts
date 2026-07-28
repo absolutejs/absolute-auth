@@ -2,10 +2,7 @@ import { Type } from '@sinclair/typebox';
 import { Value } from '@sinclair/typebox/value';
 import type { RedisLike } from '../stores/redis';
 import { isUserSessionId } from '../typeGuards';
-import type {
-	SessionData,
-	UserSessionId
-} from '../types';
+import type { SessionData, UserSessionId } from '../types';
 import type { AuthSessionStore, SessionUserDecoder } from './types';
 
 // Listing sessions (for device management) needs key enumeration, which the minimal RedisLike
@@ -48,7 +45,9 @@ const unregisteredSessionSchema = Type.Object({
 	accessToken: Type.Optional(Type.String()),
 	expiresAt: Type.Number(),
 	refreshToken: Type.Optional(Type.String()),
-	sessionInformation: Type.Optional(Type.Record(Type.String(), Type.Unknown())),
+	sessionInformation: Type.Optional(
+		Type.Record(Type.String(), Type.Unknown())
+	),
 	userIdentity: Type.Optional(Type.Record(Type.String(), Type.Unknown()))
 });
 
@@ -70,7 +69,7 @@ const parseSession = <UserType>(
 	if (!Value.Check(sessionSchema, value)) return undefined;
 
 	try {
-		const {impersonator} = value;
+		const { impersonator } = value;
 		if (
 			impersonator?.returnToSessionId !== undefined &&
 			!isUserSessionId(impersonator.returnToSessionId)

@@ -213,4 +213,10 @@ export const blockMigrations: Record<BlockName, BlockMigrations> = {
 };
 
 export { runMigrations } from './runner';
+export type {
+	MigrationClient,
+	MigrationQueryResult,
+	MigrationRunResult,
+	RunMigrationsOptions
+} from './runner';
 export type { Migration, BlockMigrations } from './types';

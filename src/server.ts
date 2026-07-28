@@ -37,10 +37,7 @@ export type { AuthSessionStore } from './session/types';
 export type { NodeSamlAdapterOptions } from './sso/nodeSamlAdapter';
 export { createNodeSamlAdapter } from './sso/nodeSamlAdapter';
 export type { SsoIdentity, SSOConfig } from './sso/config';
-export type {
-	SSOConnection,
-	SSOConnectionStore
-} from './sso/types';
+export type { SSOConnection, SSOConnectionStore } from './sso/types';
 export { createPostgresSsoConnectionStore } from './sso/postgresSsoConnectionStore';
 export { isUserSessionId } from './typeGuards';
 export { userSessionIdTypebox } from './typebox';

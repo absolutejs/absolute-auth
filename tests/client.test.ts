@@ -4,9 +4,8 @@ import { createAuthClient } from '../src/client/createAuthClient';
 const stub = (
 	handler: (url: string, init: RequestInit) => Response | Promise<Response>
 ) =>
-	mock<typeof fetch>(
-		async (input: RequestInfo | URL, init?: RequestInit) =>
-			handler(input.toString(), init ?? {})
+	mock<typeof fetch>(async (input: RequestInfo | URL, init?: RequestInit) =>
+		handler(input.toString(), init ?? {})
 	);
 
 describe('createAuthClient', () => {

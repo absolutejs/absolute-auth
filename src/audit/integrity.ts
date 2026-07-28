@@ -83,23 +83,23 @@ const cleanMetadata = (metadata?: Record<string, unknown>) => {
 };
 
 const readIntegrity = (event: AuditEvent) => {
-  const raw = event.metadata?.[INTEGRITY_KEY];
-  if (typeof raw !== 'object' || raw === null) return undefined;
-  const hash: unknown = Reflect.get(raw, 'hash');
-  const previousHash: unknown = Reflect.get(raw, 'previousHash');
-  const writerId: unknown = Reflect.get(raw, 'writerId');
-  if (
-    typeof hash !== 'string' ||
-    typeof previousHash !== 'string' ||
-    (writerId !== undefined && typeof writerId !== 'string')
-  )
-    return undefined;
+	const raw = event.metadata?.[INTEGRITY_KEY];
+	if (typeof raw !== 'object' || raw === null) return undefined;
+	const hash: unknown = Reflect.get(raw, 'hash');
+	const previousHash: unknown = Reflect.get(raw, 'previousHash');
+	const writerId: unknown = Reflect.get(raw, 'writerId');
+	if (
+		typeof hash !== 'string' ||
+		typeof previousHash !== 'string' ||
+		(writerId !== undefined && typeof writerId !== 'string')
+	)
+		return undefined;
 
-  return {
-    hash,
-    previousHash,
-    writerId
-  } satisfies AuditIntegrity;
+	return {
+		hash,
+		previousHash,
+		writerId
+	} satisfies AuditIntegrity;
 };
 
 const brokenAt = (index: number) => {

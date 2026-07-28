@@ -1052,6 +1052,8 @@ export {
 	type Migration
 } from './migrations';
 export type {
+	MigrationClient,
+	MigrationQueryResult,
 	MigrationRunResult,
 	RunMigrationsOptions
 } from './migrations/runner';

@@ -1,5 +1,5 @@
 {
-	"version": "0.57.6",
+	"version": "0.57.7",
 	"name": "@absolutejs/auth",
 	"description": "An authorization library for absolutejs",
 	"repository": {
@@ -234,29 +234,45 @@
 		"manifestContract": 2,
 		"runtimePeers": {
 			"@node-saml/node-saml": {
-				"artifactImports": ["@node-saml/node-saml"],
-				"buildExternals": ["@node-saml/node-saml"],
+				"artifactImports": [
+					"@node-saml/node-saml"
+				],
+				"buildExternals": [
+					"@node-saml/node-saml"
+				],
 				"optional": true,
 				"range": ">=5.1.0 <6",
 				"tested": "5.1.0"
 			},
 			"@opentelemetry/api": {
-				"artifactImports": ["@opentelemetry/api"],
-				"buildExternals": ["@opentelemetry/api"],
+				"artifactImports": [
+					"@opentelemetry/api"
+				],
+				"buildExternals": [
+					"@opentelemetry/api"
+				],
 				"optional": true,
 				"range": ">=1.9.1 <2",
 				"tested": "1.9.1"
 			},
 			"@simplewebauthn/browser": {
-				"artifactImports": ["@simplewebauthn/browser"],
-				"buildExternals": ["@simplewebauthn/browser"],
+				"artifactImports": [
+					"@simplewebauthn/browser"
+				],
+				"buildExternals": [
+					"@simplewebauthn/browser"
+				],
 				"optional": true,
 				"range": ">=13.3.0 <14",
 				"tested": "13.3.0"
 			},
 			"@simplewebauthn/server": {
-				"artifactImports": ["@simplewebauthn/server"],
-				"buildExternals": ["@simplewebauthn/server"],
+				"artifactImports": [
+					"@simplewebauthn/server"
+				],
+				"buildExternals": [
+					"@simplewebauthn/server"
+				],
 				"optional": true,
 				"range": ">=13.3.2 <14",
 				"tested": "13.3.2"
@@ -267,40 +283,62 @@
 					"drizzle-orm/neon-http",
 					"drizzle-orm/pg-core"
 				],
-				"buildExternals": ["drizzle-orm"],
+				"buildExternals": [
+					"drizzle-orm"
+				],
 				"range": ">=1.0.0-rc.4 <2",
 				"tested": "1.0.0-rc.4"
 			},
 			"elysia": {
-				"artifactImports": ["elysia"],
-				"buildExternals": ["elysia"],
+				"artifactImports": [
+					"elysia"
+				],
+				"buildExternals": [
+					"elysia"
+				],
 				"range": ">=1.4.29 <2",
 				"tested": "1.4.29"
 			},
 			"react": {
-				"artifactImports": ["react"],
-				"buildExternals": ["react"],
+				"artifactImports": [
+					"react"
+				],
+				"buildExternals": [
+					"react"
+				],
 				"optional": true,
 				"range": ">=18 <20",
 				"tested": "19.2.8"
 			},
 			"solid-js": {
-				"artifactImports": ["solid-js"],
-				"buildExternals": ["solid-js"],
+				"artifactImports": [
+					"solid-js"
+				],
+				"buildExternals": [
+					"solid-js"
+				],
 				"optional": true,
 				"range": ">=1.9.14 <2",
 				"tested": "1.9.14"
 			},
 			"svelte": {
-				"artifactImports": ["svelte/store"],
-				"buildExternals": ["svelte"],
+				"artifactImports": [
+					"svelte/store"
+				],
+				"buildExternals": [
+					"svelte"
+				],
 				"optional": true,
 				"range": ">=5.56.7 <6",
 				"tested": "5.56.7"
 			},
 			"vue": {
-				"artifactImports": ["vue"],
-				"buildExternals": ["vue"],
+				"artifactImports": [
+					"vue"
+				],
+				"buildExternals": [
+					"vue"
+				],
 				"optional": true,
 				"range": ">=3.5.40 <4",
 				"tested": "3.5.40"

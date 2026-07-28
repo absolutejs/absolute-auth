@@ -65,9 +65,9 @@ export const clerkImporter: Importer = {
 			.map((raw) => {
 				const primary =
 					raw.email_addresses?.find(
-							(email) =>
-								raw.primary_email_address_id === undefined ||
-								email.email_address.length > 0
+						(email) =>
+							raw.primary_email_address_id === undefined ||
+							email.email_address.length > 0
 					) ?? raw.email_addresses?.[0];
 
 				return {

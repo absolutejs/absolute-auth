@@ -154,6 +154,10 @@ app.get('/documents', ({ protectAgent }) =>
 
 Postgres and Neon registration/delegation stores are exported alongside the
 in-memory stores. Include the `agents` migration block in production.
+`runMigrations` uses its existing Neon-compatible pool when given
+`databaseUrl`, or accepts an injected `MigrationClient` for standard Postgres
+drivers. Injected clients remain owned by the caller and are not closed by the
+migration runner.
 
 For agents that need to create or link an account, configure
 `agentAuth.agentRegistration` with an identity-registration store, access-token

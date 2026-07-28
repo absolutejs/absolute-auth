@@ -47,7 +47,7 @@ export const extractDpopNonceClaim = (proof: string) => {
 			Buffer.from(payloadSegment, 'base64url').toString('utf8')
 		);
 		if (typeof payload !== 'object' || payload === null) return undefined;
-			const value: unknown = Reflect.get(payload, 'nonce');
+		const value: unknown = Reflect.get(payload, 'nonce');
 
 		return typeof value === 'string' ? value : undefined;
 	} catch {

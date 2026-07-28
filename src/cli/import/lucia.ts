@@ -83,9 +83,9 @@ export const luciaImporter: Importer = {
 			emailVerified: true,
 			externalId: raw.id,
 			passwordHash: passwordByUserId.get(raw.id),
-				passwordHashAlgo: detectPasswordHashAlgorithm(
-					passwordByUserId.get(raw.id)
-				)
+			passwordHashAlgo: detectPasswordHashAlgorithm(
+				passwordByUserId.get(raw.id)
+			)
 		}));
 
 		const identities = oauthKeys.map((key) => {

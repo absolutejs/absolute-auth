@@ -31,9 +31,7 @@ const installFetchSpy = () => {
 	return recorded;
 };
 
-const requireBodyRecord = (
-	request: RecordedRequest | undefined
-) => {
+const requireBodyRecord = (request: RecordedRequest | undefined) => {
 	if (
 		request === undefined ||
 		typeof request.body !== 'object' ||
@@ -95,9 +93,7 @@ describe('plugin: discordAlertPlugin', () => {
 		await sink.append(sampleEvent);
 		expect(
 			requireString(requireBodyRecord(recorded[0]), 'content')
-		).toContain(
-			'credentials_login'
-		);
+		).toContain('credentials_login');
 	});
 });
 
@@ -119,7 +115,9 @@ describe('plugin: pagerdutyAlertPlugin', () => {
 		expect(requireString(body, 'event_action')).toBe('trigger');
 		expect(requireString(body, 'routing_key')).toBe('INTEGRATION_KEY_XYZ');
 		expect(requireString(payload, 'severity')).toBe('critical');
-		expect(requireString(payload, 'summary')).toContain('credentials_login');
+		expect(requireString(payload, 'summary')).toContain(
+			'credentials_login'
+		);
 	});
 });
 

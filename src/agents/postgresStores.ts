@@ -262,7 +262,7 @@ export const createDrizzleAgentDelegationStore = <DB extends AnyPgDatabase>(
 		return rows.map(toDelegation);
 	},
 	saveDelegation: async (delegation) => {
-			const values: typeof agentDelegationsTable.$inferInsert = {
+		const values: typeof agentDelegationsTable.$inferInsert = {
 			agent_id: delegation.agentId,
 			authorization_details:
 				delegation.authorizationDetails === undefined
@@ -428,7 +428,7 @@ export const createPostgresAgentRegistrationStore = <DB extends AnyPgDatabase>(
 		return rows.map(toRegistration);
 	},
 	saveRegistration: async (registration) => {
-			const values: typeof agentRegistrationsTable.$inferInsert = {
+		const values: typeof agentRegistrationsTable.$inferInsert = {
 			agent_id: registration.agentId,
 			allowed_scopes: registration.allowedScopes,
 			client_id: registration.clientId ?? null,

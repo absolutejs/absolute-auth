@@ -97,10 +97,10 @@ const validateRedirectUri = (uri: string) => {
 	}
 };
 
-const validateSecureMetadataUrl = (
-	name: string,
-	value: string | undefined
-) => (value !== undefined && !secureUrl(value) ? `${name} must use HTTPS` : undefined);
+const validateSecureMetadataUrl = (name: string, value: string | undefined) =>
+	value !== undefined && !secureUrl(value)
+		? `${name} must use HTTPS`
+		: undefined;
 
 export const validateClientIdMetadataDocument = (
 	document: ClientIdMetadataDocument,

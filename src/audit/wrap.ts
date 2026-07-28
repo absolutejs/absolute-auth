@@ -1,9 +1,6 @@
 import type { CredentialsConfig } from '../credentials/config';
 import type { MfaConfig } from '../mfa/config';
-import type {
-	OnRevocationSuccess,
-	OnSignOut
-} from '../types';
+import type { OnRevocationSuccess, OnSignOut } from '../types';
 import { isStatusResponse } from '../typeGuards';
 import type { AuditEmitter } from './config';
 

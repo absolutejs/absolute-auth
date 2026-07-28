@@ -1,11 +1,7 @@
 import { desc, eq, lt } from 'drizzle-orm';
 import { bigint, jsonb, pgTable, varchar } from 'drizzle-orm/pg-core';
 import { type AnyPgDatabase, createNeonDatabase } from '../stores/postgres';
-import {
-	isAuditEventType,
-	type AuditEvent,
-	type AuditSink
-} from './types';
+import { isAuditEventType, type AuditEvent, type AuditSink } from './types';
 
 const ID_LENGTH = 255;
 const IP_LENGTH = 64;

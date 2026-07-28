@@ -64,7 +64,8 @@ const isAuth0User = (value: unknown): value is Auth0User =>
 			Reflect.get(value, 'identities').every(isAuth0Identity)));
 
 const requireAuth0User = (value: unknown) => {
-	if (!isAuth0User(value)) throw new Error('Invalid Auth0 user export record');
+	if (!isAuth0User(value))
+		throw new Error('Invalid Auth0 user export record');
 
 	return value;
 };
@@ -103,7 +104,7 @@ export const auth0Importer: Importer = {
 			familyName: raw.family_name,
 			givenName: raw.given_name,
 			passwordHash: raw.password_hash,
-				passwordHashAlgo: detectPasswordHashAlgorithm(raw.password_hash)
+			passwordHashAlgo: detectPasswordHashAlgorithm(raw.password_hash)
 		}));
 
 		// Auth0 always has at least one identity (the auth0 connection

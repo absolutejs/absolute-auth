@@ -1,8 +1,12 @@
+import { SQL } from 'bun';
 import { describe, expect, test } from 'bun:test';
 import { tablesToInitSql } from '../src/migrations/generate';
 import { blockMigrations } from '../src/migrations/index';
+import { runMigrations, type MigrationClient } from '../src/migrations/runner';
 import { credentialsTable } from '../src/credentials/postgresCredentialStore';
 import { lockoutsTable } from '../src/lockout/postgresLockoutStore';
+
+const LAST_QUERY_OFFSET = -1;
 
 // The runner test uses the actual `runMigrations` against a real Postgres only in CI when
 // `MIGRATION_TEST_DATABASE_URL` is set. The unit tests below cover the SQL generation
@@ -84,3 +88,93 @@ describe('blockMigrations manifest', () => {
 		}
 	});
 });
+
+describe('runMigrations', () => {
+	test('uses an injected standard Postgres client without owning its lifecycle', async () => {
+		const queries: Array<{
+			text: string;
+			values: readonly unknown[] | undefined;
+		}> = [];
+		const client: MigrationClient = {
+			query: async (text, values) => {
+				queries.push({ text, values });
+
+				return {
+					rows: text.startsWith('SELECT')
+						? [{ id: 'vault/already-applied' }]
+						: []
+				};
+			}
+		};
+
+		const result = await runMigrations({
+			blocks: ['vault'],
+			client,
+			log: () => undefined
+		});
+
+		expect(result).toEqual({
+			applied: ['vault/0001_init'],
+			skipped: []
+		});
+		expect(queries[0]?.text).toContain(
+			'CREATE TABLE IF NOT EXISTS "auth_migrations"'
+		);
+		expect(
+			queries.some(({ text }) => text.includes('"auth_vault_entries"'))
+		).toBe(true);
+		expect(queries.at(LAST_QUERY_OFFSET)?.values?.[0]).toBe(
+			'vault/0001_init'
+		);
+	});
+
+	test('requires either a database URL or an injected client', async () => {
+		await expect(
+			runMigrations({ blocks: ['vault'], log: () => undefined })
+		).rejects.toThrow('requires databaseUrl or client');
+	});
+});
+
+const migrationDatabaseUrl = process.env['MIGRATION_TEST_DATABASE_URL'];
+
+describe.skipIf(migrationDatabaseUrl === undefined)(
+	'runMigrations Postgres integration',
+	() => {
+		test('applies and journals migrations through an injected Bun SQL client', async () => {
+			if (migrationDatabaseUrl === undefined)
+				throw new Error('MIGRATION_TEST_DATABASE_URL is required');
+			const sql = new SQL({
+				max: 1,
+				prepare: false,
+				url: migrationDatabaseUrl
+			});
+			const client: MigrationClient = {
+				query: async (text, values = []) => ({
+					rows: Array.from(await sql.unsafe(text, [...values]))
+				})
+			};
+
+			try {
+				const first = await runMigrations({
+					blocks: ['vault'],
+					client,
+					log: () => undefined
+				});
+				const second = await runMigrations({
+					blocks: ['vault'],
+					client,
+					log: () => undefined
+				});
+				const [table] = await sql<
+					Array<{ table_name: string | null }>
+				>`SELECT to_regclass('public.auth_vault_entries')::text AS table_name`;
+
+				expect(first.applied).toEqual(['vault/0001_init']);
+				expect(second.skipped).toContain('vault/0001_init');
+				expect(table?.table_name).toBe('auth_vault_entries');
+			} finally {
+				await sql.close();
+			}
+		});
+	}
+);

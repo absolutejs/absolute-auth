@@ -77,9 +77,7 @@ export const AUDIT_EVENT_TYPES: readonly AuditEventType[] = [
 	'webauthn_registered'
 ];
 
-export const isAuditEventType = (
-	value: string
-): value is AuditEventType =>
+export const isAuditEventType = (value: string): value is AuditEventType =>
 	AUDIT_EVENT_TYPES.some((eventType) => eventType === value);
 
 export type AuditEvent = {

@@ -13,7 +13,10 @@ import { Pool } from '@neondatabase/serverless';
 import { blockMigrations, type BlockName } from './index';
 
 export type RunMigrationsOptions = {
-	databaseUrl: string;
+	/** Existing SQL client. When provided, the runner does not create or close a pool. */
+	client?: MigrationClient;
+	/** Postgres connection string used by the default Neon-compatible pool. */
+	databaseUrl?: string;
 	/** Subset of blocks to apply. Omit to apply every block the package ships. */
 	blocks?: BlockName[];
 	/** Optional logger; defaults to console.log. Pass `() => undefined` for silent mode. */
@@ -23,6 +26,17 @@ export type RunMigrationsOptions = {
 export type MigrationRunResult = {
 	applied: string[];
 	skipped: string[];
+};
+
+export type MigrationQueryResult = {
+	rows: unknown[];
+};
+
+export type MigrationClient = {
+	query: (
+		text: string,
+		values?: readonly unknown[]
+	) => Promise<MigrationQueryResult>;
 };
 
 const JOURNAL_DDL = `CREATE TABLE IF NOT EXISTS "auth_migrations" (
@@ -35,22 +49,21 @@ type JournalRow = { id: string };
 const isJournalRow = (value: unknown): value is JournalRow =>
 	typeof value === 'object' &&
 	value !== null &&
-  typeof Reflect.get(value, 'id') === 'string';
+	typeof Reflect.get(value, 'id') === 'string';
 
 const isBlockName = (value: string): value is BlockName =>
-  Object.hasOwn(blockMigrations, value);
+	Object.hasOwn(blockMigrations, value);
 
-const allBlockNames = () =>
-  Object.keys(blockMigrations).filter(isBlockName);
+const allBlockNames = () => Object.keys(blockMigrations).filter(isBlockName);
 
 const applyOne = async (
-	pool: Pool,
+	client: MigrationClient,
 	id: string,
 	sql: string,
 	log: (message: string) => void
 ) => {
-	await pool.query(sql);
-	await pool.query(
+	await client.query(sql);
+	await client.query(
 		`INSERT INTO "auth_migrations" ("id", "applied_at_ms") VALUES ($1, $2)`,
 		[id, Date.now()]
 	);
@@ -58,7 +71,7 @@ const applyOne = async (
 };
 
 const runOne = async (
-	pool: Pool,
+	client: MigrationClient,
 	id: string,
 	sql: string,
 	applied: Set<string>,
@@ -71,21 +84,33 @@ const runOne = async (
 
 		return;
 	}
-	await applyOne(pool, id, sql, log);
+	await applyOne(client, id, sql, log);
 	result.applied.push(id);
 };
 
 export const runMigrations = async ({
 	blocks,
+	client,
 	databaseUrl,
 	log = console.log
 }: RunMigrationsOptions) => {
-	const pool = new Pool({ connectionString: databaseUrl });
+	let ownedPool: Pool | undefined;
+	let migrationClient: MigrationClient;
+	if (client !== undefined) {
+		migrationClient = client;
+	} else {
+		if (databaseUrl === undefined)
+			throw new Error('runMigrations requires databaseUrl or client');
+		ownedPool = new Pool({ connectionString: databaseUrl });
+		migrationClient = ownedPool;
+	}
 	const result: MigrationRunResult = { applied: [], skipped: [] };
 
 	try {
-		await pool.query(JOURNAL_DDL);
-		const journal = await pool.query(`SELECT "id" FROM "auth_migrations"`);
+		await migrationClient.query(JOURNAL_DDL);
+		const journal = await migrationClient.query(
+			`SELECT "id" FROM "auth_migrations"`
+		);
 		const applied = new Set(
 			journal.rows.filter(isJournalRow).map((row) => row.id)
 		);
@@ -101,10 +126,17 @@ export const runMigrations = async ({
 		await flat.reduce(async (prior, item) => {
 			await prior;
 
-			return runOne(pool, item.id, item.sql, applied, result, log);
+			return runOne(
+				migrationClient,
+				item.id,
+				item.sql,
+				applied,
+				result,
+				log
+			);
 		}, Promise.resolve());
 	} finally {
-		await pool.end();
+		await ownedPool?.end();
 	}
 
 	return result;

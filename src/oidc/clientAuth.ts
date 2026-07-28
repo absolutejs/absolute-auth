@@ -46,18 +46,17 @@ const fetchJwksUri = async (jwksUri: string) => {
 			signal: AbortSignal.timeout(JWKS_FETCH_TIMEOUT_MS)
 		});
 		if (!response.ok) return undefined;
-			const body: unknown = await response.json();
-			if (typeof body !== 'object' || body === null) return undefined;
-			const keys: unknown = Reflect.get(body, 'keys');
-			if (!Array.isArray(keys)) return undefined;
-			const jwks = keys.filter(
-				(key): key is JsonWebKey =>
-					typeof key === 'object' && key !== null
-			);
-			if (jwks.length !== keys.length) return undefined;
-			jwksCache.set(jwksUri, { fetchedAt: Date.now(), jwks });
+		const body: unknown = await response.json();
+		if (typeof body !== 'object' || body === null) return undefined;
+		const keys: unknown = Reflect.get(body, 'keys');
+		if (!Array.isArray(keys)) return undefined;
+		const jwks = keys.filter(
+			(key): key is JsonWebKey => typeof key === 'object' && key !== null
+		);
+		if (jwks.length !== keys.length) return undefined;
+		jwksCache.set(jwksUri, { fetchedAt: Date.now(), jwks });
 
-			return jwks;
+		return jwks;
 	} catch {
 		return undefined;
 	}
@@ -118,15 +117,15 @@ export const verifyClientAssertion = async ({
 		const parsed: unknown = JSON.parse(
 			Buffer.from(payloadSegment, 'base64url').toString('utf8')
 		);
-			if (
-				typeof parsed !== 'object' ||
-				parsed === null ||
-				Array.isArray(parsed)
-			)
-				return undefined;
-			payload = Object.fromEntries(
-				Object.keys(parsed).map((key) => [key, Reflect.get(parsed, key)])
-			);
+		if (
+			typeof parsed !== 'object' ||
+			parsed === null ||
+			Array.isArray(parsed)
+		)
+			return undefined;
+		payload = Object.fromEntries(
+			Object.keys(parsed).map((key) => [key, Reflect.get(parsed, key)])
+		);
 	} catch {
 		return undefined;
 	}
