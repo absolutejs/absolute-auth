@@ -34,88 +34,121 @@ const portableJsonb = customType<{ data: unknown; driverData: unknown }>({
 		typeof value === 'string' ? JSON.parse(value) : value,
 	toDriver: (value) => JSON.stringify(value)
 });
-export const agentDelegationsTable = pgTable('auth_agent_delegations', {
-	agent_id: varchar('agent_id', { length: ID_LENGTH }).notNull(),
-	authorization_details: portableJsonb('authorization_details').$type<
-		Record<string, unknown>[]
-	>(),
-	created_at_ms: bigint('created_at_ms', { mode: 'number' }).notNull(),
-	delegation_id: varchar('delegation_id', {
-		length: ID_LENGTH
-	}).primaryKey(),
-	expires_at_ms: bigint('expires_at_ms', { mode: 'number' }),
-	organization_id: varchar('organization_id', { length: ID_LENGTH }),
-	scopes: portableJsonb('scopes').$type<string[]>().notNull().default([]),
-	status: varchar('status', { length: STATUS_LENGTH })
-		.$type<AgentDelegationStatus>()
-		.notNull(),
-	updated_at_ms: bigint('updated_at_ms', { mode: 'number' }).notNull(),
-	user_id: varchar('user_id', { length: ID_LENGTH }).notNull()
+const bunSqlJsonb = customType<{ data: unknown; driverData: unknown }>({
+	dataType: () => 'jsonb',
+	fromDriver: (value) =>
+		typeof value === 'string' ? JSON.parse(value) : value,
+	toDriver: (value) => value
 });
-export const agentIdentityRegistrationsTable = pgTable(
-	'auth_agent_identity_registrations',
-	{
-		agent_id: varchar('agent_id', { length: ID_LENGTH }).notNull().unique(),
-		claim_attempt:
-			portableJsonb('claim_attempt').$type<
-				AgentIdentityRegistration['claimAttempt']
-			>(),
-		claim_attempt_token_hash: varchar('claim_attempt_token_hash', {
-			length: ID_LENGTH
-		}).unique(),
-		claim_expires_at_ms: bigint('claim_expires_at_ms', {
-			mode: 'number'
-		}).notNull(),
-		claim_token_hash: varchar('claim_token_hash', {
-			length: ID_LENGTH
-		})
-			.notNull()
-			.unique(),
+type JsonbFactory = (name: string) => ReturnType<typeof portableJsonb>;
+const createAgentDelegationsTable = (json: JsonbFactory) =>
+	pgTable('auth_agent_delegations', {
+		agent_id: varchar('agent_id', { length: ID_LENGTH }).notNull(),
+		authorization_details: json('authorization_details').$type<
+			Record<string, unknown>[]
+		>(),
 		created_at_ms: bigint('created_at_ms', { mode: 'number' }).notNull(),
-		expires_at_ms: bigint('expires_at_ms', { mode: 'number' }).notNull(),
-		kind: varchar('kind', { length: 32 })
-			.$type<AgentIdentityRegistrationKind>()
-			.notNull(),
-		last_polled_at_ms: bigint('last_polled_at_ms', { mode: 'number' }),
-		login_hint: varchar('login_hint', { length: ID_LENGTH }),
-		registration_id: varchar('registration_id', {
+		delegation_id: varchar('delegation_id', {
 			length: ID_LENGTH
 		}).primaryKey(),
+		expires_at_ms: bigint('expires_at_ms', { mode: 'number' }),
+		organization_id: varchar('organization_id', { length: ID_LENGTH }),
+		scopes: json('scopes').$type<string[]>().notNull().default([]),
 		status: varchar('status', { length: STATUS_LENGTH })
-			.$type<AgentIdentityRegistrationStatus>()
+			.$type<AgentDelegationStatus>()
 			.notNull(),
 		updated_at_ms: bigint('updated_at_ms', { mode: 'number' }).notNull(),
-		upstream_client_id: varchar('upstream_client_id', {
-			length: ID_LENGTH
-		}),
-		upstream_issuer: varchar('upstream_issuer', { length: ID_LENGTH }),
-		upstream_subject: varchar('upstream_subject', { length: ID_LENGTH }),
-		user_id: varchar('user_id', { length: ID_LENGTH }),
-		version: integer('version').notNull()
-	},
-	(table) => [
-		uniqueIndex('auth_agent_identity_upstream_unique').on(
-			table.upstream_issuer,
-			table.upstream_subject,
-			table.upstream_client_id
-		)
-	]
-);
-export const agentRegistrationsTable = pgTable('auth_agent_registrations', {
-	agent_id: varchar('agent_id', { length: ID_LENGTH }).primaryKey(),
-	allowed_scopes: portableJsonb('allowed_scopes')
-		.$type<string[]>()
-		.notNull()
-		.default([]),
-	client_id: varchar('client_id', { length: ID_LENGTH }).unique(),
-	created_at_ms: bigint('created_at_ms', { mode: 'number' }).notNull(),
-	metadata: portableJsonb('metadata').$type<Record<string, unknown>>(),
-	name: varchar('name', { length: NAME_LENGTH }).notNull(),
-	status: varchar('status', { length: STATUS_LENGTH })
-		.$type<AgentRegistrationStatus>()
-		.notNull(),
-	updated_at_ms: bigint('updated_at_ms', { mode: 'number' }).notNull()
-});
+		user_id: varchar('user_id', { length: ID_LENGTH }).notNull()
+	});
+const createAgentIdentityRegistrationsTable = (json: JsonbFactory) =>
+	pgTable(
+		'auth_agent_identity_registrations',
+		{
+			agent_id: varchar('agent_id', { length: ID_LENGTH })
+				.notNull()
+				.unique(),
+			claim_attempt:
+				json('claim_attempt').$type<
+					AgentIdentityRegistration['claimAttempt']
+				>(),
+			claim_attempt_token_hash: varchar('claim_attempt_token_hash', {
+				length: ID_LENGTH
+			}).unique(),
+			claim_expires_at_ms: bigint('claim_expires_at_ms', {
+				mode: 'number'
+			}).notNull(),
+			claim_token_hash: varchar('claim_token_hash', {
+				length: ID_LENGTH
+			})
+				.notNull()
+				.unique(),
+			created_at_ms: bigint('created_at_ms', {
+				mode: 'number'
+			}).notNull(),
+			expires_at_ms: bigint('expires_at_ms', {
+				mode: 'number'
+			}).notNull(),
+			kind: varchar('kind', { length: 32 })
+				.$type<AgentIdentityRegistrationKind>()
+				.notNull(),
+			last_polled_at_ms: bigint('last_polled_at_ms', { mode: 'number' }),
+			login_hint: varchar('login_hint', { length: ID_LENGTH }),
+			registration_id: varchar('registration_id', {
+				length: ID_LENGTH
+			}).primaryKey(),
+			status: varchar('status', { length: STATUS_LENGTH })
+				.$type<AgentIdentityRegistrationStatus>()
+				.notNull(),
+			updated_at_ms: bigint('updated_at_ms', {
+				mode: 'number'
+			}).notNull(),
+			upstream_client_id: varchar('upstream_client_id', {
+				length: ID_LENGTH
+			}),
+			upstream_issuer: varchar('upstream_issuer', { length: ID_LENGTH }),
+			upstream_subject: varchar('upstream_subject', {
+				length: ID_LENGTH
+			}),
+			user_id: varchar('user_id', { length: ID_LENGTH }),
+			version: integer('version').notNull()
+		},
+		(table) => [
+			uniqueIndex('auth_agent_identity_upstream_unique').on(
+				table.upstream_issuer,
+				table.upstream_subject,
+				table.upstream_client_id
+			)
+		]
+	);
+const createAgentRegistrationsTable = (json: JsonbFactory) =>
+	pgTable('auth_agent_registrations', {
+		agent_id: varchar('agent_id', { length: ID_LENGTH }).primaryKey(),
+		allowed_scopes: json('allowed_scopes')
+			.$type<string[]>()
+			.notNull()
+			.default([]),
+		client_id: varchar('client_id', { length: ID_LENGTH }).unique(),
+		created_at_ms: bigint('created_at_ms', { mode: 'number' }).notNull(),
+		metadata: json('metadata').$type<Record<string, unknown>>(),
+		name: varchar('name', { length: NAME_LENGTH }).notNull(),
+		status: varchar('status', { length: STATUS_LENGTH })
+			.$type<AgentRegistrationStatus>()
+			.notNull(),
+		updated_at_ms: bigint('updated_at_ms', { mode: 'number' }).notNull()
+	});
+
+/** Bun SQL mappings for server-described native JSONB parameters. */
+export const agentDelegationsBunSqlTable =
+	createAgentDelegationsTable(bunSqlJsonb);
+export const agentDelegationsTable = createAgentDelegationsTable(portableJsonb);
+export const agentIdentityRegistrationsBunSqlTable =
+	createAgentIdentityRegistrationsTable(bunSqlJsonb);
+export const agentIdentityRegistrationsTable =
+	createAgentIdentityRegistrationsTable(portableJsonb);
+export const agentRegistrationsBunSqlTable =
+	createAgentRegistrationsTable(bunSqlJsonb);
+export const agentRegistrationsTable =
+	createAgentRegistrationsTable(portableJsonb);
 
 type RegistrationRow = typeof agentRegistrationsTable.$inferSelect;
 type DelegationRow = typeof agentDelegationsTable.$inferSelect;
@@ -209,8 +242,9 @@ export const createNeonAgentIdentityRegistrationStore = (databaseUrl: string) =>
 	);
 export const createNeonAgentRegistrationStore = (databaseUrl: string) =>
 	createPostgresAgentRegistrationStore(createNeonDatabase(databaseUrl));
-export const createDrizzleAgentDelegationStore = <DB extends AnyPgDatabase>(
-	db: DB
+const createDrizzleAgentDelegationStoreFor = <DB extends AnyPgDatabase>(
+	db: DB,
+	table: typeof agentDelegationsTable
 ): AgentDelegationStore => ({
 	findActiveDelegation: async ({
 		agentId,
@@ -220,24 +254,24 @@ export const createDrizzleAgentDelegationStore = <DB extends AnyPgDatabase>(
 	}) => {
 		const organizationCondition =
 			organizationId === undefined
-				? isNull(agentDelegationsTable.organization_id)
-				: eq(agentDelegationsTable.organization_id, organizationId);
+				? isNull(table.organization_id)
+				: eq(table.organization_id, organizationId);
 		const [row] = await db
 			.select()
-			.from(agentDelegationsTable)
+			.from(table)
 			.where(
 				and(
-					eq(agentDelegationsTable.agent_id, agentId),
-					eq(agentDelegationsTable.user_id, userId),
+					eq(table.agent_id, agentId),
+					eq(table.user_id, userId),
 					organizationCondition,
-					eq(agentDelegationsTable.status, 'active'),
+					eq(table.status, 'active'),
 					or(
-						isNull(agentDelegationsTable.expires_at_ms),
-						gt(agentDelegationsTable.expires_at_ms, now)
+						isNull(table.expires_at_ms),
+						gt(table.expires_at_ms, now)
 					)
 				)
 			)
-			.orderBy(desc(agentDelegationsTable.updated_at_ms))
+			.orderBy(desc(table.updated_at_ms))
 			.limit(1);
 
 		return row === undefined ? undefined : toDelegation(row);
@@ -245,24 +279,24 @@ export const createDrizzleAgentDelegationStore = <DB extends AnyPgDatabase>(
 	findByDelegationId: async (delegationId) => {
 		const [row] = await db
 			.select()
-			.from(agentDelegationsTable)
-			.where(eq(agentDelegationsTable.delegation_id, delegationId))
+			.from(table)
+			.where(eq(table.delegation_id, delegationId))
 			.limit(1);
 
 		return row === undefined ? undefined : toDelegation(row);
 	},
 	listDelegations: async (agentId) => {
-		const base = db.select().from(agentDelegationsTable);
+		const base = db.select().from(table);
 		const rows = await (agentId === undefined
-			? base.orderBy(desc(agentDelegationsTable.created_at_ms))
+			? base.orderBy(desc(table.created_at_ms))
 			: base
-					.where(eq(agentDelegationsTable.agent_id, agentId))
-					.orderBy(desc(agentDelegationsTable.created_at_ms)));
+					.where(eq(table.agent_id, agentId))
+					.orderBy(desc(table.created_at_ms)));
 
 		return rows.map(toDelegation);
 	},
 	saveDelegation: async (delegation) => {
-		const values: typeof agentDelegationsTable.$inferInsert = {
+		const values: typeof table.$inferInsert = {
 			agent_id: delegation.agentId,
 			authorization_details:
 				delegation.authorizationDetails === undefined
@@ -277,37 +311,43 @@ export const createDrizzleAgentDelegationStore = <DB extends AnyPgDatabase>(
 			updated_at_ms: delegation.updatedAt,
 			user_id: delegation.userId
 		};
-		await db
-			.insert(agentDelegationsTable)
-			.values(values)
-			.onConflictDoUpdate({
-				set: values,
-				target: agentDelegationsTable.delegation_id
-			});
+		await db.insert(table).values(values).onConflictDoUpdate({
+			set: values,
+			target: table.delegation_id
+		});
 	}
 });
-/** @deprecated Use createDrizzleAgentDelegationStore. */
-export const createPostgresAgentDelegationStore =
-	createDrizzleAgentDelegationStore;
-export const createPostgresAgentIdentityRegistrationStore = <
+export const createDrizzleAgentDelegationStore = <DB extends AnyPgDatabase>(
+	db: DB
+) => createDrizzleAgentDelegationStoreFor(db, agentDelegationsTable);
+export const createBunSqlDrizzleAgentDelegationStore = <
 	DB extends AnyPgDatabase
 >(
 	db: DB
+) => createDrizzleAgentDelegationStoreFor(db, agentDelegationsBunSqlTable);
+/** @deprecated Use createDrizzleAgentDelegationStore. */
+export const createPostgresAgentDelegationStore =
+	createDrizzleAgentDelegationStore;
+const createPostgresAgentIdentityRegistrationStoreFor = <
+	DB extends AnyPgDatabase
+>(
+	db: DB,
+	table: typeof agentIdentityRegistrationsTable
 ): AgentIdentityRegistrationStore => ({
 	create: async (registration) => {
 		const rows = await db
-			.insert(agentIdentityRegistrationsTable)
+			.insert(table)
 			.values(identityRegistrationValues(registration))
 			.onConflictDoNothing()
-			.returning({ id: agentIdentityRegistrationsTable.registration_id });
+			.returning({ id: table.registration_id });
 
 		return rows.length === 1;
 	},
 	findByAgentId: async (agentId) => {
 		const [row] = await db
 			.select()
-			.from(agentIdentityRegistrationsTable)
-			.where(eq(agentIdentityRegistrationsTable.agent_id, agentId))
+			.from(table)
+			.where(eq(table.agent_id, agentId))
 			.limit(1);
 
 		return row === undefined ? undefined : toIdentityRegistration(row);
@@ -315,13 +355,8 @@ export const createPostgresAgentIdentityRegistrationStore = <
 	findByAttemptTokenHash: async (attemptTokenHash) => {
 		const [row] = await db
 			.select()
-			.from(agentIdentityRegistrationsTable)
-			.where(
-				eq(
-					agentIdentityRegistrationsTable.claim_attempt_token_hash,
-					attemptTokenHash
-				)
-			)
+			.from(table)
+			.where(eq(table.claim_attempt_token_hash, attemptTokenHash))
 			.limit(1);
 
 		return row === undefined ? undefined : toIdentityRegistration(row);
@@ -329,13 +364,8 @@ export const createPostgresAgentIdentityRegistrationStore = <
 	findByClaimTokenHash: async (claimTokenHash) => {
 		const [row] = await db
 			.select()
-			.from(agentIdentityRegistrationsTable)
-			.where(
-				eq(
-					agentIdentityRegistrationsTable.claim_token_hash,
-					claimTokenHash
-				)
-			)
+			.from(table)
+			.where(eq(table.claim_token_hash, claimTokenHash))
 			.limit(1);
 
 		return row === undefined ? undefined : toIdentityRegistration(row);
@@ -343,13 +373,8 @@ export const createPostgresAgentIdentityRegistrationStore = <
 	findByRegistrationId: async (registrationId) => {
 		const [row] = await db
 			.select()
-			.from(agentIdentityRegistrationsTable)
-			.where(
-				eq(
-					agentIdentityRegistrationsTable.registration_id,
-					registrationId
-				)
-			)
+			.from(table)
+			.where(eq(table.registration_id, registrationId))
 			.limit(1);
 
 		return row === undefined ? undefined : toIdentityRegistration(row);
@@ -357,18 +382,12 @@ export const createPostgresAgentIdentityRegistrationStore = <
 	findByUpstreamIdentity: async ({ clientId, issuer, subject }) => {
 		const [row] = await db
 			.select()
-			.from(agentIdentityRegistrationsTable)
+			.from(table)
 			.where(
 				and(
-					eq(
-						agentIdentityRegistrationsTable.upstream_client_id,
-						clientId
-					),
-					eq(agentIdentityRegistrationsTable.upstream_issuer, issuer),
-					eq(
-						agentIdentityRegistrationsTable.upstream_subject,
-						subject
-					)
+					eq(table.upstream_client_id, clientId),
+					eq(table.upstream_issuer, issuer),
+					eq(table.upstream_subject, subject)
 				)
 			)
 			.limit(1);
@@ -382,30 +401,46 @@ export const createPostgresAgentIdentityRegistrationStore = <
 		};
 		const values = identityRegistrationValues(next);
 		const rows = await db
-			.update(agentIdentityRegistrationsTable)
+			.update(table)
 			.set(values)
 			.where(
 				and(
-					eq(
-						agentIdentityRegistrationsTable.registration_id,
-						registration.registrationId
-					),
-					eq(agentIdentityRegistrationsTable.version, expectedVersion)
+					eq(table.registration_id, registration.registrationId),
+					eq(table.version, expectedVersion)
 				)
 			)
-			.returning({ id: agentIdentityRegistrationsTable.registration_id });
+			.returning({ id: table.registration_id });
 
 		return rows.length === 1;
 	}
 });
-export const createPostgresAgentRegistrationStore = <DB extends AnyPgDatabase>(
+export const createBunSqlDrizzleAgentIdentityRegistrationStore = <
+	DB extends AnyPgDatabase
+>(
 	db: DB
+) =>
+	createPostgresAgentIdentityRegistrationStoreFor(
+		db,
+		agentIdentityRegistrationsBunSqlTable
+	);
+export const createPostgresAgentIdentityRegistrationStore = <
+	DB extends AnyPgDatabase
+>(
+	db: DB
+) =>
+	createPostgresAgentIdentityRegistrationStoreFor(
+		db,
+		agentIdentityRegistrationsTable
+	);
+const createPostgresAgentRegistrationStoreFor = <DB extends AnyPgDatabase>(
+	db: DB,
+	table: typeof agentRegistrationsTable
 ): AgentRegistrationStore => ({
 	findByAgentId: async (agentId) => {
 		const [row] = await db
 			.select()
-			.from(agentRegistrationsTable)
-			.where(eq(agentRegistrationsTable.agent_id, agentId))
+			.from(table)
+			.where(eq(table.agent_id, agentId))
 			.limit(1);
 
 		return row === undefined ? undefined : toRegistration(row);
@@ -413,8 +448,8 @@ export const createPostgresAgentRegistrationStore = <DB extends AnyPgDatabase>(
 	findByClientId: async (clientId) => {
 		const [row] = await db
 			.select()
-			.from(agentRegistrationsTable)
-			.where(eq(agentRegistrationsTable.client_id, clientId))
+			.from(table)
+			.where(eq(table.client_id, clientId))
 			.limit(1);
 
 		return row === undefined ? undefined : toRegistration(row);
@@ -422,13 +457,13 @@ export const createPostgresAgentRegistrationStore = <DB extends AnyPgDatabase>(
 	listRegistrations: async () => {
 		const rows = await db
 			.select()
-			.from(agentRegistrationsTable)
-			.orderBy(desc(agentRegistrationsTable.created_at_ms));
+			.from(table)
+			.orderBy(desc(table.created_at_ms));
 
 		return rows.map(toRegistration);
 	},
 	saveRegistration: async (registration) => {
-		const values: typeof agentRegistrationsTable.$inferInsert = {
+		const values: typeof table.$inferInsert = {
 			agent_id: registration.agentId,
 			allowed_scopes: registration.allowedScopes,
 			client_id: registration.clientId ?? null,
@@ -441,12 +476,17 @@ export const createPostgresAgentRegistrationStore = <DB extends AnyPgDatabase>(
 			status: registration.status,
 			updated_at_ms: registration.updatedAt
 		};
-		await db
-			.insert(agentRegistrationsTable)
-			.values(values)
-			.onConflictDoUpdate({
-				set: values,
-				target: agentRegistrationsTable.agent_id
-			});
+		await db.insert(table).values(values).onConflictDoUpdate({
+			set: values,
+			target: table.agent_id
+		});
 	}
 });
+export const createBunSqlDrizzleAgentRegistrationStore = <
+	DB extends AnyPgDatabase
+>(
+	db: DB
+) => createPostgresAgentRegistrationStoreFor(db, agentRegistrationsBunSqlTable);
+export const createPostgresAgentRegistrationStore = <DB extends AnyPgDatabase>(
+	db: DB
+) => createPostgresAgentRegistrationStoreFor(db, agentRegistrationsTable);

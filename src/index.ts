@@ -889,8 +889,14 @@ export {
 } from './agents/inMemoryStores';
 export {
 	agentDelegationsTable,
+	agentDelegationsBunSqlTable,
 	agentIdentityRegistrationsTable,
+	agentIdentityRegistrationsBunSqlTable,
 	agentRegistrationsTable,
+	agentRegistrationsBunSqlTable,
+	createBunSqlDrizzleAgentDelegationStore,
+	createBunSqlDrizzleAgentIdentityRegistrationStore,
+	createBunSqlDrizzleAgentRegistrationStore,
 	createNeonAgentDelegationStore,
 	createNeonAgentIdentityRegistrationStore,
 	createNeonAgentRegistrationStore,
