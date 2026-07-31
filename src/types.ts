@@ -112,6 +112,9 @@ export type SessionData<UserType> = {
 	 *  revoke) read it, and they are all gated on an `auth_provider`. */
 	accessToken?: string;
 	refreshToken?: string;
+	/** Normalized OAuth subject retained for provider operations that target an
+	 *  account identifier instead of a token, such as Withings revocation. */
+	oauthSubject?: string | number;
 	expiresAt: number;
 	/** When the session was last established by an actual authentication (login, OAuth
 	 *  callback, or MFA challenge — NOT a token refresh). Drives step-up `requireRecentAuth`. */
@@ -142,6 +145,7 @@ export type UnregisteredSessionData = {
 	expiresAt: number;
 	accessToken?: string;
 	refreshToken?: string;
+	oauthSubject?: string | number;
 };
 
 export type UnregisteredSessionRecord = Record<
@@ -152,6 +156,7 @@ export type UnregisteredSessionRecord = Record<
 export type ResolvedOAuthAuthorization = {
 	userIdentity: Record<string, unknown>;
 	accessToken: string;
+	oauthSubject?: string | number;
 	refreshToken?: string;
 	expiresAt?: number;
 	tokenType?: string;
@@ -353,7 +358,7 @@ export type OnRevocationSuccess =
 			tokenToRevoke,
 			authProvider
 	  }: {
-			tokenToRevoke: string;
+			tokenToRevoke: string | number;
 			authProvider: string;
 			authClient?: string;
 	  }) => void | Promise<void>)

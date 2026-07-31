@@ -56,8 +56,14 @@ describe('redis auth session store', () => {
 		);
 		const id = crypto.randomUUID();
 
-		await store.setSession(id, session('alice'));
-		expect((await store.getSession(id))?.user.id).toBe('alice');
+		await store.setSession(id, {
+			...session('alice'),
+			oauthSubject: 142857
+		});
+		expect(await store.getSession(id)).toMatchObject({
+			oauthSubject: 142857,
+			user: { id: 'alice' }
+		});
 
 		await store.removeSession(id);
 		expect(await store.getSession(id)).toBeUndefined();

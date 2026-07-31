@@ -1,7 +1,9 @@
-import { isValidProviderOption } from 'citra';
+import { isProfileOAuth2Client } from 'citra';
 import { Elysia, t } from 'elysia';
 import { resolveClientProviderEntry } from '../providers/clients';
+import { loadSessionFromSource } from '../session/access';
 import { sessionStore } from '../session/state';
+import type { AuthSessionStore } from '../session/types';
 import {
 	authClientOption,
 	authProviderOption,
@@ -14,7 +16,8 @@ import {
 	RouteString
 } from '../types';
 
-type ProfileProps = {
+type ProfileProps<UserType> = {
+	authSessionStore?: AuthSessionStore<UserType>;
 	clientProviders: ClientProviders;
 	profileRoute?: RouteString;
 	onProfileSuccess: OnProfileSuccess;
@@ -22,11 +25,12 @@ type ProfileProps = {
 };
 
 export const profile = <UserType>({
+	authSessionStore,
 	clientProviders,
 	profileRoute = '/oauth2/profile',
 	onProfileSuccess,
 	onProfileError
-}: ProfileProps) =>
+}: ProfileProps<UserType>) =>
 	new Elysia().use(sessionStore<UserType>()).get(
 		profileRoute,
 		async ({
@@ -45,10 +49,6 @@ export const profile = <UserType>({
 				return status('Unauthorized', 'No auth provider found');
 			}
 
-			if (!isValidProviderOption(auth_provider.value)) {
-				return status('Unauthorized', 'Invalid provider');
-			}
-
 			if (user_session_id.value === undefined) {
 				return status('Unauthorized', 'No user session found');
 			}
@@ -62,8 +62,18 @@ export const profile = <UserType>({
 				return status('Unauthorized', resolvedProvider.error);
 			}
 			const { clientName, providerInstance } = resolvedProvider.entry;
+			if (!isProfileOAuth2Client(providerInstance)) {
+				return status(
+					'Not Implemented',
+					'Provider does not expose a profile endpoint'
+				);
+			}
 
-			const userSession = session[user_session_id.value];
+			const userSession = await loadSessionFromSource({
+				authSessionStore,
+				session,
+				userSessionId: user_session_id.value
+			});
 
 			if (userSession === undefined) {
 				return status('Unauthorized', 'No user session found');

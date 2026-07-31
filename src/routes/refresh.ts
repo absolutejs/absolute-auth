@@ -1,4 +1,4 @@
-import { isRefreshableOAuth2Client, isValidProviderOption } from 'citra';
+import { isRefreshableOAuth2Client } from 'citra';
 import { Elysia, t } from 'elysia';
 import { MILLISECONDS_IN_A_DAY } from '../constants';
 import { resolveClientProviderEntry } from '../providers/clients';
@@ -52,10 +52,6 @@ export const refresh = <UserType>({
 				return status('Unauthorized', 'No auth provider found');
 			}
 
-			if (!isValidProviderOption(auth_provider.value)) {
-				return status('Bad Request', 'Invalid provider');
-			}
-
 			if (user_session_id.value === undefined) {
 				return status('Unauthorized', 'No user session found');
 			}
@@ -82,12 +78,7 @@ export const refresh = <UserType>({
 
 			const { refreshToken } = userSession;
 
-			if (
-				!isRefreshableOAuth2Client(
-					auth_provider.value,
-					providerInstance
-				)
-			) {
+			if (!isRefreshableOAuth2Client(providerInstance)) {
 				return status('Not Implemented', 'Provider is not refreshable');
 			}
 

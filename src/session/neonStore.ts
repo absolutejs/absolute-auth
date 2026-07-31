@@ -23,6 +23,9 @@ export const authSessionsTable = pgTable(
 		created_at: timestamp('created_at').notNull().defaultNow(),
 		expires_at_ms: bigint('expires_at_ms', { mode: 'number' }).notNull(),
 		id: varchar('id', { length: 255 }).primaryKey(),
+		oauth_subject_json: jsonb('oauth_subject_json').$type<
+			string | number
+		>(),
 		refresh_token: text('refresh_token'),
 		updated_at: timestamp('updated_at').notNull().defaultNow(),
 		user_json: jsonb('user_json').$type<Record<string, unknown>>().notNull()
@@ -39,6 +42,9 @@ export const authUnregisteredSessionsTable = pgTable(
 		created_at: timestamp('created_at').notNull().defaultNow(),
 		expires_at_ms: bigint('expires_at_ms', { mode: 'number' }).notNull(),
 		id: varchar('id', { length: 255 }).primaryKey(),
+		oauth_subject_json: jsonb('oauth_subject_json').$type<
+			string | number
+		>(),
 		refresh_token: text('refresh_token'),
 		session_information_json: jsonb('session_information_json').$type<
 			Record<string, unknown>
@@ -81,6 +87,7 @@ const toSessionData = <UserType>(
 	accessToken: row.access_token ?? undefined,
 	authenticatedAt: row.authenticated_at_ms ?? undefined,
 	expiresAt: row.expires_at_ms,
+	oauthSubject: row.oauth_subject_json ?? undefined,
 	refreshToken: row.refresh_token ?? undefined,
 	user: cloneUser(decodeUser(row.user_json))
 });
@@ -90,6 +97,7 @@ const toUnregisteredSessionData = (
 ): UnregisteredSessionData => ({
 	accessToken: row.access_token ?? undefined,
 	expiresAt: row.expires_at_ms,
+	oauthSubject: row.oauth_subject_json ?? undefined,
 	refreshToken: row.refresh_token ?? undefined,
 	sessionInformation: cloneRecord(row.session_information_json ?? undefined),
 	userIdentity: cloneRecord(row.user_identity_json ?? undefined)
@@ -171,6 +179,7 @@ export const createNeonAuthSessionStore = <UserType>(
 					authenticated_at_ms: value.authenticatedAt ?? null,
 					expires_at_ms: value.expiresAt,
 					id,
+					oauth_subject_json: value.oauthSubject ?? null,
 					refresh_token: value.refreshToken ?? null,
 					updated_at: new Date(),
 					user_json: value.user ?? {}
@@ -180,6 +189,7 @@ export const createNeonAuthSessionStore = <UserType>(
 						access_token: value.accessToken ?? null,
 						authenticated_at_ms: value.authenticatedAt ?? null,
 						expires_at_ms: value.expiresAt,
+						oauth_subject_json: value.oauthSubject ?? null,
 						refresh_token: value.refreshToken ?? null,
 						updated_at: new Date(),
 						user_json: value.user ?? {}
@@ -194,6 +204,7 @@ export const createNeonAuthSessionStore = <UserType>(
 					access_token: value.accessToken ?? null,
 					expires_at_ms: value.expiresAt,
 					id,
+					oauth_subject_json: value.oauthSubject ?? null,
 					refresh_token: value.refreshToken ?? null,
 					session_information_json: value.sessionInformation ?? null,
 					updated_at: new Date(),
@@ -203,6 +214,7 @@ export const createNeonAuthSessionStore = <UserType>(
 					set: {
 						access_token: value.accessToken ?? null,
 						expires_at_ms: value.expiresAt,
+						oauth_subject_json: value.oauthSubject ?? null,
 						refresh_token: value.refreshToken ?? null,
 						session_information_json:
 							value.sessionInformation ?? null,

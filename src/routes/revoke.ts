@@ -1,4 +1,4 @@
-import { isRevocableOAuth2Client, isValidProviderOption } from 'citra';
+import { isRevocableOAuth2Client } from 'citra';
 import { Elysia, t } from 'elysia';
 import { resolveClientProviderEntry } from '../providers/clients';
 import { loadSessionFromSource } from '../session/access';
@@ -49,10 +49,6 @@ export const revoke = <UserType>({
 				return status('Unauthorized', 'No auth provider found');
 			}
 
-			if (!isValidProviderOption(auth_provider.value)) {
-				return status('Bad Request', 'Invalid provider');
-			}
-
 			if (user_session_id.value === undefined) {
 				return status('Unauthorized', 'No user session found');
 			}
@@ -67,9 +63,7 @@ export const revoke = <UserType>({
 			}
 			const { clientName, providerInstance } = resolvedProvider.entry;
 
-			if (
-				!isRevocableOAuth2Client(auth_provider.value, providerInstance)
-			) {
+			if (!isRevocableOAuth2Client(providerInstance)) {
 				return status(
 					'Not Implemented',
 					'Provider does not support revocation'
@@ -86,7 +80,7 @@ export const revoke = <UserType>({
 				return status('Unauthorized', 'No user session found');
 			}
 
-			const { accessToken } = userSession;
+			const { accessToken, oauthSubject, refreshToken } = userSession;
 
 			if (accessToken === undefined) {
 				return status(
@@ -96,12 +90,17 @@ export const revoke = <UserType>({
 			}
 
 			try {
-				await providerInstance.revokeToken(accessToken);
+				const tokenToRevoke = providerInstance.resolveRevocationInput({
+					accessToken,
+					refreshToken,
+					subject: oauthSubject
+				});
+				await providerInstance.revokeToken(tokenToRevoke);
 
 				await onRevocationSuccess?.({
 					authClient: clientName,
 					authProvider: auth_provider.value,
-					tokenToRevoke: accessToken
+					tokenToRevoke
 				});
 
 				return new Response('Token revoked', {

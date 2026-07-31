@@ -440,7 +440,8 @@ const buildAuthApplications = async <UserType>(
 			onLinkIdentityConflict,
 			resolveAuthIntent
 		}),
-		profile({
+		profile<UserType>({
+			authSessionStore,
 			clientProviders,
 			onProfileError,
 			onProfileSuccess,

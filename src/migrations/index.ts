@@ -129,6 +129,14 @@ const oidcResourceAudienceMigration: Migration = {
 	].join('\n')
 };
 
+const sessionOAuthSubjectMigration: Migration = {
+	id: '0002_oauth_subject',
+	sql: [
+		'ALTER TABLE "auth_sessions" ADD COLUMN IF NOT EXISTS "oauth_subject_json" jsonb;',
+		'ALTER TABLE "auth_unregistered_sessions" ADD COLUMN IF NOT EXISTS "oauth_subject_json" jsonb;'
+	].join('\n')
+};
+
 export const blockMigrations: Record<BlockName, BlockMigrations> = {
 	adaptive: initMigration('adaptive', [knownDevicesTable, loginHistoryTable]),
 	agents: {
@@ -197,10 +205,16 @@ export const blockMigrations: Record<BlockName, BlockMigrations> = {
 	portal: initMigration('portal', [setupSessionsTable]),
 	roles: initMigration('roles', [rolesTable]),
 	scim: initMigration('scim', [scimTokensTable]),
-	sessions: initMigration('sessions', [
-		authSessionsTable,
-		authUnregisteredSessionsTable
-	]),
+	sessions: {
+		block: 'sessions',
+		migrations: [
+			...initMigration('sessions', [
+				authSessionsTable,
+				authUnregisteredSessionsTable
+			]).migrations,
+			sessionOAuthSubjectMigration
+		]
+	},
 	sso: initMigration('sso', [ssoConnectionsTable, samlServiceProvidersTable]),
 	vault: initMigration('vault', [vaultEntriesTable]),
 	vc: initMigration('vc', [

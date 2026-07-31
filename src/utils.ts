@@ -1,5 +1,7 @@
 import {
 	decodeJWT,
+	extractPropFromIdentity,
+	isProfileOAuth2Client,
 	isValidProviderOption,
 	normalizeProviderIdentity,
 	OAuth2Client,
@@ -84,7 +86,30 @@ export const instantiateUserSession = async <UserType>({
 			providerInstance,
 			tokenResponse
 		}));
-	const { accessToken, refreshToken, userIdentity } = authorization;
+	const {
+		accessToken,
+		oauthSubject: resolvedOAuthSubject,
+		refreshToken,
+		userIdentity
+	} = authorization;
+	const providerMeta =
+		providerConfiguration ??
+		(isValidProviderOption(authProvider)
+			? providers[authProvider]
+			: undefined);
+	const extractedSubject = providerMeta
+		? extractPropFromIdentity(
+				userIdentity,
+				providerMeta.subject,
+				providerMeta.subjectType
+			)
+		: Reflect.get(userIdentity, 'sub');
+	const oauthSubject =
+		resolvedOAuthSubject ??
+		(typeof extractedSubject === 'string' ||
+		typeof extractedSubject === 'number'
+			? extractedSubject
+			: undefined);
 
 	const userSession = validateSession({ session, user_session_id });
 	const userSessionId = getUserSessionId({
@@ -107,6 +132,7 @@ export const instantiateUserSession = async <UserType>({
 			accessToken,
 			authenticatedAt: Date.now(),
 			expiresAt: Date.now() + sessionDurationMs,
+			oauthSubject,
 			refreshToken,
 			user
 		};
@@ -120,6 +146,7 @@ export const instantiateUserSession = async <UserType>({
 		existingUnregistered.accessToken = accessToken;
 		existingUnregistered.expiresAt =
 			Date.now() + unregisteredSessionDurationMs;
+		existingUnregistered.oauthSubject = oauthSubject;
 		existingUnregistered.refreshToken = refreshToken;
 		existingUnregistered.userIdentity = userIdentity;
 
@@ -129,6 +156,7 @@ export const instantiateUserSession = async <UserType>({
 	unregisteredSession[userSessionId] = {
 		accessToken,
 		expiresAt: Date.now() + unregisteredSessionDurationMs,
+		oauthSubject,
 		refreshToken,
 		userIdentity
 	};
@@ -153,7 +181,7 @@ export const resolveOAuthAuthorization = async ({
 }: {
 	authProvider: string;
 	providerConfiguration?: ProviderConfig;
-	providerInstance: Pick<OAuth2Client<ProviderOption>, 'fetchUserProfile'>;
+	providerInstance: OAuth2Client<ProviderOption>;
 	tokenResponse: OAuth2TokenResponse;
 	now?: number;
 }): Promise<ResolvedOAuthAuthorization> => {
@@ -214,6 +242,11 @@ export const resolveOAuthAuthorization = async ({
 		refreshToken =
 			readOptionalString(withingsBody, 'refresh_token') ?? refreshToken;
 	} else {
+		if (!isProfileOAuth2Client(providerInstance)) {
+			throw new Error(
+				`Provider "${authProvider}" returned no identity and has no profile endpoint`
+			);
+		}
 		userIdentity = normalizeProviderIdentity({
 			identity: await providerInstance.fetchUserProfile(accessToken),
 			providerConfiguration: meta,
@@ -222,10 +255,21 @@ export const resolveOAuthAuthorization = async ({
 	}
 
 	const tokenType: unknown = Reflect.get(tokenResponse, 'token_type');
+	const oauthSubject = extractPropFromIdentity(
+		userIdentity,
+		meta.subject,
+		meta.subjectType
+	);
+	if (typeof oauthSubject !== 'string' && typeof oauthSubject !== 'number') {
+		throw new Error(
+			`Provider "${authProvider}" returned an invalid OAuth subject`
+		);
+	}
 
 	return {
 		accessToken,
 		expiresAt: resolveOAuthTokenExpiresAt(tokenResponse, now),
+		oauthSubject,
 		refreshToken,
 		tokenType: typeof tokenType === 'string' ? tokenType : undefined,
 		userIdentity

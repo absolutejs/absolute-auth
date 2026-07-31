@@ -31,6 +31,7 @@ const sessionSchema = Type.Object({
 	authenticatedAt: Type.Optional(Type.Number()),
 	expiresAt: Type.Number(),
 	impersonator: Type.Optional(impersonatorSchema),
+	oauthSubject: Type.Optional(Type.Union([Type.String(), Type.Number()])),
 	refreshToken: Type.Optional(Type.String()),
 	samlLogout: Type.Optional(
 		Type.Object({
@@ -44,6 +45,7 @@ const sessionSchema = Type.Object({
 const unregisteredSessionSchema = Type.Object({
 	accessToken: Type.Optional(Type.String()),
 	expiresAt: Type.Number(),
+	oauthSubject: Type.Optional(Type.Union([Type.String(), Type.Number()])),
 	refreshToken: Type.Optional(Type.String()),
 	sessionInformation: Type.Optional(
 		Type.Record(Type.String(), Type.Unknown())
