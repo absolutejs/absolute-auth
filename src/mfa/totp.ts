@@ -7,9 +7,11 @@ import { generateBackupCodes } from './backupCodes';
 import {
 	DEFAULT_BACKUP_CODE_COUNT,
 	DEFAULT_MFA_ISSUER,
+	DEFAULT_MFA_MANAGEMENT_AUTH_MAX_AGE_MS,
 	type MfaRouteProps
 } from './config';
 import { decryptTotpSecret, encryptTotpSecret } from './secret';
+import { hasRecentAuthentication } from './recentAuth';
 
 export const mfaTotpRoutes = <UserType>({
 	authSessionStore,
@@ -17,6 +19,7 @@ export const mfaTotpRoutes = <UserType>({
 	encryptionKey,
 	getUserId,
 	issuer = DEFAULT_MFA_ISSUER,
+	managementAuthMaxAgeMs = DEFAULT_MFA_MANAGEMENT_AUTH_MAX_AGE_MS,
 	mfaStore,
 	onMfaEnrolled,
 	totpSetupRoute = '/auth/mfa/totp/setup',
@@ -38,6 +41,17 @@ export const mfaTotpRoutes = <UserType>({
 				});
 				if (!userSession) {
 					return status('Unauthorized', 'Authentication required');
+				}
+				if (
+					!hasRecentAuthentication(
+						userSession,
+						managementAuthMaxAgeMs
+					)
+				) {
+					return status(
+						'Unauthorized',
+						'Recent authentication required'
+					);
 				}
 
 				const userId = getUserId(userSession.user);
@@ -87,6 +101,17 @@ export const mfaTotpRoutes = <UserType>({
 				});
 				if (!userSession) {
 					return status('Unauthorized', 'Authentication required');
+				}
+				if (
+					!hasRecentAuthentication(
+						userSession,
+						managementAuthMaxAgeMs
+					)
+				) {
+					return status(
+						'Unauthorized',
+						'Recent authentication required'
+					);
 				}
 
 				const userId = getUserId(userSession.user);

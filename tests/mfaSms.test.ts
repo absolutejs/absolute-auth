@@ -24,6 +24,7 @@ const createProvider = () => {
 	let status: VerificationCheckStatus = 'approved';
 	const provider: VerificationProvider = {
 		name: 'test-verify',
+		cancel: async () => undefined,
 		check: async (input) => {
 			checks.push(input);
 
@@ -50,6 +51,7 @@ const buildApp = async (overrides: Partial<MfaRouteProps<TestUser>> = {}) => {
 	const mfaStore = createInMemoryMfaStore();
 	const authSessionStore = createInMemoryAuthSessionStore<TestUser>();
 	await authSessionStore.setSession(TEST_SESSION_ID, {
+		authenticatedAt: Date.now(),
 		expiresAt: Date.now() + 60_000,
 		user: { email: 'sms@example.com', sub: USER_ID }
 	});
@@ -61,7 +63,7 @@ const buildApp = async (overrides: Partial<MfaRouteProps<TestUser>> = {}) => {
 	};
 	const app = new Elysia().use(mfaSmsRoutes({ ...baseConfig, ...overrides }));
 
-	return { app, mfaStore };
+	return { app, authSessionStore, mfaStore };
 };
 
 const post = (
@@ -136,6 +138,50 @@ describe('SMS MFA enrollment', () => {
 			(await post(app, '/auth/mfa/sms/setup', { phone: PHONE })).status
 		).toBe(429);
 		expect(mock.starts).toHaveLength(1);
+	});
+
+	test('atomically admits only one concurrent provider delivery', async () => {
+		const mock = createProvider();
+		const { app } = await buildApp({ verificationProvider: mock.provider });
+		const responses = await Promise.all([
+			post(app, '/auth/mfa/sms/setup', { phone: PHONE }),
+			post(app, '/auth/mfa/sms/setup', { phone: PHONE })
+		]);
+		expect(responses.map(({ status }) => status).sort()).toEqual([
+			200, 429
+		]);
+		expect(mock.starts).toHaveLength(1);
+	});
+
+	test('atomically consumes a provider challenge once', async () => {
+		const mock = createProvider();
+		const { app } = await buildApp({ verificationProvider: mock.provider });
+		await post(app, '/auth/mfa/sms/setup', { phone: PHONE });
+		const responses = await Promise.all([
+			post(app, '/auth/mfa/sms/verify', { code: '123456' }),
+			post(app, '/auth/mfa/sms/verify', { code: '123456' })
+		]);
+		expect(responses.map(({ status }) => status).sort()).toEqual([
+			200, 400
+		]);
+	});
+
+	test('requires recent authentication before changing the SMS factor', async () => {
+		const { app, authSessionStore } = await buildApp({
+			onSendSmsCode: () => undefined
+		});
+		await authSessionStore.setSession(TEST_SESSION_ID, {
+			authenticatedAt: Date.now() - 600_000,
+			expiresAt: Date.now() + 60_000,
+			user: { email: 'sms@example.com', sub: USER_ID }
+		});
+		const response = await post(app, '/auth/mfa/sms/setup', {
+			phone: PHONE
+		});
+		expect(response.status).toBe(401);
+		expect(await response.text()).toContain(
+			'Recent authentication required'
+		);
 	});
 
 	test('maps normalized provider failures to a safe route response', async () => {

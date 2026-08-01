@@ -19,6 +19,7 @@ const buildTotpApp = async () => {
 	const mfaStore = createInMemoryMfaStore();
 	const authSessionStore = createInMemoryAuthSessionStore<TestUser>();
 	await authSessionStore.setSession(TEST_SESSION_ID, {
+		authenticatedAt: Date.now(),
 		expiresAt: Date.now() + SESSION_TTL_MS,
 		user: { email: 'mfa@example.com', sub: 'user-mfa' }
 	});

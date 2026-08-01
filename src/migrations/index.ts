@@ -130,6 +130,11 @@ const mfaSmsDeliveryPolicyMigration: Migration = {
 	].join('\n')
 };
 
+const mfaSmsAtomicChallengeMigration: Migration = {
+	id: '0005_sms_atomic_challenge',
+	sql: 'ALTER TABLE "auth_mfa_enrollments" ADD COLUMN IF NOT EXISTS "sms_challenge_id" text;'
+};
+
 const oidcResourceAudienceMigration: Migration = {
 	id: '0002_resource_audience',
 	sql: [
@@ -185,7 +190,8 @@ export const blockMigrations: Record<BlockName, BlockMigrations> = {
 			...initMigration('mfa', [mfaEnrollmentsTable]).migrations,
 			mfaSmsColumnsMigration,
 			mfaTotpLockoutMigration,
-			mfaSmsDeliveryPolicyMigration
+			mfaSmsDeliveryPolicyMigration,
+			mfaSmsAtomicChallengeMigration
 		]
 	},
 	oidc: {

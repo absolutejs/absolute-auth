@@ -9,6 +9,8 @@ import type { MFAStore } from './types';
 
 export const DEFAULT_BACKUP_CODE_COUNT = 10;
 export const DEFAULT_MFA_ISSUER = 'AbsoluteAuth';
+export const DEFAULT_MFA_MANAGEMENT_AUTH_MAX_AGE_MS =
+	5 * SECONDS_IN_A_MINUTE * MILLISECONDS_IN_A_SECOND;
 export const DEFAULT_MFA_SESSION_TTL_MS = MILLISECONDS_IN_A_DAY;
 export const DEFAULT_SMS_CODE_LENGTH = 6;
 const SMS_CODE_TTL_MINUTES = 5;
@@ -44,6 +46,8 @@ export type MfaConfig<UserType> = {
 	encryptionKey?: string;
 	issuer?: string;
 	managementRoute?: RouteString;
+	/** Maximum age of the authentication ceremony used to enroll, replace, or remove MFA. */
+	managementAuthMaxAgeMs?: number;
 	onMfaChallengeError?: (context: {
 		error: unknown;
 		userId?: string;

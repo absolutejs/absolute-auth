@@ -19,6 +19,8 @@ export type MfaEnrollment = {
 	smsProviderReference?: string;
 	// Last successful provider/local delivery request. Enforces resend cooldowns.
 	smsCodeSentAt?: number;
+	/** Opaque generation binding every update to the currently active challenge. */
+	smsChallengeId?: string;
 	// E.164 phone number the SMS code is delivered to.
 	smsPhone?: string;
 	smsVerified: boolean;
@@ -35,11 +37,40 @@ export type MfaEnrollment = {
 };
 
 export type MFAStore = {
+	/** Atomically reserves the SMS slot only when the resend cooldown has elapsed. */
+	claimSmsChallenge: (input: {
+		challengeId: string;
+		cooldownCutoff: number;
+		enrollment: MfaEnrollment;
+	}) => Promise<boolean>;
+	completeSmsChallenge: (input: {
+		challengeId: string;
+		lastUsedAt?: number;
+		smsVerified: boolean;
+		userId: string;
+	}) => Promise<boolean>;
+	finalizeSmsChallenge: (input: {
+		challengeId: string;
+		expiresAt: number;
+		hash?: string;
+		providerReference?: string;
+		userId: string;
+	}) => Promise<boolean>;
 	getEnrollment: (userId: string) => Promise<MfaEnrollment | undefined>;
 	// Enumerate every enrollment — used by key rotation (`rotateMfaEncryptionKey`)
 	// to sweep all stored TOTP secrets.
 	listEnrollments: () => Promise<MfaEnrollment[]>;
 	removeEnrollment: (userId: string) => Promise<void>;
+	recordSmsFailure: (input: {
+		challengeId: string;
+		maxAttempts: number;
+		userId: string;
+	}) => Promise<number | undefined>;
+	rollbackSmsChallenge: (input: {
+		challengeId: string;
+		previous?: MfaEnrollment;
+		userId: string;
+	}) => Promise<void>;
 	saveEnrollment: (enrollment: MfaEnrollment) => Promise<void>;
 };
 

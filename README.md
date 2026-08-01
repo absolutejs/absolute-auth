@@ -91,9 +91,12 @@ import { createSimpleWebAuthnAdapter } from '@absolutejs/auth/webauthn';
 
 ### Provider-managed phone verification
 
-`verificationProvider` is the vendor-neutral challenge lifecycle used by SMS
-MFA. Auth owns enrollment, resend cooldowns, failed-attempt policy, audit, and
-session promotion; the provider generates, delivers, and checks the code.
+`verificationProvider` is the vendor-neutral phone-verification lifecycle.
+The contract supports SMS, WhatsApp, and voice-call OTP; MFA currently selects
+SMS while signup, recovery, phone change, and step-up flows can use the same
+provider contract. Auth owns enrollment, atomic resend/code-consumption policy,
+audit, and session promotion; the provider generates, delivers, checks, and
+cancels the code.
 
 ```ts
 import { auth } from '@absolutejs/auth/server';
@@ -118,9 +121,11 @@ application-owned delivery system such as `@absolutejs/dispatch`. Its payload
 includes `purpose` and `userId` for safe templates, audit correlation, and
 tenant routing. Provider and local-code sends share the default 30-second
 per-enrollment resend cooldown; configure `mfa.smsResendCooldownMs` when needed.
+MFA enrollment, replacement, and removal require a fresh authentication by
+default (five minutes); configure `mfa.managementAuthMaxAgeMs` deliberately.
 
 Production databases must run the `mfa` migration block after upgrading to add
-the durable cooldown timestamp.
+the atomic SMS challenge identifier.
 
 ### Delegated AI agents
 

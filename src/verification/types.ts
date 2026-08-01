@@ -1,13 +1,27 @@
 /** Stable purposes let providers apply separate templates, limits, and audit policy. */
-export type VerificationPurpose = 'mfa_challenge' | 'mfa_enrollment';
+export type VerificationPurpose =
+	| 'account_recovery'
+	| 'mfa_challenge'
+	| 'mfa_enrollment'
+	| 'phone_change'
+	| 'phone_signup'
+	| 'step_up';
+
+export type VerificationChannel = 'call' | 'sms' | 'whatsapp';
 
 export type VerificationStartInput = {
-	channel: 'sms';
+	channel: VerificationChannel;
+	/** Optional BCP-47 locale used for provider-managed message copy. */
+	locale?: string;
 	purpose: VerificationPurpose;
+	/** Provider-specific, non-secret rate-limit buckets (for example an IP hash). */
+	rateLimits?: Readonly<Record<string, string>>;
 	/** Stable application subject. Providers must not include it in message text. */
 	subject: string;
 	/** E.164 destination. */
 	to: string;
+	/** Stable tenant key used only for provider/service routing. */
+	tenant?: string;
 };
 
 export type VerificationStartResult = {
@@ -28,6 +42,10 @@ export type VerificationCheckStatus =
 export type VerificationCheckInput = VerificationStartInput & {
 	code: string;
 	/** Exact challenge reference returned by start(). */
+	reference: string;
+};
+
+export type VerificationCancelInput = VerificationStartInput & {
 	reference: string;
 };
 
@@ -65,6 +83,7 @@ export class VerificationProviderError extends Error {
  */
 export type VerificationProvider = {
 	readonly name: string;
+	cancel: (input: VerificationCancelInput) => Promise<void>;
 	check: (input: VerificationCheckInput) => Promise<VerificationCheckResult>;
 	start: (input: VerificationStartInput) => Promise<VerificationStartResult>;
 };

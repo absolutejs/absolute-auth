@@ -127,7 +127,9 @@ export const mfaChallenge = <UserType>({
 							enrollment,
 							mfaStore,
 							onSendSmsCode,
+							previousEnrollment: enrollment,
 							purpose: 'mfa_challenge',
+							resendCooldownMs: smsResendCooldownMs,
 							ttlMs: smsCodeTtlMs,
 							userId: getUserId(user),
 							verificationProvider
@@ -156,12 +158,14 @@ export const mfaChallenge = <UserType>({
 						return status('Bad Request', 'SMS code required');
 					}
 					const localCodeHash = enrollment.smsPendingCodeHash;
+					const challengeId = enrollment.smsChallengeId;
 					const localCodeExpiresAt =
 						enrollment.smsPendingCodeExpiresAt;
 					const providerReference = enrollment.smsProviderReference;
 					if (
 						enrollment.smsPendingPurpose !== 'mfa_challenge' ||
-						localCodeExpiresAt === undefined
+						localCodeExpiresAt === undefined ||
+						challengeId === undefined
 					) {
 						return status('Bad Request', 'No SMS code in progress');
 					}
@@ -218,11 +222,10 @@ export const mfaChallenge = <UserType>({
 								localCodeHash
 							));
 					if (!smsValid) {
-						await mfaStore.saveEnrollment({
-							...enrollment,
-							smsFailedAttempts:
-								(enrollment.smsFailedAttempts ?? 0) + 1,
-							updatedAt: Date.now()
+						const attempts = await mfaStore.recordSmsFailure({
+							challengeId,
+							maxAttempts: smsMaxAttempts,
+							userId: getUserId(user)
 						});
 						await onMfaChallengeError?.({
 							error: new Error('invalid_mfa_code'),
@@ -230,7 +233,8 @@ export const mfaChallenge = <UserType>({
 						});
 
 						return status(
-							providerResult?.status === 'max_attempts_reached'
+							providerResult?.status === 'max_attempts_reached' ||
+								attempts === undefined
 								? 'Too Many Requests'
 								: 'Unauthorized',
 							providerResult?.status === 'expired'
@@ -239,16 +243,18 @@ export const mfaChallenge = <UserType>({
 						);
 					}
 
-					await mfaStore.saveEnrollment({
-						...enrollment,
+					const completed = await mfaStore.completeSmsChallenge({
+						challengeId,
 						lastUsedAt: Date.now(),
-						smsFailedAttempts: 0,
-						smsPendingCodeExpiresAt: undefined,
-						smsPendingCodeHash: undefined,
-						smsPendingPurpose: undefined,
-						smsProviderReference: undefined,
-						updatedAt: Date.now()
+						smsVerified: true,
+						userId: getUserId(user)
 					});
+					if (!completed) {
+						return status(
+							'Unauthorized',
+							'SMS challenge is no longer active'
+						);
+					}
 
 					return promote();
 				};

@@ -13,6 +13,7 @@ const buildApp = async () => {
 	const mfaStore = createInMemoryMfaStore();
 	const authSessionStore = createInMemoryAuthSessionStore<TestUser>();
 	await authSessionStore.setSession(TEST_SESSION_ID, {
+		authenticatedAt: Date.now(),
 		expiresAt: Date.now() + 60_000,
 		user: { sub: USER_ID }
 	});

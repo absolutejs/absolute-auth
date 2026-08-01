@@ -121,6 +121,7 @@ describe('MFA challenge integration', () => {
 		const starts: VerificationStartInput[] = [];
 		const verificationProvider: VerificationProvider = {
 			name: 'test-verify',
+			cancel: async () => undefined,
 			check: async () => ({ status: 'approved' }),
 			start: async (input) => {
 				starts.push(input);

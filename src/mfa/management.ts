@@ -2,7 +2,11 @@ import { Elysia, t } from 'elysia';
 import { loadSessionFromSource } from '../session/access';
 import { sessionStore } from '../session/state';
 import { userSessionIdTypebox } from '../typebox';
-import type { MfaRouteProps } from './config';
+import {
+	DEFAULT_MFA_MANAGEMENT_AUTH_MAX_AGE_MS,
+	type MfaRouteProps
+} from './config';
+import { hasRecentAuthentication } from './recentAuth';
 import { isMfaEnrolled } from './types';
 
 export type MfaStatus = {
@@ -27,6 +31,7 @@ export const mfaManagementRoutes = <UserType>({
 	authSessionStore,
 	getUserId,
 	managementRoute = '/auth/mfa',
+	managementAuthMaxAgeMs = DEFAULT_MFA_MANAGEMENT_AUTH_MAX_AGE_MS,
 	mfaStore
 }: MfaRouteProps<UserType>) =>
 	new Elysia()
@@ -79,6 +84,17 @@ export const mfaManagementRoutes = <UserType>({
 				});
 				if (!userSession) {
 					return status('Unauthorized', 'Authentication required');
+				}
+				if (
+					!hasRecentAuthentication(
+						userSession,
+						managementAuthMaxAgeMs
+					)
+				) {
+					return status(
+						'Unauthorized',
+						'Recent authentication required'
+					);
 				}
 
 				await mfaStore.removeEnrollment(getUserId(userSession.user));

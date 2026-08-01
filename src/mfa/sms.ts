@@ -13,10 +13,12 @@ import {
 	DEFAULT_SMS_CODE_TTL_MS,
 	DEFAULT_SMS_MAX_ATTEMPTS,
 	DEFAULT_SMS_RESEND_COOLDOWN_MS,
+	DEFAULT_MFA_MANAGEMENT_AUTH_MAX_AGE_MS,
 	type MfaRouteProps,
 	type SmsCodeMessage
 } from './config';
 import type { MfaEnrollment, MFAStore } from './types';
+import { hasRecentAuthentication } from './recentAuth';
 
 const DECIMAL_RADIX = 10;
 const MASK_VISIBLE_DIGITS = 4;
@@ -45,6 +47,54 @@ const issueSmsCode = async (codeLength: number, ttlMs: number) => {
 	return { code, expiresAt, hash };
 };
 
+const startProviderSmsChallenge = async (input: {
+	challengeId: string;
+	mfaStore: MFAStore;
+	phone: string;
+	previousEnrollment?: MfaEnrollment;
+	purpose: 'mfa_challenge' | 'mfa_enrollment';
+	userId: string;
+	verificationProvider: VerificationProvider;
+}) => {
+	let started;
+	try {
+		started = await input.verificationProvider.start({
+			channel: 'sms',
+			purpose: input.purpose,
+			subject: input.userId,
+			to: input.phone
+		});
+	} catch (error) {
+		await input.mfaStore.rollbackSmsChallenge({
+			challengeId: input.challengeId,
+			previous: input.previousEnrollment,
+			userId: input.userId
+		});
+		throw error;
+	}
+	const finalized = await input.mfaStore.finalizeSmsChallenge({
+		challengeId: input.challengeId,
+		expiresAt: started.expiresAt,
+		providerReference: started.reference,
+		userId: input.userId
+	});
+	if (finalized) return started;
+
+	await input.verificationProvider
+		.cancel({
+			channel: 'sms',
+			purpose: input.purpose,
+			reference: started.reference,
+			subject: input.userId,
+			to: input.phone
+		})
+		.catch(() => undefined);
+	throw new SmsChallengeConflictError('SMS challenge claim was lost');
+};
+
+export class SmsChallengeConflictError extends Error {
+	override name = 'SmsChallengeConflictError';
+}
 export const checkWithVerificationProvider = async (
 	provider: VerificationProvider,
 	input: VerificationCheckInput
@@ -64,7 +114,9 @@ export const issueAndStoreSmsCode = async ({
 	enrollment,
 	mfaStore,
 	onSendSmsCode,
+	previousEnrollment,
 	purpose,
+	resendCooldownMs,
 	verificationProvider,
 	ttlMs,
 	userId
@@ -73,51 +125,75 @@ export const issueAndStoreSmsCode = async ({
 	enrollment: MfaEnrollment;
 	mfaStore: MFAStore;
 	onSendSmsCode?: (message: SmsCodeMessage) => void | Promise<void>;
+	previousEnrollment?: MfaEnrollment;
 	verificationProvider?: MfaRouteProps<unknown>['verificationProvider'];
 	userId: string;
 	purpose: 'mfa_challenge' | 'mfa_enrollment';
+	resendCooldownMs: number;
 	ttlMs: number;
 }) => {
 	const phone = enrollment.smsPhone;
 	if (phone === undefined) return undefined;
-
-	if (verificationProvider !== undefined) {
-		const started = await verificationProvider.start({
-			channel: 'sms',
-			purpose,
-			subject: userId,
-			to: phone
-		});
-		await mfaStore.saveEnrollment({
+	const challengeId = crypto.randomUUID();
+	const now = Date.now();
+	const claimed = await mfaStore.claimSmsChallenge({
+		challengeId,
+		cooldownCutoff: now - resendCooldownMs,
+		enrollment: {
 			...enrollment,
-			smsCodeSentAt: Date.now(),
+			smsChallengeId: challengeId,
+			smsCodeSentAt: now,
 			smsFailedAttempts: 0,
-			smsPendingCodeExpiresAt: started.expiresAt,
+			smsPendingCodeExpiresAt: now + ttlMs,
 			smsPendingCodeHash: undefined,
 			smsPendingPurpose: purpose,
-			smsProviderReference: started.reference,
-			updatedAt: Date.now()
+			smsProviderReference: undefined,
+			updatedAt: now
+		}
+	});
+	if (!claimed)
+		throw new SmsChallengeConflictError('SMS resend cooldown active');
+
+	if (verificationProvider !== undefined) {
+		const started = await startProviderSmsChallenge({
+			challengeId,
+			mfaStore,
+			phone,
+			previousEnrollment,
+			purpose,
+			userId,
+			verificationProvider
 		});
 
 		return started.expiresAt;
 	}
 
 	const { code, expiresAt, hash } = await issueSmsCode(codeLength, ttlMs);
-	await mfaStore.saveEnrollment({
-		...enrollment,
-		smsCodeSentAt: Date.now(),
-		smsFailedAttempts: 0,
-		smsPendingCodeExpiresAt: expiresAt,
-		smsPendingCodeHash: hash,
-		smsPendingPurpose: purpose,
-		smsProviderReference: undefined,
-		updatedAt: Date.now()
+	const finalized = await mfaStore.finalizeSmsChallenge({
+		challengeId,
+		expiresAt,
+		hash,
+		userId
 	});
-	await onSendSmsCode?.({ code, expiresAt, phone, purpose, userId });
+	if (!finalized)
+		throw new SmsChallengeConflictError('SMS challenge claim was lost');
+	try {
+		await onSendSmsCode?.({ code, expiresAt, phone, purpose, userId });
+	} catch (error) {
+		await mfaStore.rollbackSmsChallenge({
+			challengeId,
+			previous: previousEnrollment,
+			userId
+		});
+		throw error;
+	}
 
 	return expiresAt;
 };
 export const mapVerificationProviderError = (error: unknown) => {
+	if (error instanceof SmsChallengeConflictError) {
+		return { message: error.message, status: 'Too Many Requests' as const };
+	}
 	if (!(error instanceof VerificationProviderError)) return undefined;
 	if (error.kind === 'rate_limited') {
 		return {
@@ -147,6 +223,7 @@ export const mfaSmsRoutes = <UserType>({
 	authSessionStore,
 	getUserId,
 	mfaStore,
+	managementAuthMaxAgeMs = DEFAULT_MFA_MANAGEMENT_AUTH_MAX_AGE_MS,
 	onMfaEnrolled,
 	onSendSmsCode,
 	verificationProvider,
@@ -185,6 +262,17 @@ export const mfaSmsRoutes = <UserType>({
 				if (!userSession) {
 					return status('Unauthorized', 'Authentication required');
 				}
+				if (
+					!hasRecentAuthentication(
+						userSession,
+						managementAuthMaxAgeMs
+					)
+				) {
+					return status(
+						'Unauthorized',
+						'Recent authentication required'
+					);
+				}
 
 				if (!isE164Phone(phone)) {
 					return status(
@@ -205,52 +293,38 @@ export const mfaSmsRoutes = <UserType>({
 						'SMS resend cooldown active'
 					);
 				}
-				let started;
 				try {
-					started = verificationProvider
-						? await verificationProvider.start({
-								channel: 'sms',
-								purpose: 'mfa_enrollment',
-								subject: userId,
-								to: phone
-							})
-						: undefined;
+					await issueAndStoreSmsCode({
+						codeLength: smsCodeLength,
+						enrollment: {
+							backupCodeHashes: existing?.backupCodeHashes ?? [],
+							createdAt: existing?.createdAt ?? now,
+							lastUsedAt: existing?.lastUsedAt,
+							smsFailedAttempts: 0,
+							smsPhone: phone,
+							smsVerified: false,
+							totpFailedAttempts:
+								existing?.totpFailedAttempts ?? 0,
+							totpSecretCiphertext:
+								existing?.totpSecretCiphertext,
+							totpVerified: existing?.totpVerified ?? false,
+							updatedAt: now,
+							userId
+						},
+						mfaStore,
+						onSendSmsCode,
+						previousEnrollment: existing,
+						purpose: 'mfa_enrollment',
+						resendCooldownMs: smsResendCooldownMs,
+						ttlMs: smsCodeTtlMs,
+						userId,
+						verificationProvider
+					});
 				} catch (error) {
 					const mapped = mapVerificationProviderError(error);
 					if (mapped === undefined) throw error;
 
 					return status(mapped.status, mapped.message);
-				}
-				const local = started
-					? undefined
-					: await issueSmsCode(smsCodeLength, smsCodeTtlMs);
-				await mfaStore.saveEnrollment({
-					backupCodeHashes: existing?.backupCodeHashes ?? [],
-					createdAt: existing?.createdAt ?? now,
-					lastUsedAt: existing?.lastUsedAt,
-					smsCodeSentAt: now,
-					smsFailedAttempts: 0,
-					smsPendingCodeExpiresAt:
-						started?.expiresAt ?? local?.expiresAt,
-					smsPendingCodeHash: local?.hash,
-					smsPendingPurpose: 'mfa_enrollment',
-					smsPhone: phone,
-					smsProviderReference: started?.reference,
-					smsVerified: false,
-					totpFailedAttempts: existing?.totpFailedAttempts ?? 0,
-					totpSecretCiphertext: existing?.totpSecretCiphertext,
-					totpVerified: existing?.totpVerified ?? false,
-					updatedAt: now,
-					userId
-				});
-				if (local !== undefined && onSendSmsCode !== undefined) {
-					await onSendSmsCode({
-						code: local.code,
-						expiresAt: local.expiresAt,
-						phone,
-						purpose: 'mfa_enrollment',
-						userId
-					});
 				}
 
 				return status('OK', { phone: maskPhone(phone) });
@@ -276,6 +350,17 @@ export const mfaSmsRoutes = <UserType>({
 				if (!userSession) {
 					return status('Unauthorized', 'Authentication required');
 				}
+				if (
+					!hasRecentAuthentication(
+						userSession,
+						managementAuthMaxAgeMs
+					)
+				) {
+					return status(
+						'Unauthorized',
+						'Recent authentication required'
+					);
+				}
 
 				const userId = getUserId(userSession.user);
 				const enrollment = await mfaStore.getEnrollment(userId);
@@ -287,11 +372,13 @@ export const mfaSmsRoutes = <UserType>({
 				}
 
 				const localCodeHash = enrollment.smsPendingCodeHash;
+				const challengeId = enrollment.smsChallengeId;
 				const localCodeExpiresAt = enrollment.smsPendingCodeExpiresAt;
 				const providerReference = enrollment.smsProviderReference;
 				if (
 					enrollment.smsPendingPurpose !== 'mfa_enrollment' ||
-					localCodeExpiresAt === undefined
+					localCodeExpiresAt === undefined ||
+					challengeId === undefined
 				) {
 					return status(
 						'Bad Request',
@@ -351,15 +438,15 @@ export const mfaSmsRoutes = <UserType>({
 							localCodeHash
 						));
 				if (!codeValid) {
-					await mfaStore.saveEnrollment({
-						...enrollment,
-						smsFailedAttempts:
-							(enrollment.smsFailedAttempts ?? 0) + 1,
-						updatedAt: Date.now()
+					const attempts = await mfaStore.recordSmsFailure({
+						challengeId,
+						maxAttempts: smsMaxAttempts,
+						userId
 					});
 
 					return status(
-						providerResult?.status === 'max_attempts_reached'
+						providerResult?.status === 'max_attempts_reached' ||
+							attempts === undefined
 							? 'Too Many Requests'
 							: 'Bad Request',
 						providerResult?.status === 'expired'
@@ -368,16 +455,17 @@ export const mfaSmsRoutes = <UserType>({
 					);
 				}
 
-				await mfaStore.saveEnrollment({
-					...enrollment,
-					smsFailedAttempts: 0,
-					smsPendingCodeExpiresAt: undefined,
-					smsPendingCodeHash: undefined,
-					smsPendingPurpose: undefined,
-					smsProviderReference: undefined,
+				const completed = await mfaStore.completeSmsChallenge({
+					challengeId,
 					smsVerified: true,
-					updatedAt: Date.now()
+					userId
 				});
+				if (!completed) {
+					return status(
+						'Bad Request',
+						'SMS challenge is no longer active'
+					);
+				}
 				await onMfaEnrolled?.({ userId });
 
 				return status('OK', { status: 'enrolled' });
