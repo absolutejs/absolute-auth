@@ -440,8 +440,9 @@ voice work; A is also the highest-leverage piece for the dealroom auth migration
   impl that accepts an `AnyPgDatabase` (`PgDatabase<PgQueryResultHKT>`) — runs on Neon AND
   node-postgres, no second driver bundled. `createNeon<X>Store(url)` is a convenience
   wrapper. SQLite deferred unless a consumer needs it.
-- **First-party email/SMS transport:** ✅ hook-only (`onSendEmail` / `onSendOtp`). The
-  package bundles no transport and stays agnostic; consumer brings Resend/SES/Twilio.
+- **First-party email/SMS transport:** ✅ provider/hook boundary. Email remains hook-owned;
+  SMS MFA accepts `auth/verification-provider` implementations such as Twilio Verify or the
+  built-in local-code flow through `onSendSmsCode`. Auth bundles no vendor transport.
 - **JWKS verify:** ✅ in-house via WebCrypto (`crypto.subtle` RS256/ES256). No `jose`.
 - **OIDC enterprise:** ✅ extend `citra` with a runtime/discovery-configured provider so
   all OAuth/OIDC lives there (Workstream C).

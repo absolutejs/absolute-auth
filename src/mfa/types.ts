@@ -1,3 +1,5 @@
+import type { VerificationPurpose } from '../verification/types';
+
 export type MfaFactorType = 'backup_codes' | 'sms' | 'totp';
 
 export type MfaEnrollment = {
@@ -12,6 +14,11 @@ export type MfaEnrollment = {
 	smsPendingCodeHash?: string;
 	// Epoch-ms expiry of the pending SMS code.
 	smsPendingCodeExpiresAt?: number;
+	// Purpose and provider reference bind a code to the exact auth operation that issued it.
+	smsPendingPurpose?: VerificationPurpose;
+	smsProviderReference?: string;
+	// Last successful provider/local delivery request. Enforces resend cooldowns.
+	smsCodeSentAt?: number;
 	// E.164 phone number the SMS code is delivered to.
 	smsPhone?: string;
 	smsVerified: boolean;

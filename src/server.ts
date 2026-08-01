@@ -34,6 +34,17 @@ export type {
 } from './scim/types';
 export { createPostgresScimTokenStore } from './scim/postgresScimTokenStore';
 export type { AuthSessionStore } from './session/types';
+export {
+	VerificationProviderError,
+	type VerificationCheckInput,
+	type VerificationCheckResult,
+	type VerificationCheckStatus,
+	type VerificationProvider,
+	type VerificationProviderErrorKind,
+	type VerificationPurpose,
+	type VerificationStartInput,
+	type VerificationStartResult
+} from './verification/types';
 export type { NodeSamlAdapterOptions } from './sso/nodeSamlAdapter';
 export { createNodeSamlAdapter } from './sso/nodeSamlAdapter';
 export type { SsoIdentity, SSOConfig } from './sso/config';

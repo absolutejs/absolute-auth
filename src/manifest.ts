@@ -251,6 +251,14 @@ export const manifest = defineManifest<AuthConfig<unknown>, never>()({
 			description: 'Where live sign-in sessions are kept',
 			known: ['@absolutejs/auth#postgres', '@absolutejs/auth#memory'],
 			required: true
+		},
+		verificationProvider: {
+			configPath: 'verificationProvider',
+			contract: 'auth/verification-provider',
+			description:
+				'Provider-managed phone verification for MFA and future passwordless flows',
+			known: ['@absolutejs/auth-twilio'],
+			required: false
 		}
 	},
 	tools: {

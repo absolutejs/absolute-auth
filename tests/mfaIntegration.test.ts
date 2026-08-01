@@ -6,6 +6,10 @@ import { createInMemoryCredentialStore } from '../src/credentials/inMemoryCreden
 import { auth } from '../src/index';
 import { createInMemoryMfaStore } from '../src/mfa/inMemoryMfaStore';
 import { createInMemoryAuthSessionStore } from '../src/session/inMemoryStore';
+import type {
+	VerificationProvider,
+	VerificationStartInput
+} from '../src/verification/types';
 
 type TestUser = {
 	email: string;
@@ -13,8 +17,14 @@ type TestUser = {
 };
 
 const buildMfaApp = async ({
-	totpMaxAttempts
-}: { totpMaxAttempts?: number } = {}) => {
+	totpMaxAttempts,
+	smsResendCooldownMs,
+	verificationProvider
+}: {
+	smsResendCooldownMs?: number;
+	totpMaxAttempts?: number;
+	verificationProvider?: VerificationProvider;
+} = {}) => {
 	const authSessionStore = createInMemoryAuthSessionStore<TestUser>();
 	const credentialStore = createInMemoryCredentialStore();
 	const mfaStore = createInMemoryMfaStore();
@@ -40,6 +50,7 @@ const buildMfaApp = async ({
 		},
 		mfa: {
 			mfaStore,
+			smsResendCooldownMs,
 			totpMaxAttempts,
 			getChallengeUser: (identity) =>
 				getUserByEmail(
@@ -47,7 +58,8 @@ const buildMfaApp = async ({
 				),
 			getUserId: (user) => user.sub
 		},
-		providersConfiguration: {}
+		providersConfiguration: {},
+		verificationProvider
 	});
 
 	const app = new Elysia()
@@ -105,6 +117,91 @@ const enroll = async (app: {
 };
 
 describe('MFA challenge integration', () => {
+	test('uses the top-level verification provider for SMS enrollment and login', async () => {
+		const starts: VerificationStartInput[] = [];
+		const verificationProvider: VerificationProvider = {
+			name: 'test-verify',
+			check: async () => ({ status: 'approved' }),
+			start: async (input) => {
+				starts.push(input);
+
+				return {
+					expiresAt: Date.now() + 300_000,
+					reference: `verify-${starts.length}`
+				};
+			}
+		};
+		const { app } = await buildMfaApp({
+			smsResendCooldownMs: 0,
+			verificationProvider
+		});
+		const registered = await post(app, '/auth/register', {
+			email: 'sms-flow@example.com',
+			password: 'supersecret'
+		});
+		const registeredCookie = cookieFrom(registered);
+		expect(
+			(
+				await post(
+					app,
+					'/auth/mfa/sms/setup',
+					{ phone: '+12025550100' },
+					registeredCookie
+				)
+			).status
+		).toBe(200);
+		expect(
+			(
+				await post(
+					app,
+					'/auth/mfa/sms/verify',
+					{ code: '123456' },
+					registeredCookie
+				)
+			).status
+		).toBe(200);
+
+		const login = await post(app, '/auth/login', {
+			email: 'sms-flow@example.com',
+			password: 'supersecret'
+		});
+		expect(await login.clone().json()).toMatchObject({
+			status: 'mfa_required'
+		});
+		const pending = cookieFrom(login);
+		expect(
+			(
+				await post(
+					app,
+					'/auth/mfa/challenge',
+					{ code: '123456', factor: 'sms' },
+					pending
+				)
+			).status
+		).toBe(400);
+		expect(
+			(
+				await post(
+					app,
+					'/auth/mfa/challenge',
+					{ action: 'send', factor: 'sms' },
+					pending
+				)
+			).status
+		).toBe(200);
+		const challenged = await post(
+			app,
+			'/auth/mfa/challenge',
+			{ code: '123456', factor: 'sms' },
+			pending
+		);
+		expect(challenged.status).toBe(200);
+		expect(starts.map(({ purpose }) => purpose)).toEqual([
+			'mfa_enrollment',
+			'mfa_challenge'
+		]);
+	});
+
 	test('an enrolled user must pass a TOTP challenge to get a session', async () => {
 		const { app } = await buildMfaApp();
 		const { secret } = await enroll(app);

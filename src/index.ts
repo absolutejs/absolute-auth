@@ -124,6 +124,7 @@ const buildAuthApplications = async <UserType>(
 		credentials,
 		customProviders,
 		mfa,
+		verificationProvider,
 		passwordless,
 		lockout,
 		sessions,
@@ -465,7 +466,8 @@ const buildAuthApplications = async <UserType>(
 			? mfaRoutes<UserType>({
 					...auditedMfa,
 					authSessionStore,
-					cookieSecure: resolvedCookieSecure
+					cookieSecure: resolvedCookieSecure,
+					verificationProvider
 				})
 			: new Elysia(),
 		passwordless
@@ -749,6 +751,7 @@ export type { AnyPgDatabase } from './stores/postgres';
 
 export * from './mfa/config';
 export * from './mfa/types';
+export * from './verification/types';
 export { consumeBackupCode, generateBackupCodes } from './mfa/backupCodes';
 export { createMfaGate } from './mfa/gate';
 export { mfaChallenge } from './mfa/challenge';

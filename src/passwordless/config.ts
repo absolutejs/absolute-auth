@@ -29,7 +29,7 @@ export type PasswordlessOtpMessage = {
 	expiresAt: number;
 };
 
-// Passwordless login (magic links + email/SMS OTP). Additive and optional. The magic-link flow
+// Passwordless login (magic links + email OTP). Additive and optional. The magic-link flow
 // mounts only when `onSendMagicLink` is set; the OTP flow only when `onSendOtp` is set (the token
 // is delivered out-of-band — never returned from the request route, since it is unauthenticated).
 // Both verify routes mint the same `SessionData<UserType>` as every other flow.

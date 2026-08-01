@@ -15,6 +15,7 @@ const SMS_CODE_TTL_MINUTES = 5;
 export const DEFAULT_SMS_CODE_TTL_MS =
 	SMS_CODE_TTL_MINUTES * SECONDS_IN_A_MINUTE * MILLISECONDS_IN_A_SECOND;
 export const DEFAULT_SMS_MAX_ATTEMPTS = 3;
+export const DEFAULT_SMS_RESEND_COOLDOWN_MS = 30 * MILLISECONDS_IN_A_SECOND;
 export const DEFAULT_TOTP_MAX_ATTEMPTS = 5;
 
 // Out-of-band SMS delivery payload. The plaintext `code` is handed to the consumer's sender
@@ -23,6 +24,8 @@ export type SmsCodeMessage = {
 	code: string;
 	expiresAt: number;
 	phone: string;
+	purpose: 'mfa_challenge' | 'mfa_enrollment';
+	userId: string;
 };
 
 export type MfaConfig<UserType> = {
@@ -58,6 +61,8 @@ export type MfaConfig<UserType> = {
 	smsCodeLength?: number;
 	smsCodeTtlMs?: number;
 	smsMaxAttempts?: number;
+	/** Minimum delay between code sends for the same enrollment. */
+	smsResendCooldownMs?: number;
 	smsSetupRoute?: RouteString;
 	smsVerifyRoute?: RouteString;
 	// Max consecutive failed TOTP/backup-code verifications at the login challenge before
@@ -70,4 +75,5 @@ export type MfaConfig<UserType> = {
 export type MfaRouteProps<UserType> = MfaConfig<UserType> & {
 	authSessionStore?: AuthSessionStore<UserType>;
 	cookieSecure?: boolean;
+	verificationProvider?: import('../verification/types').VerificationProvider;
 };

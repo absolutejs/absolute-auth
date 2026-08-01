@@ -25,7 +25,7 @@ const generateOtpCode = (length: number) => {
 	);
 };
 
-// Passwordless login: magic links and email/SMS OTP, each mounted only when its send hook is
+// Passwordless login: magic links and email OTP, each mounted only when its send hook is
 // configured (the token is delivered out-of-band — never returned from the unauthenticated request
 // route). Both verify routes resolve the email to a user and mint the standard session. `auth()`
 // mounts this before `protectRoutePlugin` when a `passwordless` block is supplied.

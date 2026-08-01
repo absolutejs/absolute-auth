@@ -121,6 +121,15 @@ const mfaTotpLockoutMigration: Migration = {
 	sql: 'ALTER TABLE "auth_mfa_enrollments" ADD COLUMN IF NOT EXISTS "totp_failed_attempts" smallint NOT NULL DEFAULT 0;'
 };
 
+const mfaSmsDeliveryPolicyMigration: Migration = {
+	id: '0004_sms_delivery_policy',
+	sql: [
+		'ALTER TABLE "auth_mfa_enrollments" ADD COLUMN IF NOT EXISTS "sms_code_sent_at_ms" bigint;',
+		'ALTER TABLE "auth_mfa_enrollments" ADD COLUMN IF NOT EXISTS "sms_pending_purpose" text;',
+		'ALTER TABLE "auth_mfa_enrollments" ADD COLUMN IF NOT EXISTS "sms_provider_reference" text;'
+	].join('\n')
+};
+
 const oidcResourceAudienceMigration: Migration = {
 	id: '0002_resource_audience',
 	sql: [
@@ -175,7 +184,8 @@ export const blockMigrations: Record<BlockName, BlockMigrations> = {
 		migrations: [
 			...initMigration('mfa', [mfaEnrollmentsTable]).migrations,
 			mfaSmsColumnsMigration,
-			mfaTotpLockoutMigration
+			mfaTotpLockoutMigration,
+			mfaSmsDeliveryPolicyMigration
 		]
 	},
 	oidc: {

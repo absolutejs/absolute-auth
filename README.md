@@ -89,6 +89,39 @@ The concrete SimpleWebAuthn adapter follows the same boundary:
 import { createSimpleWebAuthnAdapter } from '@absolutejs/auth/webauthn';
 ```
 
+### Provider-managed phone verification
+
+`verificationProvider` is the vendor-neutral challenge lifecycle used by SMS
+MFA. Auth owns enrollment, resend cooldowns, failed-attempt policy, audit, and
+session promotion; the provider generates, delivers, and checks the code.
+
+```ts
+import { auth } from '@absolutejs/auth/server';
+import { createTwilioVerificationProvider } from '@absolutejs/auth-twilio';
+import { Twilio } from 'twilio';
+
+const authPlugin = await auth({
+	// credentials, mfa, stores, providersConfiguration, etc.
+	verificationProvider: createTwilioVerificationProvider({
+		client: new Twilio(
+			process.env.TWILIO_ACCOUNT_SID!,
+			process.env.TWILIO_AUTH_TOKEN!
+		),
+		verifyServiceSid: process.env.TWILIO_VERIFY_SERVICE_SID!,
+		serviceTokenTtlMs: 10 * 60 * 1000
+	})
+});
+```
+
+Without a provider, `mfa.onSendSmsCode` keeps codes local and accepts any
+application-owned delivery system such as `@absolutejs/dispatch`. Its payload
+includes `purpose` and `userId` for safe templates, audit correlation, and
+tenant routing. Provider and local-code sends share the default 30-second
+per-enrollment resend cooldown; configure `mfa.smsResendCooldownMs` when needed.
+
+Production databases must run the `mfa` migration block after upgrading to add
+the durable cooldown timestamp.
+
 ### Delegated AI agents
 
 The `agentAuth` block provides a standards-first agent identity layer. It
