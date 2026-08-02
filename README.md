@@ -29,8 +29,8 @@ Absolute Auth is a TypeScript-based authentication system that provides a compre
 1. Clone the repository:
 
     ```bash
-    git clone https://github.com/alexkahndev/absolute-auth.git
-    cd absolute-auth
+    git clone https://github.com/absolutejs/auth.git
+    cd auth
     ```
 
 2. Install the dependencies:
