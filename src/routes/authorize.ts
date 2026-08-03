@@ -14,6 +14,7 @@ import {
 	OnAuthorizeError,
 	OnAuthorizeSuccess
 } from '../types';
+import { toSafeLocalPath } from '../redirect';
 import { resolveCookieSecure } from '../utils';
 
 type AuthorizeProps = {
@@ -32,11 +33,7 @@ const parseReferer = (headerReferer: string | undefined) => {
 
 		return url.pathname + url.search;
 	} catch {
-		if (headerReferer.startsWith('/') && !headerReferer.startsWith('//')) {
-			return headerReferer;
-		}
-
-		return '/';
+		return toSafeLocalPath(headerReferer);
 	}
 };
 

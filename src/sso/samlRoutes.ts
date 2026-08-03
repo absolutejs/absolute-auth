@@ -6,6 +6,7 @@ import type { AuthSessionStore } from '../session/types';
 import { isNonEmptyString } from '../typeGuards';
 import { userSessionIdTypebox } from '../typebox';
 import type { RouteString, SessionRecord, UserSessionId } from '../types';
+import { toSafeLocalPath } from '../redirect';
 import {
 	DEFAULT_SSO_ROUTE,
 	DEFAULT_SSO_SESSION_TTL_MS,
@@ -22,19 +23,14 @@ type SamlRoutesProps<UserType> = SSOConfig<UserType> & {
 
 // RelayState is round-tripped through the IdP and not signed, so it is only ever used as a
 // local post-login redirect path (never an absolute URL — guards against open redirects).
-const toLocalPath = (value: string | undefined) => {
-	if (value === undefined || value.length === 0) return '/';
-
-	return value.startsWith('/') && !value.startsWith('//') ? value : '/';
-};
-
+// toSafeLocalPath rejects absolute, protocol-relative, and backslash-prefixed values.
 const refererPath = (referer: string | undefined) => {
 	if (referer === undefined) return '/';
 
 	try {
-		return toLocalPath(new URL(referer).pathname);
+		return toSafeLocalPath(new URL(referer).pathname);
 	} catch {
-		return toLocalPath(referer);
+		return toSafeLocalPath(referer);
 	}
 };
 
@@ -180,7 +176,7 @@ export const samlSsoRoutes = <UserType>({
 						userSessionId
 					});
 
-					return redirect(toLocalPath(body.RelayState));
+					return redirect(toSafeLocalPath(body.RelayState));
 				} catch (error) {
 					await onSsoCallbackError?.({ error, organizationId });
 
@@ -340,7 +336,7 @@ export const samlSsoRoutes = <UserType>({
 						}) ?? Promise.resolve()
 					);
 					if (!('error' in responseSettled)) {
-						return redirect(toLocalPath(RelayState));
+						return redirect(toSafeLocalPath(RelayState));
 					}
 					await onSsoCallbackError?.({
 						error: responseSettled.error,
@@ -407,7 +403,7 @@ export const samlSsoRoutes = <UserType>({
 					return redirect(url);
 				}
 
-				return redirect(toLocalPath(info.relayState ?? RelayState));
+				return redirect(toSafeLocalPath(info.relayState ?? RelayState));
 			},
 			{
 				cookie: t.Cookie({

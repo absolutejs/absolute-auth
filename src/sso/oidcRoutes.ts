@@ -7,6 +7,7 @@ import type { AuthSessionStore } from '../session/types';
 import { isNonEmptyString } from '../typeGuards';
 import { userSessionIdTypebox } from '../typebox';
 import type { RouteString } from '../types';
+import { toSafeLocalPath } from '../redirect';
 import { resolveCookieSecure } from '../utils';
 import {
 	DEFAULT_SSO_ROUTE,
@@ -53,9 +54,7 @@ const parseReferer = (referer: string | undefined) => {
 
 		return url.pathname + url.search;
 	} catch {
-		return referer.startsWith('/') && !referer.startsWith('//')
-			? referer
-			: '/';
+		return toSafeLocalPath(referer);
 	}
 };
 
