@@ -1,7 +1,7 @@
 import { Elysia, t } from 'elysia';
 import { MILLISECONDS_IN_AN_HOUR } from '../constants';
 import { hashPassword, verifyPassword } from '../crypto';
-import { isTrustedOrigin } from '../csrf';
+import { resolveOriginAllowed } from '../csrf';
 import { rehashCredentialPassword } from './import';
 import { isLegacyHash } from './legacyHashers';
 import { createSessionCompatibilityLayer } from '../session/access';
@@ -32,12 +32,14 @@ export const credentialsLogin = <UserType>({
 	checkBreachesOnLogin,
 	cookieSecure,
 	credentialStore,
+	enforceTrustedOrigins,
 	getUserByEmail,
 	isMfaRequired,
 	lockoutGuard,
 	loginRoute = '/auth/login',
 	onCredentialsLoginError,
 	onCredentialsLoginSuccess,
+	onUntrustedOrigin,
 	passwordVerifier,
 	rehashOnLogin = false,
 	requireEmailVerification = false,
@@ -54,7 +56,14 @@ export const credentialsLogin = <UserType>({
 			store: { session, unregisteredSession }
 		}) =>
 			withSpan('auth.credentials.login', undefined, async (span) => {
-				if (!isTrustedOrigin(request, trustedOrigins)) {
+				if (
+					!(await resolveOriginAllowed({
+						enforce: enforceTrustedOrigins,
+						onUntrustedOrigin,
+						request,
+						trustedOrigins
+					}))
+				) {
 					return status('Forbidden', 'Request origin is not allowed');
 				}
 				// Build the loose request-context bag we expose to `isMfaRequired` so

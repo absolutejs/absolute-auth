@@ -33,6 +33,10 @@ export type CredentialsConfig<UserType> = {
 	// carries `passwordCompromised: true` so the consumer can force a reset.
 	checkBreachesOnLogin?: boolean;
 	credentialStore: CredentialStore;
+	/** When `trustedOrigins` is set, whether an untrusted Origin is REJECTED
+	 *  (default true) or merely reported via `onUntrustedOrigin` (false = a
+	 *  report-only rollout that never blocks). */
+	enforceTrustedOrigins?: boolean;
 	getUserByEmail: (
 		email: string
 	) => Promise<UserType | null | undefined> | UserType | null | undefined;
@@ -89,6 +93,13 @@ export type CredentialsConfig<UserType> = {
 		user: UserType;
 	}) => void | Promise<void>;
 	onSendEmail: (message: CredentialEmailMessage) => void | Promise<void>;
+	/** Called on login/register when the request's Origin is not in
+	 *  `trustedOrigins`. Fires whether or not `enforceTrustedOrigins` blocks the
+	 *  request, so it can drive a report-only rollout (log/surface the Origin). */
+	onUntrustedOrigin?: (context: {
+		origin: string | null;
+		request: Request;
+	}) => void | Promise<void>;
 	passwordPolicy?: PasswordPolicy;
 	registerRoute?: RouteString;
 	/** When true, registration creates the account but NOT a session, and login is

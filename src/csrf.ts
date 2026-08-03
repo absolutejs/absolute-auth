@@ -15,3 +15,31 @@ export const isTrustedOrigin = (
 
 	return origin !== null && trustedOrigins.includes(origin);
 };
+
+// Report-only-capable origin gate for the credential routes. Returns true when
+// the request may proceed. When the Origin is not trusted it calls
+// `onUntrustedOrigin` (so the integrator can log/surface it) and then blocks the
+// request ONLY when `enforce` is not false — pass `enforce: false` for a
+// report-only rollout that observes real Origins without locking anyone out.
+export const resolveOriginAllowed = async ({
+	enforce = true,
+	onUntrustedOrigin,
+	request,
+	trustedOrigins
+}: {
+	enforce?: boolean;
+	onUntrustedOrigin?: (context: {
+		origin: string | null;
+		request: Request;
+	}) => void | Promise<void>;
+	request: Request;
+	trustedOrigins?: readonly string[];
+}) => {
+	if (isTrustedOrigin(request, trustedOrigins)) return true;
+	await onUntrustedOrigin?.({
+		origin: request.headers.get('origin'),
+		request
+	});
+
+	return enforce === false;
+};

@@ -1,6 +1,6 @@
 import { Elysia, t } from 'elysia';
 import { generateSecureToken, hashPassword, hashToken } from '../crypto';
-import { isTrustedOrigin } from '../csrf';
+import { resolveOriginAllowed } from '../csrf';
 import { sessionStore } from '../session/state';
 import { isStatusResponse } from '../typeGuards';
 import { userSessionIdTypebox } from '../typebox';
@@ -17,11 +17,13 @@ export const credentialsRegister = <UserType>({
 	authSessionStore,
 	cookieSecure,
 	credentialStore,
+	enforceTrustedOrigins,
 	onCreateCredentialUser,
 	onCredentialsLoginSuccess,
 	onExistingAccount,
 	onRegistrationSuccess,
 	onSendEmail,
+	onUntrustedOrigin,
 	passwordPolicy,
 	registerRoute = '/auth/register',
 	requireEmailVerification = false,
@@ -40,7 +42,14 @@ export const credentialsRegister = <UserType>({
 			store: { session }
 		}) =>
 			withSpan('auth.credentials.register', undefined, async () => {
-				if (!isTrustedOrigin(request, trustedOrigins)) {
+				if (
+					!(await resolveOriginAllowed({
+						enforce: enforceTrustedOrigins,
+						onUntrustedOrigin,
+						request,
+						trustedOrigins
+					}))
+				) {
 					return status('Forbidden', 'Request origin is not allowed');
 				}
 				const normalizedEmail = email.trim().toLowerCase();

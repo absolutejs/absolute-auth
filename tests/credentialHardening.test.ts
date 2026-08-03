@@ -128,4 +128,30 @@ describe('origin CSRF check (F8c)', () => {
 		);
 		expect(allowed.status).not.toBe(403);
 	});
+
+	test('report-only mode reports an untrusted Origin without blocking', async () => {
+		const seen: (string | null)[] = [];
+		const config: CredentialsConfig<TestUser> = {
+			credentialStore: createInMemoryCredentialStore(),
+			enforceTrustedOrigins: false,
+			trustedOrigins: ['https://good.com'],
+			getUserByEmail: () => null,
+			onCreateCredentialUser: ({ email }) => ({ email, sub: 's' }),
+			onSendEmail: () => undefined,
+			onUntrustedOrigin: ({ origin }) => {
+				seen.push(origin);
+			}
+		};
+		const app = new Elysia().use(credentialsLogin(config));
+
+		const res = await post(
+			app,
+			'/auth/login',
+			{ email: 'a@b.com', password: 'whatever12' },
+			{ origin: 'https://evil.com' }
+		);
+		// Not blocked (report-only) — it fails later on credentials (401), not 403.
+		expect(res.status).not.toBe(403);
+		expect(seen).toEqual(['https://evil.com']);
+	});
 });
