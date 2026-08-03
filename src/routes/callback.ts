@@ -1,6 +1,7 @@
 import { Elysia, t } from 'elysia';
 import { AuthIdentityConflictError } from '../errors';
 import { resolveClientProviderEntry } from '../providers/clients';
+import { toSafeLocalPath } from '../redirect';
 import { createSessionCompatibilityLayer } from '../session/access';
 import { sessionStore } from '../session/state';
 import type { AuthSessionStore } from '../session/types';
@@ -123,7 +124,11 @@ export const callback = <UserType>({
 						);
 					}
 
-					const originUrl = origin_url?.value ?? '/';
+					// Defense in depth: only ever redirect to a safe same-origin
+					// path. This cookie is written from a validated referer today,
+					// but validating again here means a future/alternate writer
+					// can't turn it into an open redirect.
+					const originUrl = toSafeLocalPath(origin_url?.value);
 
 					let tokenResponse;
 					try {

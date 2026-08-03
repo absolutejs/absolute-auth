@@ -25,6 +25,15 @@ export const credentialsEmailVerification = <UserType>({
 						'Invalid or expired verification token'
 					);
 				}
+				// Defense in depth: do not rely on the store to reject expired
+				// tokens (a custom CredentialStore might not), so an expired
+				// verification token can never be accepted here.
+				if (consumed.expiresAt < Date.now()) {
+					return status(
+						'Bad Request',
+						'Invalid or expired verification token'
+					);
+				}
 
 				await credentialStore.setEmailVerified(consumed.email);
 				await onEmailVerified?.({ email: consumed.email });

@@ -52,6 +52,16 @@ export const credentialsPasswordReset = <UserType>({
 						'Invalid or expired reset token'
 					);
 				}
+				// Defense in depth: do not trust the store to filter expired
+				// tokens. A custom CredentialStore whose consumeResetToken returns
+				// the row without an expiry check would otherwise accept expired
+				// reset tokens forever.
+				if (consumed.expiresAt < Date.now()) {
+					return status(
+						'Bad Request',
+						'Invalid or expired reset token'
+					);
+				}
 
 				const policy = await evaluatePassword(password, passwordPolicy);
 				if (!policy.ok) {
