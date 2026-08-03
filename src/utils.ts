@@ -163,15 +163,16 @@ export const instantiateUserSession = async <UserType>({
 
 	return response;
 };
-// Cookie Secure flag resolution. Default convention: only set Secure=true in production
-// (matches express-session, iron-session, lucia, better-auth). Hardcoding Secure=true broke
-// non-browser HTTP clients (curl, SSR fetch, Playwright API contexts, test runners) on
-// http://localhost in dev, because they don't honor the browser's "localhost is a secure
-// context" exemption. An explicit `cookieSecure` on AuthConfig overrides; otherwise we
-// look at NODE_ENV. Consumers running prod without NODE_ENV=production should set
-// `cookieSecure: true` explicitly.
+// Cookie Secure flag resolution. An explicit `cookieSecure` on AuthConfig
+// overrides; otherwise we look at NODE_ENV.
+// Secure by default. Only the explicit local-dev / test environments opt out
+// (so http://localhost round-trips and issue #6 stays fixed); every other case
+// — including a production deploy that forgot to set NODE_ENV — gets Secure
+// cookies, closing the "session id sent over plaintext HTTP" gap. Consumers can
+// still force it either way via `cookieSecure`.
 export const resolveCookieSecure = (override?: boolean) =>
-	override ?? process.env.NODE_ENV === 'production';
+	override ??
+	(process.env.NODE_ENV !== 'development' && process.env.NODE_ENV !== 'test');
 export const resolveOAuthAuthorization = async ({
 	authProvider,
 	providerConfiguration,

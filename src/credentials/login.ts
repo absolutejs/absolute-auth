@@ -1,6 +1,6 @@
 import { Elysia, t } from 'elysia';
 import { MILLISECONDS_IN_AN_HOUR } from '../constants';
-import { verifyPassword } from '../crypto';
+import { hashPassword, verifyPassword } from '../crypto';
 import { rehashCredentialPassword } from './import';
 import { isLegacyHash } from './legacyHashers';
 import { createSessionCompatibilityLayer } from '../session/access';
@@ -14,6 +14,17 @@ import {
 	DEFAULT_CREDENTIAL_SESSION_TTL_MS
 } from './config';
 import { isPasswordCompromised } from './passwordPolicy';
+
+// A constant, valid argon2id hash used only to burn verification time on the
+// "no such account" branch of login, so an attacker can't tell a missing email
+// from a wrong password by response time (argon2id verification is slow, and
+// skipping it entirely on the miss branch is a user-enumeration oracle).
+// Computed lazily once per process.
+let dummyPasswordHashPromise: Promise<string> | undefined;
+const dummyPasswordHash = () =>
+	(dummyPasswordHashPromise ??= hashPassword(
+		'absolutejs-auth-timing-equalizer'
+	));
 
 export const credentialsLogin = <UserType>({
 	authSessionStore,
@@ -80,10 +91,18 @@ export const credentialsLogin = <UserType>({
 				// the consumer routes to legacy-hash verifiers (Auth0 PBKDF2, Cognito
 				// SHA-256, etc.) and still falls back to Bun for argon2id+bcrypt.
 				const verifyHash = passwordVerifier ?? verifyPassword;
-				const passwordValid =
-					credential === undefined
-						? false
-						: await verifyHash(password, credential.passwordHash);
+				let passwordValid: boolean;
+				if (credential === undefined) {
+					// Burn the same argon2id work a real verify would, then fail,
+					// so the missing-account branch is not measurably faster.
+					await verifyPassword(password, await dummyPasswordHash());
+					passwordValid = false;
+				} else {
+					passwordValid = await verifyHash(
+						password,
+						credential.passwordHash
+					);
+				}
 
 				// One generic failure (message + status) to avoid account enumeration.
 				if (

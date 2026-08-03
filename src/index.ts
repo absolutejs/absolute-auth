@@ -255,6 +255,17 @@ const buildAuthApplications = async <UserType>(
 					}
 				})
 			: undefined;
+	// Privileged flows (impersonation, role changes, sign-out) emit audit
+	// events, but only when an audit sink is wired. Warn loudly if none is
+	// configured so a deployment doesn't silently run privileged actions with
+	// no audit trail — pass `audit` or `webhooks` to satisfy this.
+	if (auditEmit === undefined) {
+		console.warn(
+			'[@absolutejs/auth] No audit sink configured (pass `audit` or `webhooks`). ' +
+				'Privileged flows (impersonation, role/permission changes, sign-out) will ' +
+				'run WITHOUT an audit trail.'
+		);
+	}
 	const lockoutGuard = lockout ? createLockoutGuard(lockout) : undefined;
 	const resolvedAgentAuth =
 		agentAuth === undefined

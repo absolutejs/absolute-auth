@@ -11,8 +11,10 @@ import { resolveCookieSecure } from '../src/utils';
 
 // Repros issue #6: the `Secure` flag was hardcoded to true on every cookie the package
 // set, which broke non-browser HTTP clients (curl, SSR fetch, test runners) trying to
-// round-trip a session on http://localhost in dev. The fix: default to NODE_ENV ===
-// 'production', and let consumers override via `cookieSecure`.
+// round-trip a session on http://localhost in dev. The fix keeps dev working:
+// default to Secure EXCEPT for the explicit development/test environments (so a
+// prod that forgot NODE_ENV is still secure), and let consumers override via
+// `cookieSecure`.
 
 type TestUser = { email: string; sub: string };
 
@@ -78,13 +80,16 @@ describe('resolveCookieSecure', () => {
 		expect(resolveCookieSecure(true)).toBe(true);
 	});
 
-	test('defaults to false when NODE_ENV !== production', () => {
+	test('opts out of Secure only for explicit development/test', () => {
 		process.env.NODE_ENV = 'development';
 		expect(resolveCookieSecure()).toBe(false);
 		process.env.NODE_ENV = 'test';
 		expect(resolveCookieSecure()).toBe(false);
+	});
+
+	test('defaults to Secure when NODE_ENV is unset (prod that forgot the env)', () => {
 		delete process.env.NODE_ENV;
-		expect(resolveCookieSecure()).toBe(false);
+		expect(resolveCookieSecure()).toBe(true);
 	});
 
 	test('defaults to true when NODE_ENV === production', () => {
