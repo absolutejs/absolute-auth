@@ -78,6 +78,11 @@ export type CredentialsConfig<UserType> = {
 		userSessionId: UserSessionId;
 	}) => void | Promise<void>;
 	onEmailVerified?: (context: { email: string }) => void | Promise<void>;
+	/** Called (in the enumeration-safe default) when someone tries to register an
+	 *  email that already exists — send the real owner a "you already have an
+	 *  account, sign in" email out-of-band. Not called when
+	 *  `revealRegistrationConflicts` is true. */
+	onExistingAccount?: (context: { email: string }) => void | Promise<void>;
 	onPasswordReset?: (context: { email: string }) => void | Promise<void>;
 	onRegistrationSuccess?: (context: {
 		email: string;
@@ -90,9 +95,17 @@ export type CredentialsConfig<UserType> = {
 	 *  rejected until the email is verified. Default false = auto-login on register and
 	 *  verification acts as a soft, later gate. */
 	requireEmailVerification?: boolean;
+	/** When true, `POST /register` returns 409 "Email is already registered" for a
+	 *  known email. Default false = enumeration-safe: return the same generic
+	 *  response a new pending registration does and call `onExistingAccount`
+	 *  instead of confirming the account exists. */
+	revealRegistrationConflicts?: boolean;
 	resetPasswordRoute?: RouteString;
 	resetTokenDurationMs?: number;
 	sessionDurationMs?: number;
+	/** When set, login/register reject requests whose `Origin` header is not in
+	 *  this list (defense against login/registration CSRF). Omit to disable. */
+	trustedOrigins?: readonly string[];
 	verificationTokenDurationMs?: number;
 	verifyEmailRoute?: RouteString;
 };

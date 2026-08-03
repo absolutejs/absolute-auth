@@ -1,6 +1,7 @@
 import { Elysia, t } from 'elysia';
 import { MILLISECONDS_IN_AN_HOUR } from '../constants';
 import { hashPassword, verifyPassword } from '../crypto';
+import { isTrustedOrigin } from '../csrf';
 import { rehashCredentialPassword } from './import';
 import { isLegacyHash } from './legacyHashers';
 import { createSessionCompatibilityLayer } from '../session/access';
@@ -40,7 +41,8 @@ export const credentialsLogin = <UserType>({
 	passwordVerifier,
 	rehashOnLogin = false,
 	requireEmailVerification = false,
-	sessionDurationMs = DEFAULT_CREDENTIAL_SESSION_TTL_MS
+	sessionDurationMs = DEFAULT_CREDENTIAL_SESSION_TTL_MS,
+	trustedOrigins
 }: CredentialRouteProps<UserType>) =>
 	new Elysia().use(sessionStore<UserType>()).post(
 		loginRoute,
@@ -52,6 +54,9 @@ export const credentialsLogin = <UserType>({
 			store: { session, unregisteredSession }
 		}) =>
 			withSpan('auth.credentials.login', undefined, async (span) => {
+				if (!isTrustedOrigin(request, trustedOrigins)) {
+					return status('Forbidden', 'Request origin is not allowed');
+				}
 				// Build the loose request-context bag we expose to `isMfaRequired` so
 				// the consumer can adapt the gate per-request (e.g. plug in `scoreRisk`).
 				const headerBag: Record<string, string | undefined> = {};

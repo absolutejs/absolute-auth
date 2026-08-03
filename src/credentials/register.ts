@@ -1,5 +1,6 @@
 import { Elysia, t } from 'elysia';
 import { generateSecureToken, hashPassword, hashToken } from '../crypto';
+import { isTrustedOrigin } from '../csrf';
 import { sessionStore } from '../session/state';
 import { isStatusResponse } from '../typeGuards';
 import { userSessionIdTypebox } from '../typebox';
@@ -18,12 +19,15 @@ export const credentialsRegister = <UserType>({
 	credentialStore,
 	onCreateCredentialUser,
 	onCredentialsLoginSuccess,
+	onExistingAccount,
 	onRegistrationSuccess,
 	onSendEmail,
 	passwordPolicy,
 	registerRoute = '/auth/register',
 	requireEmailVerification = false,
+	revealRegistrationConflicts = false,
 	sessionDurationMs = DEFAULT_CREDENTIAL_SESSION_TTL_MS,
+	trustedOrigins,
 	verificationTokenDurationMs = DEFAULT_VERIFICATION_TOKEN_TTL_MS
 }: CredentialRouteProps<UserType>) =>
 	new Elysia().use(sessionStore<UserType>()).post(
@@ -31,10 +35,14 @@ export const credentialsRegister = <UserType>({
 		async ({
 			body: { email, password, ...extraFields },
 			cookie: { user_session_id },
+			request,
 			status,
 			store: { session }
 		}) =>
 			withSpan('auth.credentials.register', undefined, async () => {
+				if (!isTrustedOrigin(request, trustedOrigins)) {
+					return status('Forbidden', 'Request origin is not allowed');
+				}
 				const normalizedEmail = email.trim().toLowerCase();
 				if (!normalizedEmail.includes('@')) {
 					return status('Bad Request', 'A valid email is required');
@@ -51,7 +59,23 @@ export const credentialsRegister = <UserType>({
 				const existing =
 					await credentialStore.getCredentialByEmail(normalizedEmail);
 				if (existing) {
-					return status('Conflict', 'Email is already registered');
+					if (revealRegistrationConflicts) {
+						return status(
+							'Conflict',
+							'Email is already registered'
+						);
+					}
+					// Enumeration-safe default: never confirm an account exists.
+					// Nudge the real owner out-of-band and return the same generic
+					// response a new registration awaiting verification returns, so
+					// an attacker can't tell registered emails from new ones. (Full
+					// indistinguishability assumes requireEmailVerification=true; see
+					// the config docs.)
+					await onExistingAccount?.({ email: normalizedEmail });
+
+					return status('Created', {
+						status: 'verification_required'
+					});
 				}
 
 				const created = await onCreateCredentialUser({

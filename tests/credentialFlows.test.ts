@@ -90,8 +90,11 @@ describe('credential registration + verification flow', () => {
 		expect(after?.emailVerified).toBe(true);
 	});
 
-	test('rejects weak passwords and duplicate registrations', async () => {
-		const { app } = buildHarness();
+	test('rejects weak passwords, and reveals duplicates when opted in', async () => {
+		// revealRegistrationConflicts:true opts into the explicit 409. The
+		// enumeration-safe default (a duplicate returns the same generic
+		// response as a new signup) is covered in credentialHardening.test.ts.
+		const { app } = buildHarness({ revealRegistrationConflicts: true });
 
 		const weak = await registerUser(app, 'a@b.com', 'short');
 		expect(weak.status).toBe(400);
