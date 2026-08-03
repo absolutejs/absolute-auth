@@ -18,6 +18,7 @@ export const credentialsRegister = <UserType>({
 	cookieSecure,
 	credentialStore,
 	enforceTrustedOrigins,
+	getUserByEmail,
 	onCreateCredentialUser,
 	onCredentialsLoginSuccess,
 	onExistingAccount,
@@ -65,9 +66,16 @@ export const credentialsRegister = <UserType>({
 					});
 				}
 
-				const existing =
-					await credentialStore.getCredentialByEmail(normalizedEmail);
-				if (existing) {
+				// The credential store is not the canonical account store: OAuth,
+				// SSO, SCIM, and passwordless users can legitimately have an account
+				// without a password credential. Check both stores before creating a
+				// user so those accounts follow the same enumeration-safe path instead
+				// of reaching the consumer's create hook and commonly failing as a 500.
+				const [existingCredential, existingUser] = await Promise.all([
+					credentialStore.getCredentialByEmail(normalizedEmail),
+					getUserByEmail(normalizedEmail)
+				]);
+				if (existingCredential || existingUser) {
 					if (revealRegistrationConflicts) {
 						return status(
 							'Conflict',

@@ -66,6 +66,45 @@ describe('registration is enumeration-safe by default (F3B)', () => {
 		expect(nudged).toEqual(['a@b.com']);
 	});
 
+	test('a canonical user without a password credential uses the same safe response', async () => {
+		const existingUser: TestUser = {
+			email: 'oauth@example.com',
+			sub: 'oauth-user'
+		};
+		let createCalls = 0;
+		const nudged: string[] = [];
+		const app = new Elysia().use(
+			credentialsRegister<TestUser>({
+				credentialStore: createInMemoryCredentialStore(),
+				passwordPolicy: { minLength: 8 },
+				requireEmailVerification: true,
+				getUserByEmail: (email) =>
+					email === existingUser.email ? existingUser : null,
+				onCreateCredentialUser: ({ email }) => {
+					createCalls += 1;
+
+					return { email, sub: 'new-user' };
+				},
+				onExistingAccount: ({ email }) => {
+					nudged.push(email);
+				},
+				onSendEmail: () => undefined
+			})
+		);
+
+		const response = await post(app, '/auth/register', {
+			email: 'OAuth@Example.com',
+			password: 'password123'
+		});
+
+		expect(response.status).toBe(201);
+		expect(await response.json()).toMatchObject({
+			status: 'verification_required'
+		});
+		expect(createCalls).toBe(0);
+		expect(nudged).toEqual(['oauth@example.com']);
+	});
+
 	test('revealRegistrationConflicts:true opts back into the 409', async () => {
 		const { app } = build({ revealRegistrationConflicts: true });
 		await post(app, '/auth/register', {
