@@ -617,6 +617,7 @@ export {
 	type SessionUserDecoder
 } from './session/types';
 export { isAuthIntent, isUserSessionId, isValidUser } from './typeGuards';
+export { readSessionCookie } from './session/cookieReader';
 export { AuthIdentityConflictError } from './errors';
 export { sessionStore } from './session/state';
 export { createInMemoryAuthSessionStore } from './session/inMemoryStore';

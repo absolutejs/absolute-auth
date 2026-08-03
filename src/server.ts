@@ -23,6 +23,7 @@ export type {
 export { createSetupSession } from './portal/operations';
 export { createPostgresSetupSessionStore } from './portal/postgresSetupSessionStore';
 export { protectRoutePlugin } from './routes/protectRoute';
+export { readSessionCookie } from './session/cookieReader';
 export { requireAuthPlugin } from './routes/requireAuth';
 export type { ScimConfig } from './scim/config';
 export type {
