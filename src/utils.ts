@@ -20,6 +20,7 @@ import {
 	InsantiateUserSessionProps,
 	OAuth2ConfigurationOptions,
 	ResolvedOAuthAuthorization,
+	parseJsonObject,
 	SessionRecord,
 	UnregisteredSessionRecord,
 	UserSessionId
@@ -273,7 +274,7 @@ export const resolveOAuthAuthorization = async ({
 		oauthSubject,
 		refreshToken,
 		tokenType: typeof tokenType === 'string' ? tokenType : undefined,
-		userIdentity
+		userIdentity: parseJsonObject(userIdentity)
 	};
 };
 const parseExpiresInSeconds = (expiresIn: unknown) => {

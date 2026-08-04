@@ -6,6 +6,7 @@ import type {
 	LinkedProviderCredentialResolver,
 	LinkedProviderGrant,
 	LinkedProviderGrantStore,
+	JsonObject,
 	ResolveLinkedProviderCredentialInput,
 	ResolvedLinkedProviderCredential
 } from '@absolutejs/linked-providers';
@@ -130,15 +131,19 @@ const buildResolvedCredential = (
 });
 
 const annotateFailureMetadata = (
-	metadata: Record<string, unknown> | undefined,
+	metadata: JsonObject | undefined,
 	report: LinkedProviderCredentialFailureReport,
 	now: number
 ) => ({
 	...(metadata ?? {}),
 	lastCredentialFailureAt: now,
 	lastCredentialFailureCode: report.code,
-	lastCredentialFailureMessage: report.message,
-	lastCredentialFailureRetryAt: report.retryAt
+	...(report.message === undefined
+		? {}
+		: { lastCredentialFailureMessage: report.message }),
+	...(report.retryAt === undefined
+		? {}
+		: { lastCredentialFailureRetryAt: report.retryAt })
 });
 
 const sortNewestFirst = <T extends { updatedAt: number }>(items: T[]) =>

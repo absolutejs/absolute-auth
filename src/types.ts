@@ -141,8 +141,8 @@ export type SessionRecord<UserType> = Record<
 >;
 
 export type UnregisteredSessionData = {
-	userIdentity?: Record<string, unknown>;
-	sessionInformation?: Record<string, unknown>;
+	userIdentity?: JsonObject;
+	sessionInformation?: JsonObject;
 	expiresAt: number;
 	accessToken?: string;
 	refreshToken?: string;
@@ -155,7 +155,7 @@ export type UnregisteredSessionRecord = Record<
 >;
 
 export type ResolvedOAuthAuthorization = {
-	userIdentity: Record<string, unknown>;
+	userIdentity: JsonObject;
 	accessToken: string;
 	oauthSubject?: string | number;
 	refreshToken?: string;
@@ -169,7 +169,7 @@ export type StatusReturn = Pick<
 >;
 
 export type OnNewUser<UserType> = (
-	userIdentity: Record<string, unknown>
+	userIdentity: JsonObject
 ) =>
 	| UserType
 	| StatusReturn
@@ -177,7 +177,7 @@ export type OnNewUser<UserType> = (
 	| Promise<UserType | StatusReturn | Response>;
 
 export type GetUser<UserType> = (
-	userIdentity: Record<string, unknown>
+	userIdentity: JsonObject
 ) =>
 	| UserType
 	| StatusReturn
@@ -630,4 +630,33 @@ export type InsantiateUserSessionProps<UserType> = {
 	resolvedAuthorization?: ResolvedOAuthAuthorization;
 	sessionDurationMs?: number;
 	unregisteredSessionDurationMs?: number;
+};
+export type JsonPrimitive = boolean | null | number | string;
+export type JsonValue = JsonPrimitive | JsonObject | JsonValue[];
+export type JsonObject = { [key: string]: JsonValue };
+
+export function isJsonValue(value: unknown): value is JsonValue {
+	if (
+		value === null ||
+		typeof value === 'boolean' ||
+		typeof value === 'string'
+	)
+		return true;
+	if (typeof value === 'number') return Number.isFinite(value);
+	if (Array.isArray(value)) return value.every(isJsonValue);
+	if (typeof value !== 'object') return false;
+
+	return Object.values(value).every(isJsonValue);
+}
+
+export const parseJsonObject = (value: unknown) => {
+	if (
+		!isJsonValue(value) ||
+		value === null ||
+		Array.isArray(value) ||
+		typeof value !== 'object'
+	)
+		throw new TypeError('Expected a JSON object');
+
+	return value;
 };

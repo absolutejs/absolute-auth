@@ -2,7 +2,8 @@ import type {
 	LinkedProviderBinding,
 	LinkedProviderBindingStore,
 	LinkedProviderGrant,
-	LinkedProviderGrantStore
+	LinkedProviderGrantStore,
+	JsonObject
 } from '@absolutejs/linked-providers';
 import type { OAuth2ConfigurationOptions } from '../types';
 import { createOAuthLinkedProviderCredentialResolver } from './oauthResolver';
@@ -14,7 +15,7 @@ export type OAuthLinkedProviderAccount = {
 	expiresAt?: number;
 	grantedScopes: string[];
 	id: string;
-	metadata?: Record<string, unknown>;
+	metadata?: JsonObject;
 	ownerRef: string;
 	providerSubject: string;
 	refreshToken?: string;

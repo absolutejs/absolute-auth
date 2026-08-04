@@ -12,7 +12,11 @@ import {
 	varchar
 } from 'drizzle-orm/pg-core';
 import { isUserSessionId } from '../typeGuards';
-import type { SessionData, UnregisteredSessionData } from '../types';
+import type {
+	JsonObject,
+	SessionData,
+	UnregisteredSessionData
+} from '../types';
 import type { AuthSessionStore, SessionUserDecoder } from './types';
 
 export const authSessionsTable = pgTable(
@@ -47,11 +51,10 @@ export const authUnregisteredSessionsTable = pgTable(
 		>(),
 		refresh_token: text('refresh_token'),
 		session_information_json: jsonb('session_information_json').$type<
-			Record<string, unknown>
+			JsonObject
 		>(),
 		updated_at: timestamp('updated_at').notNull().defaultNow(),
-		user_identity_json:
-			jsonb('user_identity_json').$type<Record<string, unknown>>()
+		user_identity_json: jsonb('user_identity_json').$type<JsonObject>()
 	},
 	(table) => [
 		index('auth_unregistered_sessions_expires_at_idx').on(
@@ -77,7 +80,7 @@ const cloneUser = <UserType>(value: UserType) => {
 	return structuredClone(value);
 };
 
-const cloneRecord = (value?: Record<string, unknown>) =>
+const cloneRecord = (value?: JsonObject) =>
 	value ? structuredClone(value) : undefined;
 
 const toSessionData = <UserType>(

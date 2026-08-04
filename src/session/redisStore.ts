@@ -16,6 +16,17 @@ export type RedisSessionClient = RedisLike & {
 const SESSION_SEGMENT = 'sess:';
 const UNREGISTERED_SEGMENT = 'unreg:';
 
+const jsonValueSchema = Type.Recursive((self) =>
+	Type.Union([
+		Type.String(),
+		Type.Number(),
+		Type.Boolean(),
+		Type.Null(),
+		Type.Array(self),
+		Type.Record(Type.String(), self)
+	])
+);
+
 const impersonatorSchema = Type.Object({
 	actorEmail: Type.Optional(Type.String()),
 	actorId: Type.String(),
@@ -48,9 +59,9 @@ const unregisteredSessionSchema = Type.Object({
 	oauthSubject: Type.Optional(Type.Union([Type.String(), Type.Number()])),
 	refreshToken: Type.Optional(Type.String()),
 	sessionInformation: Type.Optional(
-		Type.Record(Type.String(), Type.Unknown())
+		Type.Record(Type.String(), jsonValueSchema)
 	),
-	userIdentity: Type.Optional(Type.Record(Type.String(), Type.Unknown()))
+	userIdentity: Type.Optional(Type.Record(Type.String(), jsonValueSchema))
 });
 
 const parseJson = (raw: string | null) => {

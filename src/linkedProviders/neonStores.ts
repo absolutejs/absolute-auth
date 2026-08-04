@@ -2,7 +2,8 @@ import type {
 	LinkedProviderBinding,
 	LinkedProviderBindingStore,
 	LinkedProviderGrant,
-	LinkedProviderGrantStore
+	LinkedProviderGrantStore,
+	JsonObject
 } from '@absolutejs/linked-providers';
 import { neon } from '@neondatabase/serverless';
 import { desc, eq } from 'drizzle-orm';
@@ -30,7 +31,7 @@ export const linkedProviderBindingsTable = pgTable('linked_provider_bindings', {
 	grant_id: varchar('grant_id', { length: 255 }).notNull(),
 	id: varchar('id', { length: 255 }).primaryKey(),
 	label: varchar('label', { length: 255 }),
-	metadata: jsonb('metadata').$type<Record<string, unknown>>().default({}),
+	metadata: jsonb('metadata').$type<JsonObject>().default({}),
 	status: varchar('status', { length: 64 })
 		.$type<LinkedProviderBinding['status']>()
 		.notNull(),
@@ -49,7 +50,7 @@ export const linkedProviderGrantsTable = pgTable('linked_provider_grants', {
 	id: varchar('id', { length: 255 }).primaryKey(),
 	last_refresh_error: text('last_refresh_error'),
 	last_refreshed_at: timestamp('last_refreshed_at'),
-	metadata: jsonb('metadata').$type<Record<string, unknown>>().default({}),
+	metadata: jsonb('metadata').$type<JsonObject>().default({}),
 	owner_ref: varchar('owner_ref', { length: 255 }).notNull(),
 	provider_family: varchar('provider_family', { length: 64 }).notNull(),
 	provider_subject: varchar('provider_subject', { length: 255 }).notNull(),
