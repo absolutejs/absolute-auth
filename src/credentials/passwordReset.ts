@@ -20,7 +20,14 @@ export const credentialsPasswordReset = <UserType>({
 					await credentialStore.getCredentialByEmail(normalizedEmail);
 
 				// Always 200 regardless of existence to avoid account enumeration.
-				if (credential && credential.status === 'active') {
+				// A pending registration is not an account and cannot use account
+				// recovery as an alternate materialization path. It must complete the
+				// explicit email-verification flow first.
+				if (
+					credential &&
+					credential.status === 'active' &&
+					credential.registrationData === undefined
+				) {
 					const token = generateSecureToken();
 					const expiresAt = Date.now() + resetTokenDurationMs;
 					await credentialStore.saveResetToken({

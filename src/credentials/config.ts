@@ -102,9 +102,10 @@ export type CredentialsConfig<UserType> = {
 	}) => void | Promise<void>;
 	passwordPolicy?: PasswordPolicy;
 	registerRoute?: RouteString;
-	/** When true, registration creates the account but NOT a session, and login is
-	 *  rejected until the email is verified. Default false = auto-login on register and
-	 *  verification acts as a soft, later gate. */
+	/** When true, registration stores only a pending credential and does NOT call
+	 *  `onCreateCredentialUser` until a verification token is accepted. No user
+	 *  account or session exists before email ownership is proven. Default false
+	 *  creates the user immediately and auto-logs them in. */
 	requireEmailVerification?: boolean;
 	/** When true, `POST /register` returns 409 "Email is already registered" for a
 	 *  known email. Default false = enumeration-safe: return the same generic

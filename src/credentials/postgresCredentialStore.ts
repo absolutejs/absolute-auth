@@ -1,5 +1,12 @@
 import { eq } from 'drizzle-orm';
-import { bigint, boolean, pgTable, text, varchar } from 'drizzle-orm/pg-core';
+import {
+	bigint,
+	boolean,
+	jsonb,
+	pgTable,
+	text,
+	varchar
+} from 'drizzle-orm/pg-core';
 import { type AnyPgDatabase, createNeonDatabase } from '../stores/postgres';
 import type {
 	CredentialRecord,
@@ -19,6 +26,8 @@ export const credentialsTable = pgTable('auth_credentials', {
 	email_verified: boolean('email_verified').notNull().default(false),
 	organization_id: varchar('organization_id', { length: ID_LENGTH }),
 	password_hash: text('password_hash').notNull(),
+	registration_data:
+		jsonb('registration_data').$type<Record<string, unknown>>(),
 	status: varchar('status', { length: STATUS_LENGTH })
 		.notNull()
 		.default('active'),
@@ -59,6 +68,7 @@ const toCredentialRecord = (row: CredentialRow): CredentialRecord => ({
 	emailVerified: row.email_verified,
 	organizationId: row.organization_id ?? undefined,
 	passwordHash: row.password_hash,
+	registrationData: row.registration_data ?? undefined,
 	status: isCredentialStatus(row.status) ? row.status : 'active',
 	updatedAt: row.updated_at_ms,
 	userId: row.user_id ?? undefined
@@ -129,6 +139,7 @@ export const createPostgresCredentialStore = <DB extends AnyPgDatabase>(
 			email_verified: credential.emailVerified,
 			organization_id: credential.organizationId ?? null,
 			password_hash: credential.passwordHash,
+			registration_data: credential.registrationData ?? null,
 			status: credential.status,
 			updated_at_ms: credential.updatedAt,
 			user_id: credential.userId ?? null

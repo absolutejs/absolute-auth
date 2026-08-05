@@ -95,12 +95,22 @@ export const credentialsRegister = <UserType>({
 					});
 				}
 
-				const created = await onCreateCredentialUser({
-					...extraFields,
-					email: normalizedEmail
-				});
-				if (created instanceof Response || isStatusResponse(created)) {
-					return created;
+				// A verification-required signup is not an account yet. Persist only
+				// the credential and non-secret signup fields; the verification route
+				// invokes the consumer's user-creation hook after proving inbox access.
+				let created: UserType | undefined;
+				if (!requireEmailVerification) {
+					const result = await onCreateCredentialUser({
+						...extraFields,
+						email: normalizedEmail
+					});
+					if (
+						result instanceof Response ||
+						isStatusResponse(result)
+					) {
+						return result;
+					}
+					created = result;
 				}
 
 				const now = Date.now();
@@ -109,6 +119,9 @@ export const credentialsRegister = <UserType>({
 					email: normalizedEmail,
 					emailVerified: false,
 					passwordHash: await hashPassword(password),
+					registrationData: requireEmailVerification
+						? extraFields
+						: undefined,
 					status: 'active',
 					updatedAt: now
 				});
@@ -126,16 +139,20 @@ export const credentialsRegister = <UserType>({
 					token,
 					type: 'verify_email'
 				});
-				await onRegistrationSuccess?.({
-					email: normalizedEmail,
-					user: created
-				});
-
 				if (requireEmailVerification) {
 					return status('Created', {
 						status: 'verification_required'
 					});
 				}
+
+				// `created` is guaranteed in the immediate-account branch above.
+				if (created === undefined) {
+					throw new Error('Credential user was not created');
+				}
+				await onRegistrationSuccess?.({
+					email: normalizedEmail,
+					user: created
+				});
 
 				// Auto-login. A freshly registered user has no enrolled factors yet, so the
 				// MFA seam (enforced on subsequent logins) does not apply here.

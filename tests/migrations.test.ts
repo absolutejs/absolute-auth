@@ -70,6 +70,13 @@ describe('blockMigrations manifest', () => {
 		}
 	});
 
+	test('credentials migrate existing installs for deferred user creation', () => {
+		const deferred = blockMigrations.credentials.migrations.find(
+			(migration) => migration.id === '0002_deferred_user_creation'
+		);
+		expect(deferred?.sql).toContain('"registration_data" jsonb');
+	});
+
 	test('every block names tables prefixed with auth_ or a known package prefix', () => {
 		// Catches accidental cross-package collision; intent + similar consumers will own
 		// any non-`auth_` namespace and we shouldn't ship migrations that touch theirs.

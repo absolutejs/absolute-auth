@@ -113,6 +113,11 @@ const mfaSmsColumnsMigration: Migration = {
 	].join('\n')
 };
 
+const credentialDeferredUserMigration: Migration = {
+	id: '0002_deferred_user_creation',
+	sql: 'ALTER TABLE "auth_credentials" ADD COLUMN IF NOT EXISTS "registration_data" jsonb;'
+};
+
 // Additive TOTP-lockout column for the `mfa` block. Tracks consecutive failed TOTP/backup-code
 // verifications at the login challenge, independent of the first-factor (password) lockout.
 // Fresh installs get it via `0001_init`; this brings older tables up to date. Idempotent.
@@ -173,11 +178,17 @@ export const blockMigrations: Record<BlockName, BlockMigrations> = {
 		apiKeysTable
 	]),
 	audit: initMigration('audit', [auditEventsTable]),
-	credentials: initMigration('credentials', [
-		credentialsTable,
-		credentialResetTokensTable,
-		credentialVerificationTokensTable
-	]),
+	credentials: {
+		block: 'credentials',
+		migrations: [
+			...initMigration('credentials', [
+				credentialsTable,
+				credentialResetTokensTable,
+				credentialVerificationTokensTable
+			]).migrations,
+			credentialDeferredUserMigration
+		]
+	},
 	fga: initMigration('fga', [warrantsTable]),
 	linkedProviders: initMigration('linkedProviders', [
 		linkedProviderBindingsTable,

@@ -1,5 +1,6 @@
 import { Elysia, t } from 'elysia';
 import { generateSecureToken, hashToken } from '../crypto';
+import { isStatusResponse } from '../typeGuards';
 import {
 	type CredentialsConfig,
 	DEFAULT_VERIFICATION_TOKEN_TTL_MS
@@ -7,8 +8,12 @@ import {
 
 export const credentialsEmailVerification = <UserType>({
 	credentialStore,
+	getUserByEmail,
+	onCreateCredentialUser,
 	onEmailVerified,
+	onRegistrationSuccess,
 	onSendEmail,
+	requireEmailVerification = false,
 	verificationTokenDurationMs = DEFAULT_VERIFICATION_TOKEN_TTL_MS,
 	verifyEmailRoute = '/auth/verify-email'
 }: CredentialsConfig<UserType>) =>
@@ -35,7 +40,54 @@ export const credentialsEmailVerification = <UserType>({
 					);
 				}
 
+				const credential = await credentialStore.getCredentialByEmail(
+					consumed.email
+				);
+				if (!credential) {
+					return status(
+						'Bad Request',
+						'Invalid or expired verification token'
+					);
+				}
+
+				let user = await getUserByEmail(consumed.email);
+				if (
+					requireEmailVerification &&
+					!user &&
+					credential.registrationData !== undefined
+				) {
+					const created = await onCreateCredentialUser({
+						...credential.registrationData,
+						email: consumed.email
+					});
+					if (
+						created instanceof Response ||
+						isStatusResponse(created)
+					) {
+						return created;
+					}
+					user = created;
+				}
+
+				// The account hook runs only after the token has been validated. If it
+				// fails, the credential remains unverified and a new token can be
+				// requested. If the credential update fails after account creation,
+				// login remains blocked and the idempotent retry observes the user.
 				await credentialStore.setEmailVerified(consumed.email);
+				if (credential.registrationData !== undefined) {
+					await credentialStore.saveCredential({
+						...credential,
+						emailVerified: true,
+						registrationData: undefined,
+						updatedAt: Date.now()
+					});
+				}
+				if (user && credential.registrationData !== undefined) {
+					await onRegistrationSuccess?.({
+						email: consumed.email,
+						user
+					});
+				}
 				await onEmailVerified?.({ email: consumed.email });
 
 				return status('OK', { status: 'email_verified' });

@@ -181,6 +181,19 @@ describe('credential login', () => {
 });
 
 describe('password reset flow', () => {
+	test('does not treat a pending registration as a recoverable account', async () => {
+		const { app, sent } = buildHarness({ requireEmailVerification: true });
+		await registerUser(app, 'pending-reset@example.com', 'originalpass');
+
+		const requested = await postJson(app, '/auth/reset-password/request', {
+			email: 'pending-reset@example.com'
+		});
+		expect(requested.status).toBe(200);
+		expect(sent.some((message) => message.type === 'reset_password')).toBe(
+			false
+		);
+	});
+
 	test('rotates the password and invalidates the old one', async () => {
 		const { app, sent } = buildHarness();
 		await registerUser(app, 'reset@example.com', 'originalpass');
@@ -231,8 +244,10 @@ describe('registration session behavior', () => {
 		);
 	});
 
-	test('requireEmailVerification gates the session until verified', async () => {
-		const { app, sent } = buildHarness({ requireEmailVerification: true });
+	test('requireEmailVerification defers account creation until verified', async () => {
+		const { app, sent, users } = buildHarness({
+			requireEmailVerification: true
+		});
 
 		const registered = await registerUser(
 			app,
@@ -246,24 +261,85 @@ describe('registration session behavior', () => {
 		expect(await registered.json()).toMatchObject({
 			status: 'verification_required'
 		});
+		expect(users.has('verify-first@example.com')).toBe(false);
 
 		const blocked = await postJson(app, '/auth/login', {
 			email: 'verify-first@example.com',
 			password: 'supersecret'
 		});
-		expect(blocked.status).toBe(403);
+		// There is no account to distinguish from an unknown email yet.
+		expect(blocked.status).toBe(401);
 
 		const token =
 			sent.find((message) => message.type === 'verify_email')?.token ??
 			'';
 		const verified = await postJson(app, '/auth/verify-email', { token });
 		expect(verified.status).toBe(200);
+		expect(users.has('verify-first@example.com')).toBe(true);
 
 		const allowed = await postJson(app, '/auth/login', {
 			email: 'verify-first@example.com',
 			password: 'supersecret'
 		});
 		expect(allowed.status).toBe(200);
+	});
+
+	test('preserves signup fields until verification-time account creation', async () => {
+		let captured: Record<string, unknown> | undefined;
+		const { app, sent } = buildHarness({
+			requireEmailVerification: true,
+			onCreateCredentialUser: (identity) => {
+				captured = identity;
+
+				return { email: identity.email, sub: 'user:deferred-extra' };
+			}
+		});
+
+		await postJson(app, '/auth/register', {
+			email: 'deferred-extra@example.com',
+			family_name: 'Lovelace',
+			given_name: 'Ada',
+			password: 'supersecret'
+		});
+		expect(captured).toBeUndefined();
+
+		await postJson(app, '/auth/verify-email', {
+			token: sent[0]?.token ?? ''
+		});
+		expect(captured?.given_name).toBe('Ada');
+		expect(captured?.family_name).toBe('Lovelace');
+	});
+
+	test('keeps a failed verification-time account creation retryable', async () => {
+		let attempts = 0;
+		const { app, sent, users } = buildHarness({
+			requireEmailVerification: true,
+			onCreateCredentialUser: ({ email }) => {
+				attempts += 1;
+				if (attempts === 1)
+					throw new Error('temporary user-store failure');
+				const user = { email, sub: `user:${email}` };
+				users.set(email, user);
+
+				return user;
+			}
+		});
+		await registerUser(app, 'retry@example.com', 'supersecret');
+
+		const failed = await postJson(app, '/auth/verify-email', {
+			token: sent[0]?.token ?? ''
+		});
+		expect(failed.status).toBe(500);
+		expect(users.has('retry@example.com')).toBe(false);
+
+		await postJson(app, '/auth/verify-email/request', {
+			email: 'retry@example.com'
+		});
+		const retried = await postJson(app, '/auth/verify-email', {
+			token: sent.at(-1)?.token ?? ''
+		});
+		expect(retried.status).toBe(200);
+		expect(users.has('retry@example.com')).toBe(true);
 	});
 
 	test('passes extra signup fields through to onCreateCredentialUser', async () => {

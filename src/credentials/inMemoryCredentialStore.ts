@@ -5,7 +5,11 @@ import type {
 } from './types';
 
 const cloneCredential = (value: CredentialRecord): CredentialRecord => ({
-	...value
+	...value,
+	registrationData:
+		value.registrationData === undefined
+			? undefined
+			: structuredClone(value.registrationData)
 });
 
 const cloneToken = (value: CredentialToken): CredentialToken => ({ ...value });

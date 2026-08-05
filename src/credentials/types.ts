@@ -8,6 +8,12 @@ export type CredentialRecord = {
 	emailVerified: boolean;
 	organizationId?: OrganizationId;
 	passwordHash: string;
+	/**
+	 * Signup fields held until email ownership is proven. This is deliberately
+	 * stored with the credential rather than in the consumer's user table so
+	 * `requireEmailVerification` does not create an impersonatable account.
+	 */
+	registrationData?: Record<string, unknown>;
 	status: CredentialStatus;
 	updatedAt: number;
 	userId?: string;
