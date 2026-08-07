@@ -58,7 +58,16 @@ export const createInMemoryLinkedProviderStores = (
 				.forEach(([bindingId]) => bindings.delete(bindingId));
 		},
 		saveGrant: async (grant) => {
-			grants.set(grant.id, cloneGrant(grant));
+			const existing = grants.get(grant.id);
+			grants.set(
+				grant.id,
+				cloneGrant({
+					...grant,
+					refreshTokenCiphertext:
+						grant.refreshTokenCiphertext ??
+						existing?.refreshTokenCiphertext
+				})
+			);
 		}
 	};
 

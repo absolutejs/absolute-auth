@@ -6,7 +6,7 @@ import type {
 	JsonObject
 } from '@absolutejs/linked-providers';
 import { neon } from '@neondatabase/serverless';
-import { desc, eq } from 'drizzle-orm';
+import { desc, eq, sql as drizzleSql } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/neon-http';
 import { jsonb, pgTable, text, timestamp, varchar } from 'drizzle-orm/pg-core';
 import type { AnyPgDatabase } from '../stores/postgres';
@@ -251,8 +251,7 @@ export const createNeonLinkedProviderGrantStore = <DB extends AnyPgDatabase>(
 					owner_ref: grant.ownerRef,
 					provider_family: grant.providerFamily,
 					provider_subject: grant.providerSubject,
-					refresh_token_ciphertext:
-						grant.refreshTokenCiphertext ?? null,
+					refresh_token_ciphertext: drizzleSql`coalesce(excluded.refresh_token_ciphertext, ${linkedProviderGrantsTable.refresh_token_ciphertext})`,
 					status: grant.status,
 					token_type: grant.tokenType ?? null,
 					updated_at: new Date(grant.updatedAt)
