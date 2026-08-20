@@ -27,19 +27,20 @@ export const requireAuthPlugin = <UserType>({
 		seed: pluginDependencySeed(authSessionStore)
 	})
 		.use(sessionStore<UserType>())
-		.guard({ cookie: t.Cookie({ user_session_id: userSessionIdTypebox }) })
-		.resolve(
-			async ({ store: { session }, cookie: { user_session_id } }) => {
-				const { user } = await getStatusFromSource<UserType>({
-					authSessionStore,
-					session,
-					user_session_id
-				});
+		.guard({
+			cookie: t.Cookie({ user_session_id: userSessionIdTypebox }),
+			schema: 'merge'
+		})
+		.derive(async ({ store: { session }, cookie: { user_session_id } }) => {
+			const { user } = await getStatusFromSource<UserType>({
+				authSessionStore,
+				session,
+				user_session_id
+			});
 
-				return { user: user ?? null };
-			}
-		)
-		.onBeforeHandle(({ user, status }) =>
+			return { user: user ?? null };
+		})
+		.beforeHandle(({ user, status }) =>
 			// Returning undefined lets the request continue to the handler;
 			// returning the 401 short-circuits it (fail closed).
 			user === null

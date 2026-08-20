@@ -36,7 +36,9 @@ const base64Decode = (encoded: string) =>
 	new Uint8Array(Buffer.from(encoded, 'base64'));
 
 const sha256Bytes = async (input: Uint8Array) =>
-	new Uint8Array(await crypto.subtle.digest('SHA-256', input));
+	new Uint8Array(
+		await crypto.subtle.digest('SHA-256', Uint8Array.from(input))
+	);
 
 // Identifies whether a stored hash needs upgrading to native Argon2id. Used by the
 // optional `rehashOnLogin` flag to decide whether to call `rehashCredentialPassword`

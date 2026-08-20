@@ -38,6 +38,7 @@ export const mfaManagementRoutes = <UserType>({
 		.use(sessionStore<UserType>())
 		.get(
 			managementRoute,
+			{ cookie: t.Cookie({ user_session_id: userSessionIdTypebox }) },
 			async ({
 				cookie: { user_session_id },
 				status,
@@ -67,11 +68,11 @@ export const mfaManagementRoutes = <UserType>({
 				};
 
 				return status('OK', response);
-			},
-			{ cookie: t.Cookie({ user_session_id: userSessionIdTypebox }) }
+			}
 		)
 		.delete(
 			managementRoute,
+			{ cookie: t.Cookie({ user_session_id: userSessionIdTypebox }) },
 			async ({
 				cookie: { user_session_id },
 				status,
@@ -100,6 +101,5 @@ export const mfaManagementRoutes = <UserType>({
 				await mfaStore.removeEnrollment(getUserId(userSession.user));
 
 				return status('OK', { status: 'disabled' as const });
-			},
-			{ cookie: t.Cookie({ user_session_id: userSessionIdTypebox }) }
+			}
 		);

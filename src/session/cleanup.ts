@@ -26,21 +26,23 @@ export const sessionCleanup = <UserType>({
 	onSessionCleanup
 }: SessionCleanupProps<UserType>) => {
 	let intervalId: ReturnType<typeof setInterval> | null = null;
+	const sessionState: SessionRecord<UserType> = {};
+	const unregisteredSessionState: UnregisteredSessionRecord = {};
 
 	return new Elysia({ name: 'sessionCleanup' })
-		.use(sessionStore<UserType>())
-		.onStart(({ store: { session, unregisteredSession } }) => {
+		.use(sessionStore(sessionState, unregisteredSessionState))
+		.setup(() => {
 			intervalId = setInterval(async () => {
 				await performCleanup({
 					authSessionStore,
 					maxSessions,
 					onSessionCleanup,
-					session,
-					unregisteredSession
+					session: sessionState,
+					unregisteredSession: unregisteredSessionState
 				});
 			}, cleanupIntervalMs);
 		})
-		.onStop(() => {
+		.cleanup(() => {
 			if (intervalId) {
 				clearInterval(intervalId);
 				intervalId = null;

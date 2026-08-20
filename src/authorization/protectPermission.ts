@@ -33,7 +33,10 @@ export const protectPermissionPlugin = <UserType>({
 		seed: pluginDependencySeed(hasPermission)
 	})
 		.use(sessionStore<UserType>())
-		.guard({ cookie: t.Cookie({ user_session_id: userSessionIdTypebox }) })
+		.guard({
+			cookie: t.Cookie({ user_session_id: userSessionIdTypebox }),
+			schema: 'merge'
+		})
 		.derive(
 			({ store: { session }, cookie: { user_session_id }, status }) => ({
 				protectPermission: <AuthReturn, AuthFailReturn>(

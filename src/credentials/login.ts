@@ -48,6 +48,10 @@ export const credentialsLogin = <UserType>({
 }: CredentialRouteProps<UserType>) =>
 	new Elysia().use(sessionStore<UserType>()).post(
 		loginRoute,
+		{
+			body: t.Object({ email: t.String(), password: t.String() }),
+			cookie: t.Cookie({ user_session_id: userSessionIdTypebox })
+		},
 		async ({
 			body: { email, password },
 			cookie: { user_session_id },
@@ -208,9 +212,5 @@ export const credentialsLogin = <UserType>({
 					passwordCompromised,
 					status: 'authenticated'
 				});
-			}),
-		{
-			body: t.Object({ email: t.String(), password: t.String() }),
-			cookie: t.Cookie({ user_session_id: userSessionIdTypebox })
-		}
+			})
 	);

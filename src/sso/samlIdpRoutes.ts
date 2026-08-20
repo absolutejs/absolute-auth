@@ -192,14 +192,6 @@ export const samlIdpRoutes = <UserType>({
 		.use(sessionStore<UserType>())
 		.post(
 			ssoIdpRoute,
-			async ({ body, cookie: { user_session_id }, request, store }) =>
-				handleSpInitiated({
-					binding: 'POST',
-					body,
-					inMemorySession: store.session,
-					request,
-					userSessionIdValue: user_session_id.value
-				}),
 			{
 				body: t.Object({
 					RelayState: t.Optional(t.String()),
@@ -208,18 +200,18 @@ export const samlIdpRoutes = <UserType>({
 				cookie: t.Cookie({
 					user_session_id: t.Optional(userSessionIdTypebox)
 				})
-			}
-		)
-		.get(
-			ssoIdpRoute,
-			async ({ cookie: { user_session_id }, query, request, store }) =>
+			},
+			async ({ body, cookie: { user_session_id }, request, store }) =>
 				handleSpInitiated({
-					binding: 'Redirect',
-					body: query,
+					binding: 'POST',
+					body,
 					inMemorySession: store.session,
 					request,
 					userSessionIdValue: user_session_id.value
-				}),
+				})
+		)
+		.get(
+			ssoIdpRoute,
 			{
 				cookie: t.Cookie({
 					user_session_id: t.Optional(userSessionIdTypebox)
@@ -230,10 +222,27 @@ export const samlIdpRoutes = <UserType>({
 					SigAlg: t.Optional(t.String()),
 					Signature: t.Optional(t.String())
 				})
-			}
+			},
+			async ({ cookie: { user_session_id }, query, request, store }) =>
+				handleSpInitiated({
+					binding: 'Redirect',
+					body: query,
+					inMemorySession: store.session,
+					request,
+					userSessionIdValue: user_session_id.value
+				})
 		)
 		.get(
 			idpInitiateRoute,
+			{
+				cookie: t.Cookie({
+					user_session_id: t.Optional(userSessionIdTypebox)
+				}),
+				query: t.Object({
+					RelayState: t.Optional(t.String()),
+					sp: t.Optional(t.String())
+				})
+			},
 			async ({
 				cookie: { user_session_id },
 				query: { sp: serviceProviderEntityId, RelayState: relayState },
@@ -280,15 +289,6 @@ export const samlIdpRoutes = <UserType>({
 					serviceProviderEntityId: serviceProvider.entityId,
 					user: userSession.user
 				});
-			},
-			{
-				cookie: t.Cookie({
-					user_session_id: t.Optional(userSessionIdTypebox)
-				}),
-				query: t.Object({
-					RelayState: t.Optional(t.String()),
-					sp: t.Optional(t.String())
-				})
 			}
 		)
 		.get(idpMetadataRoute, async ({ request }) =>

@@ -48,6 +48,20 @@ export const authorize = ({
 
 	return new Elysia().get(
 		authorizeRoute,
+		{
+			cookie: t.Cookie({
+				auth_client: authClientOption,
+				auth_intent: authIntentOption,
+				auth_provider: t.Optional(authProviderOption)
+			}),
+			params: t.Object({
+				provider: authProviderOption
+			}),
+			query: t.Object({
+				client: authClientOption,
+				intent: authIntentOption
+			})
+		},
 		async ({
 			status,
 			redirect,
@@ -202,20 +216,6 @@ export const authorize = ({
 					'Failed to create authorization URL'
 				);
 			}
-		},
-		{
-			cookie: t.Cookie({
-				auth_client: authClientOption,
-				auth_intent: authIntentOption,
-				auth_provider: t.Optional(authProviderOption)
-			}),
-			params: t.Object({
-				provider: authProviderOption
-			}),
-			query: t.Object({
-				client: authClientOption,
-				intent: authIntentOption
-			})
 		}
 	);
 };

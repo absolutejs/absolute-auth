@@ -23,7 +23,10 @@ export const stepUpPlugin = <UserType>({
 		seed: pluginDependencySeed(authSessionStore)
 	})
 		.use(sessionStore<UserType>())
-		.guard({ cookie: t.Cookie({ user_session_id: userSessionIdTypebox }) })
+		.guard({
+			cookie: t.Cookie({ user_session_id: userSessionIdTypebox }),
+			schema: 'merge'
+		})
 		.derive(
 			({ store: { session }, cookie: { user_session_id }, status }) => ({
 				requireRecentAuth: <AuthReturn, AuthFailReturn>(

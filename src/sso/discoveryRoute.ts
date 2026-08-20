@@ -31,6 +31,7 @@ export const ssoDiscoveryRoute = ({
 
 	return new Elysia().get(
 		discoveryRoute,
+		{ query: t.Object({ email: t.Optional(t.String()) }) },
 		async ({ query: { email }, redirect, status }) => {
 			if (!isNonEmptyString(email)) {
 				return status(
@@ -69,7 +70,6 @@ export const ssoDiscoveryRoute = ({
 			return redirect(
 				`${ssoRoute}/${connection.type}/${organizationId}/authorize`
 			);
-		},
-		{ query: t.Object({ email: t.Optional(t.String()) }) }
+		}
 	);
 };

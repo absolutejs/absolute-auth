@@ -33,6 +33,13 @@ export const profile = <UserType>({
 }: ProfileProps<UserType>) =>
 	new Elysia().use(sessionStore<UserType>()).get(
 		profileRoute,
+		{
+			cookie: t.Cookie({
+				auth_client: authClientOption,
+				auth_provider: authProviderOption,
+				user_session_id: userSessionIdTypebox
+			})
+		},
 		async ({
 			status,
 			store: { session },
@@ -116,12 +123,5 @@ export const profile = <UserType>({
 							`Failed to validate authorization code: Unknown status: ${err}`
 						);
 			}
-		},
-		{
-			cookie: t.Cookie({
-				auth_client: authClientOption,
-				auth_provider: authProviderOption,
-				user_session_id: userSessionIdTypebox
-			})
 		}
 	);

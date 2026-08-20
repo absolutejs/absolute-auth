@@ -42,12 +42,16 @@ const sha256 = async (input: string) => {
 const hmacSha1 = async (key: Uint8Array, message: Uint8Array) => {
 	const cryptoKey = await crypto.subtle.importKey(
 		'raw',
-		key,
+		Uint8Array.from(key),
 		{ hash: 'SHA-1', name: 'HMAC' },
 		false,
 		['sign']
 	);
-	const signature = await crypto.subtle.sign('HMAC', cryptoKey, message);
+	const signature = await crypto.subtle.sign(
+		'HMAC',
+		cryptoKey,
+		Uint8Array.from(message)
+	);
 
 	return new Uint8Array(signature);
 };

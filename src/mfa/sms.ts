@@ -238,6 +238,10 @@ export const mfaSmsRoutes = <UserType>({
 		.use(sessionStore<UserType>())
 		.post(
 			smsSetupRoute,
+			{
+				body: t.Object({ phone: t.String() }),
+				cookie: t.Cookie({ user_session_id: userSessionIdTypebox })
+			},
 			async ({
 				body: { phone },
 				cookie: { user_session_id },
@@ -328,14 +332,14 @@ export const mfaSmsRoutes = <UserType>({
 				}
 
 				return status('OK', { phone: maskPhone(phone) });
-			},
-			{
-				body: t.Object({ phone: t.String() }),
-				cookie: t.Cookie({ user_session_id: userSessionIdTypebox })
 			}
 		)
 		.post(
 			smsVerifyRoute,
+			{
+				body: t.Object({ code: t.String() }),
+				cookie: t.Cookie({ user_session_id: userSessionIdTypebox })
+			},
 			async ({
 				body: { code },
 				cookie: { user_session_id },
@@ -469,9 +473,5 @@ export const mfaSmsRoutes = <UserType>({
 				await onMfaEnrolled?.({ userId });
 
 				return status('OK', { status: 'enrolled' });
-			},
-			{
-				body: t.Object({ code: t.String() }),
-				cookie: t.Cookie({ user_session_id: userSessionIdTypebox })
 			}
 		);

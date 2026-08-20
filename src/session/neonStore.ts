@@ -50,9 +50,9 @@ export const authUnregisteredSessionsTable = pgTable(
 			string | number
 		>(),
 		refresh_token: text('refresh_token'),
-		session_information_json: jsonb('session_information_json').$type<
-			JsonObject
-		>(),
+		session_information_json: jsonb(
+			'session_information_json'
+		).$type<JsonObject>(),
 		updated_at: timestamp('updated_at').notNull().defaultNow(),
 		user_identity_json: jsonb('user_identity_json').$type<JsonObject>()
 	},

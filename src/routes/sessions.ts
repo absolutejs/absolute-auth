@@ -26,6 +26,7 @@ export const sessionRoutes = <UserType>({
 		.use(sessionStore<UserType>())
 		.get(
 			sessionsRoute,
+			{ cookie: t.Cookie({ user_session_id: userSessionIdTypebox }) },
 			async ({
 				cookie: { user_session_id },
 				status,
@@ -60,11 +61,14 @@ export const sessionRoutes = <UserType>({
 				}));
 
 				return status('OK', { sessions: list });
-			},
-			{ cookie: t.Cookie({ user_session_id: userSessionIdTypebox }) }
+			}
 		)
 		.delete(
 			`${sessionsRoute}/:id`,
+			{
+				cookie: t.Cookie({ user_session_id: userSessionIdTypebox }),
+				params: t.Object({ id: t.String() })
+			},
 			async ({
 				cookie: { user_session_id },
 				params: { id },
@@ -101,9 +105,5 @@ export const sessionRoutes = <UserType>({
 				await authSessionStore.removeSession(id);
 
 				return status('OK', { revoked: id });
-			},
-			{
-				cookie: t.Cookie({ user_session_id: userSessionIdTypebox }),
-				params: t.Object({ id: t.String() })
 			}
 		);

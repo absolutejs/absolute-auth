@@ -33,6 +33,13 @@ export const revoke = <UserType>({
 }: RevokeProps<UserType>) =>
 	new Elysia().use(sessionStore<UserType>()).post(
 		revokeRoute,
+		{
+			cookie: t.Cookie({
+				auth_client: authClientOption,
+				auth_provider: authProviderOption,
+				user_session_id: userSessionIdTypebox
+			})
+		},
 		async ({
 			status,
 			store: { session },
@@ -125,12 +132,5 @@ export const revoke = <UserType>({
 					'Failed to revoke token'
 				);
 			}
-		},
-		{
-			cookie: t.Cookie({
-				auth_client: authClientOption,
-				auth_provider: authProviderOption,
-				user_session_id: userSessionIdTypebox
-			})
 		}
 	);

@@ -44,6 +44,16 @@ export const mfaChallenge = <UserType>({
 }: MfaRouteProps<UserType>) =>
 	new Elysia().use(sessionStore<UserType>()).post(
 		challengeRoute,
+		{
+			body: t.Object({
+				action: t.Optional(
+					t.Union([t.Literal('send'), t.Literal('verify')])
+				),
+				code: t.Optional(t.String()),
+				factor: t.Optional(t.Literal('sms'))
+			}),
+			cookie: t.Cookie({ user_session_id: userSessionIdTypebox })
+		},
 		async ({
 			body: { action, code, factor },
 			cookie: { user_session_id },
@@ -316,15 +326,5 @@ export const mfaChallenge = <UserType>({
 				});
 
 				return promote();
-			}),
-		{
-			body: t.Object({
-				action: t.Optional(
-					t.Union([t.Literal('send'), t.Literal('verify')])
-				),
-				code: t.Optional(t.String()),
-				factor: t.Optional(t.Literal('sms'))
-			}),
-			cookie: t.Cookie({ user_session_id: userSessionIdTypebox })
-		}
+			})
 	);

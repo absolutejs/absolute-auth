@@ -78,6 +78,10 @@ export const oidcSsoRoutes = <UserType>({
 		.use(sessionStore<UserType>())
 		.get(
 			authorizeRoute,
+			{
+				cookie: ssoCookieSchema,
+				params: t.Object({ organizationId: t.String() })
+			},
 			async ({
 				cookie: {
 					sso_nonce,
@@ -127,14 +131,18 @@ export const oidcSsoRoutes = <UserType>({
 				});
 
 				return redirect(authorizationUrl.toString());
-			},
-			{
-				cookie: ssoCookieSchema,
-				params: t.Object({ organizationId: t.String() })
 			}
 		)
 		.get(
 			callbackRoute,
+			{
+				cookie: ssoCookieSchema,
+				params: t.Object({ organizationId: t.String() }),
+				query: t.Object({
+					code: t.Optional(t.String()),
+					state: t.Optional(t.String())
+				})
+			},
 			async ({
 				cookie: {
 					sso_nonce,
@@ -246,14 +254,6 @@ export const oidcSsoRoutes = <UserType>({
 						'OIDC sign-in failed'
 					);
 				}
-			},
-			{
-				cookie: ssoCookieSchema,
-				params: t.Object({ organizationId: t.String() }),
-				query: t.Object({
-					code: t.Optional(t.String()),
-					state: t.Optional(t.String())
-				})
 			}
 		);
 };

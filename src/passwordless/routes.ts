@@ -86,6 +86,7 @@ export const passwordlessRoutes = <UserType>({
 				.use(sessionStore<UserType>())
 				.post(
 					`${passwordlessRoute}/magic-link`,
+					{ body: t.Object({ email: t.String() }) },
 					async ({ body: { email }, status }) => {
 						const normalizedEmail = email.trim().toLowerCase();
 						const token = generateSecureToken();
@@ -102,11 +103,11 @@ export const passwordlessRoutes = <UserType>({
 						});
 
 						return status('OK', { status: 'magic_link_sent' });
-					},
-					{ body: t.Object({ email: t.String() }) }
+					}
 				)
 				.post(
 					`${passwordlessRoute}/magic-link/verify`,
+					{ body: t.Object({ token: t.String() }), cookie },
 					async ({
 						body: { token },
 						cookie: { user_session_id },
@@ -137,8 +138,7 @@ export const passwordlessRoutes = <UserType>({
 						}
 
 						return status('OK', { status: 'authenticated' });
-					},
-					{ body: t.Object({ token: t.String() }), cookie }
+					}
 				)
 		: new Elysia();
 
@@ -147,6 +147,7 @@ export const passwordlessRoutes = <UserType>({
 				.use(sessionStore<UserType>())
 				.post(
 					`${passwordlessRoute}/otp`,
+					{ body: t.Object({ email: t.String() }) },
 					async ({ body: { email }, status }) => {
 						const normalizedEmail = email.trim().toLowerCase();
 						const code = generateOtpCode(otpLength);
@@ -165,11 +166,17 @@ export const passwordlessRoutes = <UserType>({
 						});
 
 						return status('OK', { status: 'otp_sent' });
-					},
-					{ body: t.Object({ email: t.String() }) }
+					}
 				)
 				.post(
 					`${passwordlessRoute}/otp/verify`,
+					{
+						body: t.Object({
+							code: t.String(),
+							email: t.String()
+						}),
+						cookie
+					},
 					async ({
 						body: { code, email },
 						cookie: { user_session_id },
@@ -201,13 +208,6 @@ export const passwordlessRoutes = <UserType>({
 						}
 
 						return status('OK', { status: 'authenticated' });
-					},
-					{
-						body: t.Object({
-							code: t.String(),
-							email: t.String()
-						}),
-						cookie
 					}
 				)
 		: new Elysia();

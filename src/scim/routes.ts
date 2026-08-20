@@ -79,7 +79,7 @@ export const scimRoutes = ({
 		new Elysia()
 			// Okta / Azure AD send `Content-Type: application/scim+json`, which Elysia does not
 			// parse as JSON by default.
-			.onParse(({ request }, contentType) =>
+			.parse(({ contentType, request }) =>
 				contentType === SCIM_CONTENT_TYPE ? request.json() : undefined
 			)
 			.get(spcRoute, async ({ headers, request }) => {
@@ -125,6 +125,7 @@ export const scimRoutes = ({
 			})
 			.get(
 				usersRoute,
+				{ query: t.Object({ filter: t.Optional(t.String()) }) },
 				async ({ headers, query, request }) => {
 					const organizationId = await resolveScimOrganization(
 						scimTokenStore,
@@ -145,11 +146,11 @@ export const scimRoutes = ({
 					);
 
 					return scimJson(listResponse(resources), SCIM_OK);
-				},
-				{ query: t.Object({ filter: t.Optional(t.String()) }) }
+				}
 			)
 			.get(
 				userRoute,
+				{ params: t.Object({ id: t.String() }) },
 				async ({ headers, params: { id }, request }) => {
 					const organizationId = await resolveScimOrganization(
 						scimTokenStore,
@@ -170,11 +171,11 @@ export const scimRoutes = ({
 						),
 						SCIM_OK
 					);
-				},
-				{ params: t.Object({ id: t.String() }) }
+				}
 			)
 			.put(
 				userRoute,
+				{ params: t.Object({ id: t.String() }) },
 				async ({ body, headers, params: { id }, request }) => {
 					const organizationId = await resolveScimOrganization(
 						scimTokenStore,
@@ -208,11 +209,11 @@ export const scimRoutes = ({
 						),
 						SCIM_OK
 					);
-				},
-				{ params: t.Object({ id: t.String() }) }
+				}
 			)
 			.patch(
 				userRoute,
+				{ params: t.Object({ id: t.String() }) },
 				async ({ body, headers, params: { id }, request }) => {
 					const organizationId = await resolveScimOrganization(
 						scimTokenStore,
@@ -242,11 +243,11 @@ export const scimRoutes = ({
 						),
 						SCIM_OK
 					);
-				},
-				{ params: t.Object({ id: t.String() }) }
+				}
 			)
 			.delete(
 				userRoute,
+				{ params: t.Object({ id: t.String() }) },
 				async ({ headers, params: { id } }) => {
 					const organizationId = await resolveScimOrganization(
 						scimTokenStore,
@@ -257,8 +258,7 @@ export const scimRoutes = ({
 					await onScimUserDeactivate({ id, organizationId });
 
 					return new Response(null, { status: SCIM_NO_CONTENT });
-				},
-				{ params: t.Object({ id: t.String() }) }
+				}
 			)
 			.post(groupsRoute, async ({ body, headers, request }) => {
 				const organizationId = await resolveScimOrganization(
@@ -292,6 +292,7 @@ export const scimRoutes = ({
 			})
 			.get(
 				groupsRoute,
+				{ query: t.Object({ filter: t.Optional(t.String()) }) },
 				async ({ headers, query, request }) => {
 					const organizationId = await resolveScimOrganization(
 						scimTokenStore,
@@ -312,11 +313,11 @@ export const scimRoutes = ({
 					);
 
 					return scimJson(listResponse(resources), SCIM_OK);
-				},
-				{ query: t.Object({ filter: t.Optional(t.String()) }) }
+				}
 			)
 			.get(
 				groupRoute,
+				{ params: t.Object({ id: t.String() }) },
 				async ({ headers, params: { id }, request }) => {
 					const organizationId = await resolveScimOrganization(
 						scimTokenStore,
@@ -334,11 +335,11 @@ export const scimRoutes = ({
 						toGroupResource(group, groupLocation(request.url, id)),
 						SCIM_OK
 					);
-				},
-				{ params: t.Object({ id: t.String() }) }
+				}
 			)
 			.put(
 				groupRoute,
+				{ params: t.Object({ id: t.String() }) },
 				async ({ body, headers, params: { id }, request }) => {
 					const organizationId = await resolveScimOrganization(
 						scimTokenStore,
@@ -370,11 +371,11 @@ export const scimRoutes = ({
 						toGroupResource(group, groupLocation(request.url, id)),
 						SCIM_OK
 					);
-				},
-				{ params: t.Object({ id: t.String() }) }
+				}
 			)
 			.patch(
 				groupRoute,
+				{ params: t.Object({ id: t.String() }) },
 				async ({ body, headers, params: { id }, request }) => {
 					const organizationId = await resolveScimOrganization(
 						scimTokenStore,
@@ -406,11 +407,11 @@ export const scimRoutes = ({
 						toGroupResource(group, groupLocation(request.url, id)),
 						SCIM_OK
 					);
-				},
-				{ params: t.Object({ id: t.String() }) }
+				}
 			)
 			.delete(
 				groupRoute,
+				{ params: t.Object({ id: t.String() }) },
 				async ({ headers, params: { id } }) => {
 					const organizationId = await resolveScimOrganization(
 						scimTokenStore,
@@ -423,8 +424,7 @@ export const scimRoutes = ({
 					await onScimGroupDelete({ id, organizationId });
 
 					return new Response(null, { status: SCIM_NO_CONTENT });
-				},
-				{ params: t.Object({ id: t.String() }) }
+				}
 			)
 			// /Schemas + /ResourceTypes are required-but-not-always-shipped pieces of SCIM 2.0
 			// discovery. Okta + Azure AD probe them during connection setup; with the core schemas
@@ -444,6 +444,7 @@ export const scimRoutes = ({
 			})
 			.get(
 				schemaRoute,
+				{ params: t.Object({ id: t.String() }) },
 				async ({ headers, params: { id }, request }) => {
 					const organizationId = await resolveScimOrganization(
 						scimTokenStore,
@@ -461,8 +462,7 @@ export const scimRoutes = ({
 					}
 
 					return scimJson(schema, SCIM_OK);
-				},
-				{ params: t.Object({ id: t.String() }) }
+				}
 			)
 			.get(resourceTypesRoute, async ({ headers, request }) => {
 				const organizationId = await resolveScimOrganization(
@@ -483,6 +483,7 @@ export const scimRoutes = ({
 			})
 			.get(
 				resourceTypeRoute,
+				{ params: t.Object({ id: t.String() }) },
 				async ({ headers, params: { id }, request }) => {
 					const organizationId = await resolveScimOrganization(
 						scimTokenStore,
@@ -505,8 +506,7 @@ export const scimRoutes = ({
 					}
 
 					return scimJson(resourceType, SCIM_OK);
-				},
-				{ params: t.Object({ id: t.String() }) }
+				}
 			)
 	);
 };

@@ -65,6 +65,14 @@ export const apiKeysRoutes = ({
 
 	return new Elysia().post(
 		tokenRoute,
+		{
+			body: t.Object({
+				client_id: t.Optional(t.String()),
+				client_secret: t.Optional(t.String()),
+				grant_type: t.Optional(t.String()),
+				scope: t.Optional(t.String())
+			})
+		},
 		async ({ body, headers }) => {
 			if (body.grant_type !== GRANT_CLIENT_CREDENTIALS) {
 				return oauthError(HTTP_BAD_REQUEST, 'unsupported_grant_type');
@@ -113,14 +121,6 @@ export const apiKeysRoutes = ({
 					status: HTTP_OK
 				}
 			);
-		},
-		{
-			body: t.Object({
-				client_id: t.Optional(t.String()),
-				client_secret: t.Optional(t.String()),
-				grant_type: t.Optional(t.String()),
-				scope: t.Optional(t.String())
-			})
 		}
 	);
 };

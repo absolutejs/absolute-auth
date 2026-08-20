@@ -66,6 +66,7 @@ export const organizationRoutes = <UserType>({
 		.use(sessionStore<UserType>())
 		.get(
 			organizationsRoute,
+			{ cookie },
 			async ({
 				cookie: { user_session_id },
 				status,
@@ -82,11 +83,17 @@ export const organizationRoutes = <UserType>({
 				});
 
 				return status('OK', { organizations });
-			},
-			{ cookie }
+			}
 		)
 		.post(
 			organizationsRoute,
+			{
+				body: t.Object({
+					metadata: t.Optional(t.Record(t.String(), t.Unknown())),
+					name: t.String()
+				}),
+				cookie
+			},
 			async ({
 				body: { metadata, name },
 				cookie: { user_session_id },
@@ -124,17 +131,18 @@ export const organizationRoutes = <UserType>({
 				});
 
 				return status('OK', { organization });
-			},
-			{
-				body: t.Object({
-					metadata: t.Optional(t.Record(t.String(), t.Unknown())),
-					name: t.String()
-				}),
-				cookie
 			}
 		)
 		.post(
 			`${organizationsRoute}/:organizationId/invitations`,
+			{
+				body: t.Object({
+					email: t.String(),
+					roles: t.Optional(t.Array(t.String()))
+				}),
+				cookie,
+				params: t.Object({ organizationId: t.String() })
+			},
 			async ({
 				body: { email, roles },
 				cookie: { user_session_id },
@@ -177,18 +185,11 @@ export const organizationRoutes = <UserType>({
 					invitationId: invitation.invitationId,
 					token
 				});
-			},
-			{
-				body: t.Object({
-					email: t.String(),
-					roles: t.Optional(t.Array(t.String()))
-				}),
-				cookie,
-				params: t.Object({ organizationId: t.String() })
 			}
 		)
 		.get(
 			`${organizationsRoute}/:organizationId/invitations`,
+			{ cookie, params: t.Object({ organizationId: t.String() }) },
 			async ({
 				cookie: { user_session_id },
 				params: { organizationId },
@@ -217,11 +218,17 @@ export const organizationRoutes = <UserType>({
 						state: invitation.state
 					}))
 				});
-			},
-			{ cookie, params: t.Object({ organizationId: t.String() }) }
+			}
 		)
 		.delete(
 			`${organizationsRoute}/:organizationId/invitations/:invitationId`,
+			{
+				cookie,
+				params: t.Object({
+					invitationId: t.String(),
+					organizationId: t.String()
+				})
+			},
 			async ({
 				cookie: { user_session_id },
 				params: { invitationId, organizationId },
@@ -251,17 +258,11 @@ export const organizationRoutes = <UserType>({
 				});
 
 				return status('OK', { revoked: invitationId });
-			},
-			{
-				cookie,
-				params: t.Object({
-					invitationId: t.String(),
-					organizationId: t.String()
-				})
 			}
 		)
 		.post(
 			`${organizationsRoute}/invitations/accept`,
+			{ body: t.Object({ token: t.String() }), cookie },
 			async ({
 				body: { token },
 				cookie: { user_session_id },
@@ -300,11 +301,11 @@ export const organizationRoutes = <UserType>({
 					organizationId: membership.organizationId,
 					roles: membership.roles
 				});
-			},
-			{ body: t.Object({ token: t.String() }), cookie }
+			}
 		)
 		.get(
 			`${organizationsRoute}/:organizationId/members`,
+			{ cookie, params: t.Object({ organizationId: t.String() }) },
 			async ({
 				cookie: { user_session_id },
 				params: { organizationId },
@@ -329,11 +330,17 @@ export const organizationRoutes = <UserType>({
 					);
 
 				return status('OK', { members });
-			},
-			{ cookie, params: t.Object({ organizationId: t.String() }) }
+			}
 		)
 		.delete(
 			`${organizationsRoute}/:organizationId/members/:userId`,
+			{
+				cookie,
+				params: t.Object({
+					organizationId: t.String(),
+					userId: t.String()
+				})
+			},
 			async ({
 				cookie: { user_session_id },
 				params: { organizationId, userId },
@@ -361,13 +368,6 @@ export const organizationRoutes = <UserType>({
 				await onMembershipRemoved?.({ organizationId, userId });
 
 				return status('OK', { removed: userId });
-			},
-			{
-				cookie,
-				params: t.Object({
-					organizationId: t.String(),
-					userId: t.String()
-				})
 			}
 		);
 };

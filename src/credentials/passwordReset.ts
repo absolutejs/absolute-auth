@@ -14,6 +14,7 @@ export const credentialsPasswordReset = <UserType>({
 	new Elysia()
 		.post(
 			`${resetPasswordRoute}/request`,
+			{ body: t.Object({ email: t.String() }) },
 			async ({ body: { email }, status }) => {
 				const normalizedEmail = email.trim().toLowerCase();
 				const credential =
@@ -44,11 +45,13 @@ export const credentialsPasswordReset = <UserType>({
 				}
 
 				return status('OK', { status: 'reset_requested' });
-			},
-			{ body: t.Object({ email: t.String() }) }
+			}
 		)
 		.post(
 			resetPasswordRoute,
+			{
+				body: t.Object({ password: t.String(), token: t.String() })
+			},
 			async ({ body: { password, token }, status }) => {
 				const consumed = await credentialStore.consumeResetToken(
 					await hashToken(token)
@@ -99,8 +102,5 @@ export const credentialsPasswordReset = <UserType>({
 				await onPasswordReset?.({ email: consumed.email });
 
 				return status('OK', { status: 'password_reset' });
-			},
-			{
-				body: t.Object({ password: t.String(), token: t.String() })
 			}
 		);

@@ -8,9 +8,13 @@ import {
 	ProviderOption,
 	ProvidersMap
 } from 'citra';
-import { Cookie, status as statusType, redirect as redirectType } from 'elysia';
-import { ElysiaCustomStatusResponse } from 'elysia/error';
-import type { StatusMap } from 'elysia/utils';
+import {
+	Cookie,
+	type ElysiaStatus,
+	type StatusMap,
+	status as statusType,
+	redirect as redirectType
+} from 'elysia';
 import type { ApiKeysConfig } from './apikeys/config';
 import type { AgentAuthConfig } from './agents/config';
 import type { AuditConfig } from './audit/config';
@@ -164,7 +168,7 @@ export type ResolvedOAuthAuthorization = {
 };
 
 export type StatusReturn = Pick<
-	ElysiaCustomStatusResponse<number | keyof StatusMap, unknown>,
+	ElysiaStatus<number | keyof StatusMap, unknown>,
 	'code' | 'response'
 >;
 
@@ -635,7 +639,7 @@ export type JsonPrimitive = boolean | null | number | string;
 export type JsonValue = JsonPrimitive | JsonObject | JsonValue[];
 export type JsonObject = { [key: string]: JsonValue };
 
-export function isJsonValue(value: unknown): value is JsonValue {
+export const isJsonValue = (value: unknown): value is JsonValue => {
 	if (
 		value === null ||
 		typeof value === 'boolean' ||
@@ -647,7 +651,7 @@ export function isJsonValue(value: unknown): value is JsonValue {
 	if (typeof value !== 'object') return false;
 
 	return Object.values(value).every(isJsonValue);
-}
+};
 
 export const parseJsonObject = (value: unknown) => {
 	if (

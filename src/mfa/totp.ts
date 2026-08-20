@@ -29,6 +29,7 @@ export const mfaTotpRoutes = <UserType>({
 		.use(sessionStore<UserType>())
 		.post(
 			totpSetupRoute,
+			{ cookie: t.Cookie({ user_session_id: userSessionIdTypebox }) },
 			async ({
 				cookie: { user_session_id },
 				status,
@@ -83,11 +84,14 @@ export const mfaTotpRoutes = <UserType>({
 						secret
 					})
 				});
-			},
-			{ cookie: t.Cookie({ user_session_id: userSessionIdTypebox }) }
+			}
 		)
 		.post(
 			totpVerifyRoute,
+			{
+				body: t.Object({ code: t.String() }),
+				cookie: t.Cookie({ user_session_id: userSessionIdTypebox })
+			},
 			async ({
 				body: { code },
 				cookie: { user_session_id },
@@ -143,9 +147,5 @@ export const mfaTotpRoutes = <UserType>({
 				await onMfaEnrolled?.({ userId });
 
 				return status('OK', { backupCodes: codes });
-			},
-			{
-				body: t.Object({ code: t.String() }),
-				cookie: t.Cookie({ user_session_id: userSessionIdTypebox })
 			}
 		);

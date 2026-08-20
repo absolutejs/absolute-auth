@@ -36,6 +36,13 @@ export const refresh = <UserType>({
 }: RefreshProps<UserType>) =>
 	new Elysia().use(sessionStore<UserType>()).post(
 		refreshRoute,
+		{
+			cookie: t.Cookie({
+				auth_client: authClientOption,
+				auth_provider: authProviderOption,
+				user_session_id: userSessionIdTypebox
+			})
+		},
 		async ({
 			status,
 			store: { session },
@@ -128,12 +135,5 @@ export const refresh = <UserType>({
 					'Failed to refresh token'
 				);
 			}
-		},
-		{
-			cookie: t.Cookie({
-				auth_client: authClientOption,
-				auth_provider: authProviderOption,
-				user_session_id: userSessionIdTypebox
-			})
 		}
 	);

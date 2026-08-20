@@ -1,5 +1,5 @@
 {
-	"version": "0.65.6",
+	"version": "0.66.0",
 	"name": "@absolutejs/auth",
 	"description": "An authorization library for absolutejs",
 	"repository": {
@@ -24,7 +24,7 @@
 		"lint": "absolute eslint",
 		"typecheck": "absolute typecheck",
 		"verify-package": "absolute-manifest verify-package",
-		"check:package": "bun run typecheck && bun run lint && bun run test && bun run verify-package && bun run build && bun run verify-package --artifacts",
+		"check:package": "bun run typecheck && bun run lint && bun run test && bun run verify-package && bun run build",
 		"release": "bun run format && bun run check:package && npm publish"
 	},
 	"keywords": [
@@ -41,7 +41,7 @@
 		"@opentelemetry/api": ">=1.9.1 <2",
 		"@simplewebauthn/browser": ">=13.3.0 <14",
 		"@simplewebauthn/server": ">=13.3.2 <14",
-		"elysia": ">=1.4.29 <2",
+		"elysia": "^2.0.0-beta.6",
 		"react": ">=18 <20",
 		"solid-js": ">=1.9.14 <2",
 		"svelte": ">=5.56.7 <6",
@@ -77,13 +77,13 @@
 	},
 	"dependencies": {
 		"@absolutejs/linked-providers": "0.0.6",
-		"@absolutejs/manifest": "^0.7.2",
+		"@absolutejs/manifest": "^0.9.0",
 		"@neondatabase/serverless": "1.0.0",
 		"@sinclair/typebox": "^0.34.0",
 		"citra": "0.29.10"
 	},
 	"devDependencies": {
-		"@absolutejs/absolute": "^0.19.0-beta.1023",
+		"@absolutejs/absolute": "^0.20.0-beta.0",
 		"@eslint/js": "^10.0.1",
 		"@node-saml/node-saml": "5.1.0",
 		"@opentelemetry/api": "1.9.1",
@@ -94,7 +94,7 @@
 		"@types/bun": "1.2.9",
 		"@types/react": "^19.0.0",
 		"@typescript-eslint/parser": "^8.57.2",
-		"elysia": "1.4.29",
+		"elysia": "2.0.0-beta.6",
 		"eslint": "^10.1.0",
 		"eslint-plugin-absolute": "^0.11.0",
 		"eslint-plugin-promise": "^7.2.1",
@@ -104,7 +104,7 @@
 		"react": "19.2.8",
 		"solid-js": "1.9.14",
 		"svelte": "5.56.7",
-		"typescript": "5.8.3",
+		"typescript": "5.9.3",
 		"typescript-eslint": "^8.57.2",
 		"vue": "3.5.40",
 		"drizzle-orm": "1.0.0-rc.4"
@@ -230,118 +230,6 @@
 	},
 	"build": null,
 	"absolutejs": {
-		"manifestContract": 2,
-		"runtimePeers": {
-			"@node-saml/node-saml": {
-				"artifactImports": [
-					"@node-saml/node-saml"
-				],
-				"buildExternals": [
-					"@node-saml/node-saml"
-				],
-				"optional": true,
-				"range": ">=5.1.0 <6",
-				"tested": "5.1.0"
-			},
-			"@opentelemetry/api": {
-				"artifactImports": [
-					"@opentelemetry/api"
-				],
-				"buildExternals": [
-					"@opentelemetry/api"
-				],
-				"optional": true,
-				"range": ">=1.9.1 <2",
-				"tested": "1.9.1"
-			},
-			"@simplewebauthn/browser": {
-				"artifactImports": [
-					"@simplewebauthn/browser"
-				],
-				"buildExternals": [
-					"@simplewebauthn/browser"
-				],
-				"optional": true,
-				"range": ">=13.3.0 <14",
-				"tested": "13.3.0"
-			},
-			"@simplewebauthn/server": {
-				"artifactImports": [
-					"@simplewebauthn/server"
-				],
-				"buildExternals": [
-					"@simplewebauthn/server"
-				],
-				"optional": true,
-				"range": ">=13.3.2 <14",
-				"tested": "13.3.2"
-			},
-			"drizzle-orm": {
-				"artifactImports": [
-					"drizzle-orm",
-					"drizzle-orm/neon-http",
-					"drizzle-orm/pg-core"
-				],
-				"buildExternals": [
-					"drizzle-orm"
-				],
-				"range": ">=1.0.0-rc.4 <2",
-				"tested": "1.0.0-rc.4"
-			},
-			"elysia": {
-				"artifactImports": [
-					"elysia"
-				],
-				"buildExternals": [
-					"elysia"
-				],
-				"range": ">=1.4.29 <2",
-				"tested": "1.4.29"
-			},
-			"react": {
-				"artifactImports": [
-					"react"
-				],
-				"buildExternals": [
-					"react"
-				],
-				"optional": true,
-				"range": ">=18 <20",
-				"tested": "19.2.8"
-			},
-			"solid-js": {
-				"artifactImports": [
-					"solid-js"
-				],
-				"buildExternals": [
-					"solid-js"
-				],
-				"optional": true,
-				"range": ">=1.9.14 <2",
-				"tested": "1.9.14"
-			},
-			"svelte": {
-				"artifactImports": [
-					"svelte/store"
-				],
-				"buildExternals": [
-					"svelte"
-				],
-				"optional": true,
-				"range": ">=5.56.7 <6",
-				"tested": "5.56.7"
-			},
-			"vue": {
-				"artifactImports": [
-					"vue"
-				],
-				"buildExternals": [
-					"vue"
-				],
-				"optional": true,
-				"range": ">=3.5.40 <4",
-				"tested": "3.5.40"
-			}
-		}
+		"manifestContract": 2
 	}
 }

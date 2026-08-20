@@ -32,7 +32,10 @@ const base64UrlEncode = (bytes: Uint8Array) => {
 // SHA-256 thumbprint of the cert's DER bytes, base64url-encoded — the `x5t#S256` value
 // the cnf claim of a certificate-bound access token will carry (RFC 8705 §3).
 export const computeCertThumbprint = async (derBytes: Uint8Array) => {
-	const digest = await crypto.subtle.digest('SHA-256', derBytes);
+	const digest = await crypto.subtle.digest(
+		'SHA-256',
+		Uint8Array.from(derBytes)
+	);
 
 	return base64UrlEncode(new Uint8Array(digest));
 };

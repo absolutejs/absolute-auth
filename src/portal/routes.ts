@@ -77,6 +77,14 @@ export const portalRoutes = ({
 		})
 		.put(
 			`${portalRoute}/connection/saml`,
+			{
+				body: t.Object({
+					idpEntityId: t.String(),
+					idpSloUrl: t.Optional(t.String()),
+					idpSsoUrl: t.String(),
+					idpX509Cert: t.String()
+				})
+			},
 			async ({ body, headers, status }) => {
 				const session = await loadSession(headers.authorization);
 				if (!session) {
@@ -128,18 +136,19 @@ export const portalRoutes = ({
 				});
 
 				return status('OK', { configured: true, type: 'saml' });
-			},
-			{
-				body: t.Object({
-					idpEntityId: t.String(),
-					idpSloUrl: t.Optional(t.String()),
-					idpSsoUrl: t.String(),
-					idpX509Cert: t.String()
-				})
 			}
 		)
 		.put(
 			`${portalRoute}/connection/oidc`,
+			{
+				body: t.Object({
+					clientId: t.String(),
+					clientSecret: t.String(),
+					issuer: t.String(),
+					redirectUri: t.Optional(t.String()),
+					scopes: t.Optional(t.Array(t.String()))
+				})
+			},
 			async ({ body, headers, request, status }) => {
 				const session = await loadSession(headers.authorization);
 				if (!session) {
@@ -195,15 +204,6 @@ export const portalRoutes = ({
 				});
 
 				return status('OK', { configured: true, type: 'oidc' });
-			},
-			{
-				body: t.Object({
-					clientId: t.String(),
-					clientSecret: t.String(),
-					issuer: t.String(),
-					redirectUri: t.Optional(t.String()),
-					scopes: t.Optional(t.Array(t.String()))
-				})
 			}
 		)
 		.post(

@@ -24,6 +24,7 @@ export const complianceRoutes = <UserType>({
 		.use(sessionStore<UserType>())
 		.get(
 			`${complianceRoute}/export`,
+			{ cookie: t.Cookie({ user_session_id: userSessionIdTypebox }) },
 			async ({
 				cookie: { user_session_id },
 				status,
@@ -46,11 +47,11 @@ export const complianceRoutes = <UserType>({
 				});
 
 				return status('OK', data);
-			},
-			{ cookie: t.Cookie({ user_session_id: userSessionIdTypebox }) }
+			}
 		)
 		.delete(
 			complianceRoute,
+			{ cookie: t.Cookie({ user_session_id: userSessionIdTypebox }) },
 			async ({
 				cookie: { user_session_id },
 				status,
@@ -86,6 +87,5 @@ export const complianceRoutes = <UserType>({
 				});
 
 				return status('OK', { deleted: true });
-			},
-			{ cookie: t.Cookie({ user_session_id: userSessionIdTypebox }) }
+			}
 		);

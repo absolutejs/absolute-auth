@@ -37,6 +37,7 @@ const buildApp = () => {
 		.use(sessionStore<TestUser>())
 		.post(
 			'/guest',
+			cookieSchema,
 			async ({ cookie: { user_session_id }, store: { session } }) => {
 				await createAnonymousSession({
 					authSessionStore,
@@ -46,11 +47,11 @@ const buildApp = () => {
 				});
 
 				return { ok: true };
-			},
-			cookieSchema
+			}
 		)
 		.post(
 			'/login',
+			{ ...cookieSchema, body: t.Object({ sub: t.String() }) },
 			async ({
 				body: { sub },
 				cookie: { session_ring, user_session_id },
@@ -66,11 +67,11 @@ const buildApp = () => {
 				addToSessionRing(session_ring, sessionId);
 
 				return { ok: true };
-			},
-			{ ...cookieSchema, body: t.Object({ sub: t.String() }) }
+			}
 		)
 		.get(
 			'/whoami',
+			cookieSchema,
 			async ({ cookie: { user_session_id }, store: { session } }) => {
 				const current = await loadSessionFromSource({
 					authSessionStore,
@@ -82,11 +83,11 @@ const buildApp = () => {
 					anonymous: isAnonymousSession(current),
 					sub: current?.user.sub ?? null
 				};
-			},
-			cookieSchema
+			}
 		)
 		.get(
 			'/accounts',
+			cookieSchema,
 			async ({ cookie: { session_ring } }) => {
 				const accounts = await listRingSessions({
 					authSessionStore,
@@ -97,11 +98,11 @@ const buildApp = () => {
 					sessionId: entry.sessionId,
 					sub: entry.user.sub
 				}));
-			},
-			cookieSchema
+			}
 		)
 		.post(
 			'/switch',
+			{ ...cookieSchema, body: t.Object({ sessionId: t.String() }) },
 			({
 				body: { sessionId },
 				cookie: { session_ring, user_session_id }
@@ -111,11 +112,11 @@ const buildApp = () => {
 					ring: session_ring,
 					sessionId
 				})
-			}),
-			{ ...cookieSchema, body: t.Object({ sessionId: t.String() }) }
+			})
 		)
 		.post(
 			'/signout-one',
+			{ ...cookieSchema, body: t.Object({ sessionId: t.String() }) },
 			async ({
 				body: { sessionId },
 				cookie: { session_ring, user_session_id }
@@ -128,8 +129,7 @@ const buildApp = () => {
 				});
 
 				return { ok: true };
-			},
-			{ ...cookieSchema, body: t.Object({ sessionId: t.String() }) }
+			}
 		);
 };
 

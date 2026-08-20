@@ -36,6 +36,7 @@ export const statusListRoutes = ({
 
 	return new Elysia().get(
 		listRoute,
+		{ params: t.Object({ listId: t.String() }) },
 		async ({ params: { listId } }) => {
 			const bits = await getStatusList(listId);
 			if (bits === undefined) {
@@ -53,7 +54,6 @@ export const statusListRoutes = ({
 				headers: { 'content-type': STATUS_LIST_SUB_TYP },
 				status: HTTP_OK
 			});
-		},
-		{ params: t.Object({ listId: t.String() }) }
+		}
 	);
 };

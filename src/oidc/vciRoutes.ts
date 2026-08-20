@@ -70,6 +70,17 @@ export const vciRoutes = ({
 		)
 		.post(
 			credentialRoute,
+			{
+				body: t.Object({
+					format: t.Optional(t.Union([t.Literal('vc+sd-jwt')])),
+					proof: t.Optional(
+						t.Object({
+							jwt: t.String(),
+							proof_type: t.Literal('jwt')
+						})
+					)
+				})
+			},
 			async ({ body, headers }) => {
 				const accessToken = extractBearer(headers.authorization);
 				if (accessToken === undefined) {
@@ -92,17 +103,6 @@ export const vciRoutes = ({
 					{ credential: result.credential, format: result.format },
 					{ status: HTTP_OK }
 				);
-			},
-			{
-				body: t.Object({
-					format: t.Optional(t.Union([t.Literal('vc+sd-jwt')])),
-					proof: t.Optional(
-						t.Object({
-							jwt: t.String(),
-							proof_type: t.Literal('jwt')
-						})
-					)
-				})
 			}
 		)
 		.post(nonceRoute, async () => {

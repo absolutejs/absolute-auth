@@ -461,10 +461,7 @@ const buildAuthApplications = async <UserType>(
 		})
 	]);
 
-	const featureRoutes = new Elysia({
-		name: '@absolutejs/auth/feature-routes',
-		seed: pluginSeed
-	}).use([
+	const identityFeatureRoutes = new Elysia().use([
 		auditedCredentials
 			? credentialRoutes<UserType>({
 					...auditedCredentials,
@@ -506,7 +503,10 @@ const buildAuthApplications = async <UserType>(
 					cookieSecure: resolvedCookieSecure,
 					samlAdapter: sso.samlAdapter
 				})
-			: new Elysia(),
+			: new Elysia()
+	]);
+
+	const organizationFeatureRoutes = new Elysia().use([
 		sso && sso.getOrganizationByEmailDomain
 			? ssoDiscoveryRoute({
 					getOrganizationByEmailDomain:
@@ -536,7 +536,10 @@ const buildAuthApplications = async <UserType>(
 					authSessionStore,
 					emit: auditEmit
 				})
-			: new Elysia(),
+			: new Elysia()
+	]);
+
+	const extendedFeatureRoutes = new Elysia().use([
 		portal ? portalRoutes({ ...portal, emit: auditEmit }) : new Elysia(),
 		webauthn
 			? webauthnRoutes<UserType>({
@@ -555,6 +558,15 @@ const buildAuthApplications = async <UserType>(
 			: new Elysia(),
 		createConfiguredAuthHtmxRoutes({ authSessionStore, config: htmx }),
 		agentAuthRoutes(resolvedAgentAuth)
+	]);
+
+	const featureRoutes = new Elysia({
+		name: '@absolutejs/auth/feature-routes',
+		seed: pluginSeed
+	}).use([
+		identityFeatureRoutes,
+		organizationFeatureRoutes,
+		extendedFeatureRoutes
 	]);
 
 	const authContext = createAuthContext<UserType>({

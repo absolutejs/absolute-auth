@@ -60,6 +60,16 @@ export const signout = <UserType>({
 }: SignOutProps<UserType>) =>
 	new Elysia().use(sessionStore<UserType>()).delete(
 		signoutRoute,
+		{
+			cookie: t.Cookie({
+				auth_provider: t.Optional(authProviderOption),
+				user_session_id: t.Optional(
+					t.TemplateLiteral(
+						'${string}-${string}-${string}-${string}-${string}'
+					)
+				)
+			})
+		},
 		async ({
 			status,
 			store: { session },
@@ -128,15 +138,5 @@ export const signout = <UserType>({
 
 					return new Response(null, { status: 204 });
 				}
-			),
-		{
-			cookie: t.Cookie({
-				auth_provider: t.Optional(authProviderOption),
-				user_session_id: t.Optional(
-					t.TemplateLiteral(
-						'${string}-${string}-${string}-${string}-${string}'
-					)
-				)
-			})
-		}
+			)
 	);

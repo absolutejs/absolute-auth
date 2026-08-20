@@ -57,6 +57,7 @@ export const webauthnRoutes = <UserType>({
 		.use(sessionStore<UserType>())
 		.post(
 			`${webauthnRoute}/register/options`,
+			{ cookie: challengeCookie },
 			async ({
 				cookie: { user_session_id, webauthn_challenge },
 				status,
@@ -90,11 +91,14 @@ export const webauthnRoutes = <UserType>({
 				setChallenge(webauthn_challenge, challenge);
 
 				return status('OK', options);
-			},
-			{ cookie: challengeCookie }
+			}
 		)
 		.post(
 			`${webauthnRoute}/register/verify`,
+			{
+				body: t.Object({}, { additionalProperties: true }),
+				cookie: challengeCookie
+			},
 			async ({
 				body,
 				cookie: { user_session_id, webauthn_challenge },
@@ -153,14 +157,11 @@ export const webauthnRoutes = <UserType>({
 					credentialId: result.credential.credentialId,
 					verified: true
 				});
-			},
-			{
-				body: t.Object({}, { additionalProperties: true }),
-				cookie: challengeCookie
 			}
 		)
 		.post(
 			`${webauthnRoute}/authenticate/options`,
+			{ cookie: challengeCookie },
 			async ({ cookie: { webauthn_challenge }, status }) => {
 				const { challenge, options } =
 					await webauthnAdapter.createAuthenticationOptions({
@@ -170,11 +171,17 @@ export const webauthnRoutes = <UserType>({
 				setChallenge(webauthn_challenge, challenge);
 
 				return status('OK', options);
-			},
-			{ cookie: challengeCookie }
+			}
 		)
 		.post(
 			`${webauthnRoute}/authenticate/verify`,
+			{
+				body: t.Object(
+					{ id: t.String() },
+					{ additionalProperties: true }
+				),
+				cookie: challengeCookie
+			},
 			async ({
 				body,
 				cookie: { user_session_id, webauthn_challenge },
@@ -243,13 +250,6 @@ export const webauthnRoutes = <UserType>({
 				await onWebAuthnAuthenticated?.({ user, userSessionId });
 
 				return status('OK', { status: 'authenticated' });
-			},
-			{
-				body: t.Object(
-					{ id: t.String() },
-					{ additionalProperties: true }
-				),
-				cookie: challengeCookie
 			}
 		);
 };

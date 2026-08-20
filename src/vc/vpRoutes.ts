@@ -55,6 +55,13 @@ export const vpRoutes = ({
 	return new Elysia()
 		.post(
 			authorizeRoute,
+			{
+				body: t.Object({
+					client_id: t.Optional(t.String()),
+					requested_claims: t.Array(t.String()),
+					state: t.Optional(t.String())
+				})
+			},
 			async ({ body }) => {
 				const input: CreatePresentationRequestInput = {
 					clientId: body.client_id ?? defaultClientId,
@@ -77,17 +84,11 @@ export const vpRoutes = ({
 					},
 					{ status: HTTP_OK }
 				);
-			},
-			{
-				body: t.Object({
-					client_id: t.Optional(t.String()),
-					requested_claims: t.Array(t.String()),
-					state: t.Optional(t.String())
-				})
 			}
 		)
 		.get(
 			requestRoute,
+			{ params: t.Object({ id: t.String() }) },
 			async ({ params: { id } }) => {
 				const stored = await vpConfig.requestStore.getRequest(id);
 				if (stored === undefined) {
@@ -115,11 +116,17 @@ export const vpRoutes = ({
 					},
 					status: HTTP_OK
 				});
-			},
-			{ params: t.Object({ id: t.String() }) }
+			}
 		)
 		.post(
 			responseRoute,
+			{
+				body: t.Object({
+					presentation_submission: t.Optional(t.Unknown()),
+					state: t.Optional(t.String()),
+					vp_token: t.String()
+				})
+			},
 			async ({ body }) => {
 				const requestId = body.state;
 				if (requestId === undefined) {
@@ -144,13 +151,6 @@ export const vpRoutes = ({
 					},
 					{ status: HTTP_OK }
 				);
-			},
-			{
-				body: t.Object({
-					presentation_submission: t.Optional(t.Unknown()),
-					state: t.Optional(t.String()),
-					vp_token: t.String()
-				})
 			}
 		);
 };

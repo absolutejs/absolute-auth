@@ -20,6 +20,7 @@ export const credentialsEmailVerification = <UserType>({
 	new Elysia()
 		.post(
 			verifyEmailRoute,
+			{ body: t.Object({ token: t.String() }) },
 			async ({ body: { token }, status }) => {
 				const consumed = await credentialStore.consumeVerificationToken(
 					await hashToken(token)
@@ -91,11 +92,11 @@ export const credentialsEmailVerification = <UserType>({
 				await onEmailVerified?.({ email: consumed.email });
 
 				return status('OK', { status: 'email_verified' });
-			},
-			{ body: t.Object({ token: t.String() }) }
+			}
 		)
 		.post(
 			`${verifyEmailRoute}/request`,
+			{ body: t.Object({ email: t.String() }) },
 			async ({ body: { email }, status }) => {
 				const normalizedEmail = email.trim().toLowerCase();
 				const credential =
@@ -119,6 +120,5 @@ export const credentialsEmailVerification = <UserType>({
 				}
 
 				return status('OK', { status: 'verification_requested' });
-			},
-			{ body: t.Object({ email: t.String() }) }
+			}
 		);

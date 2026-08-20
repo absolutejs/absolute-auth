@@ -49,6 +49,17 @@ export const callback = <UserType>({
 }: CallbackProps<UserType>) =>
 	new Elysia().use(sessionStore<UserType>()).get(
 		callbackRoute,
+		{
+			cookie: t.Cookie({
+				auth_client: authClientOption,
+				auth_intent: authIntentOption,
+				auth_provider: t.Optional(authProviderOption),
+				code_verifier: t.Optional(t.String()),
+				origin_url: t.Optional(t.String()),
+				state: t.Optional(t.String()),
+				user_session_id: t.Optional(userSessionIdTypebox)
+			})
+		},
 		async ({
 			status,
 			redirect,
@@ -262,16 +273,5 @@ export const callback = <UserType>({
 
 					return redirect(originUrl);
 				}
-			),
-		{
-			cookie: t.Cookie({
-				auth_client: authClientOption,
-				auth_intent: authIntentOption,
-				auth_provider: t.Optional(authProviderOption),
-				code_verifier: t.Optional(t.String()),
-				origin_url: t.Optional(t.String()),
-				state: t.Optional(t.String()),
-				user_session_id: t.Optional(userSessionIdTypebox)
-			})
-		}
+			)
 	);

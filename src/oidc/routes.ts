@@ -780,6 +780,30 @@ export const oidcProviderRoutes = <UserType>(
 			.use(sessionStore<UserType>())
 			.get(
 				authorizeRoute,
+				{
+					cookie: t.Cookie({
+						user_session_id: t.Optional(userSessionIdTypebox)
+					}),
+					query: t.Object({
+						acr_values: t.Optional(t.String()),
+						claims: t.Optional(t.String()),
+						client_id: t.Optional(t.String()),
+						code_challenge: t.Optional(t.String()),
+						code_challenge_method: t.Optional(t.String()),
+						id_token_hint: t.Optional(t.String()),
+						max_age: t.Optional(t.String()),
+						nonce: t.Optional(t.String()),
+						prompt: t.Optional(t.String()),
+						redirect_uri: t.Optional(t.String()),
+						request: t.Optional(t.String()),
+						request_uri: t.Optional(t.String()),
+						resource: t.Optional(t.String()),
+						response_mode: t.Optional(t.String()),
+						response_type: t.Optional(t.String()),
+						scope: t.Optional(t.String()),
+						state: t.Optional(t.String())
+					})
+				},
 				async ({
 					cookie: { user_session_id },
 					query,
@@ -976,8 +1000,9 @@ export const oidcProviderRoutes = <UserType>(
 						maxAge !== undefined &&
 						!Number.isNaN(maxAge) &&
 						maxAge >= 0 &&
-						(userSession.authenticatedAt ?? 0) <
-							Date.now() - maxAge * 1000;
+						(maxAge === 0 ||
+							(userSession.authenticatedAt ?? 0) <
+								Date.now() - maxAge * 1000);
 					const hintSub =
 						effectiveQuery.id_token_hint === undefined
 							? undefined
@@ -1128,34 +1153,33 @@ export const oidcProviderRoutes = <UserType>(
 					if (state !== undefined) params.state = state;
 
 					return respondToClient(redirectUri, responseMode, params);
-				},
-				{
-					cookie: t.Cookie({
-						user_session_id: t.Optional(userSessionIdTypebox)
-					}),
-					query: t.Object({
-						acr_values: t.Optional(t.String()),
-						claims: t.Optional(t.String()),
-						client_id: t.Optional(t.String()),
-						code_challenge: t.Optional(t.String()),
-						code_challenge_method: t.Optional(t.String()),
-						id_token_hint: t.Optional(t.String()),
-						max_age: t.Optional(t.String()),
-						nonce: t.Optional(t.String()),
-						prompt: t.Optional(t.String()),
-						redirect_uri: t.Optional(t.String()),
-						request: t.Optional(t.String()),
-						request_uri: t.Optional(t.String()),
-						resource: t.Optional(t.String()),
-						response_mode: t.Optional(t.String()),
-						response_type: t.Optional(t.String()),
-						scope: t.Optional(t.String()),
-						state: t.Optional(t.String())
-					})
 				}
 			)
 			.post(
 				tokenRoute,
+				{
+					body: t.Object({
+						assertion: t.Optional(t.String()),
+						audience: t.Optional(t.String()),
+						auth_req_id: t.Optional(t.String()),
+						claim_token: t.Optional(t.String()),
+						client_assertion: t.Optional(t.String()),
+						client_assertion_type: t.Optional(t.String()),
+						client_id: t.Optional(t.String()),
+						client_secret: t.Optional(t.String()),
+						code: t.Optional(t.String()),
+						code_verifier: t.Optional(t.String()),
+						device_code: t.Optional(t.String()),
+						grant_type: t.Optional(t.String()),
+						'pre-authorized_code': t.Optional(t.String()),
+						redirect_uri: t.Optional(t.String()),
+						refresh_token: t.Optional(t.String()),
+						resource: t.Optional(t.String()),
+						scope: t.Optional(t.String()),
+						subject_token: t.Optional(t.String()),
+						subject_token_type: t.Optional(t.String())
+					})
+				},
 				async ({ body, headers, request }) => {
 					// OID4VCI §3.5 — the pre-authorized_code grant is the wallet's auth material;
 					// no client_id / client_secret. Route it before authenticateTokenClient so a
@@ -1267,29 +1291,6 @@ export const oidcProviderRoutes = <UserType>(
 						HTTP_BAD_REQUEST,
 						'unsupported_grant_type'
 					);
-				},
-				{
-					body: t.Object({
-						assertion: t.Optional(t.String()),
-						audience: t.Optional(t.String()),
-						auth_req_id: t.Optional(t.String()),
-						claim_token: t.Optional(t.String()),
-						client_assertion: t.Optional(t.String()),
-						client_assertion_type: t.Optional(t.String()),
-						client_id: t.Optional(t.String()),
-						client_secret: t.Optional(t.String()),
-						code: t.Optional(t.String()),
-						code_verifier: t.Optional(t.String()),
-						device_code: t.Optional(t.String()),
-						grant_type: t.Optional(t.String()),
-						'pre-authorized_code': t.Optional(t.String()),
-						redirect_uri: t.Optional(t.String()),
-						refresh_token: t.Optional(t.String()),
-						resource: t.Optional(t.String()),
-						scope: t.Optional(t.String()),
-						subject_token: t.Optional(t.String()),
-						subject_token_type: t.Optional(t.String())
-					})
 				}
 			)
 			// RFC 9126 — Pushed Authorization Request. The RP POSTs the full authorize
@@ -1298,6 +1299,28 @@ export const oidcProviderRoutes = <UserType>(
 			// replays it. The point: request params never traverse the user-agent.
 			.post(
 				parRoute,
+				{
+					body: t.Object({
+						acr_values: t.Optional(t.String()),
+						audience: t.Optional(t.String()),
+						claims: t.Optional(t.String()),
+						client_assertion: t.Optional(t.String()),
+						client_assertion_type: t.Optional(t.String()),
+						client_id: t.Optional(t.String()),
+						client_secret: t.Optional(t.String()),
+						code_challenge: t.Optional(t.String()),
+						code_challenge_method: t.Optional(t.String()),
+						nonce: t.Optional(t.String()),
+						redirect_uri: t.Optional(t.String()),
+						resource: t.Optional(t.String()),
+						response_type: t.Optional(t.String()),
+						scope: t.Optional(t.String()),
+						state: t.Optional(t.String())
+					}),
+					headers: t.Object({
+						authorization: t.Optional(t.String())
+					})
+				},
 				async ({ body, headers, request }) => {
 					if (config.pushedAuthorizationRequestStore === undefined) {
 						return oauthError(
@@ -1344,28 +1367,6 @@ export const oidcProviderRoutes = <UserType>(
 						result.body,
 						result.ok ? HTTP_OK : result.status
 					);
-				},
-				{
-					body: t.Object({
-						acr_values: t.Optional(t.String()),
-						audience: t.Optional(t.String()),
-						claims: t.Optional(t.String()),
-						client_assertion: t.Optional(t.String()),
-						client_assertion_type: t.Optional(t.String()),
-						client_id: t.Optional(t.String()),
-						client_secret: t.Optional(t.String()),
-						code_challenge: t.Optional(t.String()),
-						code_challenge_method: t.Optional(t.String()),
-						nonce: t.Optional(t.String()),
-						redirect_uri: t.Optional(t.String()),
-						resource: t.Optional(t.String()),
-						response_type: t.Optional(t.String()),
-						scope: t.Optional(t.String()),
-						state: t.Optional(t.String())
-					}),
-					headers: t.Object({
-						authorization: t.Optional(t.String())
-					})
 				}
 			)
 			// RFC 7662 — token introspection. Authenticated clients learn whether
@@ -1375,6 +1376,17 @@ export const oidcProviderRoutes = <UserType>(
 			// tokens come back as `{ active: false }` — never an error.
 			.post(
 				introspectRoute,
+				{
+					body: t.Object({
+						client_id: t.Optional(t.String()),
+						client_secret: t.Optional(t.String()),
+						token: t.String(),
+						token_type_hint: t.Optional(t.String())
+					}),
+					headers: t.Object({
+						authorization: t.Optional(t.String())
+					})
+				},
 				async ({ body, headers }) => {
 					const basic = readBasicAuth(headers.authorization);
 					const clientId = body.client_id ?? basic.clientId;
@@ -1402,7 +1414,15 @@ export const oidcProviderRoutes = <UserType>(
 					});
 
 					return jsonResponse(result, HTTP_OK);
-				},
+				}
+			)
+			// RFC 7009 — token revocation. Refresh tokens are deleted from the
+			// store. Access tokens (JWT) are stateless, so the response is 200
+			// OK without action — spec-permitted ("the authorization server
+			// responds with HTTP status code 200 if the token has been revoked
+			// successfully or if the client submitted an invalid token").
+			.post(
+				revokeRoute,
 				{
 					body: t.Object({
 						client_id: t.Optional(t.String()),
@@ -1413,15 +1433,7 @@ export const oidcProviderRoutes = <UserType>(
 					headers: t.Object({
 						authorization: t.Optional(t.String())
 					})
-				}
-			)
-			// RFC 7009 — token revocation. Refresh tokens are deleted from the
-			// store. Access tokens (JWT) are stateless, so the response is 200
-			// OK without action — spec-permitted ("the authorization server
-			// responds with HTTP status code 200 if the token has been revoked
-			// successfully or if the client submitted an invalid token").
-			.post(
-				revokeRoute,
+				},
 				async ({ body, headers }) => {
 					const basic = readBasicAuth(headers.authorization);
 					const clientId = body.client_id ?? basic.clientId;
@@ -1442,17 +1454,6 @@ export const oidcProviderRoutes = <UserType>(
 					}
 
 					return new Response(null, { status: HTTP_OK });
-				},
-				{
-					body: t.Object({
-						client_id: t.Optional(t.String()),
-						client_secret: t.Optional(t.String()),
-						token: t.String(),
-						token_type_hint: t.Optional(t.String())
-					}),
-					headers: t.Object({
-						authorization: t.Optional(t.String())
-					})
 				}
 			)
 			// OIDC CIBA Core 1.0 §7.1 — backchannel authorization request. Clients
@@ -1463,6 +1464,18 @@ export const oidcProviderRoutes = <UserType>(
 			// /token with (grant_type=urn:openid:params:grant-type:ciba).
 			.post(
 				backchannelAuthorizationRoute,
+				{
+					body: t.Object({
+						binding_message: t.Optional(t.String()),
+						client_id: t.Optional(t.String()),
+						client_secret: t.Optional(t.String()),
+						login_hint: t.Optional(t.String()),
+						scope: t.Optional(t.String())
+					}),
+					headers: t.Object({
+						authorization: t.Optional(t.String())
+					})
+				},
 				async ({ body, headers }) => {
 					if (config.backchannelAuthStore === undefined) {
 						return oauthError(
@@ -1514,18 +1527,6 @@ export const oidcProviderRoutes = <UserType>(
 						},
 						HTTP_OK
 					);
-				},
-				{
-					body: t.Object({
-						binding_message: t.Optional(t.String()),
-						client_id: t.Optional(t.String()),
-						client_secret: t.Optional(t.String()),
-						login_hint: t.Optional(t.String()),
-						scope: t.Optional(t.String())
-					}),
-					headers: t.Object({
-						authorization: t.Optional(t.String())
-					})
 				}
 			)
 			// RFC 8628 §3.1 — device authorization request. Clients (CLIs,
@@ -1533,6 +1534,16 @@ export const oidcProviderRoutes = <UserType>(
 			// /token while the user approves on a second device.
 			.post(
 				deviceAuthorizationRoute,
+				{
+					body: t.Object({
+						client_id: t.Optional(t.String()),
+						client_secret: t.Optional(t.String()),
+						scope: t.Optional(t.String())
+					}),
+					headers: t.Object({
+						authorization: t.Optional(t.String())
+					})
+				},
 				async ({ body, headers }) => {
 					if (config.deviceAuthorizationStore === undefined) {
 						return oauthError(
@@ -1570,16 +1581,6 @@ export const oidcProviderRoutes = <UserType>(
 					});
 
 					return jsonResponse(response, HTTP_OK);
-				},
-				{
-					body: t.Object({
-						client_id: t.Optional(t.String()),
-						client_secret: t.Optional(t.String()),
-						scope: t.Optional(t.String())
-					}),
-					headers: t.Object({
-						authorization: t.Optional(t.String())
-					})
 				}
 			)
 			// Internal verification endpoint — the consumer-built device-flow
@@ -1588,6 +1589,17 @@ export const oidcProviderRoutes = <UserType>(
 			// 200 + { ok: true } or an oauthError describing what went wrong.
 			.post(
 				deviceApproveRoute,
+				{
+					body: t.Object({
+						action: t.Optional(
+							t.Union([t.Literal('approve'), t.Literal('deny')])
+						),
+						user_code: t.String()
+					}),
+					cookie: t.Cookie({
+						user_session_id: t.Optional(userSessionIdTypebox)
+					})
+				},
 				async ({ body, cookie: { user_session_id }, store }) => {
 					if (config.deviceAuthorizationStore === undefined) {
 						return oauthError(
@@ -1618,17 +1630,6 @@ export const oidcProviderRoutes = <UserType>(
 						return oauthError(HTTP_BAD_REQUEST, result.error);
 
 					return jsonResponse({ ok: true }, HTTP_OK);
-				},
-				{
-					body: t.Object({
-						action: t.Optional(
-							t.Union([t.Literal('approve'), t.Literal('deny')])
-						),
-						user_code: t.String()
-					}),
-					cookie: t.Cookie({
-						user_session_id: t.Optional(userSessionIdTypebox)
-					})
 				}
 			)
 			// OIDC RP-initiated logout (Session Management 1.0). The RP redirects the user
@@ -1639,12 +1640,6 @@ export const oidcProviderRoutes = <UserType>(
 			// allows GET + POST; we support both.
 			.get(
 				endSessionRoute,
-				async ({ cookie: { user_session_id }, query, store }) =>
-					handleEndSession({
-						cookie: user_session_id,
-						inMemorySession: store.session,
-						query
-					}),
 				{
 					cookie: t.Cookie({
 						user_session_id: t.Optional(userSessionIdTypebox)
@@ -1655,16 +1650,16 @@ export const oidcProviderRoutes = <UserType>(
 						post_logout_redirect_uri: t.Optional(t.String()),
 						state: t.Optional(t.String())
 					})
-				}
-			)
-			.post(
-				endSessionRoute,
-				async ({ body, cookie: { user_session_id }, store }) =>
+				},
+				async ({ cookie: { user_session_id }, query, store }) =>
 					handleEndSession({
 						cookie: user_session_id,
 						inMemorySession: store.session,
-						query: body
-					}),
+						query
+					})
+			)
+			.post(
+				endSessionRoute,
 				{
 					body: t.Object({
 						client_id: t.Optional(t.String()),
@@ -1675,7 +1670,13 @@ export const oidcProviderRoutes = <UserType>(
 					cookie: t.Cookie({
 						user_session_id: t.Optional(userSessionIdTypebox)
 					})
-				}
+				},
+				async ({ body, cookie: { user_session_id }, store }) =>
+					handleEndSession({
+						cookie: user_session_id,
+						inMemorySession: store.session,
+						query: body
+					})
 			)
 			// RFC 7591 — Dynamic Client Registration. The route is mounted unconditionally,
 			// but returns 501 when the registration token store isn't configured — that way
@@ -1683,6 +1684,23 @@ export const oidcProviderRoutes = <UserType>(
 			// whether DCR is on at this deployment.
 			.post(
 				registrationRoute,
+				{
+					body: t.Object({
+						backchannel_logout_uri: t.Optional(t.String()),
+						client_name: t.Optional(t.String()),
+						grant_types: t.Optional(t.Array(t.String())),
+						jwks: t.Optional(t.Any()),
+						jwks_uri: t.Optional(t.String()),
+						post_logout_redirect_uris: t.Optional(
+							t.Array(t.String())
+						),
+						redirect_uris: t.Optional(t.Array(t.String())),
+						scope: t.Optional(t.String())
+					}),
+					headers: t.Object({
+						authorization: t.Optional(t.String())
+					})
+				},
 				async ({ body, headers }) => {
 					if (config.clientRegistrationTokenStore === undefined) {
 						return jsonResponse(
@@ -1711,27 +1729,16 @@ export const oidcProviderRoutes = <UserType>(
 						result.body,
 						result.ok ? HTTP_OK : result.status
 					);
-				},
-				{
-					body: t.Object({
-						backchannel_logout_uri: t.Optional(t.String()),
-						client_name: t.Optional(t.String()),
-						grant_types: t.Optional(t.Array(t.String())),
-						jwks: t.Optional(t.Any()),
-						jwks_uri: t.Optional(t.String()),
-						post_logout_redirect_uris: t.Optional(
-							t.Array(t.String())
-						),
-						redirect_uris: t.Optional(t.Array(t.String())),
-						scope: t.Optional(t.String())
-					}),
-					headers: t.Object({
-						authorization: t.Optional(t.String())
-					})
 				}
 			)
 			.get(
 				`${registrationRoute}/:clientId`,
+				{
+					headers: t.Object({
+						authorization: t.Optional(t.String())
+					}),
+					params: t.Object({ clientId: t.String() })
+				},
 				async ({ headers, params: { clientId } }) => {
 					if (config.clientRegistrationTokenStore === undefined) {
 						return jsonResponse(
@@ -1748,16 +1755,28 @@ export const oidcProviderRoutes = <UserType>(
 					});
 
 					return jsonResponse(result.body, result.status);
-				},
-				{
-					headers: t.Object({
-						authorization: t.Optional(t.String())
-					}),
-					params: t.Object({ clientId: t.String() })
 				}
 			)
 			.put(
 				`${registrationRoute}/:clientId`,
+				{
+					body: t.Object({
+						backchannel_logout_uri: t.Optional(t.String()),
+						client_name: t.Optional(t.String()),
+						grant_types: t.Optional(t.Array(t.String())),
+						jwks: t.Optional(t.Any()),
+						jwks_uri: t.Optional(t.String()),
+						post_logout_redirect_uris: t.Optional(
+							t.Array(t.String())
+						),
+						redirect_uris: t.Optional(t.Array(t.String())),
+						scope: t.Optional(t.String())
+					}),
+					headers: t.Object({
+						authorization: t.Optional(t.String())
+					}),
+					params: t.Object({ clientId: t.String() })
+				},
 				async ({ body, headers, params: { clientId } }) => {
 					if (config.clientRegistrationTokenStore === undefined) {
 						return jsonResponse(
@@ -1776,28 +1795,16 @@ export const oidcProviderRoutes = <UserType>(
 					});
 
 					return jsonResponse(result.body, result.status);
-				},
-				{
-					body: t.Object({
-						backchannel_logout_uri: t.Optional(t.String()),
-						client_name: t.Optional(t.String()),
-						grant_types: t.Optional(t.Array(t.String())),
-						jwks: t.Optional(t.Any()),
-						jwks_uri: t.Optional(t.String()),
-						post_logout_redirect_uris: t.Optional(
-							t.Array(t.String())
-						),
-						redirect_uris: t.Optional(t.Array(t.String())),
-						scope: t.Optional(t.String())
-					}),
-					headers: t.Object({
-						authorization: t.Optional(t.String())
-					}),
-					params: t.Object({ clientId: t.String() })
 				}
 			)
 			.delete(
 				`${registrationRoute}/:clientId`,
+				{
+					headers: t.Object({
+						authorization: t.Optional(t.String())
+					}),
+					params: t.Object({ clientId: t.String() })
+				},
 				async ({ headers, params: { clientId } }) => {
 					if (config.clientRegistrationTokenStore === undefined) {
 						return jsonResponse(
@@ -1817,12 +1824,6 @@ export const oidcProviderRoutes = <UserType>(
 					}
 
 					return jsonResponse(result.body, result.status);
-				},
-				{
-					headers: t.Object({
-						authorization: t.Optional(t.String())
-					}),
-					params: t.Object({ clientId: t.String() })
 				}
 			)
 			// OIDC `/userinfo`. RP presents Bearer access token; we verify (our sig + exp),
@@ -1830,6 +1831,11 @@ export const oidcProviderRoutes = <UserType>(
 			// least `{sub}`. WWW-Authenticate on errors per RFC 6750.
 			.get(
 				userinfoRoute,
+				{
+					headers: t.Object({
+						authorization: t.Optional(t.String())
+					})
+				},
 				async ({ headers }) => {
 					const token = readUserInfoBearer(headers.authorization);
 					const result = await fetchUserInfo({ config, token });
@@ -1846,15 +1852,18 @@ export const oidcProviderRoutes = <UserType>(
 					}
 
 					return jsonResponse(result.body, HTTP_OK);
-				},
-				{
-					headers: t.Object({
-						authorization: t.Optional(t.String())
-					})
 				}
 			)
 			.post(
 				userinfoRoute,
+				{
+					body: t.Object({
+						access_token: t.Optional(t.String())
+					}),
+					headers: t.Object({
+						authorization: t.Optional(t.String())
+					})
+				},
 				async ({ headers, body }) => {
 					// Per spec, /userinfo accepts the token in the Authorization header OR
 					// the `access_token` form field. The form-field path lets RPs that can't
@@ -1876,14 +1885,6 @@ export const oidcProviderRoutes = <UserType>(
 					}
 
 					return jsonResponse(result.body, HTTP_OK);
-				},
-				{
-					body: t.Object({
-						access_token: t.Optional(t.String())
-					}),
-					headers: t.Object({
-						authorization: t.Optional(t.String())
-					})
 				}
 			)
 			.get(jwksRoute, () => ({

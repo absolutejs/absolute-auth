@@ -31,6 +31,7 @@ const buildApp = () => {
 		.use(sessionStore<TestUser>())
 		.post(
 			'/login-admin',
+			cookieSchema,
 			async ({ cookie: { user_session_id }, store: { session } }) => {
 				await promoteToSession({
 					authSessionStore,
@@ -41,11 +42,11 @@ const buildApp = () => {
 				});
 
 				return { ok: true };
-			},
-			cookieSchema
+			}
 		)
 		.post(
 			'/impersonate',
+			cookieSchema,
 			async ({ cookie: { user_session_id }, store: { session } }) => {
 				await startImpersonation({
 					authSessionStore,
@@ -62,11 +63,11 @@ const buildApp = () => {
 				});
 
 				return { ok: true };
-			},
-			cookieSchema
+			}
 		)
 		.get(
 			'/mode',
+			cookieSchema,
 			async ({ cookie: { user_session_id }, store: { session } }) => {
 				const current = await loadSessionFromSource({
 					authSessionStore,
@@ -75,11 +76,11 @@ const buildApp = () => {
 				});
 
 				return { readOnly: current?.impersonator?.readOnly ?? null };
-			},
-			cookieSchema
+			}
 		)
 		.get(
 			'/whoami',
+			cookieSchema,
 			async ({ cookie: { user_session_id }, store: { session } }) => {
 				const current = await loadSessionFromSource({
 					authSessionStore,
@@ -92,11 +93,11 @@ const buildApp = () => {
 					email: current?.user.email ?? null,
 					impersonating: isImpersonating(current)
 				};
-			},
-			cookieSchema
+			}
 		)
 		.post(
 			'/impersonate-audit-fail',
+			cookieSchema,
 			async ({ cookie: { user_session_id }, store: { session } }) => {
 				try {
 					await startImpersonation({
@@ -118,11 +119,11 @@ const buildApp = () => {
 				} catch {
 					return { threw: true };
 				}
-			},
-			cookieSchema
+			}
 		)
 		.post(
 			'/impersonate-nested',
+			cookieSchema,
 			async ({ cookie: { user_session_id }, store: { session } }) => {
 				try {
 					await startImpersonation({
@@ -141,11 +142,11 @@ const buildApp = () => {
 				} catch {
 					return { threw: true };
 				}
-			},
-			cookieSchema
+			}
 		)
 		.get(
 			'/status',
+			cookieSchema,
 			async ({ cookie: { user_session_id }, store: { session } }) => {
 				const { user, impersonator } = await getStatusFromSource({
 					authSessionStore,
@@ -157,18 +158,17 @@ const buildApp = () => {
 					actorId: impersonator?.actorId ?? null,
 					email: user?.email ?? null
 				};
-			},
-			cookieSchema
+			}
 		)
 		.post(
 			'/end',
+			cookieSchema,
 			async ({ cookie: { user_session_id }, store: { session } }) =>
 				endImpersonation({
 					authSessionStore,
 					cookie: user_session_id,
 					inMemorySession: session
-				}),
-			cookieSchema
+				})
 		);
 };
 

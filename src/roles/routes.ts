@@ -50,6 +50,7 @@ export const roleRoutes = <UserType>({
 		.use(sessionStore<UserType>())
 		.get(
 			`${rolesRoute}/:organizationId`,
+			{ cookie, params: t.Object({ organizationId: t.String() }) },
 			async ({
 				cookie: { user_session_id },
 				params: { organizationId },
@@ -70,11 +71,18 @@ export const roleRoutes = <UserType>({
 				]);
 
 				return status('OK', { roles: [...scoped, ...global] });
-			},
-			{ cookie, params: t.Object({ organizationId: t.String() }) }
+			}
 		)
 		.put(
 			`${rolesRoute}/:organizationId/members/:userId`,
+			{
+				body: t.Object({ roles: t.Array(t.String()) }),
+				cookie,
+				params: t.Object({
+					organizationId: t.String(),
+					userId: t.String()
+				})
+			},
 			async ({
 				body: { roles },
 				cookie: { user_session_id },
@@ -109,14 +117,6 @@ export const roleRoutes = <UserType>({
 				await onRolesAssigned?.({ organizationId, roles, userId });
 
 				return status('OK', { roles: updated.roles });
-			},
-			{
-				body: t.Object({ roles: t.Array(t.String()) }),
-				cookie,
-				params: t.Object({
-					organizationId: t.String(),
-					userId: t.String()
-				})
 			}
 		);
 };
