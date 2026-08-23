@@ -3,7 +3,7 @@ import {
 	defineManifest,
 	toolFactory
 } from '@absolutejs/manifest';
-import { Type } from '@sinclair/typebox';
+import { Type } from 'typebox';
 import type { AuthConfig } from './types';
 
 const tool = toolFactory<never>();

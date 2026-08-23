@@ -8,8 +8,8 @@
         "@absolutejs/linked-providers": "0.0.6",
         "@absolutejs/manifest": "^0.9.0",
         "@neondatabase/serverless": "1.0.0",
-        "@sinclair/typebox": "^0.34.0",
         "citra": "0.29.10",
+        "typebox": "^1.3.16",
       },
       "devDependencies": {
         "@absolutejs/absolute": "^0.20.0-beta.0",

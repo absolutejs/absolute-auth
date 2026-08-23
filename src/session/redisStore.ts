@@ -1,5 +1,5 @@
-import { Type } from '@sinclair/typebox';
-import { Value } from '@sinclair/typebox/value';
+import { Type } from 'typebox';
+import { Value } from 'typebox/value';
 import type { RedisLike } from '../stores/redis';
 import { isUserSessionId } from '../typeGuards';
 import type { SessionData, UserSessionId } from '../types';
@@ -16,15 +16,20 @@ export type RedisSessionClient = RedisLike & {
 const SESSION_SEGMENT = 'sess:';
 const UNREGISTERED_SEGMENT = 'unreg:';
 
-const jsonValueSchema = Type.Recursive((self) =>
-	Type.Union([
-		Type.String(),
-		Type.Number(),
-		Type.Boolean(),
-		Type.Null(),
-		Type.Array(self),
-		Type.Record(Type.String(), self)
-	])
+// typebox 1.x replaces Recursive's self-callback with a named $defs entry the
+// schema refers to by name.
+const jsonValueSchema = Type.Cyclic(
+	{
+		JsonValue: Type.Union([
+			Type.String(),
+			Type.Number(),
+			Type.Boolean(),
+			Type.Null(),
+			Type.Array(Type.Ref('JsonValue')),
+			Type.Record(Type.String(), Type.Ref('JsonValue'))
+		])
+	},
+	'JsonValue'
 );
 
 const impersonatorSchema = Type.Object({
