@@ -44,8 +44,28 @@ const formatDefault = (value: unknown) => {
 	return String(value);
 };
 
+/**
+ * The column's SQL type, brackets included.
+ *
+ * Drizzle 1.0 stopped giving array columns their own class: `.array()` records
+ * a dimension count on the same column and `getSQLType()` reports only the
+ * element type. Taking that at face value writes `scopes text` where
+ * `scopes text[]` was meant, and nothing complains at migration time -- an
+ * array written to a text column is silently stringified to `{a,b}` and read
+ * back as a string, so the damage surfaces far away, as
+ * `scopes.join is not a function` on the first token exchange.
+ */
+const columnSqlType = (column: PgColumn) => {
+	const dimensions = Reflect.get(column, 'dimensions');
+	const elementType = column.getSQLType();
+
+	return typeof dimensions === 'number' && dimensions > 0
+		? `${elementType}${'[]'.repeat(dimensions)}`
+		: elementType;
+};
+
 const columnSql = (column: PgColumn) => {
-	const parts = [`"${column.name}"`, column.getSQLType()];
+	const parts = [`"${column.name}"`, columnSqlType(column)];
 	if (column.primary) parts.push('PRIMARY KEY');
 	if (column.notNull && !column.primary) parts.push('NOT NULL');
 	if (column.hasDefault && column.default !== undefined) {
