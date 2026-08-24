@@ -765,6 +765,22 @@ export const createMobileAuthClient = (config: MobileAuthClientConfig) => {
 		return response.status === 401 ? send(true) : response;
 	};
 
+	const optionalAuthenticatedFetch = async (
+		input: RequestInfo | URL,
+		init?: RequestInit
+	) => {
+		const request = new Request(input, init);
+		if (!allowedOrigins.has(new URL(request.url).origin))
+			throw new MobileAuthError(
+				'origin',
+				'Mobile auth refused to send a request outside an allowed origin.'
+			);
+		const refreshToken = await config.storage.get(REFRESH_KEY);
+		if (access || refreshToken) return authenticatedFetch(request);
+
+		return fetchImpl(new Request(request, { credentials: 'omit' }));
+	};
+
 	const status = async () => {
 		try {
 			const metadata = await discovery();
@@ -859,6 +875,7 @@ export const createMobileAuthClient = (config: MobileAuthClientConfig) => {
 
 	return {
 		fetch: authenticatedFetch,
+		fetchOptional: optionalAuthenticatedFetch,
 		handleCallback,
 		refresh: refreshAccessToken,
 		signIn,

@@ -199,6 +199,16 @@ describe('mobile auth client', () => {
 		expect(fixture.values.get('oidc.refresh')).toBe('refresh-2');
 	});
 
+	test('can fetch public app data before the user signs in', async () => {
+		const fixture = await setup();
+		const response = await fixture.client.fetchOptional(
+			`${API_ORIGIN}/public`
+		);
+		expect(response.ok).toBe(true);
+		expect(fixture.authorizations.at(-1)).toBe('');
+		expect(fixture.refreshes()).toBe(0);
+	});
+
 	test('never sends a bearer credential outside registered origins', async () => {
 		const fixture = await setup();
 		await completeSignIn(fixture);

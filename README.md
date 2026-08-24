@@ -100,6 +100,17 @@ The OIDC client registration must be public (no client secret), include the
 exact redirect URI, permit the requested scopes/resource, and require PKCE.
 Browser applications continue using HTTP-only session cookies.
 
+AbsoluteJS mobile builds provision that public client automatically when the
+application declares `@absolutejs/auth`. The CLI passes a strict
+`ABSOLUTE_AUTH_NATIVE_CLIENTS` deployment declaration into the server runtime;
+Auth layers matching issuer clients over `oidc.clientStore` without writing to
+the consumer's database. An explicitly stored client with the same ID remains
+authoritative. Applications that use Auth on mobile must mount the OIDC
+provider; the mobile build fails with an actionable error when it is absent.
+`mobile.fetchOptional()` is intended for application-shell/page-envelope
+requests: it sends a bearer token when a renewable session exists and otherwise
+performs a credential-free request so public pages still load before sign-in.
+
 For WebSocket/Sync authentication, enable a ticket store on the provider. A
 valid audience-bound access token can then obtain a 30-second, hashed-at-rest,
 single-use ticket from `/oauth2/socket-ticket`:

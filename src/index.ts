@@ -29,6 +29,7 @@ import { createLockoutGuard } from './lockout/config';
 import { createMfaGate } from './mfa/gate';
 import { mfaRoutes } from './mfa/routes';
 import { oidcProviderRoutes } from './oidc/routes';
+import { withAbsoluteNativeAuthClients } from './oidc/nativeClients';
 import { organizationRoutes } from './organizations/routes';
 import { passwordlessRoutes } from './passwordless/routes';
 import { portalRoutes } from './portal/routes';
@@ -278,6 +279,10 @@ const buildAuthApplications = async <UserType>(
 	const oidcConfig = oidc
 		? {
 				...oidc,
+				clientStore: withAbsoluteNativeAuthClients(
+					oidc.clientStore,
+					oidc.issuer
+				),
 				additionalDiscoveryMetadata: {
 					...oidc.additionalDiscoveryMetadata,
 					...(resolvedAgentAuth?.oauthGuide === undefined
@@ -607,6 +612,12 @@ export const createAuthApplications = async <UserType>(
 
 export * from './actions';
 export { consumeSocketTicket, issueSocketTicket } from './oidc/socketTickets';
+export {
+	ABSOLUTE_NATIVE_AUTH_CLIENTS_ENV,
+	parseAbsoluteNativeAuthClients,
+	withAbsoluteNativeAuthClients,
+	type AbsoluteNativeAuthClient
+} from './oidc/nativeClients';
 export type AuthApplications<UserType> = Awaited<
 	ReturnType<typeof createAuthApplications<UserType>>
 >;
