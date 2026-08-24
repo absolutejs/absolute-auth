@@ -8,7 +8,7 @@
         "@absolutejs/linked-providers": "0.0.6",
         "@absolutejs/manifest": "^0.10.0",
         "@neondatabase/serverless": "1.0.0",
-        "citra": "0.29.10",
+        "citra": "0.29.13",
         "typebox": "^1.3.16",
       },
       "devDependencies": {
@@ -297,7 +297,7 @@
 
     "bun-types": ["bun-types@1.2.9", "", { "dependencies": { "@types/node": "*", "@types/ws": "*" } }, "sha512-dk/kOEfQbajENN/D6FyiSgOKEuUi9PWfqKQJEgwKrCMWbjS/S6tEXp178mWvWAcUSYm9ArDlWHZKO3T/4cLXiw=="],
 
-    "citra": ["citra@0.29.10", "", {}, "sha512-XFa846o1nN19OzreTegklGXwth9pZ94G+S6VuAU50kq+Rz1bB7NBq8Wd0AkturhWIYQj2dqLKGGbfL6B/xsHlQ=="],
+    "citra": ["citra@0.29.13", "", {}, "sha512-i1D6sZYNq1rgBi4E28ec4a6eKaLvKFx2z0VWryqgDgoHeiB6TdcrYful50Z+97Akr8qLchCkZW1pWUmQcLobvw=="],
 
     "clsx": ["clsx@2.1.1", "", {}, "sha512-eYm0QWBtUrBWZWG0d386OGAw16Z995PiOVo2B7bjWSbHedGl5e0ZWaq65kOGgUSNesEIDkB9ISbTg/JK9dhCZA=="],
 

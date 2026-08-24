@@ -36,8 +36,9 @@ describe('absolutejs as a configured provider', () => {
 		expect(keys).toContain('ABSOLUTEJS_CLIENT_ID');
 		expect(keys).toContain('ABSOLUTEJS_CLIENT_SECRET');
 		expect(
-			manifest.requires.env?.find((entry) => entry.key === 'ABSOLUTEJS_CLIENT_ID')
-				?.docsUrl
+			manifest.requires.env?.find(
+				(entry) => entry.key === 'ABSOLUTEJS_CLIENT_ID'
+			)?.docsUrl
 		).toBe('https://absolutejs.ai/dashboard');
 	});
 
