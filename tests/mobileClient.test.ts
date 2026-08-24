@@ -1,5 +1,10 @@
 import { describe, expect, test } from 'bun:test';
-import { createMobileAuthClient, MobileAuthError } from '../src/client/mobile';
+import {
+	createMobileAuthClient,
+	createMobileAuthTransport,
+	MobileAuthError
+} from '../src/client/mobile';
+import { createAuthClient } from '../src/client/createAuthClient';
 import { generateSigningKey, signJwt, toPublicJwk } from '../src/oidc/keys';
 
 const ISSUER = 'https://auth.example';
@@ -207,6 +212,19 @@ describe('mobile auth client', () => {
 		expect(response.ok).toBe(true);
 		expect(fixture.authorizations.at(-1)).toBe('');
 		expect(fixture.refreshes()).toBe(0);
+	});
+
+	test('maps unchanged Auth client routes to the canonical backend', async () => {
+		const fixture = await setup();
+		const authClient = createAuthClient({
+			transport: createMobileAuthTransport(fixture.client, {
+				baseUrl: API_ORIGIN
+			})
+		});
+		expect(
+			await authClient.passwordReset.request({ email: 'alice@example.com' })
+		).toEqual({ data: { ok: true }, error: null });
+		expect(fixture.authorizations.at(-1)).toBe('');
 	});
 
 	test('never sends a bearer credential outside registered origins', async () => {

@@ -893,9 +893,18 @@ export type MobileAuthClient = ReturnType<typeof createMobileAuthClient>;
  * by web applications. Passwords stay out of the WebView request path; the
  * external authorization UI owns credential entry and MFA. */
 export const createMobileAuthTransport = (
-	client: MobileAuthClient
+	client: MobileAuthClient,
+	options: { baseUrl?: string } = {}
 ): import('./createAuthClient').AuthClientTransport => ({
-	fetch: client.fetchOptional,
+	fetch: (input, init) => {
+		const resolved =
+			options.baseUrl &&
+			(typeof input === 'string' || input instanceof URL)
+				? new URL(String(input), options.baseUrl)
+				: input;
+
+		return client.fetchOptional(resolved, init);
+	},
 	signInEmail: async ({ email }) => {
 		await client.signIn({
 			authorizationParameters: { login_hint: email }
