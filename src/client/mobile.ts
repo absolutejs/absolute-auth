@@ -895,7 +895,7 @@ export type MobileAuthClient = ReturnType<typeof createMobileAuthClient>;
 export const createMobileAuthTransport = (
 	client: MobileAuthClient
 ): import('./createAuthClient').AuthClientTransport => ({
-	fetch: client.fetch,
+	fetch: client.fetchOptional,
 	signInEmail: async ({ email }) => {
 		await client.signIn({
 			authorizationParameters: { login_hint: email }
@@ -924,3 +924,5 @@ export const createMobileAuthTransport = (
 		return { user };
 	}
 });
+
+export { installAuthClientRuntimeTransport } from './runtimeTransport';

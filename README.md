@@ -110,6 +110,10 @@ provider; the mobile build fails with an actionable error when it is absent.
 `mobile.fetchOptional()` is intended for application-shell/page-envelope
 requests: it sends a bearer token when a renewable session exists and otherwise
 performs a credential-free request so public pages still load before sign-in.
+The generated native shell installs this transport through the package-owned
+runtime registry, so existing `createAuthClient()` calls select it without
+application changes. Explicit `transport` options always win, installation is
+stacked and reversible, and web/server runtimes never install the registry.
 
 For WebSocket/Sync authentication, enable a ticket store on the provider. A
 valid audience-bound access token can then obtain a 30-second, hashed-at-rest,

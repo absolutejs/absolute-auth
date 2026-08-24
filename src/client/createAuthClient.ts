@@ -8,6 +8,7 @@ import type {
 	PublicKeyCredentialCreationOptionsJSON,
 	PublicKeyCredentialRequestOptionsJSON
 } from '@simplewebauthn/browser';
+import { getAuthClientRuntimeTransport } from './runtimeTransport';
 
 export type AuthClientError = {
 	body: unknown;
@@ -126,8 +127,9 @@ export const createAuthClient = ({
 	credentials = 'same-origin',
 	fetch: fetchImpl = fetch,
 	routes,
-	transport
+	transport: configuredTransport
 }: AuthClientConfig = {}) => {
+	const transport = configuredTransport ?? getAuthClientRuntimeTransport();
 	const resolvedFetch = transport?.fetch ?? fetchImpl;
 	const signInEmail = transport?.signInEmail;
 	const signOut = transport?.signOut;
