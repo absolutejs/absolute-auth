@@ -12,6 +12,7 @@ const tool = toolFactory<never>();
  * pair (see providersFromEnv). Exotic credential shapes (apple) are
  * configured manually in providersConfiguration. */
 const COMMON_PROVIDERS = [
+	'absolutejs',
 	'discord',
 	'facebook',
 	'github',
@@ -28,6 +29,7 @@ const COMMON_PROVIDERS = [
  * the right page instead of our README. */
 const PROVIDER_CONSOLE_URLS: Record<(typeof COMMON_PROVIDERS)[number], string> =
 	{
+		absolutejs: 'https://absolutejs.ai/dashboard',
 		discord: 'https://discord.com/developers/applications',
 		facebook: 'https://developers.facebook.com/apps',
 		github: 'https://github.com/settings/developers',
