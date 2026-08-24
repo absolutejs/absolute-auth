@@ -1,4 +1,4 @@
-import { and, desc, eq, gt, lt } from 'drizzle-orm';
+import { and, desc, eq, gt, isNull, lt, or, sql } from 'drizzle-orm';
 import {
 	bigint,
 	boolean,
@@ -28,7 +28,9 @@ import type {
 	OidcRefreshToken,
 	OidcRefreshTokenStore,
 	PushedAuthorizationRequest,
-	PushedAuthorizationRequestStore
+	PushedAuthorizationRequestStore,
+	SocketTicket,
+	SocketTicketStore
 } from './types';
 
 const URL_LENGTH = 2048;
@@ -187,12 +189,26 @@ export const oauthRefreshTokensTable = pgTable('auth_oauth_refresh_tokens', {
 	audience: varchar('audience', { length: URL_LENGTH }),
 	claims_json: jsonb('claims_json').$type<Record<string, unknown>>(),
 	client_id: varchar('client_id', { length: ID_LENGTH }).notNull(),
+	consumed_token_hashes: text('consumed_token_hashes')
+		.array()
+		.notNull()
+		.default([]),
 	created_at_ms: bigint('created_at_ms', { mode: 'number' }).notNull(),
 	dpop_jkt: varchar('dpop_jkt', { length: ID_LENGTH }),
 	expires_at_ms: bigint('expires_at_ms', { mode: 'number' }).notNull(),
+	family_id: varchar('family_id', { length: ID_LENGTH }).notNull(),
+	revoked_at_ms: bigint('revoked_at_ms', { mode: 'number' }),
 	scopes: text('scopes').array().notNull(),
 	token_hash: varchar('token_hash', { length: ID_LENGTH }).primaryKey(),
 	user_id: varchar('user_id', { length: ID_LENGTH }).notNull()
+});
+export const oauthSocketTicketsTable = pgTable('auth_oauth_socket_tickets', {
+	audience: varchar('audience', { length: URL_LENGTH }).notNull(),
+	client_id: varchar('client_id', { length: ID_LENGTH }).notNull(),
+	expires_at_ms: bigint('expires_at_ms', { mode: 'number' }).notNull(),
+	scopes: text('scopes').array().notNull(),
+	subject: varchar('subject', { length: ID_LENGTH }).notNull(),
+	ticket_hash: varchar('ticket_hash', { length: ID_LENGTH }).primaryKey()
 });
 
 type ClientRow = typeof oauthClientsTable.$inferSelect;
@@ -282,6 +298,7 @@ const toRefresh = (row: RefreshRow): OidcRefreshToken => ({
 	createdAt: row.created_at_ms,
 	dpopJkt: row.dpop_jkt ?? undefined,
 	expiresAt: row.expires_at_ms,
+	familyId: row.family_id,
 	scopes: row.scopes,
 	tokenHash: row.token_hash,
 	userId: row.user_id
@@ -294,9 +311,12 @@ const toRefreshValues = (
 	audience: token.audience ?? null,
 	claims_json: token.claims ?? null,
 	client_id: token.clientId,
+	consumed_token_hashes: [],
 	created_at_ms: token.createdAt,
 	dpop_jkt: token.dpopJkt ?? null,
 	expires_at_ms: token.expiresAt,
+	family_id: token.familyId,
+	revoked_at_ms: null,
 	scopes: token.scopes,
 	token_hash: token.tokenHash,
 	user_id: token.userId
@@ -618,7 +638,12 @@ export const createPostgresOidcRefreshTokenStore = <DB extends AnyPgDatabase>(
 	consumeToken: async (tokenHash) => {
 		const [row] = await db
 			.delete(oauthRefreshTokensTable)
-			.where(eq(oauthRefreshTokensTable.token_hash, tokenHash))
+			.where(
+				or(
+					eq(oauthRefreshTokensTable.token_hash, tokenHash),
+					sql`${tokenHash} = ANY(${oauthRefreshTokensTable.consumed_token_hashes})`
+				)
+			)
 			.returning();
 
 		return row ? toRefresh(row) : undefined;
@@ -653,7 +678,12 @@ export const createPostgresOidcRefreshTokenStore = <DB extends AnyPgDatabase>(
 		const [row] = await db
 			.select()
 			.from(oauthRefreshTokensTable)
-			.where(eq(oauthRefreshTokensTable.token_hash, tokenHash))
+			.where(
+				and(
+					eq(oauthRefreshTokensTable.token_hash, tokenHash),
+					isNull(oauthRefreshTokensTable.revoked_at_ms)
+				)
+			)
 			.limit(1);
 
 		return row ? toRefresh(row) : undefined;
@@ -665,6 +695,7 @@ export const createPostgresOidcRefreshTokenStore = <DB extends AnyPgDatabase>(
 			.where(
 				and(
 					eq(oauthRefreshTokensTable.user_id, userId),
+					isNull(oauthRefreshTokensTable.revoked_at_ms),
 					gt(oauthRefreshTokensTable.expires_at_ms, Date.now())
 				)
 			);
@@ -678,9 +709,62 @@ export const createPostgresOidcRefreshTokenStore = <DB extends AnyPgDatabase>(
 				userId: oauthRefreshTokensTable.user_id
 			})
 			.from(oauthRefreshTokensTable)
-			.where(gt(oauthRefreshTokensTable.expires_at_ms, Date.now()));
+			.where(
+				and(
+					gt(oauthRefreshTokensTable.expires_at_ms, Date.now()),
+					isNull(oauthRefreshTokensTable.revoked_at_ms)
+				)
+			);
 
 		return rows;
+	},
+	revokeByConsumedToken: async (tokenHash) => {
+		const rows = await db
+			.update(oauthRefreshTokensTable)
+			.set({ revoked_at_ms: Date.now() })
+			.where(
+				and(
+					isNull(oauthRefreshTokensTable.revoked_at_ms),
+					sql`${tokenHash} = ANY(${oauthRefreshTokensTable.consumed_token_hashes})`
+				)
+			)
+			.returning({ familyId: oauthRefreshTokensTable.family_id });
+
+		return rows.length > 0;
+	},
+	rotateToken: async (currentTokenHash, replacement) => {
+		const active = and(
+			eq(oauthRefreshTokensTable.token_hash, currentTokenHash),
+			isNull(oauthRefreshTokensTable.revoked_at_ms)
+		);
+		const consumed = sql<boolean>`${currentTokenHash} = ANY(${oauthRefreshTokensTable.consumed_token_hashes})`;
+		const rows = await db
+			.update(oauthRefreshTokensTable)
+			.set({
+				acr: sql`CASE WHEN ${active} THEN ${replacement.acr ?? null} ELSE ${oauthRefreshTokensTable.acr} END`,
+				audience: sql`CASE WHEN ${active} THEN ${replacement.audience ?? null} ELSE ${oauthRefreshTokensTable.audience} END`,
+				claims_json: sql`CASE WHEN ${active} THEN ${JSON.stringify(replacement.claims ?? null)}::jsonb ELSE ${oauthRefreshTokensTable.claims_json} END`,
+				client_id: sql`CASE WHEN ${active} THEN ${replacement.clientId} ELSE ${oauthRefreshTokensTable.client_id} END`,
+				consumed_token_hashes: sql`CASE WHEN ${active} THEN array_append(${oauthRefreshTokensTable.consumed_token_hashes}, ${currentTokenHash}) ELSE ${oauthRefreshTokensTable.consumed_token_hashes} END`,
+				created_at_ms: sql`CASE WHEN ${active} THEN ${replacement.createdAt} ELSE ${oauthRefreshTokensTable.created_at_ms} END`,
+				dpop_jkt: sql`CASE WHEN ${active} THEN ${replacement.dpopJkt ?? null} ELSE ${oauthRefreshTokensTable.dpop_jkt} END`,
+				expires_at_ms: sql`CASE WHEN ${active} THEN ${replacement.expiresAt} ELSE ${oauthRefreshTokensTable.expires_at_ms} END`,
+				revoked_at_ms: sql`CASE WHEN ${consumed} THEN ${Date.now()} ELSE ${oauthRefreshTokensTable.revoked_at_ms} END`,
+				scopes: sql`CASE WHEN ${active} THEN ${replacement.scopes} ELSE ${oauthRefreshTokensTable.scopes} END`,
+				token_hash: sql`CASE WHEN ${active} THEN ${replacement.tokenHash} ELSE ${oauthRefreshTokensTable.token_hash} END`,
+				user_id: sql`CASE WHEN ${active} THEN ${replacement.userId} ELSE ${oauthRefreshTokensTable.user_id} END`
+			})
+			.where(or(active, consumed))
+			.returning({
+				revokedAt: oauthRefreshTokensTable.revoked_at_ms,
+				tokenHash: oauthRefreshTokensTable.token_hash
+			});
+
+		return (
+			rows.length === 1 &&
+			rows[0]?.revokedAt === null &&
+			rows[0]?.tokenHash === replacement.tokenHash
+		);
 	},
 	saveToken: async (token) => {
 		await db.insert(oauthRefreshTokensTable).values(toRefreshValues(token));
@@ -802,5 +886,43 @@ export const createPostgresBackchannelAuthStore = <DB extends AnyPgDatabase>(
 			.where(
 				eq(oauthBackchannelAuthRequestsTable.auth_req_id, authReqId)
 			);
+	}
+});
+
+type SocketTicketRow = typeof oauthSocketTicketsTable.$inferSelect;
+
+const toSocketTicket = (row: SocketTicketRow): SocketTicket => ({
+	audience: row.audience,
+	clientId: row.client_id,
+	expiresAt: row.expires_at_ms,
+	scopes: row.scopes,
+	subject: row.subject,
+	ticketHash: row.ticket_hash
+});
+
+export const createNeonSocketTicketStore = (databaseUrl: string) =>
+	createPostgresSocketTicketStore(createNeonDatabase(databaseUrl));
+
+export const createPostgresSocketTicketStore = <DB extends AnyPgDatabase>(
+	db: DB
+): SocketTicketStore => ({
+	consumeTicket: async (ticketHash, now = Date.now()) => {
+		const [row] = await db
+			.delete(oauthSocketTicketsTable)
+			.where(eq(oauthSocketTicketsTable.ticket_hash, ticketHash))
+			.returning();
+		if (!row || row.expires_at_ms <= now) return undefined;
+
+		return toSocketTicket(row);
+	},
+	saveTicket: async (ticket) => {
+		await db.insert(oauthSocketTicketsTable).values({
+			audience: ticket.audience,
+			client_id: ticket.clientId,
+			expires_at_ms: ticket.expiresAt,
+			scopes: ticket.scopes,
+			subject: ticket.subject,
+			ticket_hash: ticket.ticketHash
+		});
 	}
 });

@@ -4,6 +4,11 @@ import { sessionStore } from '../session/state';
 import type { AuthSessionSource } from '../session/types';
 import { userSessionIdTypebox } from '../typebox';
 import { pluginDependencySeed } from '../pluginIdentity';
+import {
+	resolveAccessTokenPrincipal,
+	type AccessTokenPrincipalConfig,
+	type AuthPrincipal
+} from '../principal';
 
 type AuthFailError =
 	| {
@@ -16,13 +21,15 @@ type AuthFailError =
 	  };
 
 export const protectRoutePlugin = <UserType>({
+	accessTokens,
 	authSessionStore
 }: {
+	accessTokens?: AccessTokenPrincipalConfig<UserType>;
 	authSessionStore?: AuthSessionSource<UserType>;
 } = {}) =>
 	new Elysia({
 		name: '@absolutejs/auth/protect-route',
-		seed: pluginDependencySeed(authSessionStore)
+		seed: pluginDependencySeed(accessTokens ?? authSessionStore)
 	})
 		.use(sessionStore<UserType>())
 		.guard({
@@ -30,19 +37,47 @@ export const protectRoutePlugin = <UserType>({
 			schema: 'merge'
 		})
 		.derive(
-			({ store: { session }, cookie: { user_session_id }, status }) => ({
-				protectRoute: <AuthReturn, AuthFailReturn = never>(
-					handleAuth: (
-						user: UserType
-					) => AuthReturn | Promise<AuthReturn>,
-					handleAuthFail?: (error: AuthFailError) => AuthFailReturn
-				) =>
-					getStatusFromSource<UserType>({
-						authSessionStore,
-						session,
-						user_session_id
-					}).then(async ({ user, error }) => {
+			async ({
+				store: { session },
+				cookie: { user_session_id },
+				headers,
+				status
+			}) => {
+				const sessionStatus = await getStatusFromSource<UserType>({
+					authSessionStore,
+					session,
+					user_session_id
+				});
+				let authPrincipal: AuthPrincipal<UserType> | undefined;
+				if (sessionStatus.user)
+					authPrincipal = {
+						kind: 'session',
+						subject:
+							accessTokens?.oidc.getUserId(sessionStatus.user) ??
+							'',
+						user: sessionStatus.user
+					};
+				else if (accessTokens)
+					authPrincipal = await resolveAccessTokenPrincipal({
+						authorization: headers.authorization,
+						config: accessTokens
+					});
+
+				return {
+					authPrincipal,
+					protectRoute: <AuthReturn, AuthFailReturn = never>(
+						handleAuth: (
+							user: UserType
+						) => AuthReturn | Promise<AuthReturn>,
+						handleAuthFail?: (
+							error: AuthFailError
+						) => AuthFailReturn
+					) => {
+						const user = authPrincipal?.user;
+						const { error } = sessionStatus;
 						if (error) {
+							if (user) return handleAuth(user);
+
 							return (
 								handleAuthFail?.(error) ??
 								status(error.code, error.message)
@@ -63,7 +98,8 @@ export const protectRoutePlugin = <UserType>({
 						}
 
 						return handleAuth(user);
-					})
-			})
+					}
+				};
+			}
 		)
 		.as('global');

@@ -40,7 +40,8 @@ import {
 	oauthInitialAccessTokensTable,
 	oauthLogoutDeliveriesTable,
 	oauthPushedAuthorizationRequestsTable,
-	oauthRefreshTokensTable
+	oauthRefreshTokensTable,
+	oauthSocketTicketsTable
 } from '../oidc/postgresStores';
 import {
 	organizationInvitationsTable,
@@ -148,6 +149,22 @@ const oidcResourceAudienceMigration: Migration = {
 	].join('\n')
 };
 
+const oidcRefreshTokenFamiliesMigration: Migration = {
+	id: '0003_refresh_token_families',
+	sql: [
+		'ALTER TABLE "auth_oauth_refresh_tokens" ADD COLUMN IF NOT EXISTS "family_id" varchar(255);',
+		'UPDATE "auth_oauth_refresh_tokens" SET "family_id" = "token_hash" WHERE "family_id" IS NULL;',
+		'ALTER TABLE "auth_oauth_refresh_tokens" ALTER COLUMN "family_id" SET NOT NULL;',
+		'ALTER TABLE "auth_oauth_refresh_tokens" ADD COLUMN IF NOT EXISTS "consumed_token_hashes" text[] NOT NULL DEFAULT ARRAY[]::text[];',
+		'ALTER TABLE "auth_oauth_refresh_tokens" ADD COLUMN IF NOT EXISTS "revoked_at_ms" bigint;'
+	].join('\n')
+};
+
+const oidcSocketTicketsMigration: Migration = {
+	id: '0004_socket_tickets',
+	sql: tablesToInitSql([oauthSocketTicketsTable])
+};
+
 const sessionOAuthSubjectMigration: Migration = {
 	id: '0002_oauth_subject',
 	sql: [
@@ -218,9 +235,12 @@ export const blockMigrations: Record<BlockName, BlockMigrations> = {
 				oauthInitialAccessTokensTable,
 				oauthLogoutDeliveriesTable,
 				oauthPushedAuthorizationRequestsTable,
-				oauthRefreshTokensTable
+				oauthRefreshTokensTable,
+				oauthSocketTicketsTable
 			]).migrations,
-			oidcResourceAudienceMigration
+			oidcResourceAudienceMigration,
+			oidcRefreshTokenFamiliesMigration,
+			oidcSocketTicketsMigration
 		]
 	},
 	organizations: initMigration('organizations', [

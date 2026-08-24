@@ -160,4 +160,48 @@ describe('createAuthClient', () => {
 			'/auth/webauthn/credentials/cred%2Fwith%20slash'
 		);
 	});
+
+	test('runtime transport preserves the public API while replacing cookie flows', async () => {
+		const events: string[] = [];
+		const client = createAuthClient({
+			baseUrl: 'https://api.example',
+			transport: {
+				fetch: stub((url) => {
+					events.push(`fetch:${url}`);
+
+					return new Response('{}');
+				}),
+				signInEmail: async ({ email }) => {
+					events.push(`sign-in:${email}`);
+
+					return { status: 'authenticated' };
+				},
+				signOut: async () => {
+					events.push('sign-out');
+
+					return null;
+				},
+				status: async () => ({ user: { id: 'native-user' } })
+			}
+		});
+
+		expect(
+			(
+				await client.signIn.email({
+					email: 'alice@example.com',
+					password: 'pw'
+				})
+			).data
+		).toEqual({ status: 'authenticated' });
+		expect((await client.status()).data).toEqual({
+			user: { id: 'native-user' }
+		});
+		await client.mfa.status();
+		await client.signOut();
+		expect(events).toEqual([
+			'sign-in:alice@example.com',
+			'fetch:https://api.example/auth/mfa',
+			'sign-out'
+		]);
+	});
 });

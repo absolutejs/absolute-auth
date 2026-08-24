@@ -72,8 +72,34 @@ const DEFAULT_ROUTES: Required<AuthClientRoutes> = {
 export type AuthClientConfig = {
 	baseUrl?: string;
 	credentials?: RequestCredentials;
-	fetch?: typeof fetch;
+	fetch?: AuthClientFetch;
 	routes?: AuthClientRoutes;
+	transport?: AuthClientTransport;
+};
+
+export type AuthClientFetch = (
+	input: RequestInfo | URL,
+	init?: RequestInit
+) => Promise<Response>;
+
+export type AuthClientTransport = {
+	fetch?: AuthClientFetch;
+	signInEmail?: (body: { email: string; password: string }) => Promise<{
+		passwordCompromised?: boolean;
+		status: 'authenticated' | 'mfa_required';
+	}>;
+	signOut?: () => Promise<null>;
+	signUpEmail?: (body: {
+		email: string;
+		password: string;
+		[extra: string]: unknown;
+	}) => Promise<
+		{ status: 'authenticated' } | { status: 'verification_required' }
+	>;
+	status?: () => Promise<{
+		impersonator?: unknown;
+		user: unknown | null;
+	}>;
 };
 
 const succeed = <T>(data: T): AuthClientResult<T> => ({
@@ -99,8 +125,14 @@ export const createAuthClient = ({
 	baseUrl = '',
 	credentials = 'same-origin',
 	fetch: fetchImpl = fetch,
-	routes
+	routes,
+	transport
 }: AuthClientConfig = {}) => {
+	const resolvedFetch = transport?.fetch ?? fetchImpl;
+	const signInEmail = transport?.signInEmail;
+	const signOut = transport?.signOut;
+	const signUpEmail = transport?.signUpEmail;
+	const transportStatus = transport?.status;
 	const resolvedRoutes: Required<AuthClientRoutes> = {
 		...DEFAULT_ROUTES,
 		...routes
@@ -108,7 +140,7 @@ export const createAuthClient = ({
 
 	const request = async <T>(path: string, init: RequestInit) => {
 		try {
-			const response = await fetchImpl(`${baseUrl}${path}`, {
+			const response = await resolvedFetch(`${baseUrl}${path}`, {
 				credentials,
 				...init
 			});
@@ -121,6 +153,16 @@ export const createAuthClient = ({
 		} catch (caught) {
 			const message =
 				caught instanceof Error ? caught.message : 'network';
+
+			return fail({ body: null, message, status: 0 });
+		}
+	};
+	const runTransport = async <T>(operation: () => Promise<T>) => {
+		try {
+			return succeed(await operation());
+		} catch (caught) {
+			const message =
+				caught instanceof Error ? caught.message : 'authentication';
 
 			return fail({ body: null, message, status: 0 });
 		}
@@ -216,10 +258,12 @@ export const createAuthClient = ({
 		},
 		signIn: {
 			email: (body: { email: string; password: string }) =>
-				post<{
-					passwordCompromised?: boolean;
-					status: 'authenticated' | 'mfa_required';
-				}>(resolvedRoutes.login, body)
+				signInEmail
+					? runTransport(() => signInEmail(body))
+					: post<{
+							passwordCompromised?: boolean;
+							status: 'authenticated' | 'mfa_required';
+						}>(resolvedRoutes.login, body)
 		},
 		signUp: {
 			email: (body: {
@@ -227,16 +271,23 @@ export const createAuthClient = ({
 				password: string;
 				[extra: string]: unknown;
 			}) =>
-				post<
-					| { status: 'authenticated' }
-					| { status: 'verification_required' }
-				>(resolvedRoutes.register, body)
+				signUpEmail
+					? runTransport(() => signUpEmail(body))
+					: post<
+							| { status: 'authenticated' }
+							| { status: 'verification_required' }
+						>(resolvedRoutes.register, body)
 		},
-		signOut: () => del<null>(resolvedRoutes.signout),
+		signOut: () =>
+			signOut
+				? runTransport(() => signOut())
+				: del<null>(resolvedRoutes.signout),
 		status: () =>
-			get<{ impersonator?: unknown; user: unknown | null }>(
-				resolvedRoutes.status
-			)
+			transportStatus
+				? runTransport(() => transportStatus())
+				: get<{ impersonator?: unknown; user: unknown | null }>(
+						resolvedRoutes.status
+					)
 	};
 };
 

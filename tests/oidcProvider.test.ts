@@ -6,7 +6,8 @@ import {
 	createInMemoryAuthorizationCodeStore,
 	createInMemoryDeviceAuthorizationStore,
 	createInMemoryOAuthClientStore,
-	createInMemoryOidcRefreshTokenStore
+	createInMemoryOidcRefreshTokenStore,
+	createInMemorySocketTicketStore
 } from '../src/oidc/inMemoryStores';
 import { createInMemoryAuthSessionStore } from '../src/session/inMemoryStore';
 import type { UserSessionId } from '../src/types';
@@ -33,6 +34,7 @@ const buildApp = async (
 	extras: {
 		deviceFlow?: boolean;
 		getAccessTokenClaims?: ClaimsHook;
+		socketTickets?: boolean;
 		strictFapi?: boolean;
 	} = {}
 ) => {
@@ -58,6 +60,9 @@ const buildApp = async (
 			issuer: ISSUER,
 			refreshTokenStore: createInMemoryOidcRefreshTokenStore(),
 			signingKey,
+			socketTicketStore: extras.socketTickets
+				? createInMemorySocketTicketStore()
+				: undefined,
 			strictFapi: extras.strictFapi,
 			getClaims: (user) => ({ email: user.email }),
 			getUserId: (user) => user.sub
@@ -296,6 +301,13 @@ describe('OIDC provider', () => {
 			refresh_token: tokens.refresh_token
 		});
 		expect(reuse.status).toBe(400);
+
+		const descendantAfterReuse = await token(app, {
+			client_id: 'app1',
+			grant_type: 'refresh_token',
+			refresh_token: refreshed.refresh_token
+		});
+		expect(descendantAfterReuse.status).toBe(400);
 	});
 
 	test('authorization response carries RFC 9207 iss parameter (mix-up defense)', async () => {
@@ -865,6 +877,63 @@ describe('OIDC provider — RFC 8628 device authorization', () => {
 		);
 		expect(discovery.grant_types_supported).toContain(
 			'urn:ietf:params:oauth:grant-type:device_code'
+		);
+	});
+
+	test('issues WebSocket tickets only to a valid bearer token', async () => {
+		const app = await buildApp({ socketTickets: true });
+		const challenge = await hashToken(VERIFIER);
+		const code = codeFromRedirect(
+			await authorize(
+				app,
+				challenge,
+				`user_session_id=${SESSION_ID}`,
+				ISSUER
+			)
+		);
+		const tokens = await (
+			await token(app, {
+				client_id: 'app1',
+				code,
+				code_verifier: VERIFIER,
+				grant_type: 'authorization_code',
+				redirect_uri: REDIRECT_URI,
+				resource: ISSUER
+			})
+		).json();
+
+		const anonymous = await app.handle(
+			new Request('http://localhost/oauth2/socket-ticket', {
+				body: JSON.stringify({}),
+				headers: { 'content-type': 'application/json' },
+				method: 'POST'
+			})
+		);
+		expect(anonymous.status).toBe(401);
+
+		const response = await app.handle(
+			new Request('http://localhost/oauth2/socket-ticket', {
+				body: JSON.stringify({}),
+				headers: {
+					authorization: `Bearer ${tokens.access_token}`,
+					'content-type': 'application/json'
+				},
+				method: 'POST'
+			})
+		);
+		expect(response.status).toBe(200);
+		const issued = await response.json();
+		expect(issued.ticket).toStartWith('ast_');
+		expect(issued.expires_in).toBe(30);
+		expect(response.headers.get('cache-control')).toBe('no-store');
+
+		const discovery = await (
+			await app.handle(
+				new Request('http://localhost/.well-known/openid-configuration')
+			)
+		).json();
+		expect(discovery.socket_ticket_endpoint).toBe(
+			`${ISSUER}/oauth2/socket-ticket`
 		);
 	});
 });

@@ -66,6 +66,7 @@ const buildApp = async ({
 		clientId: RP_A,
 		createdAt: now,
 		expiresAt: now + HOUR_MS,
+		familyId: 'family-a',
 		scopes: ['openid'],
 		tokenHash: 'hash-a',
 		userId: USER_SUB
@@ -74,6 +75,7 @@ const buildApp = async ({
 		clientId: RP_B,
 		createdAt: now,
 		expiresAt: now + HOUR_MS,
+		familyId: 'family-b',
 		scopes: ['openid'],
 		tokenHash: 'hash-b',
 		userId: USER_SUB
@@ -82,6 +84,7 @@ const buildApp = async ({
 		clientId: RP_C_NO_BACKCHANNEL,
 		createdAt: now,
 		expiresAt: now + HOUR_MS,
+		familyId: 'family-c',
 		scopes: ['openid'],
 		tokenHash: 'hash-c',
 		userId: USER_SUB

@@ -66,6 +66,64 @@ installSessionExpiryGuard({
 });
 ```
 
+### Installed-app authentication
+
+`createMobileAuthClient` keeps the public auth surface provider-neutral while
+using the installed-app security model: system-browser Authorization Code with
+S256 PKCE, exact state/issuer/redirect validation, rotating refresh credentials
+in native secure storage, in-memory access tokens, serialized refresh, and an
+origin allowlist for bearer requests. Passwords are entered in the external
+authorization UI and never posted through the app WebView.
+
+```ts
+import {
+	createMobileAuthClient,
+	createMobileAuthTransport,
+	createAuthClient
+} from '@absolutejs/auth/client';
+import { lifecycle, links, secureStorage } from '@absolutejs/devices';
+
+const mobile = createMobileAuthClient({
+	clientId: 'com.example.app',
+	issuer: 'https://app.example',
+	lifecycle,
+	links,
+	redirectUri: 'com.example.app:/oauth/callback',
+	storage: secureStorage
+});
+const authClient = createAuthClient({
+	transport: createMobileAuthTransport(mobile)
+});
+```
+
+The OIDC client registration must be public (no client secret), include the
+exact redirect URI, permit the requested scopes/resource, and require PKCE.
+Browser applications continue using HTTP-only session cookies.
+
+For WebSocket/Sync authentication, enable a ticket store on the provider. A
+valid audience-bound access token can then obtain a 30-second, hashed-at-rest,
+single-use ticket from `/oauth2/socket-ticket`:
+
+```ts
+const socketTicketStore = createPostgresSocketTicketStore(db);
+
+await auth({
+	oidc: {
+		// ...normal provider configuration
+		socketTicketStore
+	}
+});
+
+const ticket = await mobile.socketTicket('https://app.example/sync');
+```
+
+Run the `oidc` migration block after upgrading; migration
+`0004_socket_tickets` creates the ticket table. Resource servers may use
+`requireAuthPlugin({ accessTokens: { getUser, oidc } })` to resolve cookie
+sessions and bearer access tokens into the same typed `authPrincipal`. DPoP-
+bound bearer tokens currently fail closed until resource-proof verification is
+enabled.
+
 The defaults use `/oauth2/status`, `/signin`, `reason=session_expired`, and a
 `returnUrl` query parameter. Use `onExpired` when a router or application shell
 should own navigation. The returned guard exposes `check()` for an immediate

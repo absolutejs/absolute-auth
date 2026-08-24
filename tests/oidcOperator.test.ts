@@ -26,6 +26,7 @@ describe('OIDC operator lifecycle', () => {
 			codeHash: 'target-code',
 			createdAt: now,
 			expiresAt: now + MINUTE_MS,
+			familyId: 'target-family',
 			redirectUri: 'https://client.test/callback',
 			scopes: ['openid'],
 			userId: 'user-1'

@@ -107,6 +107,7 @@ const buildAuthApplications = async <UserType>(
 	configuration: AuthConfig<UserType>
 ) => {
 	const {
+		getUser,
 		providersConfiguration,
 		authorizeRoute,
 		cookieSecure,
@@ -570,6 +571,12 @@ const buildAuthApplications = async <UserType>(
 	]);
 
 	const authContext = createAuthContext<UserType>({
+		accessTokens: oidcConfig
+			? {
+					oidc: oidcConfig,
+					getUser: async (subject) => (await getUser(subject)) ?? null
+				}
+			: undefined,
 		agentAuth: resolvedAgentAuth,
 		authorization,
 		authSessionStore,
@@ -599,12 +606,14 @@ export const createAuthApplications = async <UserType>(
 ) => buildAuthApplications(configuration);
 
 export * from './actions';
+export { consumeSocketTicket, issueSocketTicket } from './oidc/socketTickets';
 export type AuthApplications<UserType> = Awaited<
 	ReturnType<typeof createAuthApplications<UserType>>
 >;
 export { createAuthContext } from './authContext';
 export type { AuthInstance } from './authContext';
 export * from './types';
+export * from './principal';
 export * from './typebox';
 export * from './vault/config';
 export * from './vault/types';
@@ -995,7 +1004,8 @@ export {
 	createInMemoryLogoutDeliveryStore,
 	createInMemoryOAuthClientStore,
 	createInMemoryOidcRefreshTokenStore,
-	createInMemoryPushedAuthorizationRequestStore
+	createInMemoryPushedAuthorizationRequestStore,
+	createInMemorySocketTicketStore
 } from './oidc/inMemoryStores';
 export {
 	consumePushedRequest,
@@ -1026,6 +1036,7 @@ export {
 	createNeonOAuthClientStore,
 	createNeonOidcRefreshTokenStore,
 	createNeonPushedAuthorizationRequestStore,
+	createNeonSocketTicketStore,
 	createPostgresAuthorizationCodeStore,
 	createPostgresBackchannelAuthStore,
 	createPostgresClientAssertionJtiStore,
@@ -1036,6 +1047,7 @@ export {
 	createPostgresOAuthClientStore,
 	createPostgresOidcRefreshTokenStore,
 	createPostgresPushedAuthorizationRequestStore,
+	createPostgresSocketTicketStore,
 	oauthClientAssertionJtisTable,
 	oauthClientRegistrationTokensTable,
 	oauthClientsTable,
@@ -1045,7 +1057,8 @@ export {
 	oauthInitialAccessTokensTable,
 	oauthLogoutDeliveriesTable,
 	oauthPushedAuthorizationRequestsTable,
-	oauthRefreshTokensTable
+	oauthRefreshTokensTable,
+	oauthSocketTicketsTable
 } from './oidc/postgresStores';
 export {
 	deleteRegisteredClient,

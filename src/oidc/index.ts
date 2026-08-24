@@ -26,14 +26,18 @@ export {
 	createNeonInitialAccessTokenStore,
 	createNeonOAuthClientStore,
 	createNeonOidcRefreshTokenStore,
+	createNeonSocketTicketStore,
 	createPostgresAuthorizationCodeStore,
 	createPostgresClientAssertionJtiStore,
 	createPostgresClientRegistrationTokenStore,
 	createPostgresDeviceAuthorizationStore,
 	createPostgresInitialAccessTokenStore,
 	createPostgresOAuthClientStore,
-	createPostgresOidcRefreshTokenStore
+	createPostgresOidcRefreshTokenStore,
+	createPostgresSocketTicketStore
 } from './postgresStores';
+export { createInMemorySocketTicketStore } from './inMemoryStores';
+export { consumeSocketTicket, issueSocketTicket } from './socketTickets';
 export type {
 	AuthorizationCodeStore,
 	ClientAssertionJtiStore,
@@ -43,5 +47,7 @@ export type {
 	OAuthClient,
 	OAuthClientStore,
 	OidcRefreshTokenConnection,
-	OidcRefreshTokenStore
+	OidcRefreshTokenStore,
+	SocketTicket,
+	SocketTicketStore
 } from './types';

@@ -24,8 +24,10 @@ import type {
 	LogoutDeliveryStore,
 	OAuthClient,
 	OAuthClientStore,
+	OidcRefreshToken,
 	OidcRefreshTokenStore,
-	PushedAuthorizationRequestStore
+	PushedAuthorizationRequestStore,
+	SocketTicketStore
 } from './types';
 
 export const DEFAULT_OIDC_ROUTE: RouteString = '/oauth2';
@@ -233,6 +235,19 @@ export type OidcProviderConfig<UserType> = {
 	pushedAuthorizationRequestTtlMs?: number;
 	refreshTokenStore: OidcRefreshTokenStore;
 	refreshTokenTtlMs?: number;
+	/** Enables short-lived, single-use tickets for browser/native WebSocket
+	 * authentication at `${oidcRoute}/socket-ticket`. */
+	socketTicketStore?: SocketTicketStore;
+	/** Ticket lifetime in milliseconds. Defaults to 30 seconds. */
+	socketTicketTtlMs?: number;
+	/** Restrict which WebSocket resource audiences may receive tickets. The
+	 * issuer itself is always the default when the request omits `audience`. */
+	allowSocketTicketAudience?: (context: {
+		audience: string;
+		clientId: string;
+		scopes: string[];
+		subject: string;
+	}) => boolean | Promise<boolean>;
 	/** Previous public signing identities retained only for the bounded token
 	 * overlap window after rotation. The active `signingKey` always signs new
 	 * tokens and is published first. Private material does not belong here. */
@@ -431,8 +446,10 @@ export const issueTokenSet = async <UserType>({
 	clientId,
 	config,
 	dpopJkt,
+	familyId,
 	nonce,
 	now = Date.now(),
+	persistRefreshToken,
 	scopes,
 	sub
 }: {
@@ -443,8 +460,10 @@ export const issueTokenSet = async <UserType>({
 	clientId: string;
 	config: OidcProviderConfig<UserType>;
 	dpopJkt?: string;
+	familyId?: string;
 	nonce?: string;
 	now?: number;
+	persistRefreshToken?: (token: OidcRefreshToken) => Promise<void>;
 	scopes: string[];
 	sub: string;
 }) => {
@@ -483,7 +502,7 @@ export const issueTokenSet = async <UserType>({
 	if (acr !== undefined) idPayload.acr = acr;
 
 	const refreshToken = generateSecureToken(TOKEN_BYTES);
-	await config.refreshTokenStore.saveToken({
+	const refreshRecord: OidcRefreshToken = {
 		acr,
 		audience,
 		claims,
@@ -491,10 +510,13 @@ export const issueTokenSet = async <UserType>({
 		createdAt: now,
 		dpopJkt,
 		expiresAt: now + refreshTtl,
+		familyId: familyId ?? crypto.randomUUID(),
 		scopes,
 		tokenHash: await hashToken(refreshToken),
 		userId: sub
-	});
+	};
+	if (persistRefreshToken) await persistRefreshToken(refreshRecord);
+	else await config.refreshTokenStore.saveToken(refreshRecord);
 
 	return {
 		access_token: await signJwt(accessPayload, config.signingKey),

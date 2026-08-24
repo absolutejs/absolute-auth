@@ -6,6 +6,13 @@ import { credentialsRegister } from '../src/credentials/register';
 import { createInMemoryCredentialStore } from '../src/credentials/inMemoryCredentialStore';
 import { createInMemoryAuthSessionStore } from '../src/session/inMemoryStore';
 import { requireAuthPlugin } from '../src/routes/requireAuth';
+import { generateSigningKey } from '../src/oidc/keys';
+import { issueTokenSet, type OidcProviderConfig } from '../src/oidc/config';
+import {
+	createInMemoryAuthorizationCodeStore,
+	createInMemoryOAuthClientStore,
+	createInMemoryOidcRefreshTokenStore
+} from '../src/oidc/inMemoryStores';
 
 type TestUser = { email: string; sub: string };
 
@@ -95,5 +102,94 @@ describe('requireAuthPlugin fails closed by default (F7)', () => {
 			ok: true,
 			sub: 'user:a@b.com'
 		});
+	});
+
+	test('accepts an audience-bound mobile token and exposes the normalized principal', async () => {
+		const signingKey = await generateSigningKey();
+		const user = { email: 'mobile@example.com', sub: 'mobile-user' };
+		const oidc: OidcProviderConfig<TestUser> = {
+			authorizationCodeStore: createInMemoryAuthorizationCodeStore(),
+			clientStore: createInMemoryOAuthClientStore([]),
+			issuer: 'https://api.example',
+			refreshTokenStore: createInMemoryOidcRefreshTokenStore(),
+			signingKey,
+			getUserId: (candidate) => candidate.sub
+		};
+		const tokens = await issueTokenSet({
+			audience: oidc.issuer,
+			clientId: 'native-client',
+			config: oidc,
+			scopes: ['openid', 'account:read'],
+			sub: user.sub
+		});
+		const app = new Elysia()
+			.use(
+				requireAuthPlugin<TestUser>({
+					accessTokens: {
+						oidc,
+						getUser: (subject) =>
+							subject === user.sub ? user : null
+					}
+				})
+			)
+			.get('/mobile-secret', ({ authPrincipal, user: resolved }) => ({
+				kind: authPrincipal?.kind,
+				scopes:
+					authPrincipal?.kind === 'access-token'
+						? authPrincipal.scopes
+						: [],
+				sub: resolved?.sub
+			}));
+
+		const response = await app.handle(
+			new Request('http://localhost/mobile-secret', {
+				headers: { authorization: `Bearer ${tokens.access_token}` }
+			})
+		);
+		expect(response.status).toBe(200);
+		expect(await response.json()).toEqual({
+			kind: 'access-token',
+			scopes: ['openid', 'account:read'],
+			sub: user.sub
+		});
+	});
+
+	test('rejects a validly signed token for a different resource audience', async () => {
+		const signingKey = await generateSigningKey();
+		const oidc: OidcProviderConfig<TestUser> = {
+			authorizationCodeStore: createInMemoryAuthorizationCodeStore(),
+			clientStore: createInMemoryOAuthClientStore([]),
+			issuer: 'https://api.example',
+			refreshTokenStore: createInMemoryOidcRefreshTokenStore(),
+			signingKey,
+			getUserId: (candidate) => candidate.sub
+		};
+		const tokens = await issueTokenSet({
+			audience: 'https://other-resource.example',
+			clientId: 'native-client',
+			config: oidc,
+			scopes: ['openid'],
+			sub: 'mobile-user'
+		});
+		const app = new Elysia()
+			.use(
+				requireAuthPlugin<TestUser>({
+					accessTokens: {
+						oidc,
+						getUser: () => ({
+							email: 'mobile@example.com',
+							sub: 'mobile-user'
+						})
+					}
+				})
+			)
+			.get('/mobile-secret', () => ({ ok: true }));
+
+		const response = await app.handle(
+			new Request('http://localhost/mobile-secret', {
+				headers: { authorization: `Bearer ${tokens.access_token}` }
+			})
+		);
+		expect(response.status).toBe(401);
 	});
 });

@@ -146,6 +146,8 @@ export type OidcRefreshToken = {
 	createdAt: number;
 	dpopJkt?: string;
 	expiresAt: number;
+	/** Stable identifier shared by every rotation descendant of one grant. */
+	familyId: string;
 	scopes: string[];
 	tokenHash: string;
 	userId: string;
@@ -173,7 +175,33 @@ export type OidcRefreshTokenStore = {
 	// Batch posture for operator connection inventories. Returns public ids only;
 	// token hashes and credential material never cross this boundary.
 	listConnections: () => Promise<OidcRefreshTokenConnection[]>;
+	/** Revoke a family when a previously consumed token is presented again. */
+	revokeByConsumedToken: (tokenHash: string) => Promise<boolean>;
+	/** Atomically replace the active family token, or revoke on detected reuse. */
+	rotateToken: (
+		currentTokenHash: string,
+		replacement: OidcRefreshToken
+	) => Promise<boolean>;
 	saveToken: (token: OidcRefreshToken) => Promise<void>;
+};
+
+/** Server-side record for a short-lived, one-time WebSocket bootstrap ticket. */
+export type SocketTicket = {
+	audience: string;
+	clientId: string;
+	expiresAt: number;
+	scopes: string[];
+	subject: string;
+	ticketHash: string;
+};
+
+export type SocketTicketStore = {
+	/** Atomically delete and return a ticket. Expired tickets return undefined. */
+	consumeTicket: (
+		ticketHash: string,
+		now?: number
+	) => Promise<SocketTicket | undefined>;
+	saveTicket: (ticket: SocketTicket) => Promise<void>;
 };
 
 // RFC 8628 device authorization. The device polls for the access token using `device_code`;

@@ -56,6 +56,7 @@ import {
 	updateRegisteredClient
 } from './registration';
 import type { OAuthClient } from './types';
+import { socketTicketRoutes } from './socketTicketRoutes';
 
 const HTTP_OK = 200;
 const HTTP_NO_CONTENT = 204;
@@ -67,6 +68,8 @@ const CODE_TTL_MINUTES = 10;
 const CODE_TTL_MS = MILLISECONDS_IN_A_MINUTE * CODE_TTL_MINUTES;
 const TOKEN_BYTES = 32;
 const BASIC_PREFIX = 'Basic ';
+
+class RefreshTokenReuseError extends Error {}
 
 type TokenSet = Awaited<ReturnType<typeof issueTokenSet>>;
 
@@ -216,6 +219,7 @@ export const oidcProviderRoutes = <UserType>(
 	const parRoute: RouteString = `${oidcRoute}/par`;
 	const registrationRoute: RouteString = `${oidcRoute}/register`;
 	const userinfoRoute: RouteString = `${oidcRoute}/userinfo`;
+	const socketTicketRoute: RouteString = `${oidcRoute}/socket-ticket`;
 	const registrationBaseUrl = `${issuer}${registrationRoute}`;
 	const tokenUrl = `${issuer}${oidcRoute}/token`;
 	const resolveClient = async (clientId: string) =>
@@ -435,11 +439,14 @@ export const oidcProviderRoutes = <UserType>(
 		if (presented === undefined) {
 			return oauthError(HTTP_BAD_REQUEST, 'invalid_request');
 		}
-		const record = await refreshTokenStore.consumeToken(
-			await hashToken(presented)
-		);
+		const presentedHash = await hashToken(presented);
+		const record = await refreshTokenStore.getToken(presentedHash);
+		if (record === undefined) {
+			await refreshTokenStore.revokeByConsumedToken(presentedHash);
+
+			return oauthError(HTTP_BAD_REQUEST, 'invalid_grant');
+		}
 		if (
-			record === undefined ||
 			record.expiresAt < Date.now() ||
 			record.clientId !== client.clientId
 		) {
@@ -459,19 +466,35 @@ export const oidcProviderRoutes = <UserType>(
 			}
 		}
 
-		return tokenResponse(
-			await issueTokenSet({
-				acr: record.acr,
-				audience: record.audience,
-				claims: record.claims,
-				clientCertThumbprint,
-				clientId: client.clientId,
-				config,
-				dpopJkt: record.dpopJkt,
-				scopes: record.scopes,
-				sub: record.userId
-			})
-		);
+		try {
+			return tokenResponse(
+				await issueTokenSet({
+					acr: record.acr,
+					audience: record.audience,
+					claims: record.claims,
+					clientCertThumbprint,
+					clientId: client.clientId,
+					config,
+					dpopJkt: record.dpopJkt,
+					familyId: record.familyId,
+					scopes: record.scopes,
+					sub: record.userId,
+					persistRefreshToken: async (replacement) => {
+						if (
+							!(await refreshTokenStore.rotateToken(
+								presentedHash,
+								replacement
+							))
+						)
+							throw new RefreshTokenReuseError();
+					}
+				})
+			);
+		} catch (error) {
+			if (error instanceof RefreshTokenReuseError)
+				return oauthError(HTTP_BAD_REQUEST, 'invalid_grant');
+			throw error;
+		}
 	};
 
 	const grantTokenExchange = async (
@@ -665,7 +688,10 @@ export const oidcProviderRoutes = <UserType>(
 						'self_signed_tls_client_auth'
 					],
 		token_endpoint_auth_signing_alg_values_supported: ['ES256'],
-		userinfo_endpoint: `${issuer}${userinfoRoute}`
+		userinfo_endpoint: `${issuer}${userinfoRoute}`,
+		...(config.socketTicketStore
+			? { socket_ticket_endpoint: `${issuer}${socketTicketRoute}` }
+			: {})
 	};
 	if (config.deviceAuthorizationStore) {
 		discovery.device_authorization_endpoint = `${issuer}${deviceAuthorizationRoute}`;
@@ -1826,6 +1852,7 @@ export const oidcProviderRoutes = <UserType>(
 					return jsonResponse(result.body, result.status);
 				}
 			)
+			.use(socketTicketRoutes(config))
 			// OIDC `/userinfo`. RP presents Bearer access token; we verify (our sig + exp),
 			// optionally enrich via `getUserInfo(sub)` hook, return JSON. Always returns at
 			// least `{sub}`. WWW-Authenticate on errors per RFC 6750.

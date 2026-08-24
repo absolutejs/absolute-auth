@@ -17,7 +17,9 @@ import type {
 	OidcRefreshTokenConnection,
 	OidcRefreshTokenStore,
 	PushedAuthorizationRequest,
-	PushedAuthorizationRequestStore
+	PushedAuthorizationRequestStore,
+	SocketTicket,
+	SocketTicketStore
 } from './types';
 
 const DEFAULT_LIST_LIMIT = 100;
@@ -241,50 +243,81 @@ export const createInMemoryOAuthClientStore = (
 };
 export const createInMemoryOidcRefreshTokenStore =
 	(): OidcRefreshTokenStore => {
-		const tokens = new Map<string, OidcRefreshToken>();
+		const families = new Map<
+			string,
+			{
+				consumed: Set<string>;
+				revoked: boolean;
+				token: OidcRefreshToken;
+			}
+		>();
+		const activeForHash = (tokenHash: string) => {
+			for (const family of families.values()) {
+				if (!family.revoked && family.token.tokenHash === tokenHash)
+					return family;
+			}
+
+			return undefined;
+		};
+		const familyForConsumedHash = (tokenHash: string) => {
+			for (const family of families.values())
+				if (family.consumed.has(tokenHash)) return family;
+
+			return undefined;
+		};
 
 		return {
 			consumeToken: async (tokenHash) => {
-				const record = tokens.get(tokenHash);
-				tokens.delete(tokenHash);
+				const family =
+					activeForHash(tokenHash) ??
+					familyForConsumedHash(tokenHash);
+				if (!family) return undefined;
+				families.delete(family.token.familyId);
 
-				return record;
+				return family.token;
 			},
 			deleteForClient: async (clientId) => {
 				let deleted = 0;
-				for (const [hash, token] of tokens) {
-					if (token.clientId !== clientId) continue;
-					tokens.delete(hash);
+				for (const [familyId, family] of families) {
+					if (family.token.clientId !== clientId) continue;
+					families.delete(familyId);
 					deleted += 1;
 				}
 
 				return deleted;
 			},
 			deleteForUser: async (userId) => {
-				for (const [hash, token] of tokens) {
-					if (token.userId === userId) tokens.delete(hash);
+				for (const [familyId, family] of families) {
+					if (family.token.userId === userId)
+						families.delete(familyId);
 				}
 			},
 			deleteForUserClient: async (userId, clientId) => {
 				let deleted = 0;
-				for (const [hash, token] of tokens) {
-					if (token.userId !== userId || token.clientId !== clientId)
+				for (const [familyId, family] of families) {
+					if (
+						family.token.userId !== userId ||
+						family.token.clientId !== clientId
+					)
 						continue;
-					tokens.delete(hash);
+					families.delete(familyId);
 					deleted += 1;
 				}
 
 				return deleted;
 			},
-			getToken: async (tokenHash) => tokens.get(tokenHash),
+			getToken: async (tokenHash) => activeForHash(tokenHash)?.token,
 			listClientIdsForUser: async (userId) => {
 				const now = Date.now();
-				const active = Array.from(tokens.values()).filter(
-					(token) => token.userId === userId && token.expiresAt > now
+				const active = Array.from(families.values()).filter(
+					(family) =>
+						!family.revoked &&
+						family.token.userId === userId &&
+						family.token.expiresAt > now
 				);
 
 				return Array.from(
-					new Set(active.map((token) => token.clientId))
+					new Set(active.map((family) => family.token.clientId))
 				);
 			},
 			listConnections: async () => {
@@ -293,8 +326,9 @@ export const createInMemoryOidcRefreshTokenStore =
 					string,
 					OidcRefreshTokenConnection
 				>();
-				for (const token of tokens.values()) {
-					if (token.expiresAt <= now) continue;
+				for (const family of families.values()) {
+					const { token } = family;
+					if (family.revoked || token.expiresAt <= now) continue;
 					const connection: OidcRefreshTokenConnection = {
 						clientId: token.clientId,
 						userId: token.userId
@@ -307,8 +341,32 @@ export const createInMemoryOidcRefreshTokenStore =
 
 				return Array.from(connections.values());
 			},
+			revokeByConsumedToken: async (tokenHash) => {
+				const family = familyForConsumedHash(tokenHash);
+				if (!family) return false;
+				family.revoked = true;
+
+				return true;
+			},
+			rotateToken: async (currentTokenHash, replacement) => {
+				const family = activeForHash(currentTokenHash);
+				if (family) {
+					family.consumed.add(currentTokenHash);
+					family.token = { ...replacement };
+
+					return true;
+				}
+				const reused = familyForConsumedHash(currentTokenHash);
+				if (reused) reused.revoked = true;
+
+				return false;
+			},
 			saveToken: async (token) => {
-				tokens.set(token.tokenHash, { ...token });
+				families.set(token.familyId, {
+					consumed: new Set(),
+					revoked: false,
+					token: { ...token }
+				});
 			}
 		};
 	};
@@ -331,3 +389,23 @@ export const createInMemoryPushedAuthorizationRequestStore =
 			}
 		};
 	};
+
+export const createInMemorySocketTicketStore = (): SocketTicketStore => {
+	const tickets = new Map<string, SocketTicket>();
+
+	return {
+		consumeTicket: async (ticketHash, now = Date.now()) => {
+			const ticket = tickets.get(ticketHash);
+			tickets.delete(ticketHash);
+			if (!ticket || ticket.expiresAt <= now) return undefined;
+
+			return { ...ticket, scopes: [...ticket.scopes] };
+		},
+		saveTicket: async (ticket) => {
+			tickets.set(ticket.ticketHash, {
+				...ticket,
+				scopes: [...ticket.scopes]
+			});
+		}
+	};
+};

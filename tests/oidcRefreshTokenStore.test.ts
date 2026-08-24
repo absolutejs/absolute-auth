@@ -8,6 +8,29 @@ import {
 const MINUTE_MS = 60_000;
 
 describe('OIDC refresh-token store', () => {
+	test('rotates atomically and revokes the descendant when an ancestor is replayed', async () => {
+		const store = createInMemoryOidcRefreshTokenStore();
+		const now = Date.now();
+		const first = {
+			clientId: 'mobile-app',
+			createdAt: now,
+			expiresAt: now + MINUTE_MS,
+			familyId: 'mobile-family',
+			scopes: ['openid'],
+			tokenHash: 'refresh-1',
+			userId: 'alice'
+		};
+		const second = { ...first, tokenHash: 'refresh-2' };
+		await store.saveToken(first);
+
+		expect(await store.rotateToken(first.tokenHash, second)).toBe(true);
+		expect(await store.getToken(first.tokenHash)).toBeUndefined();
+		expect(await store.getToken(second.tokenHash)).toEqual(second);
+		expect(await store.rotateToken(first.tokenHash, first)).toBe(false);
+		expect(await store.getToken(second.tokenHash)).toBeUndefined();
+		expect(await store.listConnections()).toEqual([]);
+	});
+
 	test('deletes only one user and client connection', async () => {
 		const store = createInMemoryOidcRefreshTokenStore();
 		const now = Date.now();
@@ -27,6 +50,7 @@ describe('OIDC refresh-token store', () => {
 					clientId,
 					createdAt: now,
 					expiresAt: now + MINUTE_MS,
+					familyId: `family-${tokenHash}`,
 					scopes: ['openid'],
 					tokenHash,
 					userId
@@ -45,6 +69,26 @@ describe('OIDC refresh-token store', () => {
 		expect(await store.getToken('alice-b')).toBeDefined();
 		expect(await store.getToken('bob-a')).toBeDefined();
 		expect(await store.deleteForUserClient('alice', 'client-a')).toBe(0);
+	});
+
+	test('revoking a consumed ancestor deletes its active family descendant', async () => {
+		const store = createInMemoryOidcRefreshTokenStore();
+		const now = Date.now();
+		const first = {
+			clientId: 'mobile-app',
+			createdAt: now,
+			expiresAt: now + MINUTE_MS,
+			familyId: 'family',
+			scopes: ['openid'],
+			tokenHash: 'first',
+			userId: 'alice'
+		};
+		const second = { ...first, tokenHash: 'second' };
+		await store.saveToken(first);
+		await store.rotateToken(first.tokenHash, second);
+
+		expect(await store.consumeToken(first.tokenHash)).toEqual(second);
+		expect(await store.getToken(second.tokenHash)).toBeUndefined();
 	});
 
 	test('deletes issued codes and approved device grants for one connection', async () => {
