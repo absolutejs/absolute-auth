@@ -9,6 +9,7 @@ import { protectRoutePlugin } from './routes/protectRoute';
 import { stepUpPlugin } from './routes/stepUp';
 import type { AuthSessionStore } from './session/types';
 import type { AccessTokenPrincipalConfig } from './principal';
+import { createAbsoluteAuthSyncBridge } from './syncBridge';
 
 export const createAuthContext = <UserType>({
 	agentAuth,
@@ -24,11 +25,22 @@ export const createAuthContext = <UserType>({
 	authorization?: AuthorizationConfig<UserType>;
 	emit?: AuditEmitter;
 	seedSource?: object;
-}) =>
-	new Elysia({
+}) => {
+	const absoluteAuthSync = accessTokens
+		? createAbsoluteAuthSyncBridge(accessTokens)
+		: undefined;
+	const syncBridge = new Elysia({
+		name: '@absolutejs/auth/sync-bridge',
+		seed: pluginDependencySeed(seedSource)
+	})
+		.decorate('absoluteAuthSync', absoluteAuthSync)
+		.as('global');
+
+	return new Elysia({
 		name: '@absolutejs/auth/context',
 		seed: pluginDependencySeed(seedSource)
 	}).use([
+		syncBridge,
 		protectRoutePlugin<UserType>({ accessTokens, authSessionStore }),
 		stepUpPlugin<UserType>({ authSessionStore }),
 		authorization
@@ -40,6 +52,7 @@ export const createAuthContext = <UserType>({
 			: new Elysia(),
 		agentAuthContextPlugin(agentAuth)
 	]);
+};
 
 export type AuthInstance<UserType> = ReturnType<
 	typeof createAuthContext<UserType>

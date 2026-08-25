@@ -25,6 +25,11 @@ export { createPostgresSetupSessionStore } from './portal/postgresSetupSessionSt
 export { protectRoutePlugin } from './routes/protectRoute';
 export { readSessionCookie } from './session/cookieReader';
 export { requireAuthPlugin } from './routes/requireAuth';
+export {
+	createAbsoluteAuthSyncBridge,
+	type AbsoluteAuthSyncBridge,
+	type AbsoluteAuthSyncContext
+} from './syncBridge';
 export type { ScimConfig } from './scim/config';
 export type {
 	ScimFilter,

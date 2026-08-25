@@ -6,6 +6,8 @@ export type MobileAuthSecureStorage = {
 	get(key: string): Promise<string | null>;
 	remove(key: string): Promise<void>;
 	set(key: string, value: string): Promise<void>;
+	/** Serialize refresh-token rotation with a native background worker. */
+	withLock?<T>(key: string, run: () => Promise<T>): Promise<T>;
 };
 
 export type MobileAuthLinks = {
@@ -603,22 +605,28 @@ export const createMobileAuthClient = (config: MobileAuthClientConfig) => {
 
 	const rotateAccessToken = async () => {
 		await assertSecureStorage();
-		const refreshToken = await config.storage.get(REFRESH_KEY);
-		if (!refreshToken)
-			throw new MobileAuthError(
-				'token',
-				'This app has no renewable mobile session.'
-			);
-		const metadata = await discovery();
-		const body = new URLSearchParams({
-			client_id: config.clientId,
-			grant_type: 'refresh_token',
-			refresh_token: refreshToken
-		});
-		body.set('resource', resource);
-		const tokens = await tokenRequest(metadata, body);
+		const exchange = async () => {
+			const refreshToken = await config.storage.get(REFRESH_KEY);
+			if (!refreshToken)
+				throw new MobileAuthError(
+					'token',
+					'This app has no renewable mobile session.'
+				);
+			const metadata = await discovery();
+			const body = new URLSearchParams({
+				client_id: config.clientId,
+				grant_type: 'refresh_token',
+				refresh_token: refreshToken
+			});
+			body.set('resource', resource);
+			const tokens = await tokenRequest(metadata, body);
 
-		return (await acceptTokens(tokens)).accessToken;
+			return (await acceptTokens(tokens)).accessToken;
+		};
+
+		return config.storage.withLock
+			? config.storage.withLock(REFRESH_KEY, exchange)
+			: exchange();
 	};
 
 	const refreshAccessToken = async () => {

@@ -129,7 +129,7 @@ await auth({
 	}
 });
 
-const ticket = await mobile.socketTicket('https://app.example/sync');
+const ticket = await mobile.socketTicket();
 ```
 
 Run the `oidc` migration block after upgrading; migration
@@ -138,6 +138,20 @@ Run the `oidc` migration block after upgrading; migration
 sessions and bearer access tokens into the same typed `authPrincipal`. DPoP-
 bound bearer tokens currently fail closed until resource-proof verification is
 enabled.
+
+The complete Auth application also publishes an `absoluteAuthSync` capability
+to later Elysia plugins. `@absolutejs/sync` detects it automatically: the
+single-use ticket on a WebSocket and the Bearer token on the finite background
+HTTP route both resolve to the same `{ authPrincipal, user }` context. Mount
+Auth before Sync; page and native code require no authentication wiring:
+
+```ts
+new Elysia().use(authApplication).use(syncSocket({ engine }));
+```
+
+The bridge is capability-based, so Auth does not depend on Sync and Sync does
+not depend on Auth. Invalid, expired, replayed, wrong-audience, and DPoP-bound
+credentials continue to fail closed.
 
 The defaults use `/oauth2/status`, `/signin`, `reason=session_expired`, and a
 `returnUrl` query parameter. Use `onExpired` when a router or application shell

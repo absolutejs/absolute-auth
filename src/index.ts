@@ -673,6 +673,11 @@ export {
 export { createInMemoryLinkedProviderStores } from './linkedProviders/inMemoryStores';
 export { protectRoutePlugin } from './routes/protectRoute';
 export { requireAuthPlugin } from './routes/requireAuth';
+export {
+	createAbsoluteAuthSyncBridge,
+	type AbsoluteAuthSyncBridge,
+	type AbsoluteAuthSyncContext
+} from './syncBridge';
 export { sessionRoutes } from './routes/sessions';
 export { stepUpPlugin } from './routes/stepUp';
 export * from './session/sessionsConfig';

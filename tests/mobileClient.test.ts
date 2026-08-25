@@ -33,6 +33,7 @@ const setup = async (options: { secure?: boolean } = {}) => {
 	let currentTime = 1_800_000_000_000;
 	let authorizeNonce = '';
 	let refreshes = 0;
+	let refreshLocks = 0;
 	let apiCalls = 0;
 	const fetchImpl: typeof fetch = async (input, init) => {
 		const request = new Request(input, init);
@@ -132,6 +133,11 @@ const setup = async (options: { secure?: boolean } = {}) => {
 			},
 			set: async (key, value) => {
 				values.set(key, value);
+			},
+			withLock: async (_key, run) => {
+				refreshLocks += 1;
+
+				return run();
 			}
 		},
 		now: () => currentTime
@@ -147,7 +153,8 @@ const setup = async (options: { secure?: boolean } = {}) => {
 		},
 		apiCalls: () => apiCalls,
 		emitLink: (url: string) => linkListener?.(url),
-		refreshes: () => refreshes
+		refreshes: () => refreshes,
+		refreshLocks: () => refreshLocks
 	};
 };
 
@@ -196,6 +203,7 @@ describe('mobile auth client', () => {
 		]);
 		expect(responses.every((response) => response.ok)).toBe(true);
 		expect(fixture.refreshes()).toBe(1);
+		expect(fixture.refreshLocks()).toBe(1);
 		expect(fixture.apiCalls()).toBe(2);
 		expect(fixture.authorizations.slice(-2)).toEqual([
 			'Bearer access-2',
