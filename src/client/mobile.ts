@@ -63,6 +63,14 @@ export type MobileAuthTokens = {
 
 export type MobileAuthUser = Record<string, unknown> & { sub: string };
 
+export type MobileAuthPrincipal = {
+	issuer: string;
+	namespace: string;
+	/** Optional server-owned tenant/account partition from userinfo. */
+	partition?: string;
+	subject: string;
+};
+
 export type MobileAuthErrorCode =
 	| 'aborted'
 	| 'callback'
@@ -449,6 +457,46 @@ export const createMobileAuthClient = (config: MobileAuthClientConfig) => {
 	let stopResume: (() => Promise<void> | void) | undefined;
 	let startPromise: Promise<void> | undefined;
 	const pendingSignIns = new Map<string, DeferredSignIn>();
+	let currentPrincipal: MobileAuthPrincipal | null | undefined;
+	const principalListeners = new Set<
+		(principal: MobileAuthPrincipal | null) => void
+	>();
+	const publishPrincipal = (principal: MobileAuthPrincipal | null) => {
+		if (
+			currentPrincipal !== undefined &&
+			currentPrincipal?.namespace === principal?.namespace
+		)
+			return;
+		currentPrincipal = principal;
+		for (const listener of principalListeners) listener(principal);
+	};
+	const principalFor = async (
+		user: MobileAuthUser
+	): Promise<MobileAuthPrincipal> => {
+		const partition =
+			typeof user.absolutejs_sync_partition === 'string' &&
+			user.absolutejs_sync_partition.length > 0
+				? user.absolutejs_sync_partition
+				: undefined;
+		const digest = await crypto.subtle.digest(
+			'SHA-256',
+			new TextEncoder().encode(
+				JSON.stringify([
+					issuer,
+					config.clientId,
+					user.sub,
+					partition ?? null
+				])
+			)
+		);
+
+		return {
+			issuer,
+			namespace: `auth:v1:${base64Url(new Uint8Array(digest))}`,
+			...(partition === undefined ? {} : { partition }),
+			subject: user.sub
+		};
+	};
 
 	const fetchDiscovery = async () => {
 		const url = new URL('/.well-known/openid-configuration', `${issuer}/`);
@@ -780,6 +828,11 @@ export const createMobileAuthClient = (config: MobileAuthClientConfig) => {
 
 		return fetchImpl(new Request(request, { credentials: 'omit' }));
 	};
+	const signedOut = () => {
+		publishPrincipal(null);
+
+		return null;
+	};
 
 	const status = async () => {
 		try {
@@ -787,7 +840,7 @@ export const createMobileAuthClient = (config: MobileAuthClientConfig) => {
 			const response = await authenticatedFetch(
 				metadata.userinfo_endpoint
 			);
-			if (response.status === 401) return null;
+			if (response.status === 401) return signedOut();
 			if (!response.ok)
 				throw new MobileAuthError(
 					'network',
@@ -800,14 +853,23 @@ export const createMobileAuthClient = (config: MobileAuthClientConfig) => {
 					'The user-info response is malformed.'
 				);
 
-			return { ...user, sub: user.sub } satisfies MobileAuthUser;
+			const normalized = {
+				...user,
+				sub: user.sub
+			} satisfies MobileAuthUser;
+			publishPrincipal(await principalFor(normalized));
+
+			return normalized;
 		} catch (error) {
 			if (
-				error instanceof MobileAuthError &&
-				(error.code === 'oauth' || error.code === 'token')
+				!(
+					error instanceof MobileAuthError &&
+					(error.code === 'oauth' || error.code === 'token')
+				)
 			)
-				return null;
-			throw error;
+				throw error;
+
+			return signedOut();
 		}
 	};
 
@@ -863,7 +925,25 @@ export const createMobileAuthClient = (config: MobileAuthClientConfig) => {
 				config.storage.remove(PENDING_KEY),
 				config.storage.remove(REFRESH_KEY)
 			]);
+			publishPrincipal(null);
 		}
+	};
+
+	const principal = async () => {
+		await status();
+
+		return currentPrincipal ?? null;
+	};
+
+	const onPrincipalChange = (
+		listener: (principal: MobileAuthPrincipal | null) => void
+	) => {
+		principalListeners.add(listener);
+		if (currentPrincipal !== undefined) listener(currentPrincipal);
+
+		return () => {
+			principalListeners.delete(listener);
+		};
 	};
 
 	const stop = async () => {
@@ -877,6 +957,8 @@ export const createMobileAuthClient = (config: MobileAuthClientConfig) => {
 		fetch: authenticatedFetch,
 		fetchOptional: optionalAuthenticatedFetch,
 		handleCallback,
+		onPrincipalChange,
+		principal,
 		refresh: refreshAccessToken,
 		signIn,
 		signOut,

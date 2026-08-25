@@ -222,7 +222,9 @@ describe('mobile auth client', () => {
 			})
 		});
 		expect(
-			await authClient.passwordReset.request({ email: 'alice@example.com' })
+			await authClient.passwordReset.request({
+				email: 'alice@example.com'
+			})
 		).toEqual({ data: { ok: true }, error: null });
 		expect(fixture.authorizations.at(-1)).toBe('');
 	});
@@ -247,6 +249,32 @@ describe('mobile auth client', () => {
 			fixture.client.socketTicket('https://api.example/sync')
 		).resolves.toBe('ticket:https://api.example/sync');
 		expect(fixture.authorizations.at(-1)).toBe('Bearer access-1');
+	});
+
+	test('derives and publishes an opaque Sync namespace from verified userinfo', async () => {
+		const fixture = await setup();
+		const namespaces: Array<string | null> = [];
+		const remove = fixture.client.onPrincipalChange((principal) =>
+			namespaces.push(principal?.namespace ?? null)
+		);
+		await completeSignIn(fixture);
+		const first = await fixture.client.principal();
+		const second = await fixture.client.principal();
+
+		expect(first).toEqual(second);
+		expect(first).toEqual(
+			expect.objectContaining({
+				issuer: ISSUER,
+				subject: 'user-alice'
+			})
+		);
+		expect(first?.namespace).toStartWith('auth:v1:');
+		expect(first?.namespace).not.toContain('user-alice');
+		expect(namespaces).toEqual([first?.namespace]);
+
+		await fixture.client.signOut();
+		expect(namespaces).toEqual([first?.namespace, null]);
+		remove();
 	});
 
 	test('refuses to start when native secure storage is unavailable', async () => {
