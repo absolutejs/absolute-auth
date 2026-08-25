@@ -4,6 +4,12 @@ import {
 	type AccessTokenPrincipalConfig,
 	type AuthPrincipal
 } from './principal';
+import {
+	deriveAuthSyncNamespace,
+	readAuthSyncPartition
+} from './syncNamespace';
+
+const PWA_SYNC_CLIENT_ID = '@absolutejs/pwa';
 
 /** The context shared by authenticated WebSocket and finite HTTP Sync work. */
 export type AbsoluteAuthSyncContext<UserType> = {
@@ -25,12 +31,30 @@ export type AbsoluteAuthSyncBridge<UserType> = {
 	resolveBearer: (input: {
 		authorization?: string;
 	}) => Promise<AbsoluteAuthSyncContext<UserType> | undefined>;
+	/** Resolve only a verified browser session previously derived by Auth. The
+	 * caller must independently enforce an exact same-origin request boundary. */
+	resolveSession: (input: { authPrincipal?: unknown }) => Promise<
+		| {
+				context: AbsoluteAuthSyncContext<UserType>;
+				namespace: string;
+		  }
+		| undefined
+	>;
 };
 
 const toSyncContext = <UserType>(
 	authPrincipal: AuthPrincipal<UserType> | undefined
-) =>
-	authPrincipal ? { authPrincipal, user: authPrincipal.user } : undefined;
+) => (authPrincipal ? { authPrincipal, user: authPrincipal.user } : undefined);
+
+const isSessionAuthPrincipal = <UserType>(
+	value: unknown
+): value is Extract<AuthPrincipal<UserType>, { kind: 'session' }> =>
+	typeof value === 'object' &&
+	value !== null &&
+	Reflect.get(value, 'kind') === 'session' &&
+	typeof Reflect.get(value, 'subject') === 'string' &&
+	Reflect.get(value, 'subject').length > 0 &&
+	Reflect.has(value, 'user');
 
 export const createAbsoluteAuthSyncBridge = <UserType>(
 	accessTokens: AccessTokenPrincipalConfig<UserType>
@@ -54,5 +78,20 @@ export const createAbsoluteAuthSyncBridge = <UserType>(
 				authorization,
 				config: accessTokens
 			})
-		)
+	),
+	resolveSession: async ({ authPrincipal }) => {
+		if (!isSessionAuthPrincipal<UserType>(authPrincipal)) return undefined;
+		const context = toSyncContext(authPrincipal);
+		if (!context) return undefined;
+
+		return {
+			context,
+				namespace: await deriveAuthSyncNamespace({
+				clientId: PWA_SYNC_CLIENT_ID,
+				issuer: accessTokens.oidc.issuer,
+				partition: readAuthSyncPartition(authPrincipal.user),
+				subject: authPrincipal.subject
+			})
+		};
+	}
 });

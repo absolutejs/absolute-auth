@@ -1,3 +1,8 @@
+import {
+	deriveAuthSyncNamespace,
+	readAuthSyncPartition
+} from '../syncNamespace';
+
 export type MobileAuthSecureStorage = {
 	capability?: () => Promise<{
 		available: boolean;
@@ -475,26 +480,16 @@ export const createMobileAuthClient = (config: MobileAuthClientConfig) => {
 	const principalFor = async (
 		user: MobileAuthUser
 	): Promise<MobileAuthPrincipal> => {
-		const partition =
-			typeof user.absolutejs_sync_partition === 'string' &&
-			user.absolutejs_sync_partition.length > 0
-				? user.absolutejs_sync_partition
-				: undefined;
-		const digest = await crypto.subtle.digest(
-			'SHA-256',
-			new TextEncoder().encode(
-				JSON.stringify([
-					issuer,
-					config.clientId,
-					user.sub,
-					partition ?? null
-				])
-			)
-		);
+		const partition = readAuthSyncPartition(user);
 
 		return {
 			issuer,
-			namespace: `auth:v1:${base64Url(new Uint8Array(digest))}`,
+			namespace: await deriveAuthSyncNamespace({
+				clientId: config.clientId,
+				issuer,
+				partition,
+				subject: user.sub
+			}),
 			...(partition === undefined ? {} : { partition }),
 			subject: user.sub
 		};

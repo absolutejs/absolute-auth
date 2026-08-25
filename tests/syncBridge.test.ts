@@ -56,6 +56,15 @@ describe('Absolute Auth Sync bridge', () => {
 				absoluteAuthSync?.consumeSocketTicket({
 					ticket: String(Reflect.get(Object(body), 'ticket'))
 				})
+			)
+			.get('/session', ({ absoluteAuthSync }) =>
+				absoluteAuthSync?.resolveSession({
+					authPrincipal: {
+						kind: 'session',
+						subject: user.id,
+						user
+					}
+				})
 			);
 
 		const bearerResponse = await app.handle(
@@ -89,6 +98,16 @@ describe('Absolute Auth Sync bridge', () => {
 			subject: user.id
 		});
 		expect(ticket.authPrincipal).toEqual(bearer.authPrincipal);
+		const sessionResponse = await app.handle(
+			new Request('http://localhost/session')
+		);
+		const session = await sessionResponse.json();
+		expect(session.context).toEqual({
+			authPrincipal: { kind: 'session', subject: user.id, user },
+			user
+		});
+		expect(session.namespace).toMatch(/^auth:v1:[A-Za-z0-9_-]{43}$/u);
+		expect(session.namespace).not.toContain(user.id);
 
 		const replay = await app.handle(
 			new Request('http://localhost/ticket', {

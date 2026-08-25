@@ -30,6 +30,7 @@ export {
 	type AbsoluteAuthSyncBridge,
 	type AbsoluteAuthSyncContext
 } from './syncBridge';
+export { deriveAuthSyncNamespace } from './syncNamespace';
 export type { ScimConfig } from './scim/config';
 export type {
 	ScimFilter,

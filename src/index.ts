@@ -625,6 +625,7 @@ export { createAuthContext } from './authContext';
 export type { AuthInstance } from './authContext';
 export * from './types';
 export * from './principal';
+export * from './syncNamespace';
 export * from './typebox';
 export * from './vault/config';
 export * from './vault/types';
