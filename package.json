@@ -1,5 +1,5 @@
 {
-	"version": "0.69.4",
+	"version": "0.69.5",
 	"name": "@absolutejs/auth",
 	"description": "An authorization library for absolutejs",
 	"repository": {
@@ -17,14 +17,14 @@
 	"license": "BSL-1.1",
 	"author": "Alex Kahn",
 	"scripts": {
-		"build": "rm -rf dist && bun build src/index.ts src/server.ts src/agents/index.ts src/oidc/index.ts src/saml.ts src/webauthn.ts src/htmx/index.ts src/client/index.ts src/client/mobile.ts src/client/react.ts src/client/vue.ts src/client/solid.ts src/client/svelte.ts src/plugins/index.ts src/providers/index.ts src/linkedProviders/index.ts src/vault/index.ts src/manifest.ts --root src --outdir dist --sourcemap --target=bun --external elysia --external react --external vue --external solid-js --external svelte --external @opentelemetry/api --external @simplewebauthn/browser --external @simplewebauthn/server --external @node-saml/node-saml && bun build src/cli/migrate.ts --outdir dist/cli --sourcemap --target=bun --external @neondatabase/serverless --external drizzle-orm && bun build src/fingerprint-client/index.ts --outdir dist/fingerprint-client --sourcemap --target=browser && tsc --emitDeclarationOnly --project tsconfig.json && chmod +x dist/cli/migrate.js && absolute-manifest emit",
+		"build": "rm -rf dist && bun build src/index.ts src/server.ts src/agents/index.ts src/oidc/index.ts src/saml.ts src/webauthn.ts src/htmx/index.ts src/client/index.ts src/client/mobile.ts src/client/react.ts src/client/vue.ts src/client/solid.ts src/client/svelte.ts src/plugins/index.ts src/providers/index.ts src/linkedProviders/index.ts src/vault/index.ts src/manifest.ts --root src --outdir dist --sourcemap --target=bun --external elysia --external react --external vue --external solid-js --external svelte --external @opentelemetry/api --external @simplewebauthn/browser --external @simplewebauthn/server --external @node-saml/node-saml && bun build src/cli/migrate.ts --outdir dist/cli --sourcemap --target=bun --external @neondatabase/serverless --external drizzle-orm && bun build src/fingerprint-client/index.ts --outdir dist/fingerprint-client --sourcemap --target=browser && bun run scripts/emitDeclarations.ts && chmod +x dist/cli/migrate.js && absolute-manifest emit",
 		"config": "absolute config",
 		"test": "bun test",
 		"format": "absolute prettier --write",
 		"lint": "absolute eslint",
 		"typecheck": "absolute typecheck",
 		"verify-package": "absolute-manifest verify-package",
-		"check:package": "bun run typecheck && bun run lint && bun run test && bun run verify-package && bun run build",
+		"check:package": "bun run typecheck && bun run lint && bun run test && bun run build && bun run verify-package",
 		"release": "bun run format && bun run check:package && npm publish"
 	},
 	"keywords": [
