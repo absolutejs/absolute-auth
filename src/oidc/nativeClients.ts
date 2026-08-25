@@ -40,7 +40,7 @@ const parseClient = (value: unknown, index: number): AbsoluteNativeAuthClient =>
 		throw new TypeError(
 			`${ABSOLUTE_NATIVE_AUTH_CLIENTS_ENV}[${index}] must be an object.`
 		);
-	const scopes = value.scopes;
+	const { scopes } = value;
 	if (
 		!Array.isArray(scopes) ||
 		scopes.length === 0 ||

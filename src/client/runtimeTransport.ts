@@ -6,17 +6,16 @@ type AuthTransportRegistry = { installations: AuthTransportInstallation[] };
 const AUTH_TRANSPORT_REGISTRY = Symbol.for(
 	'@absolutejs/auth/client-runtime-transport'
 );
-const host = globalThis as { [key: symbol]: unknown };
 const isRegistry = (value: unknown): value is AuthTransportRegistry =>
 	typeof value === 'object' &&
 	value !== null &&
 	Array.isArray(Reflect.get(value, 'installations'));
 
-const registry = (() => {
-	const existing = host[AUTH_TRANSPORT_REGISTRY];
+const createRegistry = () => {
+	const existing = Reflect.get(globalThis, AUTH_TRANSPORT_REGISTRY);
 	if (isRegistry(existing)) return existing;
 	const created: AuthTransportRegistry = { installations: [] };
-	Object.defineProperty(host, AUTH_TRANSPORT_REGISTRY, {
+	Object.defineProperty(globalThis, AUTH_TRANSPORT_REGISTRY, {
 		configurable: false,
 		enumerable: false,
 		value: created,
@@ -24,7 +23,9 @@ const registry = (() => {
 	});
 
 	return created;
-})();
+};
+
+const registry = createRegistry();
 
 export const getAuthClientRuntimeTransport = () =>
 	registry.installations.at(-1)?.transport;
@@ -32,7 +33,7 @@ export const getAuthClientRuntimeTransport = () =>
 export const installAuthClientRuntimeTransport = (
 	transport: AuthClientTransport
 ) => {
-	const installation = { transport };
+	const installation: AuthTransportInstallation = { transport };
 	registry.installations.push(installation);
 
 	return () => {

@@ -279,10 +279,6 @@ const buildAuthApplications = async <UserType>(
 	const oidcConfig = oidc
 		? {
 				...oidc,
-				clientStore: withAbsoluteNativeAuthClients(
-					oidc.clientStore,
-					oidc.issuer
-				),
 				additionalDiscoveryMetadata: {
 					...oidc.additionalDiscoveryMetadata,
 					...(resolvedAgentAuth?.oauthGuide === undefined
@@ -301,6 +297,10 @@ const buildAuthApplications = async <UserType>(
 									)
 							})
 				},
+				clientStore: withAbsoluteNativeAuthClients(
+					oidc.clientStore,
+					oidc.issuer
+				),
 				publicTokenGrantTypes: [
 					...(oidc.publicTokenGrantTypes ?? []),
 					...(resolvedAgentAuth?.agentRegistration === undefined

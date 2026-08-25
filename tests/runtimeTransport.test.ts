@@ -14,6 +14,7 @@ describe('Auth client runtime transport', () => {
 			installAuthClientRuntimeTransport({
 				fetch: async (input) => {
 					requests.push(String(input));
+
 					return Response.json({ user: { id: 'native-user' } });
 				}
 			})
