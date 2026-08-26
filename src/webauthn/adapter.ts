@@ -46,7 +46,9 @@ export type WebAuthnAuthenticationResult = {
 export type WebAuthnAdapter = {
 	createAuthenticationOptions: (request: {
 		allowCredentials: WebAuthnCredentialDescriptor[];
+		challenge?: string;
 		rpId: string;
+		userVerification?: 'discouraged' | 'preferred' | 'required';
 	}) =>
 		| Promise<WebAuthnAuthenticationOptions>
 		| WebAuthnAuthenticationOptions;

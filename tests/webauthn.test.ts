@@ -5,6 +5,7 @@ import { createInMemoryCredentialStore } from '../src/credentials/inMemoryCreden
 import { auth } from '../src/index';
 import { createInMemoryAuthSessionStore } from '../src/session/inMemoryStore';
 import { createInMemoryWebAuthnCredentialStore } from '../src/webauthn/inMemoryWebAuthnCredentialStore';
+import { createSimpleWebAuthnAdapter } from '../src/webauthn/simpleWebAuthnAdapter';
 
 type TestUser = {
 	email: string;
@@ -164,6 +165,21 @@ describe('WebAuthn registration', () => {
 });
 
 describe('WebAuthn authentication', () => {
+	test('supports a caller-bound challenge with required user verification', async () => {
+		const adapter = await createSimpleWebAuthnAdapter();
+		const result = await adapter.createAuthenticationOptions({
+			allowCredentials: [],
+			challenge: 'request-bound-challenge-0123456789abcdef',
+			rpId: 'example.com',
+			userVerification: 'required'
+		});
+
+		expect(result.challenge).toBe(
+			'request-bound-challenge-0123456789abcdef'
+		);
+		expect(result.options.userVerification).toBe('required');
+	});
+
 	test('signs in passwordlessly and bumps the signature counter', async () => {
 		const { app, webauthnCredentialStore } = await buildApp();
 		// Register the user so getWebAuthnUser can resolve the credential's userId.

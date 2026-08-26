@@ -69,12 +69,22 @@ export const createSimpleWebAuthnAdapter =
 			new Uint8Array(Buffer.from(value, 'base64url'));
 
 		return {
-			createAuthenticationOptions: async ({ allowCredentials, rpId }) => {
+			createAuthenticationOptions: async ({
+				allowCredentials,
+				challenge,
+				rpId,
+				userVerification
+			}) => {
 				const options = await generateAuthenticationOptions({
 					allowCredentials: allowCredentials.map(({ id }) => ({
 						id
 					})),
-					rpID: rpId
+					challenge:
+						challenge === undefined
+							? undefined
+							: fromBase64Url(challenge),
+					rpID: rpId,
+					userVerification
 				});
 
 				return {
