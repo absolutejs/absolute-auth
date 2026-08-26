@@ -27,6 +27,7 @@ import { credentialRoutes } from './credentials/routes';
 import { createConfiguredAuthHtmxRoutes } from './htmx/configuredRoutes';
 import { createLockoutGuard } from './lockout/config';
 import { createMfaGate } from './mfa/gate';
+import { nativePushRoutes } from './nativePush';
 import { mfaRoutes } from './mfa/routes';
 import { oidcProviderRoutes } from './oidc/routes';
 import { withAbsoluteNativeAuthClients } from './oidc/nativeClients';
@@ -126,6 +127,7 @@ const buildAuthApplications = async <UserType>(
 		credentials,
 		customProviders,
 		mfa,
+		nativePush,
 		verificationProvider,
 		passwordless,
 		lockout,
@@ -162,6 +164,8 @@ const buildAuthApplications = async <UserType>(
 		onRevocationError,
 		onSessionCleanup
 	} = configuration;
+	if (nativePush && !oidc)
+		throw new Error('nativePush requires the OIDC provider');
 	if (agentAuth?.agentRegistration !== undefined) {
 		if (oidc === undefined) {
 			throw new Error(
@@ -545,7 +549,21 @@ const buildAuthApplications = async <UserType>(
 			: new Elysia()
 	]);
 
+	const nativePushApplication = new Elysia();
+	if (nativePush && oidcConfig)
+		nativePushApplication.use(
+			nativePushRoutes<UserType>({
+				accessTokens: {
+					oidc: oidcConfig,
+					getUser: async (subject) =>
+						(await getUser(subject)) ?? null
+				},
+				authSessionStore,
+				config: nativePush
+			})
+		);
 	const extendedFeatureRoutes = new Elysia().use([
+		nativePushApplication,
 		portal ? portalRoutes({ ...portal, emit: auditEmit }) : new Elysia(),
 		webauthn
 			? webauthnRoutes<UserType>({
@@ -605,6 +623,8 @@ export const auth = async <UserType>(configuration: AuthConfig<UserType>) => {
 
 	return application.use(authContext);
 };
+
+export * from './nativePush';
 
 export const createAuthApplications = async <UserType>(
 	configuration: AuthConfig<UserType>

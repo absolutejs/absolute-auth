@@ -24,7 +24,12 @@ const waitFor: (
 	);
 };
 
-const setup = async (options: { secure?: boolean } = {}) => {
+const setup = async (
+	options: {
+		beforeSignOut?: () => Promise<void> | void;
+		secure?: boolean;
+	} = {}
+) => {
 	const signingKey = await generateSigningKey();
 	const values = new Map<string, string>();
 	const opened: string[] = [];
@@ -104,6 +109,7 @@ const setup = async (options: { secure?: boolean } = {}) => {
 	};
 	const client = createMobileAuthClient({
 		allowedOrigins: [ISSUER, API_ORIGIN],
+		beforeSignOut: options.beforeSignOut,
 		clientId: 'mobile-client',
 		fetch: fetchImpl,
 		issuer: ISSUER,
@@ -283,6 +289,24 @@ describe('mobile auth client', () => {
 		await fixture.client.signOut();
 		expect(namespaces).toEqual([first?.namespace, null]);
 		remove();
+	});
+
+	test('runs native cleanup while sign-out credentials still exist', async () => {
+		const events: string[] = [];
+		const fixture = await setup({
+			beforeSignOut: async () => {
+				events.push(
+					fixture.values.has('oidc.refresh')
+						? 'cleanup-with-credential'
+						: 'cleanup-without-credential'
+				);
+			}
+		});
+		await completeSignIn(fixture);
+		await fixture.client.signOut();
+
+		expect(events).toEqual(['cleanup-with-credential']);
+		expect(fixture.values.has('oidc.refresh')).toBe(false);
 	});
 
 	test('refuses to start when native secure storage is unavailable', async () => {

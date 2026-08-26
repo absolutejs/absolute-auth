@@ -115,6 +115,30 @@ runtime registry, so existing `createAuthClient()` calls select it without
 application changes. Explicit `transport` options always win, installation is
 stacked and reversible, and web/server runtimes never install the registry.
 
+When portable push is enabled, Auth also owns its authenticated installation
+boundary. Pass the existing Dispatch push lifecycle directly; the server derives
+the principal, tenant, and authorized topics and returns an opaque installation
+identity. The native shell is the only code that sees the APNs/FCM token, and
+ordinary application/page code cannot read it:
+
+```ts
+const authApplication = await auth({
+	// ...normal Auth + OIDC configuration
+	nativePush: {
+		registrar: pushLifecycle,
+		tenant: (principal) => principal.user.organizationId,
+		topics: (principal) => topicsFor(principal.user)
+	}
+});
+```
+
+The fixed `/auth/mobile/push` route accepts bearer-authenticated native clients
+and cookie-authenticated web clients, but never accepts user ID, tenant, or
+topics from either. Token rotation and deletion require the server-issued
+installation identity and Dispatch verifies that it belongs to the current
+principal. Native sign-out attempts removal while credentials still exist and
+always clears the local provider registration even when the network is down.
+
 For WebSocket/Sync authentication, enable a ticket store on the provider. A
 valid audience-bound access token can then obtain a 30-second, hashed-at-rest,
 single-use ticket from `/oauth2/socket-ticket`:

@@ -41,6 +41,8 @@ export type MobileAuthDiscovery = {
 
 export type MobileAuthClientConfig = {
 	allowedOrigins?: readonly string[];
+	/** Runs while renewable credentials still exist, before native sign-out. */
+	beforeSignOut?: () => Promise<void> | void;
 	clientId: string;
 	clockSkewMs?: number;
 	fetch?: typeof globalThis.fetch;
@@ -917,10 +919,19 @@ export const createMobileAuthClient = (config: MobileAuthClientConfig) => {
 				method: 'POST'
 			});
 	};
+	const runBeforeSignOut = async () => {
+		try {
+			await config.beforeSignOut?.();
+		} catch {
+			// Sign-out must remain available. Native integrations fail closed
+			// locally and stale provider registrations retire on send.
+		}
+	};
 
 	const signOut = async () => {
 		const refreshToken = await config.storage.get(REFRESH_KEY);
 		try {
+			await runBeforeSignOut();
 			if (refreshToken) await revokeRefreshToken(refreshToken);
 		} finally {
 			access = undefined;
