@@ -70,6 +70,7 @@ export type WebAuthnAdapter = {
 		expectedChallenge: string;
 		expectedOrigin: string;
 		expectedRPID: string;
+		requireUserVerification?: boolean;
 		response: unknown;
 	}) => Promise<WebAuthnAuthenticationResult>;
 	verifyRegistration: (request: {

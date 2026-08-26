@@ -121,6 +121,7 @@ export const createSimpleWebAuthnAdapter =
 				expectedChallenge,
 				expectedOrigin,
 				expectedRPID,
+				requireUserVerification,
 				response
 			}) => {
 				if (!isAuthenticationResponse(response))
@@ -134,6 +135,7 @@ export const createSimpleWebAuthnAdapter =
 					expectedChallenge,
 					expectedOrigin,
 					expectedRPID,
+					requireUserVerification,
 					response
 				});
 
