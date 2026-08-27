@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
-import { verifyDpopProof } from '../oidc/dpop';
-import { createDpopClient, createDpopKey, createDpopProof } from './dpop';
+import { createDpopClient, createDpopKey, createDpopProof } from '../src/client/dpop';
+import { verifyDpopProof } from '../src/oidc/dpop';
 
 const decodePayload = (proof: string) => {
 	const [, payload] = proof.split('.');
