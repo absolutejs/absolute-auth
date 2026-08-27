@@ -3,6 +3,7 @@ import { Elysia } from 'elysia';
 import { hashToken } from '../src/crypto';
 import {
 	agentAuthPlugin,
+	agentProtectedResourceMetadata,
 	auth,
 	createInMemoryAgentDelegationStore,
 	createInMemoryAgentRegistrationStore,
@@ -99,6 +100,17 @@ describe('agent auth resource and guard', () => {
 			resource_name: 'Documents API',
 			scopes_supported: ['documents:read', 'documents:write']
 		});
+	});
+
+	test('advertises when a resource requires DPoP-bound access tokens', () => {
+		expect(
+			agentProtectedResourceMetadata({
+				authorizationServer: ISSUER,
+				dpopBoundAccessTokensRequired: true,
+				resource: RESOURCE,
+				scopes: ['documents:read']
+			})
+		).toMatchObject({ dpop_bound_access_tokens_required: true });
 	});
 
 	test('resolves a delegated agent and intersects delegation scopes', async () => {
