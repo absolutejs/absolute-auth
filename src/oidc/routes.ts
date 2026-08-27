@@ -364,7 +364,7 @@ export const oidcProviderRoutes = <UserType>(
 				'dpop-nonce': fresh,
 				'www-authenticate': 'DPoP error="use_dpop_nonce"'
 			},
-			status: HTTP_UNAUTHORIZED
+			status: HTTP_BAD_REQUEST
 		});
 	};
 

@@ -8,6 +8,7 @@ import { jwkThumbprint, verifyJwt } from './keys';
 // the private key. WorkOS does not offer this.
 
 const DEFAULT_MAX_AGE_MS = 60_000;
+const MAX_JTI_LENGTH = 128;
 const SECONDS_TO_MS = 1000;
 
 // RFC 9449 §8 — DPoP nonces. Server-issued challenge values the client must echo back in
@@ -94,26 +95,70 @@ export const verifyDpopNonce = async ({
 
 export type DpopResult = {
 	jkt: string;
-	jti?: string;
+	jti: string;
 };
 
-const decodeHeader = (segment: string) =>
-	JSON.parse(Buffer.from(segment, 'base64url').toString('utf8'));
+export type DpopJti = DpopResult & {
+	expiresAt: number;
+};
 
-const normalizeHtu = (value: unknown) => {
+const decodeHeader = (segment: string) => {
+	try {
+		const value: unknown = JSON.parse(
+			Buffer.from(segment, 'base64url').toString('utf8')
+		);
+
+		return typeof value === 'object' && value !== null && !Array.isArray(value)
+			? value
+			: undefined;
+	} catch {
+		return undefined;
+	}
+};
+
+const normalizeHtu = (value: unknown, proofClaim = false) => {
 	try {
 		const url = new URL(String(value));
+		if (
+			url.username ||
+			url.password ||
+			(proofClaim && (url.search.length > 0 || url.hash.length > 0))
+		)
+			return undefined;
 
 		return `${url.origin}${url.pathname}`;
 	} catch {
-		return '';
+		return undefined;
 	}
+};
+
+const isPublicEs256Jwk = (value: unknown): value is JsonWebKey => {
+	if (typeof value !== 'object' || value === null || Array.isArray(value))
+		return false;
+	const kty = Reflect.get(value, 'kty');
+	const crv = Reflect.get(value, 'crv');
+	const xCoordinate = Reflect.get(value, 'x');
+	const yCoordinate = Reflect.get(value, 'y');
+	const privateComponent = Reflect.get(value, 'd');
+	const alg = Reflect.get(value, 'alg');
+
+	return (
+		kty === 'EC' &&
+		crv === 'P-256' &&
+		typeof xCoordinate === 'string' &&
+		xCoordinate.length > 0 &&
+		typeof yCoordinate === 'string' &&
+		yCoordinate.length > 0 &&
+		privateComponent === undefined &&
+		(alg === undefined || alg === 'ES256')
+	);
 };
 
 // Verify a DPoP proof for a request. Returns the key thumbprint (`jkt`) to bind to the token,
 // or undefined if the proof is missing/invalid/stale/replayed.
 export const verifyDpopProof = async ({
 	accessToken,
+	consumeJti,
 	htm,
 	htu,
 	isUsedJti,
@@ -122,6 +167,7 @@ export const verifyDpopProof = async ({
 	proof
 }: {
 	accessToken?: string;
+	consumeJti?: (jti: DpopJti) => boolean | Promise<boolean>;
 	htm: string;
 	htu: string;
 	isUsedJti?: (jti: string) => boolean | Promise<boolean>;
@@ -130,19 +176,24 @@ export const verifyDpopProof = async ({
 	proof: string | undefined;
 }): Promise<DpopResult | undefined> => {
 	if (proof === undefined) return undefined;
-	const [headerSegment] = proof.split('.');
+	const segments = proof.split('.');
+	if (segments.length !== 3) return undefined;
+	const [headerSegment] = segments;
 	if (headerSegment === undefined) return undefined;
 
 	const header = decodeHeader(headerSegment);
+	const publicJwk =
+		header === undefined ? undefined : Reflect.get(header, 'jwk');
 	if (
-		header?.typ !== 'dpop+jwt' ||
-		header.alg !== 'ES256' ||
-		header.jwk === undefined
+		header === undefined ||
+		Reflect.get(header, 'typ') !== 'dpop+jwt' ||
+		Reflect.get(header, 'alg') !== 'ES256' ||
+		!isPublicEs256Jwk(publicJwk)
 	) {
 		return undefined;
 	}
 
-	const verified = await verifyJwt(proof, header.jwk);
+	const verified = await verifyJwt(proof, publicJwk).catch(() => undefined);
 	if (verified === undefined) return undefined;
 
 	const { payload } = verified;
@@ -157,23 +208,32 @@ export const verifyDpopProof = async ({
 	}
 	const iatMs =
 		typeof payload.iat === 'number' ? payload.iat * SECONDS_TO_MS : 0;
-	if (
-		payload.htm !== htm ||
-		normalizeHtu(payload.htu) !== normalizeHtu(htu) ||
-		iatMs === 0 ||
-		Math.abs(now - iatMs) > maxAgeMs
-	) {
-		return undefined;
-	}
-
+	const claimedHtu = normalizeHtu(payload.htu, true);
+	const expectedHtu = normalizeHtu(htu);
 	const jti = typeof payload.jti === 'string' ? payload.jti : undefined;
 	if (
-		jti !== undefined &&
-		isUsedJti !== undefined &&
-		(await isUsedJti(jti))
+		payload.htm !== htm ||
+		claimedHtu === undefined ||
+		expectedHtu === undefined ||
+		claimedHtu !== expectedHtu ||
+		iatMs === 0 ||
+		Math.abs(now - iatMs) > maxAgeMs ||
+		jti === undefined ||
+		jti.length === 0 ||
+		jti.length > MAX_JTI_LENGTH
 	) {
 		return undefined;
 	}
 
-	return { jkt: await jwkThumbprint(header.jwk), jti };
+	const jkt = await jwkThumbprint(publicJwk);
+	if (isUsedJti !== undefined && (await isUsedJti(jti))) {
+		return undefined;
+	}
+	if (
+		consumeJti !== undefined &&
+		!(await consumeJti({ expiresAt: iatMs + maxAgeMs, jkt, jti }))
+	)
+		return undefined;
+
+	return { jkt, jti };
 };

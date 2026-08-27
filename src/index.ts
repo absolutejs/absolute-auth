@@ -1019,7 +1019,7 @@ export {
 	verifyDpopNonce,
 	verifyDpopProof
 } from './oidc/dpop';
-export type { DpopResult } from './oidc/dpop';
+export type { DpopJti, DpopResult } from './oidc/dpop';
 export {
 	CLIENT_ASSERTION_TYPE,
 	verifyClientAssertion,

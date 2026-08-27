@@ -281,8 +281,11 @@ const authPlugin = await auth({
 		resource: 'https://api.example.com',
 		scopes: ['documents:read', 'documents:write'],
 		verifyCredential: createOidcAgentCredentialVerifier({
+			// Atomically insert a hash of jkt + jti; return false on conflict.
+			consumeDpopJti: replayStore.consume,
 			issuer: 'https://auth.example.com',
 			publicJwk: signingKey.publicJwk,
+			requireDpop: true,
 			resource: 'https://api.example.com'
 		})
 	},
@@ -299,6 +302,16 @@ With `registerDynamicClients` enabled, an RFC 7591 client becomes an agent
 registration. Approval through the existing RFC 8628 device flow creates the
 user-to-agent delegation. The agent can then use RFC 8693 token exchange to get
 a narrowed, audience-bound access token for the protected API.
+
+When `requireDpop` is enabled, the adapter accepts only an RFC 9449-bound
+access token using the `DPoP` authorization scheme, verifies its per-request
+proof and `ath` token hash, and requires the proof key to match `cnf.jkt`.
+Provide `consumeDpopJti` as an atomic shared-store insertion in clustered
+deployments; returning `false` rejects a replay. Proofs without `jti`, proofs
+whose JWK contains private key material, oversized identifiers, and `htu`
+claims containing query or fragment components fail closed. Resource servers
+that require RFC 9449 nonces can use the nonce helpers exported by
+`@absolutejs/auth/oidc` to issue a separate resource nonce challenge.
 
 ```ts
 app.get('/documents', ({ protectAgent }) =>

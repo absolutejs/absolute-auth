@@ -23,7 +23,7 @@ const SESSION_ID: UserSessionId = '11111111-1111-4111-8111-111111111111';
 const VERIFIER = 'pkce-verifier-0123456789-abcdefghij-0123456789';
 const HOUR_MS = 3_600_000;
 const HTTP_OK = 200;
-const HTTP_UNAUTHORIZED = 401;
+const HTTP_BAD_REQUEST = 400;
 
 const buildDpopProof = async ({
 	htu,
@@ -153,7 +153,7 @@ describe('OIDC provider — DPoP nonce enforcement at /token', () => {
 		return new URL(location).searchParams.get('code') ?? '';
 	};
 
-	test('first DPoP request without nonce → 401 + DPoP-Nonce header', async () => {
+	test('first DPoP request without nonce → 400 + DPoP-Nonce header', async () => {
 		const app = await buildApp();
 		const code = await getCode(app);
 		const dpopKey = await generateSigningKey();
@@ -175,7 +175,7 @@ describe('OIDC provider — DPoP nonce enforcement at /token', () => {
 				method: 'POST'
 			})
 		);
-		expect(response.status).toBe(HTTP_UNAUTHORIZED);
+		expect(response.status).toBe(HTTP_BAD_REQUEST);
 		expect(response.headers.get('dpop-nonce')).toBeTruthy();
 		expect(response.headers.get('www-authenticate')).toContain(
 			'use_dpop_nonce'

@@ -7,6 +7,14 @@
  */
 export type { OidcProviderConfig } from './config';
 export {
+	extractDpopNonceClaim,
+	mintDpopNonce,
+	verifyDpopNonce,
+	verifyDpopProof,
+	type DpopJti,
+	type DpopResult
+} from './dpop';
+export {
 	generateSigningKey,
 	jwkThumbprint,
 	signJwt,
