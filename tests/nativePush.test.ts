@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { Elysia } from 'elysia';
-import { nativePushRoutes } from '../src/nativePush';
+import { pushRoutes } from '../src/nativePush';
 import { generateSigningKey } from '../src/oidc/keys';
 import { issueTokenSet, type OidcProviderConfig } from '../src/oidc/config';
 import {
@@ -12,8 +12,9 @@ import {
 type TestUser = { organizationId: string; sub: string };
 
 const fixture = async ({
-	registrationError
-}: { registrationError?: Error } = {}) => {
+	registrationError,
+	removalError
+}: { registrationError?: Error; removalError?: Error } = {}) => {
 	const signingKey = await generateSigningKey();
 	const user: TestUser = { organizationId: 'tenant-server', sub: 'user-42' };
 	const oidc: OidcProviderConfig<TestUser> = {
@@ -34,7 +35,7 @@ const fixture = async ({
 	const registered: unknown[] = [];
 	const removed: unknown[] = [];
 	const app = new Elysia().use(
-		nativePushRoutes<TestUser>({
+		pushRoutes<TestUser>({
 			accessTokens: {
 				oidc,
 				getUser: (subject) => (subject === user.sub ? user : null)
@@ -51,6 +52,7 @@ const fixture = async ({
 						};
 					},
 					removeInstallation: async (input) => {
+						if (removalError) throw removalError;
 						removed.push(input);
 					}
 				},
@@ -59,9 +61,14 @@ const fixture = async ({
 			}
 		})
 	);
-	const request = (method: 'DELETE' | 'POST', body: unknown, bearer = true) =>
+	const request = (
+		method: 'DELETE' | 'POST',
+		body: unknown,
+		bearer = true,
+		path = '/auth/push'
+	) =>
 		app.handle(
-			new Request('http://localhost/auth/mobile/push', {
+			new Request(`http://localhost${path}`, {
 				body: JSON.stringify(body),
 				headers: {
 					...(bearer
@@ -76,7 +83,7 @@ const fixture = async ({
 	return { registered, removed, request };
 };
 
-describe('native push registration', () => {
+describe('push registration', () => {
 	test('derives user, tenant, and topics on the authenticated server', async () => {
 		const harness = await fixture();
 		const response = await harness.request('POST', {
@@ -102,6 +109,46 @@ describe('native push registration', () => {
 				topics: ['incidents'],
 				userId: 'user-42'
 			}
+		]);
+	});
+
+	test('accepts structured Web Push credentials on the canonical route', async () => {
+		const harness = await fixture();
+		const response = await harness.request('POST', {
+			platform: 'webpush',
+			subscription: {
+				endpoint: 'https://push.example/subscription-1',
+				keys: { auth: 'auth-key', p256dh: 'p256dh-key' }
+			}
+		});
+
+		expect(response.status).toBe(200);
+		expect(harness.registered).toEqual([
+			{
+				platform: 'webpush',
+				subscription: {
+					endpoint: 'https://push.example/subscription-1',
+					keys: { auth: 'auth-key', p256dh: 'p256dh-key' }
+				},
+				tenant: 'tenant-server',
+				topics: ['incidents'],
+				userId: 'user-42'
+			}
+		]);
+	});
+
+	test('keeps the installed-client native route as an alias', async () => {
+		const harness = await fixture();
+		const response = await harness.request(
+			'POST',
+			{ platform: 'apns', token: 'native-token' },
+			true,
+			'/auth/mobile/push'
+		);
+
+		expect(response.status).toBe(200);
+		expect(harness.registered).toEqual([
+			expect.objectContaining({ platform: 'apns', token: 'native-token' })
 		]);
 	});
 
@@ -145,6 +192,20 @@ describe('native push registration', () => {
 			installationId: 'prior-user-installation',
 			platform: 'fcm',
 			token: 'raw-provider-token'
+		});
+
+		expect(response.status).toBe(409);
+		expect(await response.json()).toEqual({
+			code: 'installation-ownership'
+		});
+	});
+
+	test('returns the same safe conflict when removing another user installation', async () => {
+		const ownershipError = new Error('internal ownership details');
+		ownershipError.name = 'PushInstallationOwnershipError';
+		const harness = await fixture({ removalError: ownershipError });
+		const response = await harness.request('DELETE', {
+			installationId: 'prior-user-installation'
 		});
 
 		expect(response.status).toBe(409);

@@ -118,13 +118,14 @@ stacked and reversible, and web/server runtimes never install the registry.
 When portable push is enabled, Auth also owns its authenticated installation
 boundary. Pass the existing Dispatch push lifecycle directly; the server derives
 the principal, tenant, and authorized topics and returns an opaque installation
-identity. The native shell is the only code that sees the APNs/FCM token, and
-ordinary application/page code cannot read it:
+identity. The native shell handles APNs/FCM tokens, while the generated PWA
+runtime handles structured browser subscriptions; ordinary page code reads
+neither provider credential:
 
 ```ts
 const authApplication = await auth({
 	// ...normal Auth + OIDC configuration
-	nativePush: {
+	push: {
 		registrar: pushLifecycle,
 		tenant: (principal) => principal.user.organizationId,
 		topics: (principal) => topicsFor(principal.user)
@@ -132,9 +133,10 @@ const authApplication = await auth({
 });
 ```
 
-The fixed `/auth/mobile/push` route accepts bearer-authenticated native clients
-and cookie-authenticated web clients, but never accepts user ID, tenant, or
-topics from either. Token rotation and deletion require the server-issued
+The fixed `/auth/push` route accepts bearer-authenticated native clients and
+cookie-authenticated web clients, but never accepts user ID, tenant, or topics
+from either. The prior `/auth/mobile/push` path remains an installed-client
+compatibility alias. Credential rotation and deletion require the server-issued
 installation identity and Dispatch verifies that it belongs to the current
 principal. Native sign-out attempts removal while credentials still exist and
 always clears the local provider registration even when the network is down.

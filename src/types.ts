@@ -437,7 +437,9 @@ export type AuthConfig<UserType> = {
 	 *  the resolver the package uses to hydrate the typed `user` in
 	 *  `protectRoute`'s context. */
 	getUser: (sub: string) => UserType | null | Promise<UserType | null>;
-	/** Authenticated, server-owned native push registration. Requires `oidc`. */
+	/** Authenticated, server-owned web and native push registration. Requires `oidc`. */
+	push?: import('./nativePush').PushConfig<NoInfer<UserType>>;
+	/** @deprecated Use `push`. */
 	nativePush?: import('./nativePush').NativePushConfig<NoInfer<UserType>>;
 	providersConfiguration: OAuth2ConfigurationOptions;
 	/** Bring-your-own OAuth providers (citra createCustomOAuth2Client) — keys
