@@ -211,6 +211,7 @@ export type SocketTicketStore = {
 export type DeviceAuthorizationStatus = 'approved' | 'denied' | 'pending';
 
 export type DeviceAuthorization = {
+	audience?: string;
 	clientId: string;
 	createdAt: number;
 	deviceCodeHash: string;

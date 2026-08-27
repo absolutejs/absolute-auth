@@ -1,4 +1,5 @@
 export * from './createAuthClient';
+export * from './dpop';
 export * from './sessionExpiry';
 export * from './mobile';
 export * from './runtimeTransport';

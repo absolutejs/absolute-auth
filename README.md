@@ -300,8 +300,9 @@ const authPlugin = await auth({
 
 With `registerDynamicClients` enabled, an RFC 7591 client becomes an agent
 registration. Approval through the existing RFC 8628 device flow creates the
-user-to-agent delegation. The agent can then use RFC 8693 token exchange to get
-a narrowed, audience-bound access token for the protected API.
+user-to-agent delegation. Send the RFC 8707 `resource` value with device
+authorization to bind the resulting token directly to the protected API, or
+use RFC 8693 token exchange when narrowing an existing user token.
 
 When `requireDpop` is enabled, the adapter accepts only an RFC 9449-bound
 access token using the `DPoP` authorization scheme, verifies its per-request
@@ -312,6 +313,24 @@ whose JWK contains private key material, oversized identifiers, and `htu`
 claims containing query or fragment components fail closed. Resource servers
 that require RFC 9449 nonces can use the nonce helpers exported by
 `@absolutejs/auth/oidc` to issue a separate resource nonce challenge.
+
+Client applications can use `createDpopClient` from `@absolutejs/auth/client`.
+It creates a non-exportable P-256 private key, signs a fresh proof for every
+request, adds `ath` and the case-sensitive `DPoP` authorization scheme when an
+access token is supplied, and retries one authorization- or resource-server
+nonce challenge. Give the two servers distinct `nonceScope` values when they
+share an origin. Redirects remain manual so credentials and proofs are never
+forwarded to an unverified location.
+
+```ts
+import { createDpopClient } from '@absolutejs/auth/client';
+
+const dpop = await createDpopClient();
+const response = await dpop.fetch(resourceUrl, {
+	dpop: { accessToken, nonceScope: protectedResource },
+	method: 'POST'
+});
+```
 
 ```ts
 app.get('/documents', ({ protectAgent }) =>

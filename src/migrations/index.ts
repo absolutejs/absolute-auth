@@ -165,6 +165,11 @@ const oidcSocketTicketsMigration: Migration = {
 	sql: tablesToInitSql([oauthSocketTicketsTable])
 };
 
+const oidcDeviceAudienceMigration: Migration = {
+	id: '0005_device_resource_audience',
+	sql: 'ALTER TABLE "auth_oauth_device_authorizations" ADD COLUMN IF NOT EXISTS "audience" varchar(2048);'
+};
+
 const sessionOAuthSubjectMigration: Migration = {
 	id: '0002_oauth_subject',
 	sql: [
@@ -240,7 +245,8 @@ export const blockMigrations: Record<BlockName, BlockMigrations> = {
 			]).migrations,
 			oidcResourceAudienceMigration,
 			oidcRefreshTokenFamiliesMigration,
-			oidcSocketTicketsMigration
+			oidcSocketTicketsMigration,
+			oidcDeviceAudienceMigration
 		]
 	},
 	organizations: initMigration('organizations', [
