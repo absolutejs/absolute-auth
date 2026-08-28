@@ -1,4 +1,4 @@
-import { Elysia, t } from 'elysia';
+import { Elysia, StatusMap, t, type ElysiaStatus } from 'elysia';
 import { getStatusFromSource } from '../session/access';
 import { sessionStore } from '../session/state';
 import type { AuthSessionSource } from '../session/types';
@@ -20,6 +20,29 @@ type AuthFailError =
 			readonly message: 'User is not authenticated';
 	  };
 
+type AuthFailureResponse =
+	| ElysiaStatus<
+			'Bad Request',
+			'Cookies are missing',
+			(typeof StatusMap)['Bad Request']
+	  >
+	| ElysiaStatus<
+			'Unauthorized',
+			'User is not authenticated',
+			(typeof StatusMap)['Unauthorized']
+	  >;
+
+type ProtectRoute<UserType> = {
+	<AuthReturn, AuthFailReturn = never>(
+		handleAuth: (user: UserType) => Promise<AuthReturn>,
+		handleAuthFail?: (error: AuthFailError) => AuthFailReturn
+	): Promise<AuthFailureResponse | AuthReturn | Awaited<AuthFailReturn>>;
+	<AuthReturn, AuthFailReturn = never>(
+		handleAuth: (user: UserType) => AuthReturn,
+		handleAuthFail?: (error: AuthFailError) => AuthFailReturn
+	): Promise<AuthFailureResponse | AuthReturn | Awaited<AuthFailReturn>>;
+};
+
 export const protectRoutePlugin = <UserType>({
 	accessTokens,
 	authSessionStore
@@ -40,8 +63,7 @@ export const protectRoutePlugin = <UserType>({
 			async ({
 				store: { session },
 				cookie: { user_session_id },
-				headers,
-				status
+				headers
 			}) => {
 				const sessionStatus = await getStatusFromSource<UserType>({
 					authSessionStore,
@@ -63,43 +85,47 @@ export const protectRoutePlugin = <UserType>({
 						config: accessTokens
 					});
 
-				return {
-					authPrincipal,
-					protectRoute: <AuthReturn, AuthFailReturn = never>(
-						handleAuth: (
-							user: UserType
-						) => AuthReturn | Promise<AuthReturn>,
-						handleAuthFail?: (
-							error: AuthFailError
-						) => AuthFailReturn
-					) => {
-						const user = authPrincipal?.user;
-						const { error } = sessionStatus;
-						if (error) {
-							if (user) return handleAuth(user);
-
-							return (
-								handleAuthFail?.(error) ??
-								status(error.code, error.message)
-							);
-						}
-
-						if (!user) {
-							return (
-								handleAuthFail?.({
-									code: 'Unauthorized',
-									message: 'User is not authenticated'
-								}) ??
-								status(
-									'Unauthorized',
-									'User is not authenticated'
-								)
-							);
-						}
-
-						return handleAuth(user);
-					}
-				};
+				return { absoluteAuthStatus: sessionStatus, authPrincipal };
 			}
 		)
+		.derive(({ absoluteAuthStatus, authPrincipal, status }) => {
+			const protectRoute: ProtectRoute<UserType> = async (
+				handleAuth,
+				handleAuthFail
+			) => {
+				if (!absoluteAuthStatus)
+					return (
+						(await handleAuthFail?.({
+							code: 'Unauthorized',
+							message: 'User is not authenticated'
+						})) ??
+						status('Unauthorized', 'User is not authenticated')
+					);
+
+				const user = authPrincipal?.user;
+				const { error } = absoluteAuthStatus;
+				if (error) {
+					if (user) return handleAuth(user);
+
+					return (
+						(await handleAuthFail?.(error)) ??
+						status(error.code, error.message)
+					);
+				}
+
+				if (!user) {
+					return (
+						(await handleAuthFail?.({
+							code: 'Unauthorized',
+							message: 'User is not authenticated'
+						})) ??
+						status('Unauthorized', 'User is not authenticated')
+					);
+				}
+
+				return handleAuth(user);
+			};
+
+			return { protectRoute };
+		})
 		.as('global');
