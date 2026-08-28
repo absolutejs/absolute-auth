@@ -364,7 +364,7 @@ export const oidcProviderRoutes = <UserType>(
 				'dpop-nonce': fresh,
 				'www-authenticate': 'DPoP error="use_dpop_nonce"'
 			},
-			status: HTTP_UNAUTHORIZED
+			status: HTTP_BAD_REQUEST
 		});
 	};
 
@@ -1564,6 +1564,7 @@ export const oidcProviderRoutes = <UserType>(
 					body: t.Object({
 						client_id: t.Optional(t.String()),
 						client_secret: t.Optional(t.String()),
+						resource: t.Optional(t.String()),
 						scope: t.Optional(t.String())
 					}),
 					headers: t.Object({
@@ -1600,6 +1601,7 @@ export const oidcProviderRoutes = <UserType>(
 										client.scopes.includes(entry)
 									);
 					const response = await issueDeviceAuthorization({
+						audience: body.resource,
 						clientId: client.clientId,
 						config,
 						now: Date.now(),

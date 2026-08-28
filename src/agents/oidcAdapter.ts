@@ -3,7 +3,7 @@ import {
 	verifyJwtWithKeys,
 	type SigningKeyIdentity
 } from '../oidc/keys';
-import { verifyDpopProof } from '../oidc/dpop';
+import { verifyDpopProof, type DpopJti } from '../oidc/dpop';
 import type { AgentCredentialVerifier } from './types';
 
 const BEARER_PREFIX = 'Bearer ';
@@ -33,6 +33,7 @@ const readAudience = (audience: unknown) => {
  * agent identity while retaining `sub` as the authorizing user. */
 export const createOidcAgentCredentialVerifier = ({
 	issuer,
+	consumeDpopJti,
 	isUsedDpopJti,
 	maxDpopAgeMs,
 	publicJwk,
@@ -41,6 +42,7 @@ export const createOidcAgentCredentialVerifier = ({
 	resource
 }: {
 	issuer: string;
+	consumeDpopJti?: (jti: DpopJti) => boolean | Promise<boolean>;
 	isUsedDpopJti?: (jti: string) => boolean | Promise<boolean>;
 	maxDpopAgeMs?: number;
 	requireDpop?: boolean;
@@ -84,6 +86,7 @@ export const createOidcAgentCredentialVerifier = ({
 			if (!authorization.startsWith('DPoP ')) return undefined;
 			const proof = await verifyDpopProof({
 				accessToken: token,
+				consumeJti: consumeDpopJti,
 				htm: request.method,
 				htu: request.url,
 				isUsedJti: isUsedDpopJti,

@@ -678,11 +678,13 @@ export type DeviceAuthorizationResponse = {
 };
 
 export const issueDeviceAuthorization = async <UserType>({
+	audience,
 	clientId,
 	config,
 	now = Date.now(),
 	requestedScopes
 }: {
+	audience?: string;
 	clientId: string;
 	config: OidcProviderConfig<UserType>;
 	now?: number;
@@ -700,6 +702,7 @@ export const issueDeviceAuthorization = async <UserType>({
 		config.devicePollIntervalSeconds ??
 		DEFAULT_DEVICE_POLL_INTERVAL_SECONDS;
 	await config.deviceAuthorizationStore.saveDeviceAuthorization({
+		audience,
 		clientId,
 		createdAt: now,
 		deviceCodeHash: await hashToken(deviceCode),
@@ -849,6 +852,7 @@ export const exchangeDeviceCode = async <UserType>({
 		deviceCodeHash
 	);
 	const tokenSet = await issueTokenSet({
+		audience: record.audience,
 		clientId,
 		config,
 		dpopJkt,

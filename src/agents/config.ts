@@ -31,6 +31,9 @@ export type AgentAuthConfig = {
 	oauthGuide?: AgentOAuthGuideConfig;
 	authorizationServer: string;
 	delegationStore: AgentDelegationStore;
+	/** Advertise RFC 9728 `dpop_bound_access_tokens_required`. Keep this aligned
+	 * with a credential verifier configured with `requireDpop: true`. */
+	dpopBoundAccessTokensRequired?: boolean;
 	logoUri?: string;
 	metadataRoute?: RouteString;
 	/** Authorization-server route prefix. Defaults to `/oauth2`; used to derive
@@ -50,6 +53,7 @@ export const agentProtectedResourceMetadata = (
 	config: Pick<
 		AgentAuthConfig,
 		| 'authorizationServer'
+		| 'dpopBoundAccessTokensRequired'
 		| 'logoUri'
 		| 'resource'
 		| 'resourceName'
@@ -58,6 +62,9 @@ export const agentProtectedResourceMetadata = (
 ) => ({
 	authorization_servers: [config.authorizationServer],
 	bearer_methods_supported: ['header'],
+	...(config.dpopBoundAccessTokensRequired === true
+		? { dpop_bound_access_tokens_required: true }
+		: {}),
 	...(config.logoUri === undefined
 		? {}
 		: { resource_logo_uri: config.logoUri }),

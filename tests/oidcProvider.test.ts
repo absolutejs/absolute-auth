@@ -758,6 +758,7 @@ describe('OIDC provider — RFC 8628 device authorization', () => {
 			new Request('http://localhost/oauth2/device_authorization', {
 				body: new URLSearchParams({
 					client_id: 'app1',
+					resource: 'https://api.example/federation-inbox',
 					scope: 'openid profile'
 				}),
 				method: 'POST'
@@ -808,6 +809,9 @@ describe('OIDC provider — RFC 8628 device authorization', () => {
 			await app.handle(new Request('http://localhost/oauth2/jwks'))
 		).json();
 		const decoded = await verifyJwt(tokens.access_token, jwks.keys[0]);
+		expect(decoded?.payload.aud).toBe(
+			'https://api.example/federation-inbox'
+		);
 		expect(decoded?.payload.sub).toBe('user-alice');
 
 		// 5. Single-use: a second exchange with the same device_code fails.

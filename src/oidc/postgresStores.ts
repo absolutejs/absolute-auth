@@ -135,6 +135,7 @@ export const oauthCodesTable = pgTable('auth_oauth_codes', {
 export const oauthDeviceAuthorizationsTable = pgTable(
 	'auth_oauth_device_authorizations',
 	{
+		audience: varchar('audience', { length: 2048 }),
 		client_id: varchar('client_id', { length: ID_LENGTH }).notNull(),
 		created_at_ms: bigint('created_at_ms', { mode: 'number' }).notNull(),
 		device_code_hash: varchar('device_code_hash', {
@@ -279,6 +280,7 @@ const toCodeValues = (
 });
 
 const toDeviceAuth = (row: DeviceAuthRow): DeviceAuthorization => ({
+	audience: row.audience ?? undefined,
 	clientId: row.client_id,
 	createdAt: row.created_at_ms,
 	deviceCodeHash: row.device_code_hash,
@@ -519,6 +521,7 @@ export const createPostgresDeviceAuthorizationStore = <
 	},
 	saveDeviceAuthorization: async (deviceAuthorization) => {
 		await db.insert(oauthDeviceAuthorizationsTable).values({
+			audience: deviceAuthorization.audience ?? null,
 			client_id: deviceAuthorization.clientId,
 			created_at_ms: deviceAuthorization.createdAt,
 			device_code_hash: deviceAuthorization.deviceCodeHash,

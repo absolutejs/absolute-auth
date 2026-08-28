@@ -1,4 +1,4 @@
-import { Elysia, t } from 'elysia';
+import { Elysia, StatusMap, t, type ElysiaStatus } from 'elysia';
 import { loadSessionFromSource } from '../session/access';
 import { sessionStore } from '../session/state';
 import type { AuthSessionSource } from '../session/types';
@@ -8,6 +8,25 @@ import { pluginDependencySeed } from '../pluginIdentity';
 type ReauthFailError = {
 	readonly code: 'Unauthorized';
 	readonly message: 'Recent authentication required';
+};
+
+type ReauthFailureResponse = ElysiaStatus<
+	'Unauthorized',
+	'Recent authentication required',
+	(typeof StatusMap)['Unauthorized']
+>;
+
+type RequireRecentAuth<UserType> = {
+	<AuthReturn, AuthFailReturn = never>(
+		maxAgeMs: number,
+		handleAuth: (user: UserType) => Promise<AuthReturn>,
+		handleAuthFail?: (error: ReauthFailError) => AuthFailReturn
+	): Promise<ReauthFailureResponse | AuthReturn | Awaited<AuthFailReturn>>;
+	<AuthReturn, AuthFailReturn = never>(
+		maxAgeMs: number,
+		handleAuth: (user: UserType) => AuthReturn,
+		handleAuthFail?: (error: ReauthFailError) => AuthFailReturn
+	): Promise<ReauthFailureResponse | AuthReturn | Awaited<AuthFailReturn>>;
 };
 
 // Step-up re-auth, usable alongside `protectRoute`. `requireRecentAuth(maxAgeMs, …)`
@@ -28,19 +47,17 @@ export const stepUpPlugin = <UserType>({
 			schema: 'merge'
 		})
 		.derive(
-			({ store: { session }, cookie: { user_session_id }, status }) => ({
-				requireRecentAuth: <AuthReturn, AuthFailReturn>(
-					maxAgeMs: number,
-					handleAuth: (
-						user: UserType
-					) => AuthReturn | Promise<AuthReturn>,
-					handleAuthFail?: (error: ReauthFailError) => AuthFailReturn
+			({ store: { session }, cookie: { user_session_id }, status }) => {
+				const requireRecentAuth: RequireRecentAuth<UserType> = (
+					maxAgeMs,
+					handleAuth,
+					handleAuthFail
 				) =>
 					loadSessionFromSource<UserType>({
 						authSessionStore,
 						session,
 						userSessionId: user_session_id.value
-					}).then((userSession) => {
+					}).then(async (userSession) => {
 						const authenticatedAt = userSession?.authenticatedAt;
 						const isRecent =
 							authenticatedAt !== undefined &&
@@ -48,10 +65,10 @@ export const stepUpPlugin = <UserType>({
 
 						if (!userSession || !isRecent) {
 							return (
-								handleAuthFail?.({
+								(await handleAuthFail?.({
 									code: 'Unauthorized',
 									message: 'Recent authentication required'
-								}) ??
+								})) ??
 								status(
 									'Unauthorized',
 									'Recent authentication required'
@@ -60,7 +77,9 @@ export const stepUpPlugin = <UserType>({
 						}
 
 						return handleAuth(userSession.user);
-					})
-			})
+					});
+
+				return { requireRecentAuth };
+			}
 		)
 		.as('global');

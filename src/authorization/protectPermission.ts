@@ -1,4 +1,4 @@
-import { Elysia, t } from 'elysia';
+import { Elysia, StatusMap, t, type ElysiaStatus } from 'elysia';
 import { getStatusFromSource } from '../session/access';
 import { sessionStore } from '../session/state';
 import { userSessionIdTypebox } from '../typebox';
@@ -19,6 +19,40 @@ type PermissionFailError =
 			readonly message: 'User is not authenticated';
 	  };
 
+type PermissionFailureResponse =
+	| ElysiaStatus<
+			'Bad Request',
+			'Cookies are missing',
+			(typeof StatusMap)['Bad Request']
+	  >
+	| ElysiaStatus<
+			'Forbidden',
+			'Insufficient permissions',
+			(typeof StatusMap)['Forbidden']
+	  >
+	| ElysiaStatus<
+			'Unauthorized',
+			'User is not authenticated',
+			(typeof StatusMap)['Unauthorized']
+	  >;
+
+type ProtectPermission<UserType> = {
+	<AuthReturn, AuthFailReturn = never>(
+		check: PermissionCheck,
+		handleAuth: (user: UserType) => Promise<AuthReturn>,
+		handleAuthFail?: (error: PermissionFailError) => AuthFailReturn
+	): Promise<
+		PermissionFailureResponse | AuthReturn | Awaited<AuthFailReturn>
+	>;
+	<AuthReturn, AuthFailReturn = never>(
+		check: PermissionCheck,
+		handleAuth: (user: UserType) => AuthReturn,
+		handleAuthFail?: (error: PermissionFailError) => AuthFailReturn
+	): Promise<
+		PermissionFailureResponse | AuthReturn | Awaited<AuthFailReturn>
+	>;
+};
+
 // RBAC/ABAC guard, usable alongside `protectRoute`. `protectPermission(check, handler)` runs the
 // handler only when the caller is authenticated AND the consumer's `hasPermission` hook approves
 // the `{ permission, organizationId }` descriptor — otherwise 401 (not authenticated) or 403
@@ -38,15 +72,11 @@ export const protectPermissionPlugin = <UserType>({
 			schema: 'merge'
 		})
 		.derive(
-			({ store: { session }, cookie: { user_session_id }, status }) => ({
-				protectPermission: <AuthReturn, AuthFailReturn>(
-					check: PermissionCheck,
-					handleAuth: (
-						user: UserType
-					) => AuthReturn | Promise<AuthReturn>,
-					handleAuthFail?: (
-						error: PermissionFailError
-					) => AuthFailReturn
+			({ store: { session }, cookie: { user_session_id }, status }) => {
+				const protectPermission: ProtectPermission<UserType> = (
+					check,
+					handleAuth,
+					handleAuthFail
 				) =>
 					getStatusFromSource<UserType>({
 						authSessionStore,
@@ -55,16 +85,16 @@ export const protectPermissionPlugin = <UserType>({
 					}).then(async ({ user, error }) => {
 						if (error) {
 							return (
-								handleAuthFail?.(error) ??
+								(await handleAuthFail?.(error)) ??
 								status(error.code, error.message)
 							);
 						}
 						if (!user) {
 							return (
-								handleAuthFail?.({
+								(await handleAuthFail?.({
 									code: 'Unauthorized',
 									message: 'User is not authenticated'
-								}) ??
+								})) ??
 								status(
 									'Unauthorized',
 									'User is not authenticated'
@@ -86,16 +116,18 @@ export const protectPermissionPlugin = <UserType>({
 							});
 
 							return (
-								handleAuthFail?.({
+								(await handleAuthFail?.({
 									code: 'Forbidden',
 									message: 'Insufficient permissions'
-								}) ??
+								})) ??
 								status('Forbidden', 'Insufficient permissions')
 							);
 						}
 
 						return handleAuth(user);
-					})
-			})
+					});
+
+				return { protectPermission };
+			}
 		)
 		.as('global');
