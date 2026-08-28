@@ -20,8 +20,24 @@ import { decryptTotpSecret } from './secret';
 import {
 	checkWithVerificationProvider,
 	issueAndStoreSmsCode,
-	mapVerificationProviderError
+	mapVerificationProviderError,
+	maskPhone
 } from './sms';
+import {
+	getMfaFactors,
+	type TotpMfaFactor,
+	withMfaFactors
+} from './types';
+
+export type MfaChallengeOptions = {
+	backupCodesAvailable: boolean;
+	factors: Array<{
+		id: string;
+		label: string;
+		phone: string | null;
+		type: 'sms' | 'totp';
+	}>;
+};
 
 export const mfaChallenge = <UserType>({
 	authSessionStore,
@@ -42,7 +58,66 @@ export const mfaChallenge = <UserType>({
 	smsResendCooldownMs = DEFAULT_SMS_RESEND_COOLDOWN_MS,
 	totpMaxAttempts = DEFAULT_TOTP_MAX_ATTEMPTS
 }: MfaRouteProps<UserType>) =>
-	new Elysia().use(sessionStore<UserType>()).post(
+	new Elysia()
+		.use(sessionStore<UserType>())
+		.get(
+			challengeRoute,
+			{ cookie: t.Cookie({ user_session_id: userSessionIdTypebox }) },
+			async ({
+				cookie: { user_session_id },
+				status,
+				store: { unregisteredSession }
+			}) => {
+				const compatibilityLayer =
+					await createSessionCompatibilityLayer({
+						authSessionStore,
+						userSessionId: user_session_id.value
+					});
+				const challengeUnregistered = authSessionStore
+					? compatibilityLayer.unregisteredSession
+					: unregisteredSession;
+				const pendingId = user_session_id.value;
+				const pending = pendingId
+					? challengeUnregistered[pendingId]
+					: undefined;
+				if (!pending) {
+					return status(
+						'Unauthorized',
+						'No MFA challenge in progress'
+					);
+				}
+				const user = await getChallengeUser(
+					pending.userIdentity ?? {}
+				);
+				const enrollment = user
+					? await mfaStore.getEnrollment(getUserId(user))
+					: undefined;
+				if (!enrollment) {
+					return status(
+						'Unauthorized',
+						'No MFA challenge in progress'
+					);
+				}
+				const response: MfaChallengeOptions = {
+					backupCodesAvailable:
+						enrollment.backupCodeHashes.length > 0,
+					factors: getMfaFactors(enrollment)
+						.filter((factor) => factor.verified)
+						.map((factor) => ({
+							id: factor.id,
+							label: factor.label,
+							phone:
+								factor.type === 'sms'
+									? maskPhone(factor.phone)
+									: null,
+							type: factor.type
+						}))
+				};
+
+				return status('OK', response);
+			}
+		)
+		.post(
 		challengeRoute,
 		{
 			body: t.Object({
@@ -50,12 +125,19 @@ export const mfaChallenge = <UserType>({
 					t.Union([t.Literal('send'), t.Literal('verify')])
 				),
 				code: t.Optional(t.String()),
-				factor: t.Optional(t.Literal('sms'))
+				factor: t.Optional(
+					t.Union([
+						t.Literal('backup_codes'),
+						t.Literal('sms'),
+						t.Literal('totp')
+					])
+				),
+				factorId: t.Optional(t.String())
 			}),
 			cookie: t.Cookie({ user_session_id: userSessionIdTypebox })
 		},
 		async ({
-			body: { action, code, factor },
+			body: { action, code, factor, factorId },
 			cookie: { user_session_id },
 			status,
 			store: { session, unregisteredSession }
@@ -93,6 +175,7 @@ export const mfaChallenge = <UserType>({
 						'No MFA challenge in progress'
 					);
 				}
+				const factors = getMfaFactors(enrollment);
 
 				// Promote the parked challenge into an authenticated session. Shared by every
 				// factor's success path.
@@ -131,10 +214,24 @@ export const mfaChallenge = <UserType>({
 						);
 					}
 
+					const smsFactor = factors.find(
+						(candidate) =>
+							candidate.type === 'sms' &&
+							candidate.verified &&
+							(candidate.id === factorId ||
+								factorId === undefined)
+					);
+					if (!smsFactor || smsFactor.type !== 'sms') {
+						return status('Bad Request', 'SMS factor not found');
+					}
 					try {
 						await issueAndStoreSmsCode({
 							codeLength: smsCodeLength,
-							enrollment,
+							enrollment: {
+								...withMfaFactors(enrollment, factors),
+								smsPendingFactorId: smsFactor.id,
+								smsPhone: smsFactor.phone
+							},
 							mfaStore,
 							onSendSmsCode,
 							previousEnrollment: enrollment,
@@ -151,11 +248,32 @@ export const mfaChallenge = <UserType>({
 						return status(mapped.status, mapped.message);
 					}
 
-					return status('OK', { status: 'sent' });
+					return status('OK', {
+						factorId: smsFactor.id,
+						phone: maskPhone(smsFactor.phone),
+						status: 'sent'
+					});
 				};
 
 				const runSmsChallenge = async () => {
-					if (!enrollment.smsVerified || !enrollment.smsPhone) {
+					if (
+						action !== 'send' &&
+						factorId !== undefined &&
+						enrollment.smsPendingFactorId !== undefined &&
+						factorId !== enrollment.smsPendingFactorId
+					) {
+						return status('Bad Request', 'No SMS code in progress');
+					}
+					const selectedFactorId =
+						enrollment.smsPendingFactorId ?? factorId;
+					const smsFactor = factors.find(
+						(candidate) =>
+							candidate.type === 'sms' &&
+							candidate.verified &&
+							(candidate.id === selectedFactorId ||
+								selectedFactorId === undefined)
+					);
+					if (!smsFactor || smsFactor.type !== 'sms') {
 						return status(
 							'Unauthorized',
 							'No MFA challenge in progress'
@@ -213,7 +331,7 @@ export const mfaChallenge = <UserType>({
 								purpose: 'mfa_challenge',
 								reference: providerReference,
 								subject: getUserId(user),
-								to: enrollment.smsPhone
+								to: smsFactor.phone
 							}
 						);
 						if (checked.error !== undefined) {
@@ -255,6 +373,7 @@ export const mfaChallenge = <UserType>({
 
 					const completed = await mfaStore.completeSmsChallenge({
 						challengeId,
+						factors,
 						lastUsedAt: Date.now(),
 						smsVerified: true,
 						userId: getUserId(user)
@@ -284,22 +403,37 @@ export const mfaChallenge = <UserType>({
 					return status('Unauthorized', 'Too many attempts');
 				}
 
-				const totpValid =
-					enrollment.totpVerified && enrollment.totpSecretCiphertext
-						? await verifyTotp({
-								secret: await decryptTotpSecret(
-									enrollment.totpSecretCiphertext,
-									encryptionKey
-								),
-								token: code
-							})
-						: false;
-				const remainingBackupHashes = totpValid
-					? undefined
-					: await consumeBackupCode(
-							code,
-							enrollment.backupCodeHashes
-						);
+				const totpFactors = factors.filter(
+					(candidate): candidate is TotpMfaFactor =>
+						candidate.type === 'totp' &&
+						candidate.verified &&
+						(candidate.id === factorId || factorId === undefined)
+				);
+				const totpChecks =
+					factor === 'backup_codes'
+						? []
+						: await Promise.all(
+								totpFactors.map(async (candidate) =>
+									verifyTotp({
+										secret: await decryptTotpSecret(
+											candidate.secretCiphertext,
+											encryptionKey
+										),
+										token: code
+									})
+								)
+							);
+				const totpValid = totpChecks.some(Boolean);
+				const mayUseBackupCode =
+					factor === 'backup_codes' ||
+					(factor === undefined && factorId === undefined);
+				const remainingBackupHashes =
+					totpValid || !mayUseBackupCode
+						? undefined
+						: await consumeBackupCode(
+								code,
+								enrollment.backupCodeHashes
+							);
 
 				if (!totpValid && remainingBackupHashes === undefined) {
 					await mfaStore.saveEnrollment({

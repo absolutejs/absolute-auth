@@ -86,6 +86,17 @@ const post = (
 		})
 	);
 
+const get = (
+	app: { handle: (request: Request) => Promise<Response> },
+	path: string,
+	cookie: string
+) =>
+	app.handle(
+		new Request(`http://localhost${path}`, {
+			headers: { cookie }
+		})
+	);
+
 const cookieFrom = (response: Response) =>
 	response.headers
 		.getSetCookie()
@@ -170,6 +181,16 @@ describe('MFA challenge integration', () => {
 			status: 'mfa_required'
 		});
 		const pending = cookieFrom(login);
+		const options = await get(app, '/auth/mfa/challenge', pending);
+		expect(options.status).toBe(200);
+		expect(await options.json()).toMatchObject({
+			factors: [
+				{
+					phone: '••••••••0100',
+					type: 'sms'
+				}
+			]
+		});
 		expect(
 			(
 				await post(

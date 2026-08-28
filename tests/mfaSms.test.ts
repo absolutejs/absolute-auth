@@ -128,6 +128,54 @@ describe('SMS MFA enrollment', () => {
 		);
 	});
 
+	test('enrolls multiple independently labeled phone factors', async () => {
+		const mock = createProvider();
+		const { app, mfaStore } = await buildApp({
+			smsResendCooldownMs: 0,
+			verificationProvider: mock.provider
+		});
+		const alexSetup = await (
+			await post(app, '/auth/mfa/sms/setup', {
+				label: 'Alex',
+				phone: PHONE
+			})
+		).json();
+		expect(
+			(
+				await post(app, '/auth/mfa/sms/verify', {
+					code: '123456',
+					factorId: alexSetup.factorId
+				})
+			).status
+		).toBe(200);
+		const kyleSetup = await (
+			await post(app, '/auth/mfa/sms/setup', {
+				label: 'Kyle',
+				phone: '+12025550101'
+			})
+		).json();
+		expect(
+			(
+				await post(app, '/auth/mfa/sms/verify', {
+					code: '123456',
+					factorId: kyleSetup.factorId
+				})
+			).status
+		).toBe(200);
+
+		const enrollment = await mfaStore.getEnrollment(USER_ID);
+		expect(
+			enrollment?.factors?.map((factor) => ({
+				label: factor.label,
+				type: factor.type,
+				verified: factor.verified
+			}))
+		).toEqual([
+			{ label: 'Alex', type: 'sms', verified: true },
+			{ label: 'Kyle', type: 'sms', verified: true }
+		]);
+	});
+
 	test('enforces a resend cooldown before calling the provider again', async () => {
 		const mock = createProvider();
 		const { app } = await buildApp({ verificationProvider: mock.provider });

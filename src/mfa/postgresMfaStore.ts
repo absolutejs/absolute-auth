@@ -9,7 +9,7 @@ import {
 	varchar
 } from 'drizzle-orm/pg-core';
 import { type AnyPgDatabase, createNeonDatabase } from '../stores/postgres';
-import type { MfaEnrollment, MFAStore } from './types';
+import type { MfaEnrollment, MfaFactor, MFAStore } from './types';
 
 const ID_LENGTH = 255;
 const PHONE_LENGTH = 20;
@@ -21,6 +21,7 @@ export const mfaEnrollmentsTable = pgTable('auth_mfa_enrollments', {
 		.default([]),
 	created_at_ms: bigint('created_at_ms', { mode: 'number' }).notNull(),
 	last_used_at_ms: bigint('last_used_at_ms', { mode: 'number' }),
+	mfa_factors: jsonb('mfa_factors').$type<MfaFactor[]>(),
 	sms_challenge_id: text('sms_challenge_id'),
 	sms_code_sent_at_ms: bigint('sms_code_sent_at_ms', { mode: 'number' }),
 	sms_failed_attempts: smallint('sms_failed_attempts').notNull().default(0),
@@ -28,6 +29,7 @@ export const mfaEnrollmentsTable = pgTable('auth_mfa_enrollments', {
 		mode: 'number'
 	}),
 	sms_pending_code_hash: text('sms_pending_code_hash'),
+	sms_pending_factor_id: text('sms_pending_factor_id'),
 	sms_pending_purpose: text('sms_pending_purpose').$type<
 		MfaEnrollment['smsPendingPurpose']
 	>(),
@@ -47,12 +49,14 @@ type MfaInsert = typeof mfaEnrollmentsTable.$inferInsert;
 const toEnrollment = (row: MfaRow): MfaEnrollment => ({
 	backupCodeHashes: row.backup_code_hashes,
 	createdAt: row.created_at_ms,
+	factors: row.mfa_factors ?? undefined,
 	lastUsedAt: row.last_used_at_ms ?? undefined,
 	smsChallengeId: row.sms_challenge_id ?? undefined,
 	smsCodeSentAt: row.sms_code_sent_at_ms ?? undefined,
 	smsFailedAttempts: row.sms_failed_attempts,
 	smsPendingCodeExpiresAt: row.sms_pending_code_expires_at_ms ?? undefined,
 	smsPendingCodeHash: row.sms_pending_code_hash ?? undefined,
+	smsPendingFactorId: row.sms_pending_factor_id ?? undefined,
 	smsPendingPurpose: row.sms_pending_purpose ?? undefined,
 	smsPhone: row.sms_phone ?? undefined,
 	smsProviderReference: row.sms_provider_reference ?? undefined,
@@ -73,12 +77,14 @@ export const createPostgresMfaStore = <DB extends AnyPgDatabase>(
 		backup_code_hashes: enrollment.backupCodeHashes,
 		created_at_ms: enrollment.createdAt,
 		last_used_at_ms: enrollment.lastUsedAt ?? null,
+		mfa_factors: enrollment.factors ?? null,
 		sms_challenge_id: enrollment.smsChallengeId ?? null,
 		sms_code_sent_at_ms: enrollment.smsCodeSentAt ?? null,
 		sms_failed_attempts: enrollment.smsFailedAttempts ?? 0,
 		sms_pending_code_expires_at_ms:
 			enrollment.smsPendingCodeExpiresAt ?? null,
 		sms_pending_code_hash: enrollment.smsPendingCodeHash ?? null,
+		sms_pending_factor_id: enrollment.smsPendingFactorId ?? null,
 		sms_pending_purpose: enrollment.smsPendingPurpose ?? null,
 		sms_phone: enrollment.smsPhone ?? null,
 		sms_provider_reference: enrollment.smsProviderReference ?? null,
@@ -105,12 +111,15 @@ export const createPostgresMfaStore = <DB extends AnyPgDatabase>(
 				.values(values)
 				.onConflictDoUpdate({
 					set: {
+						mfa_factors: enrollment.factors ?? null,
 						sms_challenge_id: challengeId,
 						sms_code_sent_at_ms: enrollment.smsCodeSentAt ?? null,
 						sms_failed_attempts: 0,
 						sms_pending_code_expires_at_ms:
 							enrollment.smsPendingCodeExpiresAt ?? null,
 						sms_pending_code_hash: null,
+						sms_pending_factor_id:
+							enrollment.smsPendingFactorId ?? null,
 						sms_pending_purpose:
 							enrollment.smsPendingPurpose ?? null,
 						sms_phone: enrollment.smsPhone ?? null,
@@ -133,6 +142,7 @@ export const createPostgresMfaStore = <DB extends AnyPgDatabase>(
 		},
 		completeSmsChallenge: async ({
 			challengeId,
+			factors,
 			lastUsedAt,
 			smsVerified,
 			userId
@@ -141,10 +151,12 @@ export const createPostgresMfaStore = <DB extends AnyPgDatabase>(
 				.update(mfaEnrollmentsTable)
 				.set({
 					last_used_at_ms: lastUsedAt,
+					mfa_factors: factors,
 					sms_challenge_id: null,
 					sms_failed_attempts: 0,
 					sms_pending_code_expires_at_ms: null,
 					sms_pending_code_hash: null,
+					sms_pending_factor_id: null,
 					sms_pending_purpose: null,
 					sms_provider_reference: null,
 					sms_verified: smsVerified,
