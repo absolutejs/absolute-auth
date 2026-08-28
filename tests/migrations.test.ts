@@ -77,6 +77,16 @@ describe('blockMigrations manifest', () => {
 		expect(deferred?.sql).toContain('"registration_data" jsonb');
 	});
 
+	test('OIDC initializes refresh-token hash arrays with a PostgreSQL array default', () => {
+		const oidcInit = blockMigrations.oidc.migrations.find(
+			(migration) => migration.id === '0001_init'
+		);
+
+		expect(oidcInit?.sql).toContain(
+			'"consumed_token_hashes" text[] NOT NULL DEFAULT ARRAY[]::text[]'
+		);
+	});
+
 	test('every block names tables prefixed with auth_ or a known package prefix', () => {
 		// Catches accidental cross-package collision; intent + similar consumers will own
 		// any non-`auth_` namespace and we shouldn't ship migrations that touch theirs.
@@ -147,7 +157,7 @@ const migrationDatabaseUrl = process.env['MIGRATION_TEST_DATABASE_URL'];
 describe.skipIf(migrationDatabaseUrl === undefined)(
 	'runMigrations Postgres integration',
 	() => {
-		test('applies and journals migrations through an injected Bun SQL client', async () => {
+		test('applies every migration and journals an idempotent rerun', async () => {
 			if (migrationDatabaseUrl === undefined)
 				throw new Error('MIGRATION_TEST_DATABASE_URL is required');
 			const sql = new SQL({
@@ -163,22 +173,43 @@ describe.skipIf(migrationDatabaseUrl === undefined)(
 
 			try {
 				const first = await runMigrations({
-					blocks: ['vault'],
 					client,
 					log: () => undefined
 				});
 				const second = await runMigrations({
-					blocks: ['vault'],
 					client,
 					log: () => undefined
 				});
-				const [table] = await sql<
-					Array<{ table_name: string | null }>
-				>`SELECT to_regclass('public.auth_vault_entries')::text AS table_name`;
+				const expectedIds = Object.entries(blockMigrations).flatMap(
+					([blockName, block]) =>
+						block.migrations.map(
+							(migration) => `${blockName}/${migration.id}`
+						)
+				);
+				const [columns] = await sql<
+					Array<{
+						column_default: string | null;
+						data_type: string;
+						vault_table: string | null;
+					}>
+				>`SELECT
+					(SELECT column_default FROM information_schema.columns
+						WHERE table_schema = 'public'
+							AND table_name = 'auth_oauth_refresh_tokens'
+							AND column_name = 'consumed_token_hashes') AS column_default,
+					(SELECT data_type FROM information_schema.columns
+						WHERE table_schema = 'public'
+							AND table_name = 'auth_oauth_refresh_tokens'
+							AND column_name = 'consumed_token_hashes') AS data_type,
+					to_regclass('public.auth_vault_entries')::text AS vault_table`;
 
-				expect(first.applied).toEqual(['vault/0001_init']);
-				expect(second.skipped).toContain('vault/0001_init');
-				expect(table?.table_name).toBe('auth_vault_entries');
+				expect(first.applied).toEqual(expectedIds);
+				expect(second.skipped).toEqual(expectedIds);
+				expect(columns).toEqual({
+					column_default: 'ARRAY[]::text[]',
+					data_type: 'ARRAY',
+					vault_table: 'auth_vault_entries'
+				});
 			} finally {
 				await sql.close();
 			}

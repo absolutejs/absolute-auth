@@ -35,4 +35,42 @@ describe('array columns in generated DDL', () => {
 
 		expect(sql).toContain('"grid" integer[][] NOT NULL');
 	});
+
+	test('casts empty PostgreSQL array defaults to the column type', () => {
+		const sql = tablesToInitSql([
+			pgTable('probe', {
+				consumed: text('consumed').array().notNull().default([])
+			})
+		]);
+
+		expect(sql).toContain(
+			'"consumed" text[] NOT NULL DEFAULT ARRAY[]::text[]'
+		);
+		expect(sql).not.toContain("DEFAULT '[]'::jsonb");
+	});
+
+	test('renders populated and nested PostgreSQL array defaults', () => {
+		const sql = tablesToInitSql([
+			pgTable('probe', {
+				grid: integer('grid')
+					.array('[][]')
+					.notNull()
+					.default([
+						[1, 2],
+						[2, 1]
+					]),
+				labels: text('labels')
+					.array()
+					.notNull()
+					.default(["owner's", 'custodian'])
+			})
+		]);
+
+		expect(sql).toContain(
+			'"grid" integer[][] NOT NULL DEFAULT ARRAY[ARRAY[1, 2], ARRAY[2, 1]]::integer[][]'
+		);
+		expect(sql).toContain(
+			"\"labels\" text[] NOT NULL DEFAULT ARRAY['owner''s', 'custodian']::text[]"
+		);
+	});
 });
