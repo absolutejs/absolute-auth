@@ -753,7 +753,7 @@ export const createPostgresOidcRefreshTokenStore = <DB extends AnyPgDatabase>(
 				dpop_jkt: sql`CASE WHEN ${active} THEN ${replacement.dpopJkt ?? null} ELSE ${oauthRefreshTokensTable.dpop_jkt} END`,
 				expires_at_ms: sql`CASE WHEN ${active} THEN ${replacement.expiresAt} ELSE ${oauthRefreshTokensTable.expires_at_ms} END`,
 				revoked_at_ms: sql`CASE WHEN ${consumed} THEN ${Date.now()} ELSE ${oauthRefreshTokensTable.revoked_at_ms} END`,
-				scopes: sql`CASE WHEN ${active} THEN ${replacement.scopes} ELSE ${oauthRefreshTokensTable.scopes} END`,
+				scopes: sql`CASE WHEN ${active} THEN ${sql.param(replacement.scopes, oauthRefreshTokensTable.scopes)} ELSE ${oauthRefreshTokensTable.scopes} END`,
 				token_hash: sql`CASE WHEN ${active} THEN ${replacement.tokenHash} ELSE ${oauthRefreshTokensTable.token_hash} END`,
 				user_id: sql`CASE WHEN ${active} THEN ${replacement.userId} ELSE ${oauthRefreshTokensTable.user_id} END`
 			})

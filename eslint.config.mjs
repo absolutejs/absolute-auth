@@ -94,6 +94,7 @@ export default defineConfig([
 			'absolute/no-explicit-return-type': 'error',
 			'absolute/no-import-meta-path': 'error',
 			'absolute/no-useless-function': 'error',
+			'absolute/prefer-drizzle-query-builders': 'error',
 			'absolute/sort-exports': [
 				'error',
 				{
@@ -237,6 +238,13 @@ export default defineConfig([
 			// The bounded registration state machine validates nested protocol state;
 			// flattening it would obscure the compare-and-swap invariants.
 			'absolute/max-depth-extended': 'off'
+		}
+	},
+	{
+		files: ['tests/migrations.test.ts'],
+		rules: {
+			// Migration SQL is the input under test; it cannot use a schema query builder.
+			'absolute/prefer-drizzle-query-builders': 'off'
 		}
 	},
 	{
