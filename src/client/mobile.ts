@@ -27,6 +27,16 @@ export type MobileAuthLifecycle = {
 	onResume?(listener: () => void): Promise<() => Promise<void> | void>;
 };
 
+export type MobileAuthCrypto = {
+	digestSha256(value: Uint8Array): Promise<Uint8Array>;
+	randomBytes(length: number): Uint8Array;
+	verifyEs256(input: {
+		data: Uint8Array;
+		jwk: JsonWebKey;
+		signature: Uint8Array;
+	}): Promise<boolean>;
+};
+
 export type MobileAuthDiscovery = {
 	authorization_endpoint: string;
 	code_challenge_methods_supported?: string[];
@@ -45,6 +55,7 @@ export type MobileAuthClientConfig = {
 	beforeSignOut?: () => Promise<void> | void;
 	clientId: string;
 	clockSkewMs?: number;
+	crypto?: MobileAuthCrypto;
 	fetch?: typeof globalThis.fetch;
 	issuer: string;
 	lifecycle?: MobileAuthLifecycle;
@@ -158,21 +169,47 @@ const decodeBase64Url = (value: string) => {
 	return Uint8Array.from(binary, (character) => character.charCodeAt(0));
 };
 
-const randomValue = () => {
-	const value = new Uint8Array(RANDOM_BYTES);
-	crypto.getRandomValues(value);
+const webCrypto: MobileAuthCrypto = {
+	digestSha256: async (value) =>
+		new Uint8Array(
+			await globalThis.crypto.subtle.digest(
+				'SHA-256',
+				new Uint8Array(value)
+			)
+		),
+	randomBytes: (length) => {
+		const value = new Uint8Array(length);
+		globalThis.crypto.getRandomValues(value);
 
-	return base64Url(value);
+		return value;
+	},
+	verifyEs256: async ({ data, jwk, signature }) => {
+		const key = await globalThis.crypto.subtle.importKey(
+			'jwk',
+			jwk,
+			{ hash: 'SHA-256', name: 'ECDSA', namedCurve: 'P-256' },
+			false,
+			['verify']
+		);
+
+		return globalThis.crypto.subtle.verify(
+			{ hash: 'SHA-256', name: 'ECDSA' },
+			key,
+			new Uint8Array(signature),
+			new Uint8Array(data)
+		);
+	}
 };
 
-const pkceChallenge = async (verifier: string) =>
+const randomValue = (cryptoProvider: MobileAuthCrypto) =>
+	base64Url(cryptoProvider.randomBytes(RANDOM_BYTES));
+
+const pkceChallenge = async (
+	verifier: string,
+	cryptoProvider: MobileAuthCrypto
+) =>
 	base64Url(
-		new Uint8Array(
-			await crypto.subtle.digest(
-				'SHA-256',
-				new TextEncoder().encode(verifier)
-			)
-		)
+		await cryptoProvider.digestSha256(new TextEncoder().encode(verifier))
 	);
 
 const normalizeIssuer = (value: string) => {
@@ -354,6 +391,7 @@ const parseDiscovery = (
 
 const verifyIdToken = async ({
 	clientId,
+	cryptoProvider,
 	fetchImpl,
 	idToken,
 	issuer,
@@ -362,6 +400,7 @@ const verifyIdToken = async ({
 	now
 }: {
 	clientId: string;
+	cryptoProvider: MobileAuthCrypto;
 	fetchImpl: typeof globalThis.fetch;
 	idToken: string;
 	issuer: string;
@@ -414,19 +453,11 @@ const verifyIdToken = async ({
 			'id-token',
 			'The ID token signing key is unknown.'
 		);
-	const key = await crypto.subtle.importKey(
-		'jwk',
+	const valid = await cryptoProvider.verifyEs256({
+		data: new TextEncoder().encode(`${encodedHeader}.${encodedPayload}`),
 		jwk,
-		{ hash: 'SHA-256', name: 'ECDSA', namedCurve: 'P-256' },
-		false,
-		['verify']
-	);
-	const valid = await crypto.subtle.verify(
-		{ hash: 'SHA-256', name: 'ECDSA' },
-		key,
-		decodeBase64Url(encodedSignature),
-		new TextEncoder().encode(`${encodedHeader}.${encodedPayload}`)
-	);
+		signature: decodeBase64Url(encodedSignature)
+	});
 	const audience = payload.aud;
 	if (
 		!valid ||
@@ -449,6 +480,7 @@ export const createMobileAuthClient = (config: MobileAuthClientConfig) => {
 	const issuer = normalizeIssuer(config.issuer);
 	const redirectUri = new URL(config.redirectUri).href;
 	const fetchImpl = config.fetch ?? globalThis.fetch;
+	const cryptoProvider = config.crypto ?? webCrypto;
 	const now = config.now ?? Date.now;
 	const clockSkewMs = config.clockSkewMs ?? DEFAULT_CLOCK_SKEW_MS;
 	const scopes = [...new Set(config.scopes ?? ['openid', 'profile'])];
@@ -564,6 +596,7 @@ export const createMobileAuthClient = (config: MobileAuthClientConfig) => {
 		if (nonce)
 			await verifyIdToken({
 				clientId: config.clientId,
+				cryptoProvider,
 				fetchImpl,
 				idToken: tokens.id_token,
 				issuer,
@@ -746,15 +779,18 @@ export const createMobileAuthClient = (config: MobileAuthClientConfig) => {
 		const metadata = await discovery();
 		const pending: PendingAuthorization = {
 			createdAt: now(),
-			nonce: randomValue(),
-			state: randomValue(),
-			verifier: randomValue()
+			nonce: randomValue(cryptoProvider),
+			state: randomValue(cryptoProvider),
+			verifier: randomValue(cryptoProvider)
 		};
 		await config.storage.set(PENDING_KEY, JSON.stringify(pending));
 		const url = new URL(metadata.authorization_endpoint);
 		url.search = new URLSearchParams({
 			client_id: config.clientId,
-			code_challenge: await pkceChallenge(pending.verifier),
+			code_challenge: await pkceChallenge(
+				pending.verifier,
+				cryptoProvider
+			),
 			code_challenge_method: 'S256',
 			nonce: pending.nonce,
 			redirect_uri: redirectUri,

@@ -2,7 +2,8 @@ import { describe, expect, test } from 'bun:test';
 import {
 	createMobileAuthClient,
 	createMobileAuthTransport,
-	MobileAuthError
+	MobileAuthError,
+	type MobileAuthCrypto
 } from '../src/client/mobile';
 import { createAuthClient } from '../src/client/createAuthClient';
 import { generateSigningKey, signJwt, toPublicJwk } from '../src/oidc/keys';
@@ -27,6 +28,7 @@ const waitFor: (
 const setup = async (
 	options: {
 		beforeSignOut?: () => Promise<void> | void;
+		crypto?: MobileAuthCrypto;
 		secure?: boolean;
 	} = {}
 ) => {
@@ -111,6 +113,7 @@ const setup = async (
 		allowedOrigins: [ISSUER, API_ORIGIN],
 		beforeSignOut: options.beforeSignOut,
 		clientId: 'mobile-client',
+		crypto: options.crypto,
 		fetch: fetchImpl,
 		issuer: ISSUER,
 		links: {
@@ -178,6 +181,44 @@ const completeSignIn = async (fixture: Awaited<ReturnType<typeof setup>>) => {
 };
 
 describe('mobile auth client', () => {
+	test('uses an injected native cryptography provider for PKCE and ID-token verification', async () => {
+		const calls = { digest: 0, random: 0, verify: 0 };
+		const provider: MobileAuthCrypto = {
+			digestSha256: async (value) => {
+				calls.digest += 1;
+
+				return new Uint8Array(
+					await crypto.subtle.digest('SHA-256', value)
+				);
+			},
+			randomBytes: (length) => {
+				calls.random += 1;
+
+				return crypto.getRandomValues(new Uint8Array(length));
+			},
+			verifyEs256: async ({ data, jwk, signature }) => {
+				calls.verify += 1;
+				const key = await crypto.subtle.importKey(
+					'jwk',
+					jwk,
+					{ hash: 'SHA-256', name: 'ECDSA', namedCurve: 'P-256' },
+					false,
+					['verify']
+				);
+
+				return crypto.subtle.verify(
+					{ hash: 'SHA-256', name: 'ECDSA' },
+					key,
+					signature,
+					data
+				);
+			}
+		};
+		const fixture = await setup({ crypto: provider });
+		await completeSignIn(fixture);
+		expect(calls).toEqual({ digest: 1, random: 3, verify: 1 });
+	});
+
 	test('uses external-browser S256 PKCE and persists only the refresh credential', async () => {
 		const fixture = await setup();
 		const { authorization, handled, result } =
