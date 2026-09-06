@@ -520,6 +520,7 @@ export const createMobileAuthClient = (config: MobileAuthClientConfig) => {
 			issuer,
 			namespace: await deriveAuthSyncNamespace({
 				clientId: config.clientId,
+				digestSha256: cryptoProvider.digestSha256,
 				issuer,
 				partition,
 				subject: user.sub

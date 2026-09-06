@@ -216,7 +216,8 @@ describe('mobile auth client', () => {
 		};
 		const fixture = await setup({ crypto: provider });
 		await completeSignIn(fixture);
-		expect(calls).toEqual({ digest: 1, random: 3, verify: 1 });
+		await fixture.client.status();
+		expect(calls).toEqual({ digest: 2, random: 3, verify: 1 });
 	});
 
 	test('uses external-browser S256 PKCE and persists only the refresh credential', async () => {
