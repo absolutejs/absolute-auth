@@ -49,7 +49,8 @@ const publicFactors = (
 				.map((factor) => ({
 					id: factor.id,
 					label: factor.label,
-					phone: factor.type === 'sms' ? maskPhone(factor.phone) : null,
+					phone:
+						factor.type === 'sms' ? maskPhone(factor.phone) : null,
 					type: factor.type
 				}))
 		: [];

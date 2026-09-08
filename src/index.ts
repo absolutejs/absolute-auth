@@ -682,7 +682,11 @@ export {
 	createRedisAuthSessionStore,
 	type RedisSessionClient
 } from './session/redisStore';
-export { createLinkedProviderCredentialResolver } from './linkedProviders/resolver';
+export {
+	createLinkedProviderCredentialResolver,
+	type CreateLinkedProviderCredentialResolverOptions,
+	type LinkedProviderRefreshResult
+} from './linkedProviders/resolver';
 export { createOAuthLinkedProviderCredentialResolver } from './linkedProviders/oauthResolver';
 export {
 	createOAuthAccountLinkedProviderCredentialResolver,
@@ -690,8 +694,14 @@ export {
 	type OAuthLinkedProviderAccountStore
 } from './linkedProviders/oauthAccountResolver';
 export {
+	createLinkedProviderBindingStore,
+	createLinkedProviderGrantStore,
 	createNeonLinkedProviderStores,
-	createNeonOAuthLinkedProviderCredentialResolver
+	createNeonOAuthLinkedProviderCredentialResolver,
+	linkedProviderBindingsTable,
+	linkedProviderGrantsTable,
+	type LinkedProviderBindingRow,
+	type LinkedProviderGrantRow
 } from './linkedProviders/neonStores';
 export { createInMemoryLinkedProviderStores } from './linkedProviders/inMemoryStores';
 export { protectRoutePlugin } from './routes/protectRoute';

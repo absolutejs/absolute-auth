@@ -108,7 +108,13 @@ const toBinding = (row: LinkedProviderBindingRow): LinkedProviderBinding => ({
 	username: row.username ?? undefined
 });
 
-export const createNeonLinkedProviderBindingStore = <DB extends AnyPgDatabase>(
+/**
+ * These two take a database rather than a connection string, so an application
+ * that already has one uses it instead of opening a second. Nothing in either
+ * is specific to Neon -- the Neon helpers below are the convenience that opens
+ * a connection for a caller who has none.
+ */
+export const createLinkedProviderBindingStore = <DB extends AnyPgDatabase>(
 	db: DB
 ): LinkedProviderBindingStore => ({
 	getBinding: async (id) => {
@@ -188,7 +194,7 @@ export const createNeonLinkedProviderBindingStore = <DB extends AnyPgDatabase>(
 			});
 	}
 });
-export const createNeonLinkedProviderGrantStore = <DB extends AnyPgDatabase>(
+export const createLinkedProviderGrantStore = <DB extends AnyPgDatabase>(
 	db: DB
 ): LinkedProviderGrantStore => ({
 	getGrant: async (id) => {
@@ -265,9 +271,9 @@ export const createNeonLinkedProviderStores = (databaseUrl: string) => {
 	const db = drizzle({ client: sql });
 
 	return {
-		bindingStore: createNeonLinkedProviderBindingStore(db),
+		bindingStore: createLinkedProviderBindingStore(db),
 		db,
-		grantStore: createNeonLinkedProviderGrantStore(db)
+		grantStore: createLinkedProviderGrantStore(db)
 	};
 };
 

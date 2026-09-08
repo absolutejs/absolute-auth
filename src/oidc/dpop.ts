@@ -108,7 +108,9 @@ const decodeHeader = (segment: string) => {
 			Buffer.from(segment, 'base64url').toString('utf8')
 		);
 
-		return typeof value === 'object' && value !== null && !Array.isArray(value)
+		return typeof value === 'object' &&
+			value !== null &&
+			!Array.isArray(value)
 			? value
 			: undefined;
 	} catch {

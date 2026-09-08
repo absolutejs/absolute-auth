@@ -1,5 +1,9 @@
 import { describe, expect, test } from 'bun:test';
-import { createDpopClient, createDpopKey, createDpopProof } from '../src/client/dpop';
+import {
+	createDpopClient,
+	createDpopKey,
+	createDpopProof
+} from '../src/client/dpop';
 import { verifyDpopProof } from '../src/oidc/dpop';
 
 const decodePayload = (proof: string) => {

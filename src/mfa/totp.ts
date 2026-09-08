@@ -12,11 +12,7 @@ import {
 } from './config';
 import { decryptTotpSecret, encryptTotpSecret } from './secret';
 import { hasRecentAuthentication } from './recentAuth';
-import {
-	getMfaFactors,
-	type TotpMfaFactor,
-	withMfaFactors
-} from './types';
+import { getMfaFactors, type TotpMfaFactor, withMfaFactors } from './types';
 
 const FACTOR_LABEL_MAX_LENGTH = 80;
 const DEFAULT_TOTP_LABEL = 'Authenticator app';
@@ -99,10 +95,10 @@ export const mfaTotpRoutes = <UserType>({
 						existingFactor.verified
 				);
 				await mfaStore.saveEnrollment(
-					withMfaFactors(
-						{ ...base, updatedAt: now },
-						[...factors, factor]
-					)
+					withMfaFactors({ ...base, updatedAt: now }, [
+						...factors,
+						factor
+					])
 				);
 
 				return status('OK', {

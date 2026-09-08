@@ -62,6 +62,8 @@ describe('AbsoluteJS native OAuth client provisioning', () => {
 			'https://example.com',
 			[nativeClient]
 		);
-		expect(await store.findClient(nativeClient.clientId)).toEqual(configured);
+		expect(await store.findClient(nativeClient.clientId)).toEqual(
+			configured
+		);
 	});
 });
