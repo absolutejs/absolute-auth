@@ -31,19 +31,6 @@ const renderChunk = (chunk: unknown) => {
 const formatSqlTemplate = (value: SQL) =>
 	value.queryChunks.map(renderChunk).join('');
 
-const formatDefault = (value: unknown) => {
-	if (value === null || value === undefined) return 'NULL';
-	if (is(value, SQL)) return formatSqlTemplate(value);
-	if (typeof value === 'string') return `'${value.replace(/'/gu, "''")}'`;
-	if (typeof value === 'boolean') return value ? 'true' : 'false';
-	if (typeof value === 'number') return String(value);
-	if (Array.isArray(value) || typeof value === 'object') {
-		return `'${JSON.stringify(value)}'::jsonb`;
-	}
-
-	return String(value);
-};
-
 /**
  * The column's SQL type, brackets included.
  *
@@ -64,12 +51,48 @@ const columnSqlType = (column: PgColumn) => {
 		: elementType;
 };
 
+const formatScalarDefault = (value: unknown) => {
+	if (value === null || value === undefined) return 'NULL';
+	if (is(value, SQL)) return formatSqlTemplate(value);
+	if (typeof value === 'string') return `'${value.replace(/'/gu, "''")}'`;
+	if (typeof value === 'boolean') return value ? 'true' : 'false';
+	if (typeof value === 'number') return String(value);
+	if (typeof value === 'object') {
+		return `'${JSON.stringify(value)}'::jsonb`;
+	}
+
+	return String(value);
+};
+
+type FormatArrayDefault = (values: unknown[]) => string;
+
+const formatArrayDefault: FormatArrayDefault = (values) =>
+	`ARRAY[${values
+		.map((value) =>
+			Array.isArray(value)
+				? formatArrayDefault(value)
+				: formatScalarDefault(value)
+		)
+		.join(', ')}]`;
+
+const formatDefault = (column: PgColumn, value: unknown) => {
+	const dimensions = Reflect.get(column, 'dimensions');
+	if (
+		Array.isArray(value) &&
+		typeof dimensions === 'number' &&
+		dimensions > 0
+	)
+		return `${formatArrayDefault(value)}::${columnSqlType(column)}`;
+
+	return formatScalarDefault(value);
+};
+
 const columnSql = (column: PgColumn) => {
 	const parts = [`"${column.name}"`, columnSqlType(column)];
 	if (column.primary) parts.push('PRIMARY KEY');
 	if (column.notNull && !column.primary) parts.push('NOT NULL');
 	if (column.hasDefault && column.default !== undefined) {
-		parts.push(`DEFAULT ${formatDefault(column.default)}`);
+		parts.push(`DEFAULT ${formatDefault(column, column.default)}`);
 	}
 	if (column.isUnique) parts.push('UNIQUE');
 

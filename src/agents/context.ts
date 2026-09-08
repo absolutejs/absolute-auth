@@ -12,6 +12,19 @@ type AgentAuthFailure = {
 	message: 'Agent is not authenticated' | 'Insufficient agent scopes';
 };
 
+type ProtectAgent = {
+	<AuthReturn, AuthFailReturn = never>(
+		requiredScopes: string[],
+		handleAuth: (principal: AgentPrincipal) => Promise<AuthReturn>,
+		handleAuthFail?: (error: AgentAuthFailure) => AuthFailReturn
+	): Promise<Response | AuthReturn | Awaited<AuthFailReturn>>;
+	<AuthReturn, AuthFailReturn = never>(
+		requiredScopes: string[],
+		handleAuth: (principal: AgentPrincipal) => AuthReturn,
+		handleAuthFail?: (error: AgentAuthFailure) => AuthFailReturn
+	): Promise<Response | AuthReturn | Awaited<AuthFailReturn>>;
+};
+
 const DELETE_CODE_POINT = 127;
 const HTTP_FORBIDDEN = 403;
 const HTTP_UNAUTHORIZED = 401;
@@ -97,15 +110,11 @@ export const agentAuthContextPlugin = (config?: AgentAuthConfig) =>
 		name: '@absolutejs/auth/agent-context',
 		seed: pluginDependencySeed(config)
 	})
-		.derive(({ request }) => ({
-			protectAgent: async <AuthReturn, AuthFailReturn>(
-				requiredScopes: string[],
-				handleAuth: (
-					principal: AgentPrincipal
-				) => AuthReturn | Promise<AuthReturn>,
-				handleAuthFail?: (
-					error: AgentAuthFailure
-				) => AuthFailReturn | Promise<AuthFailReturn>
+		.derive(({ request }) => {
+			const protectAgent: ProtectAgent = async (
+				requiredScopes,
+				handleAuth,
+				handleAuthFail
 			) => {
 				if (config === undefined) {
 					const failure: AgentAuthFailure = {
@@ -146,6 +155,8 @@ export const agentAuthContextPlugin = (config?: AgentAuthConfig) =>
 				}
 
 				return handleAuth(principal);
-			}
-		}))
+			};
+
+			return { protectAgent };
+		})
 		.as('global');
