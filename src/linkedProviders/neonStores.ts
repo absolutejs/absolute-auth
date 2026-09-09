@@ -13,6 +13,17 @@ import type { AnyPgDatabase } from '../stores/postgres';
 import type { OAuth2ConfigurationOptions } from '../types';
 import { createOAuthLinkedProviderCredentialResolver } from './oauthResolver';
 
+/*
+ * Every timestamp here carries its zone.
+ *
+ * These are instants -- `Date.now()` on the way in, `getTime()` on the way
+ * out -- and a `timestamp without time zone` cannot hold one. The driver
+ * writes a Date as its UTC wall clock and reads a naive value back as local,
+ * so a process outside UTC gets everything back shifted by its own offset.
+ * On a token expiry that is not a display bug: the grant reads as good for
+ * hours after it died, so nothing refreshes and every call is refused in the
+ * meantime.
+ */
 export const linkedProviderBindingsTable = pgTable('linked_provider_bindings', {
 	available_scopes: jsonb('available_scopes')
 		.$type<string[]>()
@@ -20,7 +31,9 @@ export const linkedProviderBindingsTable = pgTable('linked_provider_bindings', {
 		.default([]),
 	capabilities: jsonb('capabilities').$type<string[]>().default([]),
 	connector_provider: varchar('connector_provider', { length: 64 }).notNull(),
-	created_at: timestamp('created_at').notNull().defaultNow(),
+	created_at: timestamp('created_at', { withTimezone: true })
+		.notNull()
+		.defaultNow(),
 	email: varchar('email', { length: 320 }),
 	external_account_id: varchar('external_account_id', {
 		length: 255
@@ -35,21 +48,25 @@ export const linkedProviderBindingsTable = pgTable('linked_provider_bindings', {
 	status: varchar('status', { length: 64 })
 		.$type<LinkedProviderBinding['status']>()
 		.notNull(),
-	updated_at: timestamp('updated_at').notNull().defaultNow(),
+	updated_at: timestamp('updated_at', { withTimezone: true })
+		.notNull()
+		.defaultNow(),
 	username: varchar('username', { length: 255 })
 });
 export const linkedProviderGrantsTable = pgTable('linked_provider_grants', {
 	access_token_ciphertext: text('access_token_ciphertext'),
 	auth_provider_key: varchar('auth_provider_key', { length: 64 }).notNull(),
-	created_at: timestamp('created_at').notNull().defaultNow(),
-	expires_at: timestamp('expires_at'),
+	created_at: timestamp('created_at', { withTimezone: true })
+		.notNull()
+		.defaultNow(),
+	expires_at: timestamp('expires_at', { withTimezone: true }),
 	granted_scopes: jsonb('granted_scopes')
 		.$type<string[]>()
 		.notNull()
 		.default([]),
 	id: varchar('id', { length: 255 }).primaryKey(),
 	last_refresh_error: text('last_refresh_error'),
-	last_refreshed_at: timestamp('last_refreshed_at'),
+	last_refreshed_at: timestamp('last_refreshed_at', { withTimezone: true }),
 	metadata: jsonb('metadata').$type<JsonObject>().default({}),
 	owner_ref: varchar('owner_ref', { length: 255 }).notNull(),
 	provider_family: varchar('provider_family', { length: 64 }).notNull(),
@@ -59,7 +76,9 @@ export const linkedProviderGrantsTable = pgTable('linked_provider_grants', {
 		.$type<LinkedProviderGrant['status']>()
 		.notNull(),
 	token_type: varchar('token_type', { length: 64 }),
-	updated_at: timestamp('updated_at').notNull().defaultNow()
+	updated_at: timestamp('updated_at', { withTimezone: true })
+		.notNull()
+		.defaultNow()
 });
 export type LinkedProviderGrantRow =
 	typeof linkedProviderGrantsTable.$inferSelect;
