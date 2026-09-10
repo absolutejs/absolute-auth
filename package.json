@@ -26,7 +26,7 @@
 		"verify-package": "absolute-manifest verify-package",
 		"check:package": "bun run typecheck && bun run lint && bun run test && bun run build && bun run verify-package && absolute-changelog check",
 		"release": "bun run format && bun run check:package && npm publish",
-		"prepublishOnly": "absolute-changelog check"
+		"prepublishOnly": "bun run check:package"
 	},
 	"keywords": [
 		"authorization",
@@ -79,7 +79,7 @@
 	},
 	"devDependencies": {
 		"@absolutejs/absolute": "^0.20.0-beta.0",
-		"@absolutejs/changelog": "^0.5.1",
+		"@absolutejs/changelog": "^0.6.0",
 		"@eslint/js": "^10.0.1",
 		"@node-saml/node-saml": "5.1.0",
 		"@opentelemetry/sdk-trace-base": "^2.7.1",
