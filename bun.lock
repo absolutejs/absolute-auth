@@ -15,6 +15,7 @@
       },
       "devDependencies": {
         "@absolutejs/absolute": "^0.20.0-beta.0",
+        "@absolutejs/changelog": "^0.1.2",
         "@eslint/js": "^10.0.1",
         "@node-saml/node-saml": "5.1.0",
         "@opentelemetry/sdk-trace-base": "^2.7.1",
@@ -60,6 +61,8 @@
   },
   "packages": {
     "@absolutejs/absolute": ["@absolutejs/absolute@0.20.0-beta.0", "", { "dependencies": { "@elysia/openapi": "2.0.0-beta.1", "@elysia/server-timing": "2.0.0-beta.1", "@elysia/static": "2.0.0-beta.2", "@tailwindcss/oxide": "^4.1.0", "exact-mirror": "1.2.4", "typebox": "1.3.16", "zustand": "^5.0.12" }, "optionalDependencies": { "@absolutejs/native-darwin-arm64": "0.20.0-beta.0", "@absolutejs/native-darwin-x64": "0.20.0-beta.0", "@absolutejs/native-linux-arm64": "0.20.0-beta.0", "@absolutejs/native-linux-x64": "0.20.0-beta.0", "@absolutejs/native-windows-arm64": "0.20.0-beta.0", "@absolutejs/native-windows-x64": "0.20.0-beta.0" }, "peerDependencies": { "@angular/animations": "^21.0.0", "@angular/common": "^21.0.0", "@angular/compiler": "^21.0.0", "@angular/compiler-cli": "^21.0.0", "@angular/core": "^21.0.0", "@angular/platform-browser": "^21.0.0", "@angular/platform-server": "^21.0.0", "@angular/router": "^21.0.0", "@angular/ssr": "^21.0.0", "@vue/compiler-sfc": "^3.5.27", "elysia": "^2.0.0-beta.6", "less": "^4.6.0", "postcss": "^8.5.0", "react": "^19.2.0", "react-dom": "^19.2.0", "react-router": "^7.0.0", "rxjs": "^7.8.0", "sass": "^1.99.0", "sharp": ">=0.33.0", "stylus": "^0.64.0", "svelte": "^5.35.2", "tailwindcss": "^4.1.0", "typescript": "^5.9.3", "vue": "^3.5.27", "vue-router": "^4.5.1" }, "optionalPeers": ["@angular/animations", "@angular/common", "@angular/compiler", "@angular/compiler-cli", "@angular/core", "@angular/platform-browser", "@angular/platform-server", "@angular/router", "@angular/ssr", "@vue/compiler-sfc", "less", "postcss", "react", "react-dom", "react-router", "rxjs", "sass", "sharp", "stylus", "svelte", "tailwindcss", "typescript", "vue", "vue-router"], "bin": { "absolute": "dist/cli/index.js" } }, "sha512-NNeNK1IaN0XwMZ6Hh0WTGTIF+97mcC2Ust11kUVqlbAB9tGMpEvIdvLuS2HO2cqW9IvSEehqOX0046nvMwepMg=="],
+
+    "@absolutejs/changelog": ["@absolutejs/changelog@0.1.2", "", { "bin": { "absolute-changelog": "dist/cli.js" } }, "sha512-q6gQwkDr0IVdWHzTOT3AaZvPSn0ucNidbjBnAUZ8CSwS3wrCd02YMXuBC8sd0ptpYvCowLnR/QWIpBrNqbn+YA=="],
 
     "@absolutejs/linked-providers": ["@absolutejs/linked-providers@0.0.6", "", {}, "sha512-mk9vZLqUowxHo4dGuKjOU+MwI4/PxwlR9SehMdkivQv2QzoIYOO0vnIfPhc3TdNy+8YFQJggxk3UyErujrAu2A=="],
 

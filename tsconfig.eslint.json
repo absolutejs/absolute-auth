@@ -4,5 +4,10 @@
 		"noEmit": true,
 		"rootDir": "."
 	},
-	"include": ["scripts/**/*", "src/**/*", "tests/**/*"]
+	"include": [
+		"scripts/**/*",
+		"src/**/*",
+		"tests/**/*",
+		"changelog/**/*"
+	]
 }
