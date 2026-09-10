@@ -79,7 +79,7 @@
 	},
 	"devDependencies": {
 		"@absolutejs/absolute": "^0.20.0-beta.0",
-		"@absolutejs/changelog": "^0.2.0",
+		"@absolutejs/changelog": "^0.4.0",
 		"@eslint/js": "^10.0.1",
 		"@node-saml/node-saml": "5.1.0",
 		"@opentelemetry/sdk-trace-base": "^2.7.1",
