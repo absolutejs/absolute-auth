@@ -1,6 +1,7 @@
 import { createOAuth2Client } from 'citra';
 import { Elysia } from 'elysia';
 import { apiKeysRoutes } from './apikeys/routes';
+import { assertTokenRouteConfiguration } from './apikeys/tokenRoutes';
 import { agentAuthRoutes } from './agents/routes';
 import type { AgentAuthConfig } from './agents/config';
 import {
@@ -165,6 +166,7 @@ const buildAuthApplications = async <UserType>(
 		onRevocationError,
 		onSessionCleanup
 	} = configuration;
+	assertTokenRouteConfiguration(apikeys, oidc);
 	if (push && nativePush)
 		throw new Error('Configure `push`, not both `push` and `nativePush`');
 	const pushConfig = push ?? nativePush;

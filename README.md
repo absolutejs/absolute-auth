@@ -392,3 +392,19 @@ using it has expired; duplicate key IDs fail closed.
 ## Note
 
 This project uses Bun and is built for Elysia.
+
+## OAuth and API credential token routes
+
+As of 0.79.0, `apiKeysRoutes()` and `auth({ apikeys })` serve the
+`client_credentials` grant at `/auth/api/token` by default. OIDC authorization
+code and refresh grants continue to use `/oauth2/token`. This keeps separately
+mounted plugins from replacing each other's token handler.
+
+Update enterprise integrations and displayed token URLs to `/auth/api/token`.
+API-only applications can retain the previous URL by explicitly setting
+`apikeys.tokenRoute: '/oauth2/token'`, provided no OIDC handler uses that path.
+
+Prefer configuring both features in `auth({ oidc, apikeys })`: conflicting token
+paths are rejected during construction, including a trailing-slash alias.
+When mounting standalone plugins with custom paths, the consumer must keep
+the paths distinct; Elysia does not reject arbitrary duplicate routes.

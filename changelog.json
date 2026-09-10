@@ -1,5 +1,27 @@
 {
 	"contract": 1,
 	"name": "@absolutejs/auth",
-	"releases": []
+	"releases": [
+		{
+			"changes": [
+				{
+					"kind": "breaking",
+					"migration": {
+						"instruction": "Send client_credentials requests to /auth/api/token instead of /oauth2/token and update advertised enterprise token URLs. Keep authorization_code and refresh_token requests at /oauth2/token. Prefer auth({ oidc, apikeys }) for configuration validation. API-only consumers may explicitly keep tokenRoute: /oauth2/token if no OIDC handler uses that path.",
+						"manual": true
+					},
+					"summary": "Separate API credential token routes from OIDC and reject conflicting configuration",
+					"symbols": [
+						"apiKeysRoutes",
+						"auth",
+						"createAuthApplications",
+						"AuthConfig",
+						"ApiKeysConfig"
+					]
+				}
+			],
+			"date": "2026-09-10",
+			"version": "0.79.0"
+		}
+	]
 }

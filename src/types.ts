@@ -509,7 +509,7 @@ export type AuthConfig<UserType> = {
 	scim?: ScimConfig;
 	/** Machine-to-machine authentication: static API keys (`sk_…`) + the OAuth2
 	 *  client_credentials grant. When `apiClientStore` + `accessTokenStore` are set,
-	 *  mounts `{tokenRoute}` (defaults `/oauth2/token`) so registered clients can
+	 *  mounts `{tokenRoute}` (defaults `/auth/api/token`) so registered clients can
 	 *  exchange `client_id`/`client_secret` for short-lived `at_…` access tokens.
 	 *  Pair with the exported `createApiKey` / `resolveApiPrincipal` / `hasScopes`
 	 *  helpers to issue and guard with static keys. */
