@@ -24,7 +24,7 @@
 		"lint": "absolute eslint",
 		"typecheck": "absolute typecheck",
 		"verify-package": "absolute-manifest verify-package",
-		"check:package": "bun run typecheck && bun run lint && bun run test && bun run build && bun run verify-package",
+		"check:package": "bun run typecheck && bun run lint && bun run test && bun run build && bun run verify-package && absolute-changelog check",
 		"release": "bun run format && bun run check:package && npm publish"
 	},
 	"keywords": [
@@ -78,6 +78,7 @@
 	},
 	"devDependencies": {
 		"@absolutejs/absolute": "^0.20.0-beta.0",
+		"@absolutejs/changelog": "^0.1.2",
 		"@eslint/js": "^10.0.1",
 		"@node-saml/node-saml": "5.1.0",
 		"@opentelemetry/sdk-trace-base": "^2.7.1",
@@ -86,6 +87,7 @@
 		"@types/bun": "1.2.9",
 		"@types/react": "^19.0.0",
 		"@typescript-eslint/parser": "^8.57.2",
+		"drizzle-orm": "1.0.0-rc.4",
 		"elysia": "2.0.0-beta.6",
 		"eslint": "^10.1.0",
 		"eslint-plugin-absolute": "^0.11.0",
@@ -98,8 +100,7 @@
 		"svelte": "5.56.7",
 		"typescript": "5.9.3",
 		"typescript-eslint": "^8.57.2",
-		"vue": "3.5.40",
-		"drizzle-orm": "1.0.0-rc.4"
+		"vue": "3.5.40"
 	},
 	"module": "./dist/index.js",
 	"exports": {
@@ -202,9 +203,11 @@
 	},
 	"type": "module",
 	"files": [
+		"CHANGELOG.md",
+		"README.md",
+		"changelog.json",
 		"dist",
-		"docs",
-		"README.md"
+		"docs"
 	],
 	"typesVersions": {
 		"*": {
