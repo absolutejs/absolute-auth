@@ -1,3 +1,4 @@
+export { LinkedProviderCredentialError } from './credentialError';
 export {
 	createOAuthAccountLinkedProviderCredentialResolver,
 	type OAuthLinkedProviderAccount,

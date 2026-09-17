@@ -1,3 +1,4 @@
+import { credentialRefreshError } from './credentialError';
 import type {
 	LinkedProviderAccessTokenLease,
 	LinkedProviderBinding,
@@ -239,6 +240,37 @@ const resolveBindingCredential = async (
 	return buildResolvedCredential(grant, binding);
 };
 
+const refreshAndRecord = async (
+	grant: LinkedProviderGrant,
+	input: { minValidityMs?: number; requiredScopes?: string[] } | undefined,
+	refresh: NonNullable<CreateLinkedProviderCredentialResolverOptions['refreshAccessTokenLease']>,
+	grantStore: LinkedProviderGrantStore,
+	now: () => number
+) => {
+	let refreshed: LinkedProviderRefreshResult;
+	try {
+		const result = await refresh(grant, input);
+		if (!result) throw new Error('Linked provider access token refresh failed');
+		refreshed = result;
+	} catch (cause) {
+		const error = credentialRefreshError(cause);
+		await grantStore.saveGrant({
+			...grant,
+			lastRefreshError: error.message,
+			metadata: { ...grant.metadata, credentialFailureCode: error.code, credentialRecovery: error.recovery },
+			status: 'refresh_required',
+			updatedAt: now()
+		});
+		throw error;
+	}
+	const metadata: JsonObject = { ...refreshed.grant.metadata };
+	delete metadata.credentialRecovery;
+	delete metadata.credentialFailureCode;
+	await grantStore.saveGrant({ ...refreshed.grant, lastRefreshError: undefined, metadata });
+
+	return refreshed;
+};
+
 export const createLinkedProviderCredentialResolver = ({
 	grantStore,
 	bindingStore,
@@ -276,12 +308,7 @@ export const createLinkedProviderCredentialResolver = ({
 				);
 			}
 
-			const refreshed = await refreshAccessTokenLease(grant, input);
-			if (!refreshed) {
-				throw new Error('Linked provider access token refresh failed');
-			}
-
-			await grantStore.saveGrant(refreshed.grant);
+			const refreshed = await refreshAndRecord(grant, input, refreshAccessTokenLease, grantStore, now);
 			({ lease } = refreshed);
 		}
 
