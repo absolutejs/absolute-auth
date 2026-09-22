@@ -329,7 +329,8 @@ export const validateSession = <
 	const isExpired = userSession.expiresAt < Date.now();
 	if (isExpired) {
 		delete session[userSessionId];
-		user_session_id.remove();
+		// Remove expired server state only. A delayed read must not clear a
+		// newer login cookie that another request has already issued.
 
 		return undefined;
 	}

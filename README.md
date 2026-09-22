@@ -468,3 +468,8 @@ consumption. Custom `MFAStore` implementations must implement
 atomic semantics documented on the interface. Do not use read/modify/write
 counter updates across server instances. Complete the server rollout before
 relying on the new cooldown behavior; older servers still use the legacy limit.
+
+Session status and protected-route checks do not mutate browser session cookies.
+A pending MFA session remains unauthenticated, but background requests cannot
+clear its cookie. Expired server sessions are still removed; explicit sign-out
+continues to revoke the session and expire its cookie.
