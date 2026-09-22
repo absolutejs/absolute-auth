@@ -37,6 +37,8 @@ export type MfaConfig<UserType> = {
 	mfaStore: MFAStore;
 	// Stable per-user key for the store (e.g. the user's `sub`).
 	getUserId: (user: UserType) => string;
+	/** Default authenticator label when no name is supplied, e.g. the signed-in email. */
+	getDefaultTotpLabel?: (user: UserType) => string | null | undefined;
 	// Resolve the parked (unregistered) identity back into a user during a challenge.
 	// For credentials this is `(identity) => getUserByEmail(identity.email)`.
 	getChallengeUser: (

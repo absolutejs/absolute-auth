@@ -476,7 +476,10 @@ continues to revoke the session and expire its cookie.
 
 TOTP setup resumes an existing unfinished enrollment instead of replacing its
 secret. QR account labels use the chosen device name (for example, `onSpark: Ember Admin`),
-without internal user or factor IDs. Existing authenticator entries retain their
+without internal user or factor IDs. Set `mfa.getDefaultTotpLabel` to resolve a
+friendly default from the authenticated user (for example, their email) when
+the submitted name is blank. Custom names take precedence; unfinished setup
+retains its original name and secret. Existing authenticator entries retain their
 locally saved names; users can rename them in their authenticator app.
 `MFAStore.saveTotpEnrollment` must atomically compare factors and recovery hashes
 and update only TOTP enrollment fields, preserving unrelated SMS state.

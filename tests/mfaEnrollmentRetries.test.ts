@@ -4,7 +4,7 @@ import { mfaTotpRoutes } from '../src/mfa/totp';
 import { createInMemoryAuthSessionStore } from '../src/session/inMemoryStore';
 import { createInMemoryMfaStore } from '../src/mfa/inMemoryMfaStore';
 import { generateTotp, hashToken } from '../src/crypto';
-const fixture = async () => {
+const fixture = async (withDefaultLabel = true) => {
 	const user = { email: 'audit@example.com', sub: 'audit-user' };
 	const sessions = createInMemoryAuthSessionStore<typeof user>();
 	const store = createInMemoryMfaStore();
@@ -18,6 +18,7 @@ const fixture = async () => {
 	const app = new Elysia().use(
 		mfaTotpRoutes({
 			authSessionStore: sessions,
+			getDefaultTotpLabel: withDefaultLabel ? (u) => u.email : undefined,
 			issuer: 'onSpark',
 			mfaStore: store,
 			getUserId: (u) => u.sub
@@ -25,7 +26,7 @@ const fixture = async () => {
 	);
 	const post = (path: string, body: unknown) =>
 		app.handle(
-			new Request(`http://localhost/auth/mfa/totp/${  path}`, {
+			new Request(`http://localhost/auth/mfa/totp/${path}`, {
 				body: JSON.stringify(body),
 				headers: {
 					'content-type': 'application/json',
@@ -129,7 +130,7 @@ test('receipt retry excludes consumed codes and expires without rotating hashes'
 	const retry = await (await post('verify', body)).json();
 	expect(retry.backupCodes).toEqual(first.backupCodes.slice(1));
 	const current = await store.getEnrollment(user.sub);
- if (!current) throw new Error('Missing enrollment');
+	if (!current) throw new Error('Missing enrollment');
 	await store.saveEnrollment({
 		...current,
 		factors: current.factors?.map((f) =>
@@ -142,4 +143,21 @@ test('receipt retry excludes consumed codes and expires without rotating hashes'
 	expect((await store.getEnrollment(user.sub))?.backupCodeHashes).toEqual(
 		current.backupCodeHashes
 	);
+});
+
+test('blank authenticator names use the signed-in email and custom names win', async () => {
+	await Promise.all(
+		[undefined, '', '   ', 'Ember Admin'].map(async (label) => {
+			const { post, user } = await fixture();
+			const setup = await (await post('setup', { label })).json();
+			const expected = label?.trim() || user.email;
+			expect(setup.label).toBe(expected);
+			expect(decodeURIComponent(new URL(setup.uri).pathname)).toBe(
+				`/onSpark:${expected}`
+			);
+		})
+	);
+	const { post } = await fixture(false);
+	const setup = await (await post('setup', {})).json();
+	expect(setup.label).toBe('Authenticator app');
 });

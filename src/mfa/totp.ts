@@ -178,6 +178,7 @@ export const mfaTotpRoutes = <UserType>({
 	authSessionStore,
 	backupCodeCount = DEFAULT_BACKUP_CODE_COUNT,
 	encryptionKey,
+	getDefaultTotpLabel,
 	getUserId,
 	issuer = DEFAULT_MFA_ISSUER,
 	managementAuthMaxAgeMs = DEFAULT_MFA_MANAGEMENT_AUTH_MAX_AGE_MS,
@@ -227,7 +228,10 @@ export const mfaTotpRoutes = <UserType>({
 				const userId = getUserId(userSession.user);
 				const factor = await prepareEnrollment({
 					encryptionKey,
-					label: label?.trim() || DEFAULT_TOTP_LABEL,
+					label:
+						label?.trim() ||
+						getDefaultTotpLabel?.(userSession.user)?.trim() ||
+						DEFAULT_TOTP_LABEL,
 					mfaStore,
 					userId
 				});
