@@ -14,6 +14,8 @@ export const DEFAULT_MFA_MANAGEMENT_AUTH_MAX_AGE_MS =
 export const DEFAULT_MFA_SESSION_TTL_MS = MILLISECONDS_IN_A_DAY;
 export const DEFAULT_SMS_CODE_LENGTH = 6;
 const SMS_CODE_TTL_MINUTES = 5;
+export const DEFAULT_MFA_CODE_ATTEMPT_WINDOW_MS =
+	5 * SECONDS_IN_A_MINUTE * MILLISECONDS_IN_A_SECOND;
 export const DEFAULT_SMS_CODE_TTL_MS =
 	SMS_CODE_TTL_MINUTES * SECONDS_IN_A_MINUTE * MILLISECONDS_IN_A_SECOND;
 export const DEFAULT_SMS_MAX_ATTEMPTS = 3;
@@ -69,9 +71,12 @@ export type MfaConfig<UserType> = {
 	smsResendCooldownMs?: number;
 	smsSetupRoute?: RouteString;
 	smsVerifyRoute?: RouteString;
-	// Max consecutive failed TOTP/backup-code verifications at the login challenge before
-	// the second-factor step locks out. Independent of the first-factor (password) lockout.
+	/** Maximum code checks per timed window, shared across authenticators. */
 	totpMaxAttempts?: number;
+	/** Recovery codes have an independent attempt budget. */
+	backupCodeMaxAttempts?: number;
+	/** Fixed window; blocked requests never extend it. Default: five minutes. */
+	codeAttemptWindowMs?: number;
 	totpSetupRoute?: RouteString;
 	totpVerifyRoute?: RouteString;
 };

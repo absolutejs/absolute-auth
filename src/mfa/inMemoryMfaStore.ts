@@ -1,4 +1,4 @@
-import type { MfaEnrollment, MFAStore } from './types';
+import type { MfaEnrollment, MFAStore, MfaAttempt } from './types';
 
 const cloneEnrollment = (value: MfaEnrollment): MfaEnrollment => ({
 	...value,
@@ -8,8 +8,36 @@ const cloneEnrollment = (value: MfaEnrollment): MfaEnrollment => ({
 
 export const createInMemoryMfaStore = (): MFAStore => {
 	const enrollments = new Map<string, MfaEnrollment>();
+	const codeAttempts = new Map<string, MfaAttempt>();
 
 	return {
+		claimCodeAttempt: async ({
+			userId,
+			factor,
+			maxAttempts,
+			windowMs,
+			now
+		}) => {
+			const key = JSON.stringify([userId, factor]);
+			const previous = codeAttempts.get(key);
+			const current: Pick<MfaAttempt, 'attempts' | 'windowStartedAt'> =
+				previous && now < previous.windowStartedAt + windowMs
+					? previous
+					: { attempts: 0, windowStartedAt: now };
+			const allowed = current.attempts < maxAttempts;
+			const result: MfaAttempt = {
+				allowed,
+				attempts: current.attempts + (allowed ? 1 : 0),
+				retryAfterMs: Math.max(
+					0,
+					current.windowStartedAt + windowMs - now
+				),
+				windowStartedAt: current.windowStartedAt
+			};
+			codeAttempts.set(key, result);
+
+			return { ...result };
+		},
 		claimSmsChallenge: async ({
 			challengeId,
 			cooldownCutoff,
@@ -27,6 +55,32 @@ export const createInMemoryMfaStore = (): MFAStore => {
 				cloneEnrollment({
 					...enrollment,
 					smsChallengeId: challengeId
+				})
+			);
+
+			return true;
+		},
+		completeCodeChallenge: async ({ userId, backupCodeHash, now }) => {
+			const current = enrollments.get(userId);
+			if (
+				!current ||
+				(backupCodeHash !== undefined &&
+					!current.backupCodeHashes.includes(backupCodeHash))
+			)
+				return false;
+			enrollments.set(
+				userId,
+				cloneEnrollment({
+					...current,
+					backupCodeHashes:
+						backupCodeHash === undefined
+							? current.backupCodeHashes
+							: current.backupCodeHashes.filter(
+									(hash) => hash !== backupCodeHash
+								),
+					lastUsedAt: now,
+					totpFailedAttempts: 0,
+					updatedAt: now
 				})
 			);
 
@@ -105,11 +159,24 @@ export const createInMemoryMfaStore = (): MFAStore => {
 		},
 		removeEnrollment: async (userId) => {
 			enrollments.delete(userId);
+			codeAttempts.delete(JSON.stringify([userId, 'totp']));
+			codeAttempts.delete(JSON.stringify([userId, 'backup_codes']));
+		},
+		resetCodeAttempts: async ({ userId, factor, attempt }) => {
+			const key = JSON.stringify([userId, factor]);
+			const current = codeAttempts.get(key);
+			if (
+				current?.windowStartedAt === attempt.windowStartedAt &&
+				current.attempts === attempt.attempts
+			)
+				codeAttempts.delete(key);
 		},
 		rollbackSmsChallenge: async ({ challengeId, previous, userId }) => {
 			if (enrollments.get(userId)?.smsChallengeId !== challengeId) return;
 			if (previous) enrollments.set(userId, cloneEnrollment(previous));
 			else enrollments.delete(userId);
+			codeAttempts.delete(JSON.stringify([userId, 'totp']));
+			codeAttempts.delete(JSON.stringify([userId, 'backup_codes']));
 		},
 		saveEnrollment: async (enrollment) => {
 			enrollments.set(enrollment.userId, cloneEnrollment(enrollment));

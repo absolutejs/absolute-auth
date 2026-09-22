@@ -442,3 +442,29 @@ a real `DATABASE_URL` and runs migrations. Missing or unknown selections fail
 with an actionable error; custom adapters must configure their own migrations.
 
 For a complete credentials-only Bun setup, see [Persistent email/password sign-in](docs/PERSISTENT-CREDENTIALS.md). It includes real migration and auth configuration APIs, durable user records, and driver settings.
+
+### MFA verification cooldowns
+
+TOTP challenges allow five code checks per five-minute window by default. All
+of an account's authenticator factors share this budget. Recovery codes have a
+separate budget, so a TOTP cooldown does not prevent recovery. Configure
+`mfa.totpMaxAttempts`, `mfa.backupCodeMaxAttempts`, and
+`mfa.codeAttemptWindowMs` with positive integers. Successful verification clears
+the completed reservation unless a newer request has already used the budget.
+Blocked requests never extend the fixed window. Signing in again or changing
+an authenticator does not reset it.
+
+A throttled challenge returns HTTP 429, `Retry-After` (seconds), and JSON with
+`code: "mfa_rate_limited"`, `factor`, and `retryAfterMs`. Clients should display
+the wait time and keep recovery codes and SMS accessible. Recovery codes are
+opaque, case-sensitive strings; do not restrict input to eight characters.
+
+**Upgrade:** Run the `mfa` migration block before starting updated servers; it
+adds `auth_mfa_code_attempts`. Existing `totp_failed_attempts` values are retained
+for compatibility but no longer gate verification. The built-in memory and
+Postgres stores implement atomic attempt reservations and single-use recovery
+consumption. Custom `MFAStore` implementations must implement
+`claimCodeAttempt`, `completeCodeChallenge`, and `resetCodeAttempts` with the
+atomic semantics documented on the interface. Do not use read/modify/write
+counter updates across server instances. Complete the server rollout before
+relying on the new cooldown behavior; older servers still use the legacy limit.

@@ -29,7 +29,10 @@ import {
 	linkedProviderGrantsTable
 } from '../linkedProviders/neonStores';
 import { lockoutsTable } from '../lockout/postgresLockoutStore';
-import { mfaEnrollmentsTable } from '../mfa/postgresMfaStore';
+import {
+	mfaCodeAttemptsTable,
+	mfaEnrollmentsTable
+} from '../mfa/postgresMfaStore';
 import {
 	oauthBackchannelAuthRequestsTable,
 	oauthClientAssertionJtisTable,
@@ -233,7 +236,11 @@ export const blockMigrations: Record<BlockName, BlockMigrations> = {
 			mfaTotpLockoutMigration,
 			mfaSmsDeliveryPolicyMigration,
 			mfaSmsAtomicChallengeMigration,
-			mfaMultipleFactorsMigration
+			mfaMultipleFactorsMigration,
+			{
+				id: '0007_timed_code_attempts',
+				sql: tablesToInitSql([mfaCodeAttemptsTable])
+			}
 		]
 	},
 	oidc: {

@@ -1,4 +1,5 @@
 import { Elysia, t } from 'elysia';
+import { MILLISECONDS_IN_A_SECOND } from '../constants';
 import { constantTimeEqual, hashToken, verifyTotp } from '../crypto';
 import { createSessionCompatibilityLayer } from '../session/access';
 import { persistWhen } from '../session/promote';
@@ -6,9 +7,9 @@ import { sessionStore } from '../session/state';
 import { withSpan } from '../telemetry/tracing';
 import { userSessionIdTypebox } from '../typebox';
 import { resolveCookieSecure } from '../utils';
-import { consumeBackupCode } from './backupCodes';
 import {
 	DEFAULT_MFA_SESSION_TTL_MS,
+	DEFAULT_MFA_CODE_ATTEMPT_WINDOW_MS,
 	DEFAULT_SMS_CODE_LENGTH,
 	DEFAULT_SMS_CODE_TTL_MS,
 	DEFAULT_SMS_MAX_ATTEMPTS,
@@ -52,9 +53,22 @@ export const mfaChallenge = <UserType>({
 	smsCodeTtlMs = DEFAULT_SMS_CODE_TTL_MS,
 	smsMaxAttempts = DEFAULT_SMS_MAX_ATTEMPTS,
 	smsResendCooldownMs = DEFAULT_SMS_RESEND_COOLDOWN_MS,
-	totpMaxAttempts = DEFAULT_TOTP_MAX_ATTEMPTS
-}: MfaRouteProps<UserType>) =>
-	new Elysia()
+	totpMaxAttempts = DEFAULT_TOTP_MAX_ATTEMPTS,
+	backupCodeMaxAttempts = DEFAULT_TOTP_MAX_ATTEMPTS,
+	codeAttemptWindowMs = DEFAULT_MFA_CODE_ATTEMPT_WINDOW_MS
+}: MfaRouteProps<UserType>) => {
+	for (const value of [
+		totpMaxAttempts,
+		backupCodeMaxAttempts,
+		codeAttemptWindowMs
+	]) {
+		if (!Number.isSafeInteger(value) || value <= 0)
+			throw new Error(
+				'MFA attempt limits and window must be positive safe integers'
+			);
+	}
+
+	return new Elysia()
 		.use(sessionStore<UserType>())
 		.get(
 			challengeRoute,
@@ -76,7 +90,7 @@ export const mfaChallenge = <UserType>({
 				const pending = pendingId
 					? challengeUnregistered[pendingId]
 					: undefined;
-				if (!pending) {
+				if (!pending || pending.expiresAt <= Date.now()) {
 					return status(
 						'Unauthorized',
 						'No MFA challenge in progress'
@@ -132,6 +146,7 @@ export const mfaChallenge = <UserType>({
 			},
 			async ({
 				body: { action, code, factor, factorId },
+				set,
 				cookie: { user_session_id },
 				status,
 				store: { session, unregisteredSession }
@@ -152,7 +167,11 @@ export const mfaChallenge = <UserType>({
 					const pending = pendingId
 						? challengeUnregistered[pendingId]
 						: undefined;
-					if (!pendingId || !pending) {
+					if (
+						!pendingId ||
+						!pending ||
+						pending.expiresAt <= Date.now()
+					) {
 						return status(
 							'Unauthorized',
 							'No MFA challenge in progress'
@@ -407,15 +426,46 @@ export const mfaChallenge = <UserType>({
 						return status('Unauthorized', 'Invalid MFA code');
 					}
 
-					if (
-						(enrollment.totpFailedAttempts ?? 0) >= totpMaxAttempts
-					) {
+					// Unspecified legacy requests select the recovery budget only for non-TOTP-shaped codes.
+					const attemptFactor =
+						factor === 'backup_codes' ||
+						(factor === undefined &&
+							factorId === undefined &&
+							!/^\d{6}$/.test(code))
+							? 'backup_codes'
+							: 'totp';
+					const maxAttempts =
+						attemptFactor === 'backup_codes'
+							? backupCodeMaxAttempts
+							: totpMaxAttempts;
+					const attempt = await mfaStore.claimCodeAttempt({
+						factor: attemptFactor,
+						maxAttempts,
+						now: Date.now(),
+						userId: getUserId(user),
+						windowMs: codeAttemptWindowMs
+					});
+					const limited = () => {
+						set.headers['Retry-After'] = String(
+							Math.ceil(
+								attempt.retryAfterMs / MILLISECONDS_IN_A_SECOND
+							)
+						);
+
+						return status('Too Many Requests', {
+							code: 'mfa_rate_limited',
+							factor: attemptFactor,
+							message: 'Too many verification attempts',
+							retryAfterMs: attempt.retryAfterMs
+						});
+					};
+					if (!attempt.allowed) {
 						await onMfaChallengeError?.({
 							error: new Error('mfa_totp_attempts_exceeded'),
 							userId: getUserId(user)
 						});
 
-						return status('Unauthorized', 'Too many attempts');
+						return limited();
 					}
 
 					const totpFactors = factors.filter(
@@ -426,7 +476,7 @@ export const mfaChallenge = <UserType>({
 								factorId === undefined)
 					);
 					const totpChecks =
-						factor === 'backup_codes'
+						attemptFactor === 'backup_codes'
 							? []
 							: await Promise.all(
 									totpFactors.map(async (candidate) =>
@@ -440,42 +490,36 @@ export const mfaChallenge = <UserType>({
 									)
 								);
 					const totpValid = totpChecks.some(Boolean);
-					const mayUseBackupCode =
-						factor === 'backup_codes' ||
-						(factor === undefined && factorId === undefined);
-					const remainingBackupHashes =
-						totpValid || !mayUseBackupCode
-							? undefined
-							: await consumeBackupCode(
-									code,
-									enrollment.backupCodeHashes
-								);
-
-					if (!totpValid && remainingBackupHashes === undefined) {
-						await mfaStore.saveEnrollment({
-							...enrollment,
-							totpFailedAttempts:
-								(enrollment.totpFailedAttempts ?? 0) + 1,
-							updatedAt: Date.now()
-						});
+					const backupCodeHash =
+						attemptFactor === 'backup_codes'
+							? await hashToken(code)
+							: undefined;
+					const backupValid =
+						backupCodeHash !== undefined &&
+						enrollment.backupCodeHashes.includes(backupCodeHash);
+					if (!totpValid && !backupValid) {
 						await onMfaChallengeError?.({
 							error: new Error('invalid_mfa_code'),
 							userId: getUserId(user)
 						});
+						if (attempt.attempts >= maxAttempts) return limited();
 
 						return status('Unauthorized', 'Invalid MFA code');
 					}
-
-					await mfaStore.saveEnrollment({
-						...enrollment,
-						backupCodeHashes:
-							remainingBackupHashes ??
-							enrollment.backupCodeHashes,
-						lastUsedAt: Date.now(),
-						totpFailedAttempts: 0,
-						updatedAt: Date.now()
+					const completed = await mfaStore.completeCodeChallenge({
+						backupCodeHash,
+						now: Date.now(),
+						userId: getUserId(user)
+					});
+					if (!completed)
+						return status('Unauthorized', 'Invalid MFA code');
+					await mfaStore.resetCodeAttempts({
+						attempt,
+						factor: attemptFactor,
+						userId: getUserId(user)
 					});
 
 					return promote();
 				})
 		);
+};

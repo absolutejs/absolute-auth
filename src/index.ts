@@ -860,6 +860,7 @@ export { createInMemoryMfaStore } from './mfa/inMemoryMfaStore';
 export {
 	createNeonMfaStore,
 	createPostgresMfaStore,
+	mfaCodeAttemptsTable,
 	mfaEnrollmentsTable
 } from './mfa/postgresMfaStore';
 

@@ -299,8 +299,10 @@ describe('MFA challenge integration', () => {
 				{ code: '000000' },
 				pending
 			);
-			expect(wrong.status).toBe(401);
-			expect(await wrong.text()).toContain('Invalid MFA code');
+			expect(wrong.status).toBe(attempt === 2 ? 429 : 401);
+			expect(await wrong.text()).toContain(
+				attempt === 2 ? 'mfa_rate_limited' : 'Invalid MFA code'
+			);
 		}
 
 		// A valid code is now rejected: the lockout gates before verification.
@@ -310,8 +312,8 @@ describe('MFA challenge integration', () => {
 			{ code: await generateTotp({ secret }) },
 			pending
 		);
-		expect(lockedOut.status).toBe(401);
-		expect(await lockedOut.text()).toContain('Too many attempts');
+		expect(lockedOut.status).toBe(429);
+		expect(await lockedOut.text()).toContain('mfa_rate_limited');
 	});
 
 	test('a successful challenge resets the TOTP failed-attempt counter', async () => {
