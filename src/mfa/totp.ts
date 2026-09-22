@@ -31,7 +31,6 @@ const DEFAULT_TOTP_LABEL = 'Authenticator app';
 
 const RECEIPT_TTL_MS = 10 * 60 * 1000;
 const MAX_ENROLLMENT_RETRIES = 5;
-const FACTOR_ID_HINT_LENGTH = 8;
 
 type EnrollmentInput = {
 	userId: string;
@@ -247,7 +246,7 @@ export const mfaTotpRoutes = <UserType>({
 					label: factor.label,
 					secret,
 					uri: createTotpKeyUri({
-						accountName: `${userId} (${factor.label} ${factor.id.slice(0, FACTOR_ID_HINT_LENGTH)})`,
+						accountName: factor.label,
 						issuer,
 						secret
 					})

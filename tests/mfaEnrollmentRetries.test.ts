@@ -74,8 +74,8 @@ test('concurrent and reopened setup resumes the same pending QR', async () => {
 		await post('setup', { label: 'Different label' })
 	).json();
 	expect(reopened).toEqual(setups[0]);
-	expect(decodeURIComponent(new URL(reopened.uri).pathname)).toContain(
-		'Personal phone'
+	expect(decodeURIComponent(new URL(reopened.uri).pathname)).toBe(
+		'/onSpark:Personal phone'
 	);
 	expect(
 		(
@@ -99,8 +99,8 @@ test('adding another device preserves saved recovery codes and has a distinct ac
 	).json();
 	const second = await (await post('setup', { label: 'Work phone' })).json();
 	expect(new URL(first.uri).pathname).not.toBe(new URL(second.uri).pathname);
-	expect(decodeURIComponent(new URL(second.uri).pathname)).toContain(
-		'Work phone'
+	expect(decodeURIComponent(new URL(second.uri).pathname)).toBe(
+		'/onSpark:Work phone'
 	);
 	const added = await (
 		await post('verify', {

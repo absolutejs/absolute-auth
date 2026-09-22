@@ -475,7 +475,9 @@ clear its cookie. Expired server sessions are still removed; explicit sign-out
 continues to revoke the session and expire its cookie.
 
 TOTP setup resumes an existing unfinished enrollment instead of replacing its
-secret. QR account labels include the device label and a factor identifier.
+secret. QR account labels use the chosen device name (for example, `onSpark: Ember Admin`),
+without internal user or factor IDs. Existing authenticator entries retain their
+locally saved names; users can rename them in their authenticator app.
 `MFAStore.saveTotpEnrollment` must atomically compare factors and recovery hashes
 and update only TOTP enrollment fields, preserving unrelated SMS state.
 Verification retries preserve existing recovery codes, including when adding a
