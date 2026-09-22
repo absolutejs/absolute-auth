@@ -1,4 +1,9 @@
-import type { MfaEnrollment, MFAStore, MfaAttempt } from './types';
+import type {
+	MfaEnrollment,
+	MFAStore,
+	MfaAttempt,
+	SmsChallengeStore
+} from './types';
 
 const cloneEnrollment = (value: MfaEnrollment): MfaEnrollment => ({
 	...value,
@@ -9,6 +14,10 @@ const cloneEnrollment = (value: MfaEnrollment): MfaEnrollment => ({
 export const createInMemoryMfaStore = (): MFAStore => {
 	const enrollments = new Map<string, MfaEnrollment>();
 	const codeAttempts = new Map<string, MfaAttempt>();
+	const smsScopes = new Map<
+		string,
+		{ store: SmsChallengeStore; expiresAt: number; userId: string }
+	>();
 
 	return {
 		claimCodeAttempt: async ({
@@ -136,6 +145,26 @@ export const createInMemoryMfaStore = (): MFAStore => {
 
 			return enrollment ? cloneEnrollment(enrollment) : undefined;
 		},
+		getSmsChallengeStore: async (scope) => {
+			for (const [key, value] of smsScopes)
+				if (value.expiresAt <= Date.now()) smsScopes.delete(key);
+			const key = JSON.stringify([
+				scope.userId,
+				scope.sessionId,
+				scope.factorId
+			]);
+			let scoped = smsScopes.get(key);
+			if (!scoped) {
+				scoped = {
+					expiresAt: scope.expiresAt,
+					store: createInMemoryMfaStore(),
+					userId: scope.userId
+				};
+				smsScopes.set(key, scoped);
+			}
+
+			return scoped.store;
+		},
 		listEnrollments: async () =>
 			Array.from(enrollments.values()).map(cloneEnrollment),
 		recordSmsFailure: async ({ challengeId, maxAttempts, userId }) => {
@@ -159,8 +188,11 @@ export const createInMemoryMfaStore = (): MFAStore => {
 		},
 		removeEnrollment: async (userId) => {
 			enrollments.delete(userId);
+			for (const [key, value] of smsScopes)
+				if (value.userId === userId) smsScopes.delete(key);
 			codeAttempts.delete(JSON.stringify([userId, 'totp']));
 			codeAttempts.delete(JSON.stringify([userId, 'backup_codes']));
+			codeAttempts.delete(JSON.stringify([userId, 'sms_send']));
 		},
 		resetCodeAttempts: async ({ userId, factor, attempt }) => {
 			const key = JSON.stringify([userId, factor]);
@@ -177,6 +209,7 @@ export const createInMemoryMfaStore = (): MFAStore => {
 			else enrollments.delete(userId);
 			codeAttempts.delete(JSON.stringify([userId, 'totp']));
 			codeAttempts.delete(JSON.stringify([userId, 'backup_codes']));
+			codeAttempts.delete(JSON.stringify([userId, 'sms_send']));
 		},
 		saveEnrollment: async (enrollment) => {
 			enrollments.set(enrollment.userId, cloneEnrollment(enrollment));

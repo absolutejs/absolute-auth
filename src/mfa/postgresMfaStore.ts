@@ -11,7 +11,16 @@ import {
 	varchar
 } from 'drizzle-orm/pg-core';
 import { type AnyPgDatabase, createNeonDatabase } from '../stores/postgres';
-import type { MfaEnrollment, MfaFactor, MFAStore } from './types';
+import {
+	createPostgresSmsChallengeStore,
+	mfaSmsChallengesTable
+} from './scopedSmsStore';
+import type {
+	MfaEnrollment,
+	MfaFactor,
+	MFAStore,
+	MfaAttemptFactor
+} from './types';
 
 const ID_LENGTH = 255;
 const PHONE_LENGTH = 20;
@@ -20,7 +29,7 @@ export const mfaCodeAttemptsTable = pgTable(
 	'auth_mfa_code_attempts',
 	{
 		attempts: integer('attempts').notNull(),
-		factor: text('factor').$type<'totp' | 'backup_codes'>().notNull(),
+		factor: text('factor').$type<MfaAttemptFactor>().notNull(),
 		user_id: varchar('user_id', { length: ID_LENGTH }).notNull(),
 		window_started_at_ms: bigint('window_started_at_ms', {
 			mode: 'number'
@@ -295,6 +304,8 @@ export const createPostgresMfaStore = <DB extends AnyPgDatabase>(
 
 			return row ? toEnrollment(row) : undefined;
 		},
+		getSmsChallengeStore: (scope) =>
+			createPostgresSmsChallengeStore(db, scope),
 		listEnrollments: async () => {
 			const rows = await db.select().from(mfaEnrollmentsTable);
 
@@ -324,6 +335,9 @@ export const createPostgresMfaStore = <DB extends AnyPgDatabase>(
 			return rows[0]?.attempts;
 		},
 		removeEnrollment: async (userId) => {
+			await db
+				.delete(mfaSmsChallengesTable)
+				.where(eq(mfaSmsChallengesTable.user_id, userId));
 			await db
 				.delete(mfaCodeAttemptsTable)
 				.where(eq(mfaCodeAttemptsTable.user_id, userId));

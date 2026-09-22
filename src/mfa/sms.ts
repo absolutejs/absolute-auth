@@ -20,7 +20,7 @@ import {
 import {
 	getMfaFactors,
 	type MfaEnrollment,
-	type MFAStore,
+	type SmsChallengeStore,
 	type SmsMfaFactor,
 	withMfaFactors
 } from './types';
@@ -57,7 +57,7 @@ const issueSmsCode = async (codeLength: number, ttlMs: number) => {
 
 const startProviderSmsChallenge = async (input: {
 	challengeId: string;
-	mfaStore: MFAStore;
+	mfaStore: SmsChallengeStore;
 	phone: string;
 	previousEnrollment?: MfaEnrollment;
 	purpose: 'mfa_challenge' | 'mfa_enrollment';
@@ -131,7 +131,7 @@ export const issueAndStoreSmsCode = async ({
 }: {
 	codeLength: number;
 	enrollment: MfaEnrollment;
-	mfaStore: MFAStore;
+	mfaStore: SmsChallengeStore;
 	onSendSmsCode?: (message: SmsCodeMessage) => void | Promise<void>;
 	previousEnrollment?: MfaEnrollment;
 	verificationProvider?: MfaRouteProps<unknown>['verificationProvider'];

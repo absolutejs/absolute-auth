@@ -484,3 +484,18 @@ To tolerate a lost first response, newly issued codes have an AES-GCM encrypted
 receipt in factor JSON, replayable for ten minutes after a valid TOTP and recent
 sign-in. The receipt key is domain-separated and derived from the TOTP secret;
 consumed codes are excluded from replay. Normal verification stores hashes only.
+
+SMS sign-in state is isolated by account, pending session, and selected phone.
+`getSmsChallengeStore` must provide durable atomic claim/finalize/consume/failure/
+rollback operations for that scope. The Postgres implementation uses the
+`auth_mfa_sms_challenges` table (migration `mfa/0008_scoped_sms_challenges`),
+expires rows with their pending sessions, and clears rows on enrollment removal.
+Enrollment SMS state remains separate. Existing SMS codes must be requested again
+once the new server version is active; enrolled phones are unchanged.
+
+Resend cooldown responses include `sms_resend_cooldown`, `retryAfterMs`, and
+`Retry-After`; successful sends include `retryAfterMs` and `expiresAt`.
+A separate `sms_send` attempt budget limits account-wide delivery attempts to ten
+per five minutes by default (`smsSendMaxAttempts` / `smsSendWindowMs`). It does not
+invalidate issued codes or block authenticator/recovery verification. SMS senders
+must throw on delivery failure; scoped rollback preserves the previous challenge.

@@ -60,7 +60,7 @@ export type MfaEnrollment = {
 	userId: string;
 };
 
-export type MfaAttemptFactor = 'totp' | 'backup_codes';
+export type MfaAttemptFactor = 'totp' | 'backup_codes' | 'sms_send';
 export type MfaAttempt = {
 	allowed: boolean;
 	attempts: number;
@@ -68,7 +68,27 @@ export type MfaAttempt = {
 	windowStartedAt: number;
 };
 
+export type SmsChallengeScope = {
+	userId: string;
+	sessionId: string;
+	factorId: string;
+	expiresAt: number;
+};
+export type SmsChallengeStore = Pick<
+	MFAStore,
+	| 'claimSmsChallenge'
+	| 'completeSmsChallenge'
+	| 'finalizeSmsChallenge'
+	| 'getEnrollment'
+	| 'recordSmsFailure'
+	| 'rollbackSmsChallenge'
+>;
+
 export type MFAStore = {
+	/** Durable SMS state isolated to this pending login and selected phone. */
+	getSmsChallengeStore: (
+		scope: SmsChallengeScope
+	) => Promise<SmsChallengeStore>;
 	/** Compare-and-swap TOTP fields and recovery hashes only; preserve unrelated SMS state. */
 	saveTotpEnrollment: (input: {
 		expected: MfaEnrollment | undefined;

@@ -1,3 +1,4 @@
+import { mfaSmsChallengesTable } from '../mfa/scopedSmsStore';
 // Single export of every block's migrations. Consumers pick which blocks they enabled
 // in `auth()` and pass that subset to `runMigrations({ blocks: [...] })`, or omit `blocks`
 // to apply every migration the package ships. Adding a new block's migrations: import its
@@ -240,6 +241,10 @@ export const blockMigrations: Record<BlockName, BlockMigrations> = {
 			{
 				id: '0007_timed_code_attempts',
 				sql: tablesToInitSql([mfaCodeAttemptsTable])
+			},
+			{
+				id: '0008_scoped_sms_challenges',
+				sql: tablesToInitSql([mfaSmsChallengesTable])
 			}
 		]
 	},

@@ -1259,3 +1259,5 @@ export {
 } from './portal/postgresSetupSessionStore';
 
 export { createCredentialsApi } from './credentials/api';
+
+export { mfaSmsChallengesTable } from './mfa/scopedSmsStore';

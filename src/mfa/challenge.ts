@@ -13,6 +13,7 @@ import {
 	DEFAULT_SMS_CODE_LENGTH,
 	DEFAULT_SMS_CODE_TTL_MS,
 	DEFAULT_SMS_MAX_ATTEMPTS,
+	DEFAULT_SMS_SEND_MAX_ATTEMPTS,
 	DEFAULT_SMS_RESEND_COOLDOWN_MS,
 	DEFAULT_TOTP_MAX_ATTEMPTS,
 	type MfaRouteProps
@@ -24,7 +25,7 @@ import {
 	mapVerificationProviderError,
 	maskPhone
 } from './sms';
-import { getMfaFactors, type TotpMfaFactor, withMfaFactors } from './types';
+import { getMfaFactors, type TotpMfaFactor } from './types';
 
 export type MfaChallengeOptions = {
 	backupCodesAvailable: boolean;
@@ -52,6 +53,8 @@ export const mfaChallenge = <UserType>({
 	smsCodeLength = DEFAULT_SMS_CODE_LENGTH,
 	smsCodeTtlMs = DEFAULT_SMS_CODE_TTL_MS,
 	smsMaxAttempts = DEFAULT_SMS_MAX_ATTEMPTS,
+	smsSendMaxAttempts = DEFAULT_SMS_SEND_MAX_ATTEMPTS,
+	smsSendWindowMs = DEFAULT_MFA_CODE_ATTEMPT_WINDOW_MS,
 	smsResendCooldownMs = DEFAULT_SMS_RESEND_COOLDOWN_MS,
 	totpMaxAttempts = DEFAULT_TOTP_MAX_ATTEMPTS,
 	backupCodeMaxAttempts = DEFAULT_TOTP_MAX_ATTEMPTS,
@@ -60,7 +63,9 @@ export const mfaChallenge = <UserType>({
 	for (const value of [
 		totpMaxAttempts,
 		backupCodeMaxAttempts,
-		codeAttemptWindowMs
+		codeAttemptWindowMs,
+		smsSendMaxAttempts,
+		smsSendWindowMs
 	]) {
 		if (!Number.isSafeInteger(value) || value <= 0)
 			throw new Error(
@@ -217,18 +222,7 @@ export const mfaChallenge = <UserType>({
 						return status('OK', { status: 'authenticated' });
 					};
 
-					const sendSmsChallenge = async () => {
-						if (
-							enrollment.smsCodeSentAt !== undefined &&
-							Date.now() - enrollment.smsCodeSentAt <
-								smsResendCooldownMs
-						) {
-							return status(
-								'Too Many Requests',
-								'SMS resend cooldown active'
-							);
-						}
-
+					const runSmsChallenge = async () => {
 						const smsFactor = factors.find(
 							(candidate) =>
 								candidate.type === 'sms' &&
@@ -236,84 +230,130 @@ export const mfaChallenge = <UserType>({
 								(candidate.id === factorId ||
 									factorId === undefined)
 						);
-						if (!smsFactor || smsFactor.type !== 'sms') {
+						if (!smsFactor || smsFactor.type !== 'sms')
 							return status(
 								'Bad Request',
 								'SMS factor not found'
 							);
-						}
-						try {
-							await issueAndStoreSmsCode({
-								codeLength: smsCodeLength,
-								enrollment: {
-									...withMfaFactors(enrollment, factors),
-									smsPendingFactorId: smsFactor.id,
-									smsPhone: smsFactor.phone
-								},
-								mfaStore,
-								onSendSmsCode,
-								previousEnrollment: enrollment,
-								purpose: 'mfa_challenge',
-								resendCooldownMs: smsResendCooldownMs,
-								ttlMs: smsCodeTtlMs,
-								userId: getUserId(user),
-								verificationProvider
-							});
-						} catch (error) {
-							const mapped = mapVerificationProviderError(error);
-							if (mapped === undefined) throw error;
-
-							return status(mapped.status, mapped.message);
-						}
-
-						return status('OK', {
+						const userId = getUserId(user);
+						const smsStore = await mfaStore.getSmsChallengeStore({
+							expiresAt: pending.expiresAt,
 							factorId: smsFactor.id,
-							phone: maskPhone(smsFactor.phone),
-							status: 'sent'
+							sessionId: pendingId,
+							userId
 						});
-					};
-
-					const runSmsChallenge = async () => {
-						if (
-							action !== 'send' &&
-							factorId !== undefined &&
-							enrollment.smsPendingFactorId !== undefined &&
-							factorId !== enrollment.smsPendingFactorId
-						) {
-							return status(
-								'Bad Request',
-								'No SMS code in progress'
+						const smsEnrollment =
+							await smsStore.getEnrollment(userId);
+						const cooldown = async () => {
+							const current =
+								await smsStore.getEnrollment(userId);
+							const retryAfterMs = Math.max(
+								1,
+								(current?.smsCodeSentAt ?? Date.now()) +
+									smsResendCooldownMs -
+									Date.now()
 							);
-						}
-						const selectedFactorId =
-							enrollment.smsPendingFactorId ?? factorId;
-						const smsFactor = factors.find(
-							(candidate) =>
-								candidate.type === 'sms' &&
-								candidate.verified &&
-								(candidate.id === selectedFactorId ||
-									selectedFactorId === undefined)
-						);
-						if (!smsFactor || smsFactor.type !== 'sms') {
-							return status(
-								'Unauthorized',
-								'No MFA challenge in progress'
+							set.headers['Retry-After'] = String(
+								Math.ceil(
+									retryAfterMs / MILLISECONDS_IN_A_SECOND
+								)
 							);
-						}
 
+							return status('Too Many Requests', {
+								code: 'sms_resend_cooldown',
+								message:
+									'Wait before requesting another text to this phone.',
+								retryAfterMs
+							});
+						};
+						const sendSmsChallenge = async () => {
+							if (
+								smsEnrollment?.smsCodeSentAt !== undefined &&
+								Date.now() - smsEnrollment.smsCodeSentAt <
+									smsResendCooldownMs
+							)
+								return cooldown();
+							// Retain an account delivery ceiling while allowing independent phones/logins.
+							const delivery = await mfaStore.claimCodeAttempt({
+								factor: 'sms_send',
+								maxAttempts: smsSendMaxAttempts,
+								now: Date.now(),
+								userId,
+								windowMs: smsSendWindowMs
+							});
+							if (!delivery.allowed) {
+								set.headers['Retry-After'] = String(
+									Math.ceil(
+										delivery.retryAfterMs /
+											MILLISECONDS_IN_A_SECOND
+									)
+								);
+
+								return status('Too Many Requests', {
+									code: 'sms_delivery_rate_limited',
+									message:
+										'Too many text requests. Try again later or choose another sign-in method.',
+									retryAfterMs: delivery.retryAfterMs
+								});
+							}
+							try {
+								const now = Date.now();
+								const expiresAt = await issueAndStoreSmsCode({
+									codeLength: smsCodeLength,
+									enrollment: {
+										backupCodeHashes: [],
+										createdAt: now,
+										smsPendingFactorId: smsFactor.id,
+										smsPhone: smsFactor.phone,
+										smsVerified: true,
+										totpVerified: false,
+										updatedAt: now,
+										userId
+									},
+									mfaStore: smsStore,
+									onSendSmsCode,
+									previousEnrollment: smsEnrollment,
+									purpose: 'mfa_challenge',
+									resendCooldownMs: smsResendCooldownMs,
+									ttlMs: smsCodeTtlMs,
+									userId,
+									verificationProvider
+								});
+
+								return status('OK', {
+									expiresAt,
+									factorId: smsFactor.id,
+									phone: maskPhone(smsFactor.phone),
+									retryAfterMs: smsResendCooldownMs,
+									status: 'sent'
+								});
+							} catch (error) {
+								const mapped =
+									mapVerificationProviderError(error);
+								if (
+									mapped?.message ===
+									'SMS resend cooldown active'
+								)
+									return cooldown();
+								if (mapped === undefined) throw error;
+
+								return status(mapped.status, mapped.message);
+							}
+						};
 						if (action === 'send') return sendSmsChallenge();
 
 						if (code === undefined) {
 							return status('Bad Request', 'SMS code required');
 						}
-						const localCodeHash = enrollment.smsPendingCodeHash;
-						const challengeId = enrollment.smsChallengeId;
+						const localCodeHash = smsEnrollment?.smsPendingCodeHash;
+						const challengeId = smsEnrollment?.smsChallengeId;
 						const localCodeExpiresAt =
-							enrollment.smsPendingCodeExpiresAt;
+							smsEnrollment?.smsPendingCodeExpiresAt;
 						const providerReference =
-							enrollment.smsProviderReference;
+							smsEnrollment?.smsProviderReference;
 						if (
-							enrollment.smsPendingPurpose !== 'mfa_challenge' ||
+							smsEnrollment?.smsPendingPurpose !==
+								'mfa_challenge' ||
 							localCodeExpiresAt === undefined ||
 							challengeId === undefined
 						) {
@@ -335,7 +375,7 @@ export const mfaChallenge = <UserType>({
 							return status('Unauthorized', 'SMS code expired');
 						}
 						if (
-							(enrollment.smsFailedAttempts ?? 0) >=
+							(smsEnrollment?.smsFailedAttempts ?? 0) >=
 							smsMaxAttempts
 						) {
 							await onMfaChallengeError?.({
@@ -381,7 +421,7 @@ export const mfaChallenge = <UserType>({
 									localCodeHash
 								));
 						if (!smsValid) {
-							const attempts = await mfaStore.recordSmsFailure({
+							const attempts = await smsStore.recordSmsFailure({
 								challengeId,
 								maxAttempts: smsMaxAttempts,
 								userId: getUserId(user)
@@ -403,9 +443,8 @@ export const mfaChallenge = <UserType>({
 							);
 						}
 
-						const completed = await mfaStore.completeSmsChallenge({
+						const completed = await smsStore.completeSmsChallenge({
 							challengeId,
-							factors,
 							lastUsedAt: Date.now(),
 							smsVerified: true,
 							userId: getUserId(user)
@@ -416,6 +455,18 @@ export const mfaChallenge = <UserType>({
 								'SMS challenge is no longer active'
 							);
 						}
+
+						const stillEnrolled =
+							await mfaStore.completeCodeChallenge({
+								now: Date.now(),
+								userId: getUserId(user)
+							});
+
+						if (!stillEnrolled)
+							return status(
+								'Unauthorized',
+								'No MFA challenge in progress'
+							);
 
 						return promote();
 					};

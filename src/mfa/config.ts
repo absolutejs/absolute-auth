@@ -20,6 +20,7 @@ export const DEFAULT_SMS_CODE_TTL_MS =
 	SMS_CODE_TTL_MINUTES * SECONDS_IN_A_MINUTE * MILLISECONDS_IN_A_SECOND;
 export const DEFAULT_SMS_MAX_ATTEMPTS = 3;
 export const DEFAULT_SMS_RESEND_COOLDOWN_MS = 30 * MILLISECONDS_IN_A_SECOND;
+export const DEFAULT_SMS_SEND_MAX_ATTEMPTS = 10;
 export const DEFAULT_TOTP_MAX_ATTEMPTS = 5;
 
 // Out-of-band SMS delivery payload. The plaintext `code` is handed to the consumer's sender
@@ -67,7 +68,10 @@ export type MfaConfig<UserType> = {
 	smsCodeLength?: number;
 	smsCodeTtlMs?: number;
 	smsMaxAttempts?: number;
-	/** Minimum delay between code sends for the same enrollment. */
+	/** Account-wide delivery-attempt ceiling; independent of per-login resend cooldowns. */
+	smsSendMaxAttempts?: number;
+	smsSendWindowMs?: number;
+	/** Minimum delay between sends to the same phone within a pending login. */
 	smsResendCooldownMs?: number;
 	smsSetupRoute?: RouteString;
 	smsVerifyRoute?: RouteString;
