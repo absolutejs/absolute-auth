@@ -17,11 +17,19 @@ import {
 	type MfaRouteProps,
 	type SmsCodeMessage
 } from './config';
-import type { MfaEnrollment, MFAStore } from './types';
+import {
+	getMfaFactors,
+	type MfaEnrollment,
+	type MFAStore,
+	type SmsMfaFactor,
+	withMfaFactors
+} from './types';
 import { hasRecentAuthentication } from './recentAuth';
 
 const DECIMAL_RADIX = 10;
 const MASK_VISIBLE_DIGITS = 4;
+const FACTOR_LABEL_MAX_LENGTH = 80;
+const DEFAULT_SMS_LABEL = 'Text message';
 
 // E.164: leading '+', a non-zero country-code digit, then 7–14 more digits (8–15 total).
 const E164_PATTERN = /^\+[1-9]\d{7,14}$/u;
@@ -239,11 +247,16 @@ export const mfaSmsRoutes = <UserType>({
 		.post(
 			smsSetupRoute,
 			{
-				body: t.Object({ phone: t.String() }),
+				body: t.Object({
+					label: t.Optional(
+						t.String({ maxLength: FACTOR_LABEL_MAX_LENGTH })
+					),
+					phone: t.String()
+				}),
 				cookie: t.Cookie({ user_session_id: userSessionIdTypebox })
 			},
 			async ({
-				body: { phone },
+				body: { label, phone },
 				cookie: { user_session_id },
 				status,
 				store: { session }
@@ -297,23 +310,39 @@ export const mfaSmsRoutes = <UserType>({
 						'SMS resend cooldown active'
 					);
 				}
+				const base = existing ?? {
+					backupCodeHashes: [],
+					createdAt: now,
+					smsVerified: false,
+					totpVerified: false,
+					updatedAt: now,
+					userId
+				};
+				const factor: SmsMfaFactor = {
+					id: crypto.randomUUID(),
+					label: label?.trim() || DEFAULT_SMS_LABEL,
+					phone,
+					type: 'sms',
+					verified: false
+				};
+				const factors = [
+					...getMfaFactors(base).filter(
+						(existingFactor) =>
+							existingFactor.type !== 'sms' ||
+							existingFactor.verified
+					),
+					factor
+				];
 				try {
 					await issueAndStoreSmsCode({
 						codeLength: smsCodeLength,
 						enrollment: {
-							backupCodeHashes: existing?.backupCodeHashes ?? [],
-							createdAt: existing?.createdAt ?? now,
-							lastUsedAt: existing?.lastUsedAt,
+							...withMfaFactors(base, factors),
 							smsFailedAttempts: 0,
+							smsPendingFactorId: factor.id,
 							smsPhone: phone,
-							smsVerified: false,
-							totpFailedAttempts:
-								existing?.totpFailedAttempts ?? 0,
-							totpSecretCiphertext:
-								existing?.totpSecretCiphertext,
-							totpVerified: existing?.totpVerified ?? false,
 							updatedAt: now,
-							userId
+							userId: base.userId
 						},
 						mfaStore,
 						onSendSmsCode,
@@ -331,17 +360,23 @@ export const mfaSmsRoutes = <UserType>({
 					return status(mapped.status, mapped.message);
 				}
 
-				return status('OK', { phone: maskPhone(phone) });
+				return status('OK', {
+					factorId: factor.id,
+					phone: maskPhone(phone)
+				});
 			}
 		)
 		.post(
 			smsVerifyRoute,
 			{
-				body: t.Object({ code: t.String() }),
+				body: t.Object({
+					code: t.String(),
+					factorId: t.Optional(t.String())
+				}),
 				cookie: t.Cookie({ user_session_id: userSessionIdTypebox })
 			},
 			async ({
-				body: { code },
+				body: { code, factorId },
 				cookie: { user_session_id },
 				status,
 				store: { session }
@@ -369,6 +404,22 @@ export const mfaSmsRoutes = <UserType>({
 				const userId = getUserId(userSession.user);
 				const enrollment = await mfaStore.getEnrollment(userId);
 				if (!enrollment?.smsPhone) {
+					return status(
+						'Bad Request',
+						'No SMS enrollment in progress'
+					);
+				}
+				const factors = getMfaFactors(enrollment);
+				const pendingFactorId =
+					factorId ?? enrollment.smsPendingFactorId;
+				const pendingFactor = factors.find(
+					(candidate) =>
+						candidate.type === 'sms' &&
+						(candidate.id === pendingFactorId ||
+							(pendingFactorId === undefined &&
+								candidate.phone === enrollment.smsPhone))
+				);
+				if (!pendingFactor || pendingFactor.type !== 'sms') {
 					return status(
 						'Bad Request',
 						'No SMS enrollment in progress'
@@ -423,7 +474,7 @@ export const mfaSmsRoutes = <UserType>({
 							purpose: 'mfa_enrollment',
 							reference: providerReference,
 							subject: userId,
-							to: enrollment.smsPhone
+							to: pendingFactor.phone
 						}
 					);
 					if (checked.error !== undefined) {
@@ -459,8 +510,14 @@ export const mfaSmsRoutes = <UserType>({
 					);
 				}
 
+				const verifiedFactors = factors.map((candidate) =>
+					candidate.id === pendingFactor.id
+						? { ...candidate, verified: true }
+						: candidate
+				);
 				const completed = await mfaStore.completeSmsChallenge({
 					challengeId,
+					factors: verifiedFactors,
 					smsVerified: true,
 					userId
 				});

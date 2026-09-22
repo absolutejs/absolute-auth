@@ -2,7 +2,8 @@ import type { MfaEnrollment, MFAStore } from './types';
 
 const cloneEnrollment = (value: MfaEnrollment): MfaEnrollment => ({
 	...value,
-	backupCodeHashes: [...value.backupCodeHashes]
+	backupCodeHashes: [...value.backupCodeHashes],
+	factors: value.factors?.map((factor) => ({ ...factor }))
 });
 
 export const createInMemoryMfaStore = (): MFAStore => {
@@ -33,6 +34,7 @@ export const createInMemoryMfaStore = (): MFAStore => {
 		},
 		completeSmsChallenge: async ({
 			challengeId,
+			factors,
 			lastUsedAt,
 			smsVerified,
 			userId
@@ -43,11 +45,13 @@ export const createInMemoryMfaStore = (): MFAStore => {
 				userId,
 				cloneEnrollment({
 					...current,
+					factors: factors ?? current.factors,
 					lastUsedAt: lastUsedAt ?? current.lastUsedAt,
 					smsChallengeId: undefined,
 					smsFailedAttempts: 0,
 					smsPendingCodeExpiresAt: undefined,
 					smsPendingCodeHash: undefined,
+					smsPendingFactorId: undefined,
 					smsPendingPurpose: undefined,
 					smsProviderReference: undefined,
 					smsVerified,

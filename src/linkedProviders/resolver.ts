@@ -1,3 +1,4 @@
+import { credentialRefreshError } from './credentialError';
 import type {
 	LinkedProviderAccessTokenLease,
 	LinkedProviderBinding,
@@ -36,6 +37,21 @@ export type CreateLinkedProviderCredentialResolverOptions = {
 		| LinkedProviderRefreshResult
 		| null;
 	now?: () => number;
+	/**
+	 * What a reported failure does to the stored grant and binding.
+	 *
+	 * `latch`, the default, marks an unauthorized or revoked credential
+	 * unusable, which is what a sign-in identity needs: nothing works again
+	 * until the person authorizes again.
+	 *
+	 * `record` writes the same failure detail and leaves both statuses alone.
+	 * A connector credential wants this. Its calls fail for reasons that live
+	 * on the provider's side -- an app installation dropped from a repository,
+	 * a project unshared -- and latching turns one refused call into a
+	 * connection that stays shut until it is rebuilt, which does not fix
+	 * anything because the credential was never the problem.
+	 */
+	failurePolicy?: 'latch' | 'record';
 	onReportFailure?: (input: {
 		credential: ResolvedLinkedProviderCredential;
 		report: LinkedProviderCredentialFailureReport;
@@ -178,23 +194,31 @@ const resolveBindingFailureStatus = (
 const buildNextGrant = (
 	grant: LinkedProviderGrant,
 	report: LinkedProviderCredentialFailureReport,
-	currentTime: number
+	currentTime: number,
+	failurePolicy: 'latch' | 'record'
 ): LinkedProviderGrant => ({
 	...grant,
 	lastRefreshError: report.message ?? report.code,
 	metadata: annotateFailureMetadata(grant.metadata, report, currentTime),
-	status: resolveGrantFailureStatus(grant, report),
+	status:
+		failurePolicy === 'record'
+			? grant.status
+			: resolveGrantFailureStatus(grant, report),
 	updatedAt: currentTime
 });
 
 const buildNextBinding = (
 	binding: LinkedProviderBinding,
 	report: LinkedProviderCredentialFailureReport,
-	currentTime: number
+	currentTime: number,
+	failurePolicy: 'latch' | 'record'
 ): LinkedProviderBinding => ({
 	...binding,
 	metadata: annotateFailureMetadata(binding.metadata, report, currentTime),
-	status: resolveBindingFailureStatus(binding, report),
+	status:
+		failurePolicy === 'record'
+			? binding.status
+			: resolveBindingFailureStatus(binding, report),
 	updatedAt: currentTime
 });
 
@@ -216,9 +240,41 @@ const resolveBindingCredential = async (
 	return buildResolvedCredential(grant, binding);
 };
 
+const refreshAndRecord = async (
+	grant: LinkedProviderGrant,
+	input: { minValidityMs?: number; requiredScopes?: string[] } | undefined,
+	refresh: NonNullable<CreateLinkedProviderCredentialResolverOptions['refreshAccessTokenLease']>,
+	grantStore: LinkedProviderGrantStore,
+	now: () => number
+) => {
+	let refreshed: LinkedProviderRefreshResult;
+	try {
+		const result = await refresh(grant, input);
+		if (!result) throw new Error('Linked provider access token refresh failed');
+		refreshed = result;
+	} catch (cause) {
+		const error = credentialRefreshError(cause);
+		await grantStore.saveGrant({
+			...grant,
+			lastRefreshError: error.message,
+			metadata: { ...grant.metadata, credentialFailureCode: error.code, credentialRecovery: error.recovery },
+			status: 'refresh_required',
+			updatedAt: now()
+		});
+		throw error;
+	}
+	const metadata: JsonObject = { ...refreshed.grant.metadata };
+	delete metadata.credentialRecovery;
+	delete metadata.credentialFailureCode;
+	await grantStore.saveGrant({ ...refreshed.grant, lastRefreshError: undefined, metadata });
+
+	return refreshed;
+};
+
 export const createLinkedProviderCredentialResolver = ({
 	grantStore,
 	bindingStore,
+	failurePolicy = 'latch',
 	loadAccessTokenLease,
 	refreshAccessTokenLease,
 	now = () => Date.now(),
@@ -252,12 +308,7 @@ export const createLinkedProviderCredentialResolver = ({
 				);
 			}
 
-			const refreshed = await refreshAccessTokenLease(grant, input);
-			if (!refreshed) {
-				throw new Error('Linked provider access token refresh failed');
-			}
-
-			await grantStore.saveGrant(refreshed.grant);
+			const refreshed = await refreshAndRecord(grant, input, refreshAccessTokenLease, grantStore, now);
 			({ lease } = refreshed);
 		}
 
@@ -288,13 +339,13 @@ export const createLinkedProviderCredentialResolver = ({
 
 		if (grant) {
 			await grantStore.saveGrant(
-				buildNextGrant(grant, report, currentTime)
+				buildNextGrant(grant, report, currentTime, failurePolicy)
 			);
 		}
 
 		if (binding) {
 			await bindingStore.saveBinding(
-				buildNextBinding(binding, report, currentTime)
+				buildNextBinding(binding, report, currentTime, failurePolicy)
 			);
 		}
 

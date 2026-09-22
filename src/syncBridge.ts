@@ -78,7 +78,7 @@ export const createAbsoluteAuthSyncBridge = <UserType>(
 				authorization,
 				config: accessTokens
 			})
-	),
+		),
 	resolveSession: async ({ authPrincipal }) => {
 		if (!isSessionAuthPrincipal<UserType>(authPrincipal)) return undefined;
 		const context = toSyncContext(authPrincipal);
@@ -86,7 +86,7 @@ export const createAbsoluteAuthSyncBridge = <UserType>(
 
 		return {
 			context,
-				namespace: await deriveAuthSyncNamespace({
+			namespace: await deriveAuthSyncNamespace({
 				clientId: PWA_SYNC_CLIENT_ID,
 				issuer: accessTokens.oidc.issuer,
 				partition: readAuthSyncPartition(authPrincipal.user),
