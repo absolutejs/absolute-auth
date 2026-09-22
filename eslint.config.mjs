@@ -241,7 +241,7 @@ export default defineConfig([
 		}
 	},
 	{
-		files: ['tests/migrations.test.ts'],
+		files: ['tests/migrations.test.ts', 'tests/postgresSessionStore.test.ts'],
 		rules: {
 			// Migration SQL is the input under test; it cannot use a schema query builder.
 			'absolute/prefer-drizzle-query-builders': 'off'

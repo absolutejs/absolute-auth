@@ -168,7 +168,7 @@ export const manifest = defineManifest<AuthConfig<unknown>, never>()({
 					}
 				]
 			},
-			title: 'Your Postgres database (recommended)',
+			title: 'Neon Postgres (persistent sessions)',
 			wiring: {
 				code: 'createNeonAuthSessionStore(${env.DATABASE_URL} ?? "", decodeSessionUserRecord)',
 				imports: [
@@ -200,20 +200,20 @@ export const manifest = defineManifest<AuthConfig<unknown>, never>()({
 	],
 	lifecycle: [
 		{
-			// The CLI falls back to the DATABASE_URL env var for --db.
-			command: 'bunx absolute-auth migrate',
+			// Setup inspects the selected adapter before requiring a database.
+			command: 'bunx absolute-auth setup',
 			id: 'migrate',
 			idempotent: true,
 			kind: 'migration',
-			title: 'Set up the sign-in tables in your database',
+			title: 'Set up the selected sign-in storage',
 			when: 'after-install'
 		},
 		{
-			command: 'bunx absolute-auth migrate',
+			command: 'bunx absolute-auth setup',
 			id: 'migrate-upgrade',
 			idempotent: true,
 			kind: 'migration',
-			title: 'Apply new sign-in tables after upgrading',
+			title: 'Upgrade the selected sign-in storage',
 			when: 'after-upgrade'
 		}
 	],
@@ -227,21 +227,13 @@ export const manifest = defineManifest<AuthConfig<unknown>, never>()({
 		}
 	],
 	requires: {
-		env: [
-			{
-				description:
-					'Postgres connection string (sign-in tables live here)',
-				example: 'postgres://user:pass@host/db',
-				key: 'DATABASE_URL',
-				secret: true
-			},
-			...providerEnv
-		],
+		env: providerEnv,
 		peers: [{ name: 'elysia', range: '>=1.0', reason: 'plugin host' }],
 		services: [
 			{
 				description: 'Stores accounts, sessions, and audit events',
-				id: 'postgres'
+				id: 'postgres',
+				optional: true
 			}
 		]
 	},
@@ -251,7 +243,10 @@ export const manifest = defineManifest<AuthConfig<unknown>, never>()({
 			configPath: 'authSessionStore',
 			contract: 'auth/session-store',
 			description: 'Where live sign-in sessions are kept',
-			known: ['@absolutejs/auth#postgres', '@absolutejs/auth#memory'],
+			known: [
+				'@absolutejs/auth#createNeonAuthSessionStore',
+				'@absolutejs/auth#createInMemoryAuthSessionStore'
+			],
 			required: true
 		},
 		verificationProvider: {
