@@ -1,6 +1,7 @@
 import { createOAuth2Client } from 'citra';
 import { Elysia } from 'elysia';
 import { apiKeysRoutes } from './apikeys/routes';
+import { assertTokenRouteConfiguration } from './apikeys/tokenRoutes';
 import { agentAuthRoutes } from './agents/routes';
 import type { AgentAuthConfig } from './agents/config';
 import {
@@ -165,6 +166,7 @@ const buildAuthApplications = async <UserType>(
 		onRevocationError,
 		onSessionCleanup
 	} = configuration;
+	assertTokenRouteConfiguration(apikeys, oidc);
 	if (push && nativePush)
 		throw new Error('Configure `push`, not both `push` and `nativePush`');
 	const pushConfig = push ?? nativePush;
@@ -676,13 +678,20 @@ export { readSessionCookie } from './session/cookieReader';
 export { AuthIdentityConflictError } from './errors';
 export { sessionStore } from './session/state';
 export { createInMemoryAuthSessionStore } from './session/inMemoryStore';
-export { createNeonAuthSessionStore } from './session/neonStore';
+export {
+	createNeonAuthSessionStore,
+	createPostgresAuthSessionStore
+} from './session/neonStore';
 export { providersFromEnv, type ProviderSelection } from './providersFromEnv';
 export {
 	createRedisAuthSessionStore,
 	type RedisSessionClient
 } from './session/redisStore';
-export { createLinkedProviderCredentialResolver } from './linkedProviders/resolver';
+export {
+	createLinkedProviderCredentialResolver,
+	type CreateLinkedProviderCredentialResolverOptions,
+	type LinkedProviderRefreshResult
+} from './linkedProviders/resolver';
 export { createOAuthLinkedProviderCredentialResolver } from './linkedProviders/oauthResolver';
 export {
 	createOAuthAccountLinkedProviderCredentialResolver,
@@ -690,8 +699,14 @@ export {
 	type OAuthLinkedProviderAccountStore
 } from './linkedProviders/oauthAccountResolver';
 export {
+	createLinkedProviderBindingStore,
+	createLinkedProviderGrantStore,
 	createNeonLinkedProviderStores,
-	createNeonOAuthLinkedProviderCredentialResolver
+	createNeonOAuthLinkedProviderCredentialResolver,
+	linkedProviderBindingsTable,
+	linkedProviderGrantsTable,
+	type LinkedProviderBindingRow,
+	type LinkedProviderGrantRow
 } from './linkedProviders/neonStores';
 export { createInMemoryLinkedProviderStores } from './linkedProviders/inMemoryStores';
 export { protectRoutePlugin } from './routes/protectRoute';
@@ -829,9 +844,13 @@ export * from './mfa/types';
 export * from './verification/types';
 export { consumeBackupCode, generateBackupCodes } from './mfa/backupCodes';
 export { createMfaGate } from './mfa/gate';
-export { mfaChallenge } from './mfa/challenge';
+export { mfaChallenge, type MfaChallengeOptions } from './mfa/challenge';
 export { mfaRoutes } from './mfa/routes';
-export { mfaManagementRoutes, type MfaStatus } from './mfa/management';
+export {
+	mfaManagementRoutes,
+	type MfaPublicFactor,
+	type MfaStatus
+} from './mfa/management';
 export { rotateMfaEncryptionKey } from './mfa/rotation';
 export type { MfaKeyRotationResult } from './mfa/rotation';
 export { mfaTotpRoutes } from './mfa/totp';
@@ -841,6 +860,7 @@ export { createInMemoryMfaStore } from './mfa/inMemoryMfaStore';
 export {
 	createNeonMfaStore,
 	createPostgresMfaStore,
+	mfaCodeAttemptsTable,
 	mfaEnrollmentsTable
 } from './mfa/postgresMfaStore';
 
@@ -1237,3 +1257,7 @@ export {
 	createPostgresSetupSessionStore,
 	setupSessionsTable
 } from './portal/postgresSetupSessionStore';
+
+export { createCredentialsApi } from './credentials/api';
+
+export { mfaSmsChallengesTable } from './mfa/scopedSmsStore';

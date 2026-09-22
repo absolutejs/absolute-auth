@@ -1,0 +1,81 @@
+{
+	"contract": 1,
+	"name": "@absolutejs/auth",
+	"releases": [
+		{
+			"version": "0.81.0",
+			"date": "2026-09-22",
+			"changes": [
+				{
+					"kind": "added",
+					"summary": "Provide fixed-route credentials APIs with inferred Eden request types and a package-owned manifest integration recipe",
+					"symbols": [
+						"createCredentialsApi"
+					]
+				},
+				{
+					"kind": "fixed",
+					"summary": "Document the required auth context session binding and protected account route"
+				},
+				{
+					"kind": "changed",
+					"summary": "Delegate configurable credential routes through shared literal-path factories while retaining the same configuration and default endpoints",
+					"symbols": [
+						"credentialsLogin",
+						"credentialsRegister",
+						"credentialsEmailVerification",
+						"credentialsPasswordReset"
+					]
+				}
+			]
+		},
+		{
+			"changes": [
+				{
+					"kind": "fixed",
+					"summary": "Document verified persistent credentials integration and correct Drizzle and migration APIs"
+				}
+			],
+			"date": "2026-09-22",
+			"version": "0.80.1"
+		},
+		{
+			"changes": [
+				{
+					"kind": "fixed",
+					"summary": "Run auth setup according to the selected session store instead of always requiring PostgreSQL"
+				},
+				{
+					"kind": "added",
+					"summary": "Support existing Drizzle PostgreSQL clients for durable auth sessions",
+					"symbols": [
+						"createPostgresAuthSessionStore"
+					]
+				}
+			],
+			"date": "2026-09-22",
+			"version": "0.80.0"
+		},
+		{
+			"changes": [
+				{
+					"kind": "breaking",
+					"migration": {
+						"instruction": "Send client_credentials requests to /auth/api/token instead of /oauth2/token and update advertised enterprise token URLs. Keep authorization_code and refresh_token requests at /oauth2/token. Prefer auth({ oidc, apikeys }) for configuration validation. API-only consumers may explicitly keep tokenRoute: /oauth2/token if no OIDC handler uses that path.",
+						"manual": true
+					},
+					"summary": "Separate API credential token routes from OIDC and reject conflicting configuration",
+					"symbols": [
+						"apiKeysRoutes",
+						"auth",
+						"createAuthApplications",
+						"AuthConfig",
+						"ApiKeysConfig"
+					]
+				}
+			],
+			"date": "2026-09-10",
+			"version": "0.79.0"
+		}
+	]
+}

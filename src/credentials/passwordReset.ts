@@ -1,16 +1,30 @@
+import type { RouteString } from '../types';
 import { Elysia, t } from 'elysia';
 import { generateSecureToken, hashPassword, hashToken } from '../crypto';
 import { type CredentialsConfig, DEFAULT_RESET_TOKEN_TTL_MS } from './config';
 import { evaluatePassword } from './passwordPolicy';
 
-export const credentialsPasswordReset = <UserType>({
+export const credentialsPasswordReset = <UserType>(
+	configuration: CredentialsConfig<UserType>
+) =>
+	credentialsPasswordResetRoute<UserType, RouteString>({
+		...configuration,
+		resetPasswordRoute:
+			configuration.resetPasswordRoute ?? '/auth/reset-password'
+	});
+export const credentialsPasswordResetRoute = <
+	UserType,
+	const Route extends RouteString = RouteString
+>({
 	credentialStore,
 	onPasswordReset,
 	onSendEmail,
 	passwordPolicy,
-	resetPasswordRoute = '/auth/reset-password',
+	resetPasswordRoute,
 	resetTokenDurationMs = DEFAULT_RESET_TOKEN_TTL_MS
-}: CredentialsConfig<UserType>) =>
+}: Omit<CredentialsConfig<UserType>, 'resetPasswordRoute'> & {
+	resetPasswordRoute: Route;
+}) =>
 	new Elysia()
 		.post(
 			`${resetPasswordRoute}/request`,

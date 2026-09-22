@@ -392,3 +392,115 @@ using it has expired; duplicate key IDs fail closed.
 ## Note
 
 This project uses Bun and is built for Elysia.
+
+## OAuth and API credential token routes
+
+As of 0.79.0, `apiKeysRoutes()` and `auth({ apikeys })` serve the
+`client_credentials` grant at `/auth/api/token` by default. OIDC authorization
+code and refresh grants continue to use `/oauth2/token`. This keeps separately
+mounted plugins from replacing each other's token handler.
+
+Update enterprise integrations and displayed token URLs to `/auth/api/token`.
+API-only applications can retain the previous URL by explicitly setting
+`apikeys.tokenRoute: '/oauth2/token'`, provided no OIDC handler uses that path.
+
+Prefer configuring both features in `auth({ oidc, apikeys })`: conflicting token
+paths are rejected during construction, including a trailing-slash alias.
+When mounting standalone plugins with custom paths, the consumer must keep
+the paths distinct; Elysia does not reject arbitrary duplicate routes.
+
+### Persistent sessions with an existing PostgreSQL client
+
+Use `createPostgresAuthSessionStore(db, decodeUser)` with an existing Drizzle
+PostgreSQL client. It uses the same session tables as the Neon convenience
+adapter; `decodeUser` validates the stored user shape when a session is read.
+Pair it with `createPostgresCredentialStore(db)` for persistent passwords.
+Your application must also persist its own user records.
+
+```ts
+import { SQL } from 'bun';
+import { drizzle } from 'drizzle-orm/bun-sql';
+import { createPostgresAuthSessionStore, createPostgresCredentialStore } from '@absolutejs/auth';
+
+const databaseUrl = process.env.DATABASE_URL;
+if (!databaseUrl) throw new Error('DATABASE_URL is required');
+const client = new SQL(databaseUrl);
+const db = drizzle({ client });
+const sessionStore = createPostgresAuthSessionStore(db, decodeUser);
+const credentialStore = createPostgresCredentialStore(db);
+```
+
+Apply the `sessions` and `credentials` migrations before serving requests.
+`runMigrations` accepts a `MigrationClient` for non-Neon PostgreSQL drivers.
+With Bun SQL, use a separate `prepare: false` client for migration scripts,
+and the default prepared-query mode for application queries and JSON columns.
+
+Studio's `absolute-auth setup` reads the selected adapter from
+`src/backend/packages/auth.config.ts`. Explicit memory storage skips database
+migrations and warns that sessions reset on restart. The Neon adapter requires
+a real `DATABASE_URL` and runs migrations. Missing or unknown selections fail
+with an actionable error; custom adapters must configure their own migrations.
+
+For a complete credentials-only Bun setup, see [Persistent email/password sign-in](docs/PERSISTENT-CREDENTIALS.md). It includes real migration and auth configuration APIs, durable user records, and driver settings.
+
+### MFA verification cooldowns
+
+TOTP challenges allow five code checks per five-minute window by default. All
+of an account's authenticator factors share this budget. Recovery codes have a
+separate budget, so a TOTP cooldown does not prevent recovery. Configure
+`mfa.totpMaxAttempts`, `mfa.backupCodeMaxAttempts`, and
+`mfa.codeAttemptWindowMs` with positive integers. Successful verification clears
+the completed reservation unless a newer request has already used the budget.
+Blocked requests never extend the fixed window. Signing in again or changing
+an authenticator does not reset it.
+
+A throttled challenge returns HTTP 429, `Retry-After` (seconds), and JSON with
+`code: "mfa_rate_limited"`, `factor`, and `retryAfterMs`. Clients should display
+the wait time and keep recovery codes and SMS accessible. Recovery codes are
+opaque, case-sensitive strings; do not restrict input to eight characters.
+
+**Upgrade:** Run the `mfa` migration block before starting updated servers; it
+adds `auth_mfa_code_attempts`. Existing `totp_failed_attempts` values are retained
+for compatibility but no longer gate verification. The built-in memory and
+Postgres stores implement atomic attempt reservations and single-use recovery
+consumption. Custom `MFAStore` implementations must implement
+`claimCodeAttempt`, `completeCodeChallenge`, and `resetCodeAttempts` with the
+atomic semantics documented on the interface. Do not use read/modify/write
+counter updates across server instances. Complete the server rollout before
+relying on the new cooldown behavior; older servers still use the legacy limit.
+
+Session status and protected-route checks do not mutate browser session cookies.
+A pending MFA session remains unauthenticated, but background requests cannot
+clear its cookie. Expired server sessions are still removed; explicit sign-out
+continues to revoke the session and expire its cookie.
+
+TOTP setup resumes an existing unfinished enrollment instead of replacing its
+secret. QR account labels use the chosen device name (for example, `onSpark: Ember Admin`),
+without internal user or factor IDs. Set `mfa.getDefaultTotpLabel` to resolve a
+friendly default from the authenticated user (for example, their email) when
+the submitted name is blank. Custom names take precedence; unfinished setup
+retains its original name and secret. Existing authenticator entries retain their
+locally saved names; users can rename them in their authenticator app.
+`MFAStore.saveTotpEnrollment` must atomically compare factors and recovery hashes
+and update only TOTP enrollment fields, preserving unrelated SMS state.
+Verification retries preserve existing recovery codes, including when adding a
+device. An empty `backupCodes` response means saved codes are unchanged.
+To tolerate a lost first response, newly issued codes have an AES-GCM encrypted
+receipt in factor JSON, replayable for ten minutes after a valid TOTP and recent
+sign-in. The receipt key is domain-separated and derived from the TOTP secret;
+consumed codes are excluded from replay. Normal verification stores hashes only.
+
+SMS sign-in state is isolated by account, pending session, and selected phone.
+`getSmsChallengeStore` must provide durable atomic claim/finalize/consume/failure/
+rollback operations for that scope. The Postgres implementation uses the
+`auth_mfa_sms_challenges` table (migration `mfa/0008_scoped_sms_challenges`),
+expires rows with their pending sessions, and clears rows on enrollment removal.
+Enrollment SMS state remains separate. Existing SMS codes must be requested again
+once the new server version is active; enrolled phones are unchanged.
+
+Resend cooldown responses include `sms_resend_cooldown`, `retryAfterMs`, and
+`Retry-After`; successful sends include `retryAfterMs` and `expiresAt`.
+A separate `sms_send` attempt budget limits account-wide delivery attempts to ten
+per five minutes by default (`smsSendMaxAttempts` / `smsSendWindowMs`). It does not
+invalidate issued codes or block authenticator/recovery verification. SMS senders
+must throw on delivery failure; scoped rollback preserves the previous challenge.

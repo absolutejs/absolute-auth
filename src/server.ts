@@ -74,3 +74,5 @@ export {
 	isValidProviderOption,
 	providers
 } from 'citra';
+
+export { createCredentialsApi } from './credentials/api';

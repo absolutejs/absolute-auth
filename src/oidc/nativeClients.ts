@@ -35,7 +35,10 @@ const requireUrl = (value: unknown, field: string) => {
 	return url.href;
 };
 
-const parseClient = (value: unknown, index: number): AbsoluteNativeAuthClient => {
+const parseClient = (
+	value: unknown,
+	index: number
+): AbsoluteNativeAuthClient => {
 	if (!isRecord(value))
 		throw new TypeError(
 			`${ABSOLUTE_NATIVE_AUTH_CLIENTS_ENV}[${index}] must be an object.`
@@ -91,7 +94,9 @@ export const parseAbsoluteNativeAuthClients = (
 			`${ABSOLUTE_NATIVE_AUTH_CLIENTS_ENV} must contain an array.`
 		);
 	const clients = value.map(parseClient);
-	if (new Set(clients.map(({ clientId }) => clientId)).size !== clients.length)
+	if (
+		new Set(clients.map(({ clientId }) => clientId)).size !== clients.length
+	)
 		throw new TypeError(
 			`${ABSOLUTE_NATIVE_AUTH_CLIENTS_ENV} contains duplicate clientId values.`
 		);
@@ -124,7 +129,8 @@ export const withAbsoluteNativeAuthClients = (
 			? { deleteClient: clientStore.deleteClient.bind(clientStore) }
 			: {}),
 		findClient: async (clientId) =>
-			(await clientStore.findClient(clientId)) ?? provisioned.get(clientId),
+			(await clientStore.findClient(clientId)) ??
+			provisioned.get(clientId),
 		...(clientStore.saveClient
 			? { saveClient: clientStore.saveClient.bind(clientStore) }
 			: {}),

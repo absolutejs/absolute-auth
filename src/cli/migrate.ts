@@ -11,12 +11,14 @@
 //   help     print this message
 
 import { importers, runImport } from './import';
+import { runSetup } from './setup';
 import { blockMigrations, type BlockName, runMigrations } from '../migrations';
 
 const TOP_USAGE = `Usage:
   bunx absolute-auth <command> [options]
 
 Commands:
+  setup                  Set up storage selected in the project auth config
   migrate                Apply the package's Drizzle migrations
   import <source> <file> Import a user export from another auth library
                          <source> is one of: ${Object.keys(importers).sort().join(', ')}
@@ -236,6 +238,15 @@ const main = async () => {
 	const command = argv.shift();
 	if (command === undefined || command === 'help' || command === '--help') {
 		process.stdout.write(TOP_USAGE);
+
+		return;
+	}
+	if (command === 'setup') {
+		if (argv.length > 0)
+			throw new Error(
+				'setup takes no arguments; it reads src/backend/packages/auth.config.ts'
+			);
+		await runSetup();
 
 		return;
 	}

@@ -86,6 +86,17 @@ const post = (
 		})
 	);
 
+const get = (
+	app: { handle: (request: Request) => Promise<Response> },
+	path: string,
+	cookie: string
+) =>
+	app.handle(
+		new Request(`http://localhost${path}`, {
+			headers: { cookie }
+		})
+	);
+
 const cookieFrom = (response: Response) =>
 	response.headers
 		.getSetCookie()
@@ -170,6 +181,16 @@ describe('MFA challenge integration', () => {
 			status: 'mfa_required'
 		});
 		const pending = cookieFrom(login);
+		const options = await get(app, '/auth/mfa/challenge', pending);
+		expect(options.status).toBe(200);
+		expect(await options.json()).toMatchObject({
+			factors: [
+				{
+					phone: '••••••••0100',
+					type: 'sms'
+				}
+			]
+		});
 		expect(
 			(
 				await post(
@@ -278,8 +299,10 @@ describe('MFA challenge integration', () => {
 				{ code: '000000' },
 				pending
 			);
-			expect(wrong.status).toBe(401);
-			expect(await wrong.text()).toContain('Invalid MFA code');
+			expect(wrong.status).toBe(attempt === 2 ? 429 : 401);
+			expect(await wrong.text()).toContain(
+				attempt === 2 ? 'mfa_rate_limited' : 'Invalid MFA code'
+			);
 		}
 
 		// A valid code is now rejected: the lockout gates before verification.
@@ -289,8 +312,8 @@ describe('MFA challenge integration', () => {
 			{ code: await generateTotp({ secret }) },
 			pending
 		);
-		expect(lockedOut.status).toBe(401);
-		expect(await lockedOut.text()).toContain('Too many attempts');
+		expect(lockedOut.status).toBe(429);
+		expect(await lockedOut.text()).toContain('mfa_rate_limited');
 	});
 
 	test('a successful challenge resets the TOTP failed-attempt counter', async () => {

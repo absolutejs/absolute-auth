@@ -1,3 +1,4 @@
+import { mfaSmsChallengesTable } from '../mfa/scopedSmsStore';
 // Single export of every block's migrations. Consumers pick which blocks they enabled
 // in `auth()` and pass that subset to `runMigrations({ blocks: [...] })`, or omit `blocks`
 // to apply every migration the package ships. Adding a new block's migrations: import its
@@ -29,7 +30,10 @@ import {
 	linkedProviderGrantsTable
 } from '../linkedProviders/neonStores';
 import { lockoutsTable } from '../lockout/postgresLockoutStore';
-import { mfaEnrollmentsTable } from '../mfa/postgresMfaStore';
+import {
+	mfaCodeAttemptsTable,
+	mfaEnrollmentsTable
+} from '../mfa/postgresMfaStore';
 import {
 	oauthBackchannelAuthRequestsTable,
 	oauthClientAssertionJtisTable,
@@ -141,6 +145,14 @@ const mfaSmsAtomicChallengeMigration: Migration = {
 	sql: 'ALTER TABLE "auth_mfa_enrollments" ADD COLUMN IF NOT EXISTS "sms_challenge_id" text;'
 };
 
+const mfaMultipleFactorsMigration: Migration = {
+	id: '0006_multiple_factors',
+	sql: [
+		'ALTER TABLE "auth_mfa_enrollments" ADD COLUMN IF NOT EXISTS "mfa_factors" jsonb;',
+		'ALTER TABLE "auth_mfa_enrollments" ADD COLUMN IF NOT EXISTS "sms_pending_factor_id" text;'
+	].join('\n')
+};
+
 const oidcResourceAudienceMigration: Migration = {
 	id: '0002_resource_audience',
 	sql: [
@@ -224,7 +236,16 @@ export const blockMigrations: Record<BlockName, BlockMigrations> = {
 			mfaSmsColumnsMigration,
 			mfaTotpLockoutMigration,
 			mfaSmsDeliveryPolicyMigration,
-			mfaSmsAtomicChallengeMigration
+			mfaSmsAtomicChallengeMigration,
+			mfaMultipleFactorsMigration,
+			{
+				id: '0007_timed_code_attempts',
+				sql: tablesToInitSql([mfaCodeAttemptsTable])
+			},
+			{
+				id: '0008_scoped_sms_challenges',
+				sql: tablesToInitSql([mfaSmsChallengesTable])
+			}
 		]
 	},
 	oidc: {

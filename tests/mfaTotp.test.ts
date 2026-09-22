@@ -82,6 +82,43 @@ describe('TOTP enrollment', () => {
 		expect(verifyRes.status).toBe(400);
 	});
 
+	test('enrolls multiple independently labeled authenticator factors', async () => {
+		const { app, mfaStore } = await buildTotpApp();
+		const alexSetup = await (
+			await authedPost(app, '/auth/mfa/totp/setup', { label: 'Alex' })
+		).json();
+		expect(
+			(
+				await authedPost(app, '/auth/mfa/totp/verify', {
+					code: await generateTotp({ secret: alexSetup.secret }),
+					factorId: alexSetup.factorId
+				})
+			).status
+		).toBe(200);
+		const kyleSetup = await (
+			await authedPost(app, '/auth/mfa/totp/setup', { label: 'Kyle' })
+		).json();
+		expect(
+			(
+				await authedPost(app, '/auth/mfa/totp/verify', {
+					code: await generateTotp({ secret: kyleSetup.secret }),
+					factorId: kyleSetup.factorId
+				})
+			).status
+		).toBe(200);
+
+		const enrollment = await mfaStore.getEnrollment('user-mfa');
+		expect(
+			enrollment?.factors?.map(({ label, verified }) => ({
+				label,
+				verified
+			}))
+		).toEqual([
+			{ label: 'Alex', verified: true },
+			{ label: 'Kyle', verified: true }
+		]);
+	});
+
 	test('requires authentication to set up', async () => {
 		const { app } = await buildTotpApp();
 

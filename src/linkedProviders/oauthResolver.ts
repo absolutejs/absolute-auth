@@ -1,3 +1,4 @@
+import { LinkedProviderCredentialError } from './credentialError';
 import type {
 	LinkedProviderBindingStore,
 	LinkedProviderGrant,
@@ -103,11 +104,19 @@ export const createOAuthLinkedProviderCredentialResolver = async ({
 					}
 				: null,
 		refreshAccessTokenLease: async (grant) => {
-			if (
-				!isValidProviderOption(grant.authProviderKey) ||
-				!grant.refreshTokenCiphertext
-			) {
-				return null;
+			if (!grant.refreshTokenCiphertext) {
+				throw new LinkedProviderCredentialError(
+					'missing_refresh_token',
+					'reconnect',
+					'Authorization cannot renew automatically. Reconnect your account.'
+				);
+			}
+			if (!isValidProviderOption(grant.authProviderKey)) {
+				throw new LinkedProviderCredentialError(
+					'unsupported_provider',
+					'configuration',
+					'This provider cannot renew the connection. Contact support.'
+				);
 			}
 
 			const providerKey = grant.authProviderKey;
@@ -126,7 +135,11 @@ export const createOAuthLinkedProviderCredentialResolver = async ({
 				'error' in resolvedProviderClientConfiguration ||
 				!resolvedProviderClientConfiguration.config
 			) {
-				return null;
+				throw new LinkedProviderCredentialError(
+					'provider_configuration',
+					'configuration',
+					'The provider connection is misconfigured. Contact support.'
+				);
 			}
 			const providerClient = await createOAuth2Client(
 				providerKey,
@@ -136,7 +149,11 @@ export const createOAuthLinkedProviderCredentialResolver = async ({
 				!providerClient ||
 				!isRefreshableOAuth2Client(providerKey, providerClient)
 			) {
-				return null;
+				throw new LinkedProviderCredentialError(
+					'unsupported_refresh',
+					'configuration',
+					'This provider cannot renew the connection. Contact support.'
+				);
 			}
 
 			const tokenResponse = await providerClient.refreshAccessToken(

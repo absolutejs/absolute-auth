@@ -1,3 +1,4 @@
+import type { RouteString } from '../types';
 import { Elysia, t } from 'elysia';
 import { generateSecureToken, hashToken } from '../crypto';
 import { isStatusResponse } from '../typeGuards';
@@ -6,7 +7,17 @@ import {
 	DEFAULT_VERIFICATION_TOKEN_TTL_MS
 } from './config';
 
-export const credentialsEmailVerification = <UserType>({
+export const credentialsEmailVerification = <UserType>(
+	configuration: CredentialsConfig<UserType>
+) =>
+	credentialsEmailVerificationRoute<UserType, RouteString>({
+		...configuration,
+		verifyEmailRoute: configuration.verifyEmailRoute ?? '/auth/verify-email'
+	});
+export const credentialsEmailVerificationRoute = <
+	UserType,
+	const Route extends RouteString = RouteString
+>({
 	credentialStore,
 	getUserByEmail,
 	onCreateCredentialUser,
@@ -15,8 +26,10 @@ export const credentialsEmailVerification = <UserType>({
 	onSendEmail,
 	requireEmailVerification = false,
 	verificationTokenDurationMs = DEFAULT_VERIFICATION_TOKEN_TTL_MS,
-	verifyEmailRoute = '/auth/verify-email'
-}: CredentialsConfig<UserType>) =>
+	verifyEmailRoute
+}: Omit<CredentialsConfig<UserType>, 'verifyEmailRoute'> & {
+	verifyEmailRoute: Route;
+}) =>
 	new Elysia()
 		.post(
 			verifyEmailRoute,

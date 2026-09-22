@@ -2,9 +2,33 @@ import type { VerificationPurpose } from '../verification/types';
 
 export type MfaFactorType = 'backup_codes' | 'sms' | 'totp';
 
+export type SmsMfaFactor = {
+	id: string;
+	label: string;
+	phone: string;
+	type: 'sms';
+	verified: boolean;
+};
+
+export type TotpMfaFactor = {
+	/** Encrypted first-enrollment receipt, replayable only briefly after a valid TOTP. */
+	recoveryReceipt?: string;
+	recoveryReceiptExpiresAt?: number;
+	id: string;
+	label: string;
+	secretCiphertext: string;
+	type: 'totp';
+	verified: boolean;
+};
+
+export type MfaFactor = SmsMfaFactor | TotpMfaFactor;
+
 export type MfaEnrollment = {
 	backupCodeHashes: string[];
 	createdAt: number;
+	/** Labeled factor collection. Undefined means a legacy single-factor row that
+	 * has not yet been rewritten by a management operation. */
+	factors?: MfaFactor[];
 	lastUsedAt?: number;
 	// Count of consecutive failed SMS code verifications since the last fresh code was
 	// issued. Reset to 0 whenever a new code is sent and on a successful verification.
@@ -16,6 +40,8 @@ export type MfaEnrollment = {
 	smsPendingCodeExpiresAt?: number;
 	// Purpose and provider reference bind a code to the exact auth operation that issued it.
 	smsPendingPurpose?: VerificationPurpose;
+	/** Factor selected for the currently active SMS enrollment/challenge. */
+	smsPendingFactorId?: string;
 	smsProviderReference?: string;
 	// Last successful provider/local delivery request. Enforces resend cooldowns.
 	smsCodeSentAt?: number;
@@ -24,9 +50,7 @@ export type MfaEnrollment = {
 	// E.164 phone number the SMS code is delivered to.
 	smsPhone?: string;
 	smsVerified: boolean;
-	// Count of consecutive failed TOTP/backup-code verifications at the login challenge.
-	// Tracked separately from any first-factor (password) lockout and reset to 0 on a
-	// successful second-factor verification. Independent of `smsFailedAttempts`.
+	/** @deprecated Legacy counter. Timed, atomic challenge limits supersede it. */
 	totpFailedAttempts?: number;
 	// TOTP secret encrypted at rest (AES-GCM) when an encryption key is configured,
 	// otherwise the raw base32 secret. Never the user's typed code.
@@ -36,7 +60,60 @@ export type MfaEnrollment = {
 	userId: string;
 };
 
+export type MfaAttemptFactor = 'totp' | 'backup_codes' | 'sms_send';
+export type MfaAttempt = {
+	allowed: boolean;
+	attempts: number;
+	retryAfterMs: number;
+	windowStartedAt: number;
+};
+
+export type SmsChallengeScope = {
+	userId: string;
+	sessionId: string;
+	factorId: string;
+	expiresAt: number;
+};
+export type SmsChallengeStore = Pick<
+	MFAStore,
+	| 'claimSmsChallenge'
+	| 'completeSmsChallenge'
+	| 'finalizeSmsChallenge'
+	| 'getEnrollment'
+	| 'recordSmsFailure'
+	| 'rollbackSmsChallenge'
+>;
+
 export type MFAStore = {
+	/** Durable SMS state isolated to this pending login and selected phone. */
+	getSmsChallengeStore: (
+		scope: SmsChallengeScope
+	) => Promise<SmsChallengeStore>;
+	/** Compare-and-swap TOTP fields and recovery hashes only; preserve unrelated SMS state. */
+	saveTotpEnrollment: (input: {
+		expected: MfaEnrollment | undefined;
+		enrollment: MfaEnrollment;
+	}) => Promise<boolean>;
+	/** Reserve before checking a code. Must be atomic across all server instances. */
+	claimCodeAttempt: (input: {
+		userId: string;
+		factor: MfaAttemptFactor;
+		maxAttempts: number;
+		windowMs: number;
+		now: number;
+	}) => Promise<MfaAttempt>;
+	/** Atomically consume a recovery hash, if supplied, and update only challenge fields. */
+	completeCodeChallenge: (input: {
+		userId: string;
+		backupCodeHash?: string;
+		now: number;
+	}) => Promise<boolean>;
+	/** Clear only the reservation just completed, without erasing concurrent attempts. */
+	resetCodeAttempts: (input: {
+		userId: string;
+		factor: MfaAttemptFactor;
+		attempt: MfaAttempt;
+	}) => Promise<void>;
 	/** Atomically reserves the SMS slot only when the resend cooldown has elapsed. */
 	claimSmsChallenge: (input: {
 		challengeId: string;
@@ -45,6 +122,7 @@ export type MFAStore = {
 	}) => Promise<boolean>;
 	completeSmsChallenge: (input: {
 		challengeId: string;
+		factors?: MfaFactor[];
 		lastUsedAt?: number;
 		smsVerified: boolean;
 		userId: string;
@@ -74,10 +152,56 @@ export type MFAStore = {
 	saveEnrollment: (enrollment: MfaEnrollment) => Promise<void>;
 };
 
+const LEGACY_SMS_FACTOR_ID = 'legacy-sms';
+const LEGACY_TOTP_FACTOR_ID = 'legacy-totp';
+
+export const getMfaFactors = (enrollment: MfaEnrollment) => {
+	if (enrollment.factors !== undefined) return enrollment.factors;
+	const factors: MfaFactor[] = [];
+	if (enrollment.totpSecretCiphertext) {
+		factors.push({
+			id: LEGACY_TOTP_FACTOR_ID,
+			label: 'Authenticator app',
+			secretCiphertext: enrollment.totpSecretCiphertext,
+			type: 'totp',
+			verified: enrollment.totpVerified
+		});
+	}
+	if (enrollment.smsPhone) {
+		factors.push({
+			id: LEGACY_SMS_FACTOR_ID,
+			label: 'Text message',
+			phone: enrollment.smsPhone,
+			type: 'sms',
+			verified: enrollment.smsVerified
+		});
+	}
+
+	return factors;
+};
+
 // A user is gated by MFA once a factor is usable: a verified TOTP secret, a verified
 // SMS phone, or any remaining backup code.
 export const isMfaEnrolled = (enrollment: MfaEnrollment | undefined) =>
 	enrollment !== undefined &&
-	(enrollment.totpVerified ||
-		enrollment.smsVerified ||
+	(getMfaFactors(enrollment).some((factor) => factor.verified) ||
 		enrollment.backupCodeHashes.length > 0);
+
+/** Keep the historical single-factor columns synchronized for consumers that
+ * have not moved to the factor collection yet. */
+export const withMfaFactors = (
+	enrollment: MfaEnrollment,
+	factors: MfaFactor[]
+) => {
+	const firstSms = factors.find((factor) => factor.type === 'sms');
+	const firstTotp = factors.find((factor) => factor.type === 'totp');
+
+	return {
+		...enrollment,
+		factors,
+		smsPhone: firstSms?.phone,
+		smsVerified: firstSms?.verified ?? false,
+		totpSecretCiphertext: firstTotp?.secretCiphertext,
+		totpVerified: firstTotp?.verified ?? false
+	};
+};
