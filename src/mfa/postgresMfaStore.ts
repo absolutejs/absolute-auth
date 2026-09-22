@@ -379,6 +379,42 @@ export const createPostgresMfaStore = <DB extends AnyPgDatabase>(
 					set: values,
 					target: mfaEnrollmentsTable.user_id
 				});
+		},
+		saveTotpEnrollment: async ({ expected, enrollment }) => {
+			const table = mfaEnrollmentsTable;
+			const values = toValues(enrollment);
+			if (!expected) {
+				const rows = await db
+					.insert(table)
+					.values(values)
+					.onConflictDoNothing()
+					.returning({ userId: table.user_id });
+
+				return rows.length === 1;
+			}
+			const rows = await db
+				.update(table)
+				.set({
+					backup_code_hashes: values.backup_code_hashes,
+					mfa_factors: values.mfa_factors,
+					totp_secret_ciphertext: values.totp_secret_ciphertext,
+					totp_verified: values.totp_verified,
+					updated_at_ms: values.updated_at_ms
+				})
+				.where(
+					and(
+						eq(table.user_id, enrollment.userId),
+						expected.factors === undefined
+							? isNull(table.mfa_factors)
+							: sql`${table.mfa_factors} = ${JSON.stringify(expected.factors)}::jsonb`,
+						sql`${table.backup_code_hashes} = ${JSON.stringify(expected.backupCodeHashes)}::jsonb`,
+						sql`${table.totp_secret_ciphertext} IS NOT DISTINCT FROM ${expected.totpSecretCiphertext ?? null}`,
+						eq(table.totp_verified, expected.totpVerified)
+					)
+				)
+				.returning({ userId: table.user_id });
+
+			return rows.length === 1;
 		}
 	};
 };

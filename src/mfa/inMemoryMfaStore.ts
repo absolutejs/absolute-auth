@@ -180,6 +180,37 @@ export const createInMemoryMfaStore = (): MFAStore => {
 		},
 		saveEnrollment: async (enrollment) => {
 			enrollments.set(enrollment.userId, cloneEnrollment(enrollment));
+		},
+		saveTotpEnrollment: async ({ expected, enrollment }) => {
+			const current = enrollments.get(enrollment.userId);
+			if (
+				JSON.stringify(current?.factors) !==
+					JSON.stringify(expected?.factors) ||
+				JSON.stringify(current?.backupCodeHashes) !==
+					JSON.stringify(expected?.backupCodeHashes) ||
+				current?.totpSecretCiphertext !==
+					expected?.totpSecretCiphertext ||
+				current?.totpVerified !== expected?.totpVerified
+			)
+				return false;
+			enrollments.set(
+				enrollment.userId,
+				cloneEnrollment(
+					current
+						? {
+								...current,
+								backupCodeHashes: enrollment.backupCodeHashes,
+								factors: enrollment.factors,
+								totpSecretCiphertext:
+									enrollment.totpSecretCiphertext,
+								totpVerified: enrollment.totpVerified,
+								updatedAt: enrollment.updatedAt
+							}
+						: enrollment
+				)
+			);
+
+			return true;
 		}
 	};
 };

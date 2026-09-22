@@ -473,3 +473,14 @@ Session status and protected-route checks do not mutate browser session cookies.
 A pending MFA session remains unauthenticated, but background requests cannot
 clear its cookie. Expired server sessions are still removed; explicit sign-out
 continues to revoke the session and expire its cookie.
+
+TOTP setup resumes an existing unfinished enrollment instead of replacing its
+secret. QR account labels include the device label and a factor identifier.
+`MFAStore.saveTotpEnrollment` must atomically compare factors and recovery hashes
+and update only TOTP enrollment fields, preserving unrelated SMS state.
+Verification retries preserve existing recovery codes, including when adding a
+device. An empty `backupCodes` response means saved codes are unchanged.
+To tolerate a lost first response, newly issued codes have an AES-GCM encrypted
+receipt in factor JSON, replayable for ten minutes after a valid TOTP and recent
+sign-in. The receipt key is domain-separated and derived from the TOTP secret;
+consumed codes are excluded from replay. Normal verification stores hashes only.

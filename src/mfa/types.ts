@@ -11,6 +11,9 @@ export type SmsMfaFactor = {
 };
 
 export type TotpMfaFactor = {
+	/** Encrypted first-enrollment receipt, replayable only briefly after a valid TOTP. */
+	recoveryReceipt?: string;
+	recoveryReceiptExpiresAt?: number;
 	id: string;
 	label: string;
 	secretCiphertext: string;
@@ -66,6 +69,11 @@ export type MfaAttempt = {
 };
 
 export type MFAStore = {
+	/** Compare-and-swap TOTP fields and recovery hashes only; preserve unrelated SMS state. */
+	saveTotpEnrollment: (input: {
+		expected: MfaEnrollment | undefined;
+		enrollment: MfaEnrollment;
+	}) => Promise<boolean>;
 	/** Reserve before checking a code. Must be atomic across all server instances. */
 	claimCodeAttempt: (input: {
 		userId: string;
