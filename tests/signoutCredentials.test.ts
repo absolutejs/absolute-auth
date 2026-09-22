@@ -4,7 +4,7 @@ import type { CredentialsConfig } from '../src/credentials/config';
 import { credentialsLogin } from '../src/credentials/login';
 import { credentialsRegister } from '../src/credentials/register';
 import { createInMemoryCredentialStore } from '../src/credentials/inMemoryCredentialStore';
-import { signout } from '../src/routes/signout';
+import { signout, createSignoutApi } from '../src/routes/signout';
 import type { AuthSessionStore } from '../src/session/types';
 
 // Repros issue #7: `DELETE /oauth2/signout` 401'd on credentials sessions because the
@@ -106,7 +106,7 @@ describe('credentials signout (issue #7)', () => {
 			setUnregisteredSession: async () => undefined
 		};
 		const app = new Elysia().use(
-			signout({ authSessionStore: store, onSignOut: undefined })
+			createSignoutApi({ authSessionStore: store })
 		);
 		const response = await app.handle(
 			new Request('http://localhost/oauth2/signout', {

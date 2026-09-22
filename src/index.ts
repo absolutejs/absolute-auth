@@ -1258,3 +1258,5 @@ export {
 } from './portal/postgresSetupSessionStore';
 
 export { createCredentialsApi } from './credentials/api';
+
+export { createSignoutApi } from './routes/signout';

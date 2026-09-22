@@ -129,3 +129,18 @@ when absent, and scope database access to that user. Export the narrow business
 subapp type for its own Eden client inside React Query. A compiler pass is
 necessary, but real signup, login, reset, authorization and persistence tests
 are still required.
+
+## Typed sign-out (0.82.0+)
+
+For a credentials-only application, mount `createSignoutApi({ authSessionStore })`
+from `@absolutejs/auth/server` alongside `createCredentialsApi`. This provides
+DELETE `/oauth2/signout` with the package's existing revocation and cookie policy.
+Export that narrow subapp and call `treaty<typeof sessionApi>(origin).oauth2.signout.delete()`
+inside a React Query mutation. Check errors before clearing client state. Do not
+create a raw fetch fallback or a forwarding endpoint. When also mounting full
+`auth` for OAuth, its default sign-out path is already present; do not register
+duplicate sign-out handlers with different stores or hooks.
+
+Elysia 2 business routes with request schemas use
+`.post('/api/bookings', { body: t.Object({ classId: t.String() }) }, ({ body }) => ...)`.
+The schema/options argument precedes the handler.

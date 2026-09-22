@@ -28,3 +28,14 @@ export type ResetBody = Assert<
 		{ password: string; token: string }
 	>
 >;
+
+import { createSignoutApi } from '../src/server';
+type SessionRoutes = ReturnType<
+	typeof createSignoutApi<{ id: string }>
+>['~Routes'];
+export type SignoutPath = Assert<
+	Equal<keyof SessionRoutes['oauth2'], 'signout'>
+>;
+export type SignoutMethod = Assert<
+	Equal<keyof SessionRoutes['oauth2']['signout'], 'delete'>
+>;

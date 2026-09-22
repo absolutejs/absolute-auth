@@ -3,8 +3,19 @@
 	"name": "@absolutejs/auth",
 	"releases": [
 		{
-			"version": "0.81.0",
+			"changes": [
+				{
+					"kind": "added",
+					"summary": "Expose a fixed-path sign-out subapp for directly inferred Eden clients and document Elysia 2 schema argument order",
+					"symbols": [
+						"createSignoutApi"
+					]
+				}
+			],
 			"date": "2026-09-22",
+			"version": "0.82.0"
+		},
+		{
 			"changes": [
 				{
 					"kind": "added",
@@ -27,7 +38,9 @@
 						"credentialsPasswordReset"
 					]
 				}
-			]
+			],
+			"date": "2026-09-22",
+			"version": "0.81.0"
 		},
 		{
 			"changes": [
