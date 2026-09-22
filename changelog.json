@@ -6,6 +6,16 @@
 			"changes": [
 				{
 					"kind": "fixed",
+					"summary": "Document verified persistent credentials integration and correct Drizzle and migration APIs"
+				}
+			],
+			"date": "2026-09-22",
+			"version": "0.80.1"
+		},
+		{
+			"changes": [
+				{
+					"kind": "fixed",
 					"summary": "Run auth setup according to the selected session store instead of always requiring PostgreSQL"
 				},
 				{

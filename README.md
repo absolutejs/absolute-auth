@@ -440,3 +440,5 @@ Studio's `absolute-auth setup` reads the selected adapter from
 migrations and warns that sessions reset on restart. The Neon adapter requires
 a real `DATABASE_URL` and runs migrations. Missing or unknown selections fail
 with an actionable error; custom adapters must configure their own migrations.
+
+For a complete credentials-only Bun setup, see [Persistent email/password sign-in](docs/PERSISTENT-CREDENTIALS.md). It includes real migration and auth configuration APIs, durable user records, and driver settings.
