@@ -1,14 +1,10 @@
 import { describe, expect, spyOn, test } from 'bun:test';
-import { Elysia } from 'elysia';
 import type {
 	CredentialEmailMessage,
 	CredentialsConfig
 } from '../src/credentials/config';
-import { credentialsEmailVerification } from '../src/credentials/emailVerification';
-import { credentialsLogin } from '../src/credentials/login';
-import { credentialsPasswordReset } from '../src/credentials/passwordReset';
+import { createCredentialsApi } from '../src/credentials/api';
 import { createInMemoryCredentialStore } from '../src/credentials/inMemoryCredentialStore';
-import { credentialsRegister } from '../src/credentials/register';
 
 type TestUser = {
 	email: string;
@@ -34,11 +30,7 @@ const buildHarness = (overrides: Partial<CredentialsConfig<TestUser>> = {}) => {
 		},
 		...overrides
 	};
-	const app = new Elysia()
-		.use(credentialsRegister(config))
-		.use(credentialsEmailVerification(config))
-		.use(credentialsLogin(config))
-		.use(credentialsPasswordReset(config));
+	const app = createCredentialsApi(config);
 
 	return { app, credentialStore, sent, users };
 };
@@ -355,7 +347,7 @@ describe('registration session behavior', () => {
 			},
 			onSendEmail: () => undefined
 		};
-		const app = new Elysia().use(credentialsRegister(config));
+		const app = createCredentialsApi(config);
 
 		await postJson(app, '/auth/register', {
 			email: 'extra@example.com',

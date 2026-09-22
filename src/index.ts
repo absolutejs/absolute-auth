@@ -1256,3 +1256,5 @@ export {
 	createPostgresSetupSessionStore,
 	setupSessionsTable
 } from './portal/postgresSetupSessionStore';
+
+export { createCredentialsApi } from './credentials/api';

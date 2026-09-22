@@ -1,3 +1,4 @@
+import { credentialsIntegrationSource } from './credentials/integration';
 import {
 	defineImplementation,
 	defineManifest,
@@ -259,6 +260,42 @@ export const manifest = defineManifest<AuthConfig<unknown>, never>()({
 		}
 	},
 	tools: {
+		get_credentials_integration: tool.workspace({
+			annotations: { readOnlyHint: true },
+			authorization: {
+				approval: 'never',
+				audience: 'admin',
+				effects: ['read'],
+				requiredScopes: ['auth:inspect']
+			},
+			capabilities: ['read'],
+			description:
+				'Get the package-owned typed email/password API and protected account route recipe. Reuse createCredentialsApi rather than inventing request wrappers. Requires application-owned user callbacks, a durable session and credential store, and real email delivery.',
+			input: Type.Object({}),
+			handler: () =>
+				JSON.stringify({
+					configurationModule: 'credentials.config.ts',
+					requiredBindings: [
+						'authSessionStore',
+						'credentialStore',
+						'getUserByEmail',
+						'onCreateCredentialUser',
+						'onSendEmail'
+					],
+					requiredExport: 'credentialsConfiguration',
+					routes: [
+						'POST /auth/register',
+						'POST /auth/login',
+						'POST /auth/verify-email',
+						'POST /auth/verify-email/request',
+						'POST /auth/reset-password',
+						'POST /auth/reset-password/request'
+					],
+					source: credentialsIntegrationSource,
+					validation:
+						'Typecheck the generated module and run signup, login, verification, reset and protected-route tests. Never replace missing infrastructure with an in-memory production store or no-op email delivery.'
+				})
+		}),
 		list_sign_in_providers: tool.workspace({
 			annotations: { readOnlyHint: true },
 			authorization: {
@@ -296,7 +333,7 @@ export const manifest = defineManifest<AuthConfig<unknown>, never>()({
 	wiring: [
 		{
 			description:
-				'Sign in with Google, GitHub, and 60+ other services. Add email/password later from settings.',
+				'Sign in with Google, GitHub, and 60+ other services. For email/password use get_credentials_integration and supply application-owned user, storage and email bindings.',
 			id: 'default',
 			server: {
 				code: [

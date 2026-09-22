@@ -1,5 +1,5 @@
 {
-	"version": "0.80.1",
+	"version": "0.81.0",
 	"name": "@absolutejs/auth",
 	"description": "An authorization library for absolutejs",
 	"repository": {
@@ -24,9 +24,10 @@
 		"lint": "absolute eslint",
 		"typecheck": "absolute typecheck",
 		"verify-package": "absolute-manifest verify-package",
-		"check:package": "bun run typecheck && bun run lint && bun run test && bun run build && bun run verify-package && absolute-changelog check",
+		"check:package": "bun run typecheck && bun run typecheck:credentials && bun run lint && bun run test && bun run build && bun run verify-package && absolute-changelog check",
 		"release": "bun run format && bun run check:package && npm publish",
-		"prepublishOnly": "bun run check:package"
+		"prepublishOnly": "bun run check:package",
+		"typecheck:credentials": "tsc --project tsconfig.credentials.json"
 	},
 	"keywords": [
 		"authorization",

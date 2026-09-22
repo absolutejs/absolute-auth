@@ -3,6 +3,33 @@
 	"name": "@absolutejs/auth",
 	"releases": [
 		{
+			"version": "0.81.0",
+			"date": "2026-09-22",
+			"changes": [
+				{
+					"kind": "added",
+					"summary": "Provide fixed-route credentials APIs with inferred Eden request types and a package-owned manifest integration recipe",
+					"symbols": [
+						"createCredentialsApi"
+					]
+				},
+				{
+					"kind": "fixed",
+					"summary": "Document the required auth context session binding and protected account route"
+				},
+				{
+					"kind": "changed",
+					"summary": "Delegate configurable credential routes through shared literal-path factories while retaining the same configuration and default endpoints",
+					"symbols": [
+						"credentialsLogin",
+						"credentialsRegister",
+						"credentialsEmailVerification",
+						"credentialsPasswordReset"
+					]
+				}
+			]
+		},
+		{
 			"changes": [
 				{
 					"kind": "fixed",

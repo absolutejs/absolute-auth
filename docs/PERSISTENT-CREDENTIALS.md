@@ -95,9 +95,37 @@ Important API details:
 - Keep `prepare: false` on the migration client only. Application queries need
   Bun's default prepared mode to encode JSON session data correctly.
 - The built-in sign-out route is `DELETE /oauth2/signout`.
-- Use `createAuthContext<Customer>()` from `/server` to read typed authenticated
+- Use `createAuthContext<Customer>({ authSessionStore: sessions })` from `/server` to read typed authenticated
   users. Business APIs must check the session server-side and scope records to
   that user. Do not implement a second password or cookie system.
 - Preserve cookie headers when exposing a narrow typed JSON wrapper around the
   package's configurable credential routes. Never store session tokens in browser
   localStorage. Browser business requests belong in typed Eden + React Query.
+
+## Typed credential routes (0.81.0+)
+
+Use `createCredentialsApi` from `@absolutejs/auth/server` for fixed, directly
+Eden-typed login, registration, verification and password-reset routes. Supply
+application-owned credentials callbacks, cookie policy and a durable session
+store. Mount this subapp instead of the `credentials` block on `auth`; keep
+`auth` for OAuth/sign-out. No forwarding wrappers are needed.
+
+The manifest tool `get_credentials_integration` returns the exact integration
+source and required bindings. `credentialsConfiguration` is your application
+module, not a package export: it supplies `authSessionStore`, `credentialStore`,
+`getUserByEmail`, `onCreateCredentialUser`, and real `onSendEmail` delivery.
+Configure trusted origins, verification and password policy. Never invent these
+bindings, substitute in-memory production storage, or silently disable delivery.
+
+Browser code imports only `typeof credentialsApi` and creates
+`treaty<typeof credentialsApi>(origin)`. Call `client.auth.login.post(...)` in a
+React Query `mutationFn`. Inspect errors and preserve `mfa_required` and
+`verification_required` flows: a successful HTTP response does not always mean
+an authenticated session.
+
+For protected business routes use `createAuthContext({ authSessionStore })`,
+read `absoluteAuthStatus.user`, return `status(401, { error: 'Sign in required' })`
+when absent, and scope database access to that user. Export the narrow business
+subapp type for its own Eden client inside React Query. A compiler pass is
+necessary, but real signup, login, reset, authorization and persistence tests
+are still required.
