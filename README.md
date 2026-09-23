@@ -432,8 +432,20 @@ const credentialStore = createPostgresCredentialStore(db);
 
 Apply the `sessions` and `credentials` migrations before serving requests.
 `runMigrations` accepts a `MigrationClient` for non-Neon PostgreSQL drivers.
-With Bun SQL, use a separate `prepare: false` client for migration scripts,
-and the default prepared-query mode for application queries and JSON columns.
+On Bun, use the package-owned runner; it supports ordinary PostgreSQL over TCP
+(including local Docker databases) without a Neon WebSocket proxy:
+
+```ts
+import { runBunMigrations } from '@absolutejs/auth/bun';
+await runBunMigrations({ databaseUrl, blocks: ['sessions', 'credentials'] });
+```
+
+It owns and closes a separate unprepared connection, locks concurrent migration
+runs, and rolls back both DDL and journal entries on failure. Keep the default
+prepared-query mode for the application's Drizzle connection and JSON columns.
+Do not implement a raw SQL migration adapter in application code. The existing
+`runMigrations({ databaseUrl })` remains the Neon transport; custom clients remain
+supported for other runtimes.
 
 Studio's `absolute-auth setup` reads the selected adapter from
 `src/backend/packages/auth.config.ts`. Explicit memory storage skips database
