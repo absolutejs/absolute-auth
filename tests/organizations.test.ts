@@ -2,7 +2,10 @@ import { describe, expect, test } from 'bun:test';
 import { Elysia } from 'elysia';
 import { createInMemoryCredentialStore } from '../src/credentials/inMemoryCredentialStore';
 import { auth } from '../src/index';
-import type { OrganizationInvitationMessage } from '../src/organizations/config';
+import type {
+	OrganizationInvitationMessage,
+	OrganizationsConfig
+} from '../src/organizations/config';
 import { createInMemoryOrganizationStore } from '../src/organizations/inMemoryOrganizationStore';
 import { autoAssignOrgsByEmail } from '../src/organizations/operations';
 import { createInMemoryAuthSessionStore } from '../src/session/inMemoryStore';
@@ -18,7 +21,9 @@ const HTTP_UNAUTHORIZED = 401;
 const HTTP_FORBIDDEN = 403;
 const HTTP_BAD_REQUEST = 400;
 
-const buildApp = async () => {
+const buildApp = async (
+	options: Partial<OrganizationsConfig<TestUser>> = {}
+) => {
 	const authSessionStore = createInMemoryAuthSessionStore<TestUser>();
 	const credentialStore = createInMemoryCredentialStore();
 	const organizationStore = createInMemoryOrganizationStore();
@@ -44,12 +49,13 @@ const buildApp = async () => {
 			getVerifiedEmail: (user) => user.email,
 			onSendInvitation: (message) => {
 				invites.push(message);
-			}
+			},
+			...options
 		},
 		providersConfiguration: {}
 	});
 
-	return { app: new Elysia().use(authInstance), invites };
+	return { app: new Elysia().use(authInstance), invites, organizationStore };
 };
 
 const post = (
@@ -288,5 +294,63 @@ describe('autoAssignOrgsByEmail', () => {
 			userId: 'user-eve'
 		});
 		expect(fourth).toEqual([]);
+	});
+});
+
+describe('organization management overrides', () => {
+	test('allows an authorized nonmember manager to list members without allowing unrelated users', async () => {
+		const { app } = await buildApp({
+			canManageMembers: ({ user }) => user.email === 'admin@example.com'
+		});
+		const ownerCookie = await registerUser(app, 'owner@example.com');
+		const adminCookie = await registerUser(app, 'admin@example.com');
+		const strangerCookie = await registerUser(app, 'stranger@example.com');
+		const created = await post(
+			app,
+			'/auth/organizations',
+			{ name: 'Company' },
+			ownerCookie
+		);
+		const { organization } = await created.json();
+		const path = `/auth/organizations/${organization.organizationId}/members`;
+		expect((await send(app, path, 'GET', ownerCookie)).status).toBe(
+			HTTP_OK
+		);
+		expect((await send(app, path, 'GET', adminCookie)).status).toBe(
+			HTTP_OK
+		);
+		expect((await send(app, path, 'GET', strangerCookie)).status).toBe(
+			HTTP_FORBIDDEN
+		);
+	});
+	test('revokes an undelivered invitation and hides provider error details', async () => {
+		const { app, organizationStore } = await buildApp({
+			onSendInvitation: () => {
+				throw new Error('private provider error');
+			}
+		});
+		const cookie = await registerUser(app, 'owner@example.com');
+		const created = await post(
+			app,
+			'/auth/organizations',
+			{ name: 'Company' },
+			cookie
+		);
+		const { organization } = await created.json();
+		const response = await post(
+			app,
+			`/auth/organizations/${organization.organizationId}/invitations`,
+			{ email: 'invitee@example.com' },
+			cookie
+		);
+		const badGateway = 502;
+		expect(response.status).toBe(badGateway);
+		expect(await response.text()).not.toContain('private provider error');
+		const invitations =
+			await organizationStore.listInvitationsByOrganization(
+				organization.organizationId
+			);
+		expect(invitations).toHaveLength(1);
+		expect(invitations[0]?.state).toBe('revoked');
 	});
 });

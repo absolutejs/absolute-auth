@@ -167,13 +167,25 @@ export const organizationRoutes = <UserType>({
 					organizationStore,
 					roles: roles ?? []
 				});
-				await onSendInvitation?.({
-					email: invitation.email,
-					expiresAt: invitation.expiresAt,
-					inviterUserId: invitation.inviterUserId,
-					organizationId,
-					token
-				});
+				try {
+					await onSendInvitation?.({
+						email: invitation.email,
+						expiresAt: invitation.expiresAt,
+						inviterUserId: invitation.inviterUserId,
+						organizationId,
+						token
+					});
+				} catch {
+					await organizationStore.saveInvitation({
+						...invitation,
+						state: 'revoked'
+					});
+
+					return status(
+						'Bad Gateway',
+						'Invitation delivery failed; create a new invitation to retry'
+					);
+				}
 				await emit?.({
 					at: Date.now(),
 					metadata: { email: invitation.email },
@@ -322,7 +334,10 @@ export const organizationRoutes = <UserType>({
 					organizationId,
 					getUserId(user)
 				);
-				if (membership?.status !== 'active') {
+				if (
+					membership?.status !== 'active' &&
+					!(await mayManage(user, organizationId))
+				) {
 					return status('Forbidden', 'Not a member');
 				}
 
