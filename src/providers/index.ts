@@ -30,3 +30,9 @@ export {
 	revocableProviderOptions,
 	scopeRequiredProviderOptions
 } from 'citra';
+
+export {
+	createNeonProviderConfiguration,
+	neonProviderConfiguration
+} from './neon';
+export type { NeonManagementScope, NeonProviderOptions } from './neon';
