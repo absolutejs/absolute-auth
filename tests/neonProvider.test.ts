@@ -1,7 +1,10 @@
 import { describe, expect, test } from 'bun:test';
 import { createOAuth2Client } from 'citra';
 import { buildClientProviders } from '../src/providers/clients';
-import { createNeonProviderConfiguration } from '../src/providers/neon';
+import {
+	createNeonProviderConfiguration,
+	neonProviderConfiguration
+} from '../src/providers/neon';
 
 const credentials = {
 	clientId: 'neon-partner-test',
@@ -17,7 +20,7 @@ describe('Neon partner OAuth provider', () => {
 		});
 		expect(configuration.scope).toEqual(['openid']);
 		expect(configuration.credentials).not.toBe(credentials);
-		expect(configuration.providerConfig.subject).toEqual(['sub']);
+		expect(neonProviderConfiguration.subject).toEqual(['sub']);
 	});
 
 	test('builds a PKCE authorization request through the Auth client registry', async () => {
@@ -30,9 +33,10 @@ describe('Neon partner OAuth provider', () => {
 				'urn:neoncloud:orgs:read'
 			]
 		});
-		const registry = await buildClientProviders({}, createOAuth2Client, {
-			neon: configuration
-		});
+		const registry = await buildClientProviders(
+			{ neon: configuration },
+			createOAuth2Client
+		);
 		const entry = registry.neon?.entries[''];
 		if (!entry) throw new Error('Neon client missing');
 		expect(entry.requiresPKCE).toBe(true);

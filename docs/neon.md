@@ -16,7 +16,7 @@ const neon = createNeonProviderConfiguration({
   scopes: ['urn:neoncloud:orgs:read', 'urn:neoncloud:projects:read'],
   offlineAccess: true
 });
-// Pass customProviders: { neon } to your existing Auth configuration.
+// Pass providersConfiguration: { neon } to your existing Auth configuration.
 ```
 
 Keep credentials on the server. Register the exact callback used by your Auth
@@ -26,12 +26,12 @@ mount. The preset enables S256 PKCE, identifies accounts by `sub`, and requests
 when the customer needs those operations. Delete and organization administration
 are never implicit. Do not infer an email or organization from the subject.
 
-The existing custom-provider authorization, callback, profile, refresh and revoke
+The existing built-in provider authorization, callback, profile, refresh and revoke
 routes handle this definition. An account connection is separate from signing the
 customer into your application; enforce your application's account-linking policy.
-The generic `createOAuthLinkedProviderCredentialResolver` currently accepts only
-built-in providers. Applications using that resolver need a custom-provider-aware
-resolver before enabling unattended Neon management. This preset alone does not
+The generic `createOAuthLinkedProviderCredentialResolver` recognizes Neon through
+Citra's built-in provider registry, including background token renewal.
+This preset alone does not
 provide a resource picker, database provisioning, secret delivery or browser
 assistance. Do not enable the customer-facing connection until those pieces and
 partner credentials are in place.
@@ -40,3 +40,10 @@ Use a provider-owned sign-in window where required. Do not proxy sign-in into an
 embedded browser that violates the identity provider's policies. Never put client
 secrets, refresh tokens or database connection strings into chat or referral URLs.
 Referral agreements and reporting are separate from OAuth permission grants.
+
+## Migration from 0.84.0
+
+Move the helper result from `customProviders.neon` to
+`providersConfiguration.neon`. Neon is now a built-in Citra provider; retaining a
+custom provider under that name is rejected to prevent provider collisions.
+The helper retains the same credentials, scopes and offline-access options.
