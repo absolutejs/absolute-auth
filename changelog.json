@@ -3,6 +3,28 @@
 	"name": "@absolutejs/auth",
 	"releases": [
 		{
+			"version": "0.83.0",
+			"date": "2026-09-23",
+			"changes": [
+				{
+					"kind": "added",
+					"summary": "Provide a Bun-native PostgreSQL migration entry point with transaction rollback, concurrency serialization and connection cleanup",
+					"symbols": [
+						"runBunMigrations",
+						"BunMigrationsOptions"
+					]
+				},
+				{
+					"kind": "changed",
+					"summary": "Regenerate createAuthApplications and oidcProviderRoutes declarations with equivalent property ordering; accepted inputs and runtime behavior are unchanged",
+					"symbols": [
+						"createAuthApplications",
+						"oidcProviderRoutes"
+					]
+				}
+			]
+		},
+		{
 			"changes": [
 				{
 					"kind": "added",
