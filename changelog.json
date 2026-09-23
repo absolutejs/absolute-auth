@@ -5,6 +5,27 @@
 		{
 			"changes": [
 				{
+					"kind": "breaking",
+					"migration": {
+						"instruction": "Configure organizations.getVerifiedEmail with provider-verified email evidence. Direct acceptInvitation callers must supply verifiedEmail. Custom OrganizationStore adapters must implement atomic acceptInvitation; older adapters fail closed.",
+						"manual": true
+					},
+					"summary": "Bind organization invitation acceptance to a verified email and atomically consume the invitation with membership creation. Deny expired, revoked, missing-organization and suspended-member invitations; preserve existing member roles.",
+					"symbols": [
+						"acceptInvitation",
+						"OrganizationsConfig",
+						"OrganizationStore",
+						"listUserOrganizations",
+						"organizationRoutes"
+					]
+				}
+			],
+			"date": "2026-09-23",
+			"version": "0.86.0"
+		},
+		{
+			"changes": [
+				{
 					"kind": "changed",
 					"summary": "Include Neon in the typed built-in provider registry and configuration resolution",
 					"symbols": [

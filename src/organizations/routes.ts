@@ -24,6 +24,7 @@ export const organizationRoutes = <UserType>({
 	canManageMembers,
 	emit,
 	getUserId,
+	getVerifiedEmail,
 	invitationDurationMs,
 	onMembershipAdded,
 	onMembershipRemoved,
@@ -277,7 +278,8 @@ export const organizationRoutes = <UserType>({
 				const membership = await acceptInvitation({
 					organizationStore,
 					token,
-					userId: getUserId(user)
+					userId: getUserId(user),
+					verifiedEmail: await getVerifiedEmail?.(user)
 				});
 				if (!membership) {
 					return status(

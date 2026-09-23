@@ -41,6 +41,7 @@ const buildApp = async () => {
 		organizations: {
 			organizationStore,
 			getUserId: (user) => user.sub,
+			getVerifiedEmail: (user) => user.email,
 			onSendInvitation: (message) => {
 				invites.push(message);
 			}

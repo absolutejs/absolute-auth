@@ -4,7 +4,6 @@ import { DEFAULT_INVITATION_TTL_MS, DEFAULT_OWNER_ROLES } from './config';
 import type {
 	Organization,
 	OrganizationInvitation,
-	OrganizationMembership,
 	OrganizationStore
 } from './types';
 
@@ -14,35 +13,24 @@ import type {
 export const acceptInvitation = async ({
 	organizationStore,
 	token,
-	userId
+	userId,
+	verifiedEmail
 }: {
 	organizationStore: OrganizationStore;
 	token: string;
 	userId: string;
+	/** Provider-verified email, never an unverified profile field or request body. */
+	verifiedEmail?: string;
 }) => {
-	const invitation = await organizationStore.getInvitationByTokenHash(
-		await hashToken(token)
-	);
-	if (!invitation || invitation.state !== 'pending') return undefined;
-	if (invitation.expiresAt < Date.now()) return undefined;
+	if (!verifiedEmail?.trim() || !organizationStore.acceptInvitation)
+		return undefined;
 
-	const now = Date.now();
-	await organizationStore.saveInvitation({
-		...invitation,
-		acceptedAt: now,
-		state: 'accepted'
+	return organizationStore.acceptInvitation({
+		now: Date.now(),
+		tokenHash: await hashToken(token),
+		userId,
+		verifiedEmail: verifiedEmail.trim().toLowerCase()
 	});
-	const membership: OrganizationMembership = {
-		createdAt: now,
-		organizationId: invitation.organizationId,
-		roles: invitation.roles,
-		status: 'active',
-		updatedAt: now,
-		userId
-	};
-	await organizationStore.saveMembership(membership);
-
-	return membership;
 };
 
 // JIT / domain-based org assignment. Call from your OAuth/credential-register success hook (or

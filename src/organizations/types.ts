@@ -39,6 +39,15 @@ export type OrganizationInvitation = {
 // Persistence for the tenant model: organizations, user↔org memberships, and email invitations.
 // One cohesive store (three tables in the Postgres impl) since the three are tightly coupled.
 export type OrganizationStore = {
+	/** Atomically consume a live invitation and add membership. Custom stores must
+	 * implement this capability; acceptance fails closed without it. */
+	acceptInvitation?: (input: {
+		tokenHash: string;
+		userId: string;
+		verifiedEmail: string;
+		now: number;
+	}) => Promise<OrganizationMembership | undefined>;
+
 	deleteOrganization: (organizationId: OrganizationId) => Promise<void>;
 	getInvitation: (
 		invitationId: string
