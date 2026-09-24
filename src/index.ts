@@ -1266,3 +1266,5 @@ export { createSignoutApi } from './routes/signout';
 
 export { createEncryptedLinkedProviderGrantStore } from './linkedProviders/encryptedStore';
 export { resolveOAuthAuthorization } from './utils';
+
+export { createCoordinatedOAuthLinkedProviderCredentialResolver } from './linkedProviders/coordinatedResolver';

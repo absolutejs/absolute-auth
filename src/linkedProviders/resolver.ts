@@ -243,22 +243,30 @@ const resolveBindingCredential = async (
 const refreshAndRecord = async (
 	grant: LinkedProviderGrant,
 	input: { minValidityMs?: number; requiredScopes?: string[] } | undefined,
-	refresh: NonNullable<CreateLinkedProviderCredentialResolverOptions['refreshAccessTokenLease']>,
+	refresh: NonNullable<
+		CreateLinkedProviderCredentialResolverOptions['refreshAccessTokenLease']
+	>,
 	grantStore: LinkedProviderGrantStore,
 	now: () => number
 ) => {
 	let refreshed: LinkedProviderRefreshResult;
 	try {
 		const result = await refresh(grant, input);
-		if (!result) throw new Error('Linked provider access token refresh failed');
+		if (!result)
+			throw new Error('Linked provider access token refresh failed');
 		refreshed = result;
 	} catch (cause) {
 		const error = credentialRefreshError(cause);
 		await grantStore.saveGrant({
 			...grant,
 			lastRefreshError: error.message,
-			metadata: { ...grant.metadata, credentialFailureCode: error.code, credentialRecovery: error.recovery },
-			status: 'refresh_required',
+			metadata: {
+				...grant.metadata,
+				credentialFailureCode: error.code,
+				credentialRecovery: error.recovery
+			},
+			status:
+				error.recovery === 'reconnect' ? 'revoked' : 'refresh_required',
 			updatedAt: now()
 		});
 		throw error;
@@ -266,7 +274,11 @@ const refreshAndRecord = async (
 	const metadata: JsonObject = { ...refreshed.grant.metadata };
 	delete metadata.credentialRecovery;
 	delete metadata.credentialFailureCode;
-	await grantStore.saveGrant({ ...refreshed.grant, lastRefreshError: undefined, metadata });
+	await grantStore.saveGrant({
+		...refreshed.grant,
+		lastRefreshError: undefined,
+		metadata
+	});
 
 	return refreshed;
 };
@@ -282,12 +294,21 @@ export const createLinkedProviderCredentialResolver = ({
 }: CreateLinkedProviderCredentialResolverOptions): LinkedProviderCredentialResolver => ({
 	getAccessToken: async (credential, input) => {
 		const binding = await bindingStore.getBinding(credential.bindingId);
-		if (!binding || !isBindingUsable(binding)) {
+		if (
+			!binding ||
+			!isBindingUsable(binding) ||
+			binding.grantId !== credential.grantId ||
+			binding.connectorProvider !== credential.connectorProvider
+		) {
 			throw new Error('Linked provider binding is unavailable');
 		}
 
 		const grant = await grantStore.getGrant(credential.grantId);
-		if (!grant || !isGrantUsable(grant)) {
+		if (
+			!grant ||
+			!isGrantUsable(grant) ||
+			grant.ownerRef !== credential.ownerRef
+		) {
 			throw new Error('Linked provider grant is unavailable');
 		}
 
@@ -301,14 +322,23 @@ export const createLinkedProviderCredentialResolver = ({
 
 		const currentTime = now();
 		let lease = await loadAccessTokenLease(grant);
-		if (needsRefresh(lease, currentTime, input?.minValidityMs)) {
+		if (
+			grant.status === 'refresh_required' ||
+			needsRefresh(lease, currentTime, input?.minValidityMs)
+		) {
 			if (!refreshAccessTokenLease) {
 				throw new Error(
 					'Linked provider access token lease requires refresh'
 				);
 			}
 
-			const refreshed = await refreshAndRecord(grant, input, refreshAccessTokenLease, grantStore, now);
+			const refreshed = await refreshAndRecord(
+				grant,
+				input,
+				refreshAccessTokenLease,
+				grantStore,
+				now
+			);
 			({ lease } = refreshed);
 		}
 
@@ -319,7 +349,7 @@ export const createLinkedProviderCredentialResolver = ({
 		}
 
 		ensureLeaseScopes(lease, requiredScopes);
-		ensureLeaseValidity(lease, currentTime, input?.minValidityMs);
+		ensureLeaseValidity(lease, now(), input?.minValidityMs);
 
 		return lease;
 	},
@@ -336,6 +366,15 @@ export const createLinkedProviderCredentialResolver = ({
 		const currentTime = now();
 		const grant = await grantStore.getGrant(credential.grantId);
 		const binding = await bindingStore.getBinding(credential.bindingId);
+
+		if (
+			!grant ||
+			!binding ||
+			grant.ownerRef !== credential.ownerRef ||
+			binding.grantId !== grant.id ||
+			binding.connectorProvider !== credential.connectorProvider
+		)
+			return;
 
 		if (grant) {
 			await grantStore.saveGrant(

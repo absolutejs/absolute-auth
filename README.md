@@ -478,3 +478,20 @@ connection replacement/disconnection with credential execution and refresh befor
 enabling workers: the base grant store's ordinary upsert is not a refresh/revocation
 compare-and-swap protocol. Removing a grant locally is distinct from revoking an
 entire provider application consent, which can affect other connections.
+
+### Coordinated background credentials (0.88.0)
+
+Use `createCoordinatedOAuthLinkedProviderCredentialResolver({ transaction, cipher,
+providersConfiguration })` for background workers. Supply an **interactive Postgres
+transaction callback** yielding a Drizzle database, not a Neon HTTP batch. Renewal
+and failure reporting lock the grant row; `createLinkedProviderGrantStore(tx)`
+removal takes the same lock before deleting bindings. Reauthorization must lock
+that grant before reading/preserving a prior refresh token. Never resurrect an old
+ID with a separate upsert. Owner and binding association are checked on every lease.
+
+Call provider actions only after `getAccessToken` resolves: refresh is committed
+independently, including safe failure states. Permanent invalid grants and ambiguous
+20-second renewal timeouts require reconnection. Transactions cannot make the provider
+exchange atomic with the database: a process crash after external rotation may still
+require reconnecting. An already dispatched provider request cannot be recalled by
+local disconnect. Provider-wide consent revocation remains a separate explicit action.

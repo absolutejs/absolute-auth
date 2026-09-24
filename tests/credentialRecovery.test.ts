@@ -64,7 +64,7 @@ describe('credential refresh recovery', () => {
 			lastRefreshError:
 				'Authorization cannot renew automatically. Reconnect your account.',
 			metadata: { credentialRecovery: 'reconnect' },
-			status: 'refresh_required'
+			status: 'revoked'
 		});
 	});
 	test('temporary failure remains retryable; successful retry clears the error', async () => {
@@ -129,4 +129,31 @@ describe('credential refresh recovery', () => {
 			recovery
 		});
 	});
+});
+
+test('forged owner and rebound credentials cannot obtain tokens or report failures', async () => {
+	const state = stores();
+	const resolver = createLinkedProviderCredentialResolver({
+		...state,
+		loadAccessTokenLease: () => ({
+			accessToken: 'secret',
+			grantedScopes: ['mail']
+		})
+	});
+	const valid = await credential(resolver);
+	await expect(
+		resolver.getAccessToken({ ...valid, ownerRef: 'other' })
+	).rejects.toThrow();
+	await resolver.reportFailure(
+		{ ...valid, ownerRef: 'other' },
+		{ code: 'revoked' }
+	);
+	expect((await state.grantStore.getGrant('g'))?.status).toBe('active');
+	const binding = await state.bindingStore.getBinding('b');
+ if (!binding) throw new Error('Missing binding');
+	await state.bindingStore.saveBinding({
+		...binding,
+		grantId: 'replacement'
+	});
+	await expect(resolver.getAccessToken(valid)).rejects.toThrow();
 });

@@ -235,6 +235,12 @@ export const createLinkedProviderGrantStore = <DB extends AnyPgDatabase>(
 		return rows.map(toGrant);
 	},
 	removeGrant: async (id) => {
+		// With an interactive transaction, use the same lock order as renewal.
+		await db
+			.select({ id: linkedProviderGrantsTable.id })
+			.from(linkedProviderGrantsTable)
+			.where(eq(linkedProviderGrantsTable.id, id))
+			.for('update');
 		await db
 			.delete(linkedProviderBindingsTable)
 			.where(eq(linkedProviderBindingsTable.grant_id, id));

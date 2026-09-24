@@ -3,6 +3,19 @@
 	"name": "@absolutejs/auth",
 	"releases": [
 		{
+			"version": "0.88.0",
+			"date": "2026-09-24",
+			"changes": [
+				{
+					"kind": "added",
+					"summary": "Add encrypted interactive-transaction OAuth credential coordination; serialize refresh and removal with grant row locks, persist recovery before returning failures, and reject stale or forged credential handles. Bound ambiguous token renewals and require reconnection after permanent failures.",
+					"symbols": [
+						"createCoordinatedOAuthLinkedProviderCredentialResolver"
+					]
+				}
+			]
+		},
+		{
 			"version": "0.87.1",
 			"date": "2026-09-24",
 			"changes": [
