@@ -1,3 +1,4 @@
+import { createInMemoryWebAuthnChallengeStore } from './challengeStore';
 import { Elysia, t } from 'elysia';
 import { MILLISECONDS_IN_A_SECOND } from '../constants';
 import { loadSessionFromSource } from '../session/access';
@@ -19,6 +20,8 @@ import {
 // before `protectRoutePlugin` when a `webauthn` block is configured.
 export const webauthnRoutes = <UserType>({
 	authSessionStore,
+	canRegister,
+	challengeStore = createInMemoryWebAuthnChallengeStore(),
 	challengeDurationMs = DEFAULT_WEBAUTHN_CHALLENGE_TTL_MS,
 	cookieSecure,
 	credentialStore,
@@ -41,17 +44,30 @@ export const webauthnRoutes = <UserType>({
 		user_session_id: t.Optional(userSessionIdTypebox),
 		webauthn_challenge: t.Optional(t.String())
 	});
-	const setChallenge = (
+	const setChallenge = async (
 		cookie: { set: (options: Record<string, unknown>) => void },
-		challenge: string
-	) =>
+		challenge: string,
+		purpose: 'registration' | 'authentication',
+		sessionId?: string,
+		userId?: string
+	) => {
+		const id = crypto.randomUUID();
+		await challengeStore.save({
+			challenge,
+			expiresAt: Date.now() + challengeDurationMs,
+			id,
+			purpose,
+			sessionId,
+			userId
+		});
 		cookie.set({
 			httpOnly: true,
 			maxAge: Math.floor(challengeDurationMs / MILLISECONDS_IN_A_SECOND),
 			sameSite: 'lax',
 			secure,
-			value: challenge
+			value: id
 		});
+	};
 
 	return new Elysia()
 		.use(sessionStore<UserType>())
@@ -73,6 +89,8 @@ export const webauthnRoutes = <UserType>({
 				}
 
 				const { user } = userSession;
+				if (canRegister && !(await canRegister(user)))
+					return status('Forbidden', 'Account unavailable');
 				const userId = getUserId(user);
 				const existing =
 					await credentialStore.listCredentialsByUser(userId);
@@ -88,7 +106,13 @@ export const webauthnRoutes = <UserType>({
 						userId,
 						userName: getUserName?.(user) ?? userId
 					});
-				setChallenge(webauthn_challenge, challenge);
+				await setChallenge(
+					webauthn_challenge,
+					challenge,
+					'registration',
+					user_session_id.value,
+					userId
+				);
 
 				return status('OK', options);
 			}
@@ -114,7 +138,17 @@ export const webauthnRoutes = <UserType>({
 					return status('Unauthorized', 'Authentication required');
 				}
 
-				const expectedChallenge = webauthn_challenge.value;
+				if (canRegister && !(await canRegister(userSession.user)))
+					return status('Forbidden', 'Account unavailable');
+				const ceremony = await challengeStore.consume({
+					id: webauthn_challenge.value ?? '',
+					now: Date.now(),
+					purpose: 'registration',
+					sessionId: user_session_id.value,
+					userId: getUserId(userSession.user)
+				});
+				webauthn_challenge.remove();
+				const expectedChallenge = ceremony?.challenge;
 				if (!isNonEmptyString(expectedChallenge)) {
 					return status(
 						'Bad Request',
@@ -162,13 +196,21 @@ export const webauthnRoutes = <UserType>({
 		.post(
 			`${webauthnRoute}/authenticate/options`,
 			{ cookie: challengeCookie },
-			async ({ cookie: { webauthn_challenge }, status }) => {
+			async ({
+				cookie: { user_session_id, webauthn_challenge },
+				status
+			}) => {
 				const { challenge, options } =
 					await webauthnAdapter.createAuthenticationOptions({
 						allowCredentials: [],
 						rpId
 					});
-				setChallenge(webauthn_challenge, challenge);
+				await setChallenge(
+					webauthn_challenge,
+					challenge,
+					'authentication',
+					user_session_id.value
+				);
 
 				return status('OK', options);
 			}
@@ -188,7 +230,14 @@ export const webauthnRoutes = <UserType>({
 				status,
 				store: { session }
 			}) => {
-				const expectedChallenge = webauthn_challenge.value;
+				const ceremony = await challengeStore.consume({
+					id: webauthn_challenge.value ?? '',
+					now: Date.now(),
+					purpose: 'authentication',
+					sessionId: user_session_id.value
+				});
+				webauthn_challenge.remove();
+				const expectedChallenge = ceremony?.challenge;
 				if (!isNonEmptyString(expectedChallenge)) {
 					return status(
 						'Bad Request',

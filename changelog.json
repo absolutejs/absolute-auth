@@ -3,8 +3,28 @@
 	"name": "@absolutejs/auth",
 	"releases": [
 		{
-			"version": "0.88.0",
+			"changes": [
+				{
+					"kind": "security",
+					"summary": "Bind WebAuthn ceremonies to single-use server records, purpose, user and session; add a durable Postgres challenge store and prevent credential owner/key replacement or counter rollback.",
+					"symbols": [
+						"createPostgresWebAuthnChallengeStore",
+						"createInMemoryWebAuthnChallengeStore",
+						"webauthnChallengesTable",
+						"WebAuthnChallenge",
+						"WebAuthnChallengeStore",
+						"WebAuthnConfig",
+						"createAuthApplications",
+						"buildClientProviders",
+						"resolveProviderClientConfiguration",
+						"webauthnRoutes"
+					]
+				}
+			],
 			"date": "2026-09-24",
+			"version": "0.89.0"
+		},
+		{
 			"changes": [
 				{
 					"kind": "added",
@@ -13,11 +33,11 @@
 						"createCoordinatedOAuthLinkedProviderCredentialResolver"
 					]
 				}
-			]
+			],
+			"date": "2026-09-24",
+			"version": "0.88.0"
 		},
 		{
-			"version": "0.87.1",
-			"date": "2026-09-24",
 			"changes": [
 				{
 					"kind": "fixed",
@@ -26,11 +46,11 @@
 						"createAuthApplications"
 					]
 				}
-			]
+			],
+			"date": "2026-09-24",
+			"version": "0.87.1"
 		},
 		{
-			"version": "0.87.0",
-			"date": "2026-09-24",
 			"changes": [
 				{
 					"kind": "added",
@@ -42,7 +62,9 @@
 						"createAuthApplications"
 					]
 				}
-			]
+			],
+			"date": "2026-09-24",
+			"version": "0.87.0"
 		},
 		{
 			"changes": [

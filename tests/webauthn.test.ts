@@ -126,7 +126,8 @@ describe('WebAuthn registration', () => {
 		);
 		expect(options.status).toBe(HTTP_OK);
 		const challengeCookie = namedCookie(options, 'webauthn_challenge');
-		expect(challengeCookie).toContain(REG_CHALLENGE);
+		expect(challengeCookie).toStartWith('webauthn_challenge=');
+		expect(challengeCookie).not.toContain(REG_CHALLENGE);
 
 		const verified = await post(
 			app,
@@ -233,5 +234,77 @@ describe('WebAuthn authentication', () => {
 		);
 
 		expect(response.status).toBe(HTTP_UNAUTHORIZED);
+	});
+});
+
+describe('WebAuthn server-side ceremony binding', () => {
+	test('rejects registration challenge replay and another signed-in user', async () => {
+		const { app } = await buildApp();
+		const alice = await registerUser(app, 'alice@example.com');
+		const bob = await registerUser(app, 'bob@example.com');
+		const options = await post(
+			app,
+			'/auth/webauthn/register/options',
+			{},
+			alice
+		);
+		const challenge = namedCookie(options, 'webauthn_challenge');
+		const wrong = await post(
+			app,
+			'/auth/webauthn/register/verify',
+			{ id: 'cred-1' },
+			`${bob}; ${challenge}`
+		);
+		expect(wrong.status).toBe(HTTP_BAD_REQUEST);
+		const valid = await post(
+			app,
+			'/auth/webauthn/register/verify',
+			{ id: 'cred-1' },
+			`${alice}; ${challenge}`
+		);
+		expect(valid.status).toBe(HTTP_OK);
+		const replay = await post(
+			app,
+			'/auth/webauthn/register/verify',
+			{ id: 'cred-1' },
+			`${alice}; ${challenge}`
+		);
+		expect(replay.status).toBe(HTTP_BAD_REQUEST);
+	});
+	test('cannot use an authentication challenge to register a credential', async () => {
+		const { app } = await buildApp();
+		const session = await registerUser(app, 'purpose@example.com');
+		const options = await post(
+			app,
+			'/auth/webauthn/authenticate/options',
+			{},
+			session
+		);
+		const challenge = namedCookie(options, 'webauthn_challenge');
+		expect(
+			(
+				await post(
+					app,
+					'/auth/webauthn/register/verify',
+					{ id: 'cred-1' },
+					`${session}; ${challenge}`
+				)
+			).status
+		).toBe(HTTP_BAD_REQUEST);
+	});
+	test('server rejects a forged cookie containing the public challenge', async () => {
+		const { app } = await buildApp();
+		const session = await registerUser(app, 'forged@example.com');
+		await post(app, '/auth/webauthn/register/options', {}, session);
+		expect(
+			(
+				await post(
+					app,
+					'/auth/webauthn/register/verify',
+					{ id: 'cred-1' },
+					`${session}; webauthn_challenge=${REG_CHALLENGE}`
+				)
+			).status
+		).toBe(HTTP_BAD_REQUEST);
 	});
 });

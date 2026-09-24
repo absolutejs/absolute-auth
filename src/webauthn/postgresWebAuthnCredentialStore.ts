@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { and, eq, lte } from 'drizzle-orm';
 import {
 	bigint,
 	boolean,
@@ -81,12 +81,23 @@ export const createPostgresWebAuthnCredentialStore = <DB extends AnyPgDatabase>(
 	},
 	saveCredential: async (credential) => {
 		const values = toValues(credential);
-		await db
+		const updated = await db
 			.insert(webauthnCredentialsTable)
 			.values(values)
 			.onConflictDoUpdate({
 				set: values,
+				setWhere: and(
+					eq(webauthnCredentialsTable.user_id, credential.userId),
+					eq(
+						webauthnCredentialsTable.public_key,
+						credential.publicKey
+					),
+					lte(webauthnCredentialsTable.counter, credential.counter)
+				),
 				target: webauthnCredentialsTable.credential_id
-			});
+			})
+			.returning({ id: webauthnCredentialsTable.credential_id });
+		if (updated.length !== 1)
+			throw new Error('Credential ownership or counter conflict');
 	}
 });

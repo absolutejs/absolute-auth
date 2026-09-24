@@ -1268,3 +1268,11 @@ export { createEncryptedLinkedProviderGrantStore } from './linkedProviders/encry
 export { resolveOAuthAuthorization } from './utils';
 
 export { createCoordinatedOAuthLinkedProviderCredentialResolver } from './linkedProviders/coordinatedResolver';
+
+export {
+	createInMemoryWebAuthnChallengeStore,
+	createPostgresWebAuthnChallengeStore,
+	webauthnChallengesTable,
+	type WebAuthnChallengeStore,
+	type WebAuthnChallenge
+} from './webauthn/challengeStore';

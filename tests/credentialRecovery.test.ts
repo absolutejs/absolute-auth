@@ -150,7 +150,7 @@ test('forged owner and rebound credentials cannot obtain tokens or report failur
 	);
 	expect((await state.grantStore.getGrant('g'))?.status).toBe('active');
 	const binding = await state.bindingStore.getBinding('b');
- if (!binding) throw new Error('Missing binding');
+	if (!binding) throw new Error('Missing binding');
 	await state.bindingStore.saveBinding({
 		...binding,
 		grantId: 'replacement'
