@@ -6,7 +6,8 @@ import { isAuthIntent } from '../typeGuards';
 import {
 	authClientOption,
 	authIntentOption,
-	authProviderOption
+	authProviderOption,
+	userSessionIdTypebox
 } from '../typebox';
 import {
 	AuthorizeRoute,
@@ -54,7 +55,9 @@ export const authorize = ({
 			cookie: t.Cookie({
 				auth_client: authClientOption,
 				auth_intent: authIntentOption,
-				auth_provider: t.Optional(authProviderOption)
+				auth_link_session: t.Optional(t.String()),
+				auth_provider: t.Optional(authProviderOption),
+				user_session_id: t.Optional(userSessionIdTypebox)
 			}),
 			params: t.Object({
 				provider: authProviderOption
