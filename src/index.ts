@@ -149,6 +149,7 @@ const buildAuthApplications = async <UserType>(
 		htmx,
 		tracing,
 		resolveAuthIntent,
+		bindLinkingToSession,
 		onAuthorizeSuccess,
 		onAuthorizeError,
 		onProfileSuccess,
@@ -451,6 +452,7 @@ const buildAuthApplications = async <UserType>(
 		}),
 		authorize({
 			authorizeRoute,
+			bindLinkingToSession,
 			clientProviders,
 			cookieSecure: resolvedCookieSecure,
 			onAuthorizeError,
@@ -458,6 +460,7 @@ const buildAuthApplications = async <UserType>(
 		}),
 		callback<UserType>({
 			authSessionStore,
+			bindLinkingToSession,
 			callbackRoute,
 			clientProviders,
 			onCallbackError,
@@ -1260,3 +1263,6 @@ export {
 export { createCredentialsApi } from './credentials/api';
 
 export { createSignoutApi } from './routes/signout';
+
+export { createEncryptedLinkedProviderGrantStore } from './linkedProviders/encryptedStore';
+export { resolveOAuthAuthorization } from './utils';

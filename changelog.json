@@ -3,6 +3,22 @@
 	"name": "@absolutejs/auth",
 	"releases": [
 		{
+			"version": "0.87.0",
+			"date": "2026-09-24",
+			"changes": [
+				{
+					"kind": "added",
+					"summary": "Add owner-bound encrypted linked-provider grant storage, session-bound OAuth linking, and an exported OAuth authorization resolver for separately consented connectors.",
+					"symbols": [
+						"createEncryptedLinkedProviderGrantStore",
+						"resolveOAuthAuthorization",
+						"AuthConfig",
+						"createAuthApplications"
+					]
+				}
+			]
+		},
+		{
 			"changes": [
 				{
 					"kind": "fixed",

@@ -454,3 +454,27 @@ a real `DATABASE_URL` and runs migrations. Missing or unknown selections fail
 with an actionable error; custom adapters must configure their own migrations.
 
 For a complete credentials-only Bun setup, see [Persistent email/password sign-in](docs/PERSISTENT-CREDENTIALS.md). It includes real migration and auth configuration APIs, durable user records, and driver settings.
+
+## Separately consented connected accounts
+
+Set `bindLinkingToSession: true` when using `onLinkConnector` or `onLinkIdentity`.
+Start authorization with an explicit `intent=link_connector` (or `link_identity`)
+and a named client configured with only that capability's scopes. The callback
+requires the same live session that started consent. Revalidate the user's current
+application access in the handler. Never interpret a connector callback as login.
+
+`resolveOAuthAuthorization(callbackContext)` resolves provider identity and tokens
+without creating a login session. Check actual returned scopes before saving grants.
+Compose `createEncryptedLinkedProviderGrantStore({store, cipher})` with a raw
+package grant store and `createSecretCipher(serverOnlyKey)` or a versioned cipher.
+Use the encrypted adapter for all token writes and the OAuth credential resolver;
+use an explicit metadata projection for browser responses. The adapter exposes
+plaintext only to trusted server callers and binds encrypted tokens to grant,
+owner, provider subject and token field. It rejects plaintext legacy rows; migrate
+existing rows deliberately before enabling it. Keep encryption keys outside the DB.
+
+Create grants/bindings and audit entries in one database transaction. Serialize
+connection replacement/disconnection with credential execution and refresh before
+enabling workers: the base grant store's ordinary upsert is not a refresh/revocation
+compare-and-swap protocol. Removing a grant locally is distinct from revoking an
+entire provider application consent, which can affect other connections.
