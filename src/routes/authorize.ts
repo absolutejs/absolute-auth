@@ -6,7 +6,8 @@ import { isAuthIntent } from '../typeGuards';
 import {
 	authClientOption,
 	authIntentOption,
-	authProviderOption
+	authProviderOption,
+	userSessionIdTypebox
 } from '../typebox';
 import {
 	AuthorizeRoute,
@@ -21,6 +22,7 @@ type AuthorizeProps = {
 	clientProviders: ClientProviders;
 	authorizeRoute?: AuthorizeRoute;
 	cookieSecure?: boolean;
+	bindLinkingToSession?: boolean;
 	onAuthorizeSuccess: OnAuthorizeSuccess;
 	onAuthorizeError: OnAuthorizeError;
 };
@@ -41,6 +43,7 @@ export const authorize = ({
 	clientProviders,
 	authorizeRoute = '/oauth2/:provider/authorization',
 	cookieSecure,
+	bindLinkingToSession,
 	onAuthorizeSuccess,
 	onAuthorizeError
 }: AuthorizeProps) => {
@@ -52,7 +55,9 @@ export const authorize = ({
 			cookie: t.Cookie({
 				auth_client: authClientOption,
 				auth_intent: authIntentOption,
-				auth_provider: t.Optional(authProviderOption)
+				auth_link_session: t.Optional(t.String()),
+				auth_provider: t.Optional(authProviderOption),
+				user_session_id: t.Optional(userSessionIdTypebox)
 			}),
 			params: t.Object({
 				provider: authProviderOption
@@ -67,6 +72,8 @@ export const authorize = ({
 			redirect,
 			cookie: {
 				state,
+				auth_link_session,
+				user_session_id,
 				code_verifier,
 				auth_provider,
 				auth_client,
@@ -108,6 +115,29 @@ export const authorize = ({
 			} = resolvedProvider.entry;
 			const referer = parseReferer(headers['referer']);
 			const authIntent = isAuthIntent(intent) ? intent : undefined;
+			const linking =
+				authIntent === 'link_connector' ||
+				authIntent === 'link_identity';
+			if (
+				bindLinkingToSession &&
+				linking &&
+				(typeof user_session_id?.value !== 'string' ||
+					!user_session_id.value)
+			)
+				return status(
+					'Unauthorized',
+					'Sign in before connecting an account'
+				);
+			if (bindLinkingToSession && linking)
+				auth_link_session?.set({
+					httpOnly: true,
+					maxAge: COOKIE_DURATION,
+					path: '/',
+					sameSite: 'lax',
+					secure,
+					value: user_session_id?.value
+				});
+			if (bindLinkingToSession && !linking) auth_link_session?.remove();
 
 			origin_url.set({
 				httpOnly: true,

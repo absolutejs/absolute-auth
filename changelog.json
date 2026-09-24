@@ -5,6 +5,70 @@
 		{
 			"changes": [
 				{
+					"kind": "security",
+					"summary": "Bind WebAuthn ceremonies to single-use server records, purpose, user and session; add a durable Postgres challenge store and prevent credential owner/key replacement or counter rollback.",
+					"symbols": [
+						"createPostgresWebAuthnChallengeStore",
+						"createInMemoryWebAuthnChallengeStore",
+						"webauthnChallengesTable",
+						"WebAuthnChallenge",
+						"WebAuthnChallengeStore",
+						"WebAuthnConfig",
+						"createAuthApplications",
+						"buildClientProviders",
+						"resolveProviderClientConfiguration",
+						"webauthnRoutes"
+					]
+				}
+			],
+			"date": "2026-09-24",
+			"version": "0.89.0"
+		},
+		{
+			"changes": [
+				{
+					"kind": "added",
+					"summary": "Add encrypted interactive-transaction OAuth credential coordination; serialize refresh and removal with grant row locks, persist recovery before returning failures, and reject stale or forged credential handles. Bound ambiguous token renewals and require reconnection after permanent failures.",
+					"symbols": [
+						"createCoordinatedOAuthLinkedProviderCredentialResolver"
+					]
+				}
+			],
+			"date": "2026-09-24",
+			"version": "0.88.0"
+		},
+		{
+			"changes": [
+				{
+					"kind": "fixed",
+					"summary": "Declare session and linking cookies on the OAuth authorization route so opt-in session binding accepts existing signed-in users. Add an authorization-start regression test.",
+					"symbols": [
+						"createAuthApplications"
+					]
+				}
+			],
+			"date": "2026-09-24",
+			"version": "0.87.1"
+		},
+		{
+			"changes": [
+				{
+					"kind": "added",
+					"summary": "Add owner-bound encrypted linked-provider grant storage, session-bound OAuth linking, and an exported OAuth authorization resolver for separately consented connectors.",
+					"symbols": [
+						"createEncryptedLinkedProviderGrantStore",
+						"resolveOAuthAuthorization",
+						"AuthConfig",
+						"createAuthApplications"
+					]
+				}
+			],
+			"date": "2026-09-24",
+			"version": "0.87.0"
+		},
+		{
+			"changes": [
+				{
 					"kind": "fixed",
 					"summary": "Allow authorized nonmember organization managers to list memberships. Revoke invitations when their delivery hook fails and return a sanitized retryable error.",
 					"symbols": [
