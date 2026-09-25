@@ -158,6 +158,21 @@ export type OidcRefreshTokenConnection = {
 	userId: string;
 };
 
+/**
+ * One active refresh-token family: a single device or app grant and every rotation
+ * descended from it. Public metadata only — token hashes never cross this boundary.
+ */
+export type OidcRefreshTokenFamily = {
+	audience?: string;
+	clientId: string;
+	expiresAt: number;
+	familyId: string;
+	/** When the family's current refresh token was issued (its latest use). */
+	issuedAt: number;
+	scopes: string[];
+	userId: string;
+};
+
 export type OidcRefreshTokenStore = {
 	// Atomically fetch and delete (rotation: each refresh token is used once).
 	consumeToken: (tokenHash: string) => Promise<OidcRefreshToken | undefined>;
@@ -175,6 +190,21 @@ export type OidcRefreshTokenStore = {
 	// Batch posture for operator connection inventories. Returns public ids only;
 	// token hashes and credential material never cross this boundary.
 	listConnections: () => Promise<OidcRefreshTokenConnection[]>;
+	// Per-grant inventory for "connected devices" screens: every active family for a
+	// user, optionally narrowed to one client. Expired and revoked families are omitted.
+	listFamilies?: (
+		userId: string,
+		clientId?: string
+	) => Promise<OidcRefreshTokenFamily[]>;
+	// Active family lookup by id. Resource servers that stamp the family id into access
+	// tokens (see `getAccessTokenClaims`) use this to reject tokens from a revoked grant
+	// before their natural expiry.
+	getFamily?: (
+		familyId: string
+	) => Promise<OidcRefreshTokenFamily | undefined>;
+	// Revokes one family owned by `userId`, leaving the user's other grants for the same
+	// client intact. Returns false when no such active family exists.
+	revokeFamily?: (userId: string, familyId: string) => Promise<boolean>;
 	/** Revoke a family when a previously consumed token is presented again. */
 	revokeByConsumedToken: (tokenHash: string) => Promise<boolean>;
 	/** Atomically replace the active family token, or revoke on detected reuse. */

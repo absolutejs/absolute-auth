@@ -26,6 +26,7 @@ const VERIFIER = 'pkce-verifier-0123456789-abcdefghij-0123456789';
 type ClaimsHook = (context: {
 	audience?: string;
 	clientId: string;
+	familyId?: string;
 	scopes: string[];
 	sub: string;
 }) => Record<string, unknown> | Promise<Record<string, unknown>>;
@@ -34,6 +35,9 @@ const buildApp = async (
 	extras: {
 		deviceFlow?: boolean;
 		getAccessTokenClaims?: ClaimsHook;
+		refreshTokenStore?: ReturnType<
+			typeof createInMemoryOidcRefreshTokenStore
+		>;
 		socketTickets?: boolean;
 		strictFapi?: boolean;
 	} = {}
@@ -58,7 +62,9 @@ const buildApp = async (
 					: undefined,
 			getAccessTokenClaims: extras.getAccessTokenClaims,
 			issuer: ISSUER,
-			refreshTokenStore: createInMemoryOidcRefreshTokenStore(),
+			refreshTokenStore:
+				extras.refreshTokenStore ??
+				createInMemoryOidcRefreshTokenStore(),
 			signingKey,
 			socketTicketStore: extras.socketTickets
 				? createInMemorySocketTicketStore()
@@ -245,6 +251,82 @@ describe('OIDC provider', () => {
 		expect(accessToken?.payload.viewed_sub).toBe('user-alice');
 		// Reserved claims wins protection: sub stays the real user, not the smuggled value.
 		expect(accessToken?.payload.sub).toBe('user-alice');
+	});
+
+	test('exposes a stable refresh family to access-token claims and revokes it per grant', async () => {
+		const refreshTokenStore = createInMemoryOidcRefreshTokenStore();
+		const familyApp = await buildApp({
+			refreshTokenStore,
+			getAccessTokenClaims: ({ familyId }) => ({ fid: familyId })
+		});
+		const signIn = async () => {
+			const code = codeFromRedirect(
+				await authorize(
+					familyApp,
+					await hashToken(VERIFIER),
+					`user_session_id=${SESSION_ID}`
+				)
+			);
+
+			return (
+				await token(familyApp, {
+					client_id: 'app1',
+					code,
+					code_verifier: VERIFIER,
+					grant_type: 'authorization_code',
+					redirect_uri: REDIRECT_URI
+				})
+			).json();
+		};
+		const jwks = await (
+			await familyApp.handle(new Request('http://localhost/oauth2/jwks'))
+		).json();
+		const familyOf = async (accessToken: string) =>
+			(await verifyJwt(accessToken, jwks.keys[0]))?.payload.fid;
+
+		const laptop = await signIn();
+		const desktop = await signIn();
+		const laptopFamily = await familyOf(laptop.access_token);
+		expect(typeof laptopFamily).toBe('string');
+		expect(await familyOf(desktop.access_token)).not.toBe(laptopFamily);
+
+		const refreshed = await (
+			await token(familyApp, {
+				client_id: 'app1',
+				grant_type: 'refresh_token',
+				refresh_token: laptop.refresh_token
+			})
+		).json();
+		expect(await familyOf(refreshed.access_token)).toBe(laptopFamily);
+		expect(
+			(await refreshTokenStore.listFamilies?.('user-alice', 'app1'))
+				?.length
+		).toBe(2);
+
+		expect(
+			await refreshTokenStore.revokeFamily?.(
+				'user-alice',
+				String(laptopFamily)
+			)
+		).toBe(true);
+		expect(await refreshTokenStore.getFamily?.(String(laptopFamily))).toBe(
+			undefined
+		);
+		const afterRevoke = await token(familyApp, {
+			client_id: 'app1',
+			grant_type: 'refresh_token',
+			refresh_token: refreshed.refresh_token
+		});
+		expect(afterRevoke.status).toBe(400);
+		expect(
+			(
+				await token(familyApp, {
+					client_id: 'app1',
+					grant_type: 'refresh_token',
+					refresh_token: desktop.refresh_token
+				})
+			).status
+		).toBe(200);
 	});
 
 	test('rejects a wrong PKCE verifier', async () => {
