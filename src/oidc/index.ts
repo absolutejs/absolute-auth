@@ -55,6 +55,7 @@ export type {
 	OAuthClient,
 	OAuthClientStore,
 	OidcRefreshTokenConnection,
+	OidcRefreshTokenFamily,
 	OidcRefreshTokenStore,
 	SocketTicket,
 	SocketTicketStore
