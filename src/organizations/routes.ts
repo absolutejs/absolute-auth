@@ -11,7 +11,9 @@ import {
 	acceptInvitation,
 	createOrganization,
 	inviteToOrganization,
-	listUserOrganizations
+	listUserOrganizations,
+	MAX_INVITATION_MESSAGE_LENGTH,
+	MAX_INVITEE_NAME_LENGTH
 } from './operations';
 
 // Tenant routes: list the caller's orgs, create one (caller becomes owner), invite / list / revoke
@@ -139,13 +141,19 @@ export const organizationRoutes = <UserType>({
 			{
 				body: t.Object({
 					email: t.String(),
+					inviteeName: t.Optional(
+						t.String({ maxLength: MAX_INVITEE_NAME_LENGTH })
+					),
+					message: t.Optional(
+						t.String({ maxLength: MAX_INVITATION_MESSAGE_LENGTH })
+					),
 					roles: t.Optional(t.Array(t.String()))
 				}),
 				cookie,
 				params: t.Object({ organizationId: t.String() })
 			},
 			async ({
-				body: { email, roles },
+				body: { email, inviteeName, message, roles },
 				cookie: { user_session_id },
 				params: { organizationId },
 				status,
@@ -162,7 +170,9 @@ export const organizationRoutes = <UserType>({
 				const { invitation, token } = await inviteToOrganization({
 					email,
 					invitationDurationMs,
+					inviteeName,
 					inviterUserId: getUserId(user),
+					message,
 					organizationId,
 					organizationStore,
 					roles: roles ?? []
@@ -171,7 +181,13 @@ export const organizationRoutes = <UserType>({
 					await onSendInvitation?.({
 						email: invitation.email,
 						expiresAt: invitation.expiresAt,
+						...(invitation.inviteeName
+							? { inviteeName: invitation.inviteeName }
+							: {}),
 						inviterUserId: invitation.inviterUserId,
+						...(invitation.message
+							? { message: invitation.message }
+							: {}),
 						organizationId,
 						token
 					});
@@ -227,6 +243,9 @@ export const organizationRoutes = <UserType>({
 						email: invitation.email,
 						expiresAt: invitation.expiresAt,
 						invitationId: invitation.invitationId,
+						...(invitation.inviteeName
+							? { inviteeName: invitation.inviteeName }
+							: {}),
 						roles: invitation.roles,
 						state: invitation.state
 					}))
