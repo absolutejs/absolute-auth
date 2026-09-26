@@ -6,6 +6,7 @@ import { AuthIdentityConflictError } from '../src/errors';
 import { createInMemoryIdentityStore } from '../src/identities/inMemoryIdentityStore';
 import { resolveCallbackIdentity } from '../src/identities/link';
 import { auth } from '../src/index';
+import { getUserSessionId } from '../src/utils';
 import { blockMigrations } from '../src/migrations';
 import { describeUserAgent } from '../src/session/device';
 import { createInMemoryAuthSessionStore } from '../src/session/inMemoryStore';
@@ -18,6 +19,7 @@ const ICLOUD = 'fbfc3007-154e-4ecc-8c0b-6e020557d7bd';
 const CHROME_WINDOWS =
 	'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36';
 
+const THIRTY_DAYS_MS = 2_592_000_000;
 let nextCredential = 0;
 const readAaguid = (response: unknown) => {
 	const value: unknown =
@@ -47,7 +49,7 @@ const adapter: WebAuthnAdapter = {
 	}
 };
 
-const build = async ({ otherWayIn = false } = {}) => {
+const build = async ({ otherWayIn = false, persistent = false } = {}) => {
 	const users = new Map<string, TestUser>();
 	const identityStore = createInMemoryIdentityStore();
 	const passkeys = createInMemoryWebAuthnCredentialStore();
@@ -75,8 +77,10 @@ const build = async ({ otherWayIn = false } = {}) => {
 		webauthn: {
 			credentialStore: passkeys,
 			origin: 'https://localhost',
+			persistentSessionCookie: persistent,
 			rpId: 'localhost',
 			rpName: 'Test',
+			sessionDurationMs: THIRTY_DAYS_MS,
 			webauthnAdapter: adapter,
 			getUserId: (user) => user.sub,
 			getWebAuthnUser: (id) =>
@@ -350,5 +354,52 @@ describe('sign-in identities', () => {
 		);
 		expect(sql('webauthn')).toContain('"name" varchar(100)');
 		expect(sql('sessions')).toContain('"user_agent" varchar(512)');
+	});
+});
+
+describe('persistent session cookies', () => {
+	const signInWithPasskey = async (persistent: boolean) => {
+		const { app } = await build({ persistent });
+		const session = await signUp(app, `keep-${persistent}@example.com`);
+		const { credentialId } = await (
+			await addPasskey(app, session, {})
+		).json();
+		const options = await call(
+			app,
+			'POST',
+			'/auth/webauthn/authenticate/options',
+			undefined,
+			{}
+		);
+		const challenge = cookieNamed(options, 'webauthn_challenge');
+		const verified = await call(
+			app,
+			'POST',
+			'/auth/webauthn/authenticate/verify',
+			challenge,
+			{ id: credentialId }
+		);
+
+		return verified.headers
+			.getSetCookie()
+			.find((value) => value.startsWith('user_session_id='));
+	};
+
+	test('a passkey sign-in keeps its cookie for the session length when asked', async () => {
+		expect(await signInWithPasskey(true)).toContain('Max-Age=2592000');
+	});
+
+	test('otherwise the cookie ends with the browser', async () => {
+		expect(await signInWithPasskey(false)).not.toContain('Max-Age');
+	});
+
+	test('instantiated sessions can keep their cookie too', async () => {
+		const app = new Elysia().get('/', ({ cookie: { user_session_id } }) => {
+			getUserSessionId({ maxAgeSeconds: 2_592_000, user_session_id });
+
+			return 'ok';
+		});
+		const response = await app.handle(new Request('http://localhost/'));
+		expect(response.headers.getSetCookie()[0]).toContain('Max-Age=2592000');
 	});
 });

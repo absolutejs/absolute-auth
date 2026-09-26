@@ -59,6 +59,8 @@ type PromoteToSessionProps<UserType> = {
 	sessionDurationMs: number;
 	/** How the person signed in (`passkey`, `password`, `magic_link`, `sso`). */
 	signInMethod?: string;
+	/** Keep the cookie for `sessionDurationMs` across browser restarts. */
+	persistentCookie?: boolean;
 	user: UserType;
 	userAgent?: string;
 };
@@ -75,6 +77,7 @@ export const promoteToSession = async <UserType>({
 	impersonator,
 	inMemorySession,
 	samlLogout,
+	persistentCookie,
 	sessionDurationMs,
 	signInMethod,
 	user,
@@ -102,6 +105,9 @@ export const promoteToSession = async <UserType>({
 	targetSession[userSessionId] = data;
 	cookie.set({
 		httpOnly: true,
+		...(persistentCookie
+			? { maxAge: Math.floor(sessionDurationMs / 1000) }
+			: {}),
 		sameSite: 'lax',
 		secure: resolveCookieSecure(cookieSecure),
 		value: userSessionId

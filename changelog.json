@@ -6,6 +6,23 @@
 			"changes": [
 				{
 					"kind": "added",
+					"summary": "Optional persistent session cookies: `persistentCookie` on `instantiateUserSession` and `promoteToSession`, and `persistentSessionCookie` on the `webauthn` block, give the session cookie a Max-Age equal to the session length so a sign-in survives browser restarts. Without them the cookie still ends with the browser.",
+					"symbols": [
+						"InsantiateUserSessionProps",
+						"instantiateUserSession",
+						"WebAuthnConfig",
+						"webauthnRoutes",
+						"getUserSessionId"
+					]
+				}
+			],
+			"date": "2026-09-26",
+			"version": "0.93.0"
+		},
+		{
+			"changes": [
+				{
+					"kind": "added",
 					"summary": "Passkey management: `GET`, `PATCH` (rename) and `DELETE` on `/auth/webauthn/credentials` for the signed-in user's own passkeys. Passkeys now have a `name` (webauthn migration 0003): the one passed at registration, or the provider's name from its AAGUID (iCloud Keychain, Google Password Manager, Windows Hello, 1Password…). `hasOtherSignInMethod` can protect the last passkey. The client gains `passkeys.rename`, a working `passkeys.list`, `runPasskeyRegistration(client, { name })` and `runPasskeyAuthentication` for a sign-in button.",
 					"symbols": [
 						"AuthClientRoutes",
