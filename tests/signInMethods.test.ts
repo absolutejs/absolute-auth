@@ -403,3 +403,33 @@ describe('persistent session cookies', () => {
 		expect(response.headers.getSetCookie()[0]).toContain('Max-Age=2592000');
 	});
 });
+
+describe('form_post callbacks', () => {
+	test('a provider POST becomes a same-site GET with only OAuth fields', async () => {
+		const { app } = await build();
+		const response = await app.handle(
+			new Request('http://localhost/oauth2/callback', {
+				body: new URLSearchParams({
+					code: 'the-code',
+					extra: 'dropped',
+					state: 'the-state',
+					user: '{"name":{"firstName":"Ada"}}'
+				}),
+				headers: {
+					'content-type': 'application/x-www-form-urlencoded'
+				},
+				method: 'POST'
+			})
+		);
+		expect(response.status).toBe(303);
+		const location = new URL(
+			response.headers.get('location') ?? '',
+			'http://localhost'
+		);
+		expect(location.pathname).toBe('/oauth2/callback');
+		expect(location.searchParams.get('code')).toBe('the-code');
+		expect(location.searchParams.get('state')).toBe('the-state');
+		expect(location.searchParams.get('user')).toContain('Ada');
+		expect(location.searchParams.has('extra')).toBe(false);
+	});
+});
