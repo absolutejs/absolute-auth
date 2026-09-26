@@ -57,7 +57,10 @@ type PromoteToSessionProps<UserType> = {
 	inMemorySession: SessionRecord<UserType>;
 	samlLogout?: SessionData<UserType>['samlLogout'];
 	sessionDurationMs: number;
+	/** How the person signed in (`passkey`, `password`, `magic_link`, `sso`). */
+	signInMethod?: string;
 	user: UserType;
+	userAgent?: string;
 };
 
 // Creates a registered session for a non-OAuth (credential / MFA-promoted / SSO) user and
@@ -73,7 +76,9 @@ export const promoteToSession = async <UserType>({
 	inMemorySession,
 	samlLogout,
 	sessionDurationMs,
-	user
+	signInMethod,
+	user,
+	userAgent
 }: PromoteToSessionProps<UserType>) => {
 	const compatibilityLayer = await createSessionCompatibilityLayer({
 		authSessionStore,
@@ -92,6 +97,8 @@ export const promoteToSession = async <UserType>({
 	if (samlLogout !== undefined) data.samlLogout = samlLogout;
 	if (impersonator !== undefined) data.impersonator = impersonator;
 	if (anonymous === true) data.anonymous = true;
+	if (signInMethod !== undefined) data.signInMethod = signInMethod;
+	if (userAgent !== undefined) data.userAgent = userAgent;
 	targetSession[userSessionId] = data;
 	cookie.set({
 		httpOnly: true,

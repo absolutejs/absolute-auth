@@ -12,6 +12,8 @@ export type AuditEventType =
 	| 'data_exported'
 	| 'email_verified'
 	| 'identity_conflict'
+	| 'identity_linked'
+	| 'identity_unlinked'
 	| 'impersonation_ended'
 	| 'impersonation_started'
 	| 'invitation_accepted'
@@ -36,7 +38,9 @@ export type AuditEventType =
 	| 'token_refreshed'
 	| 'token_revoked'
 	| 'webauthn_authenticated'
-	| 'webauthn_registered';
+	| 'webauthn_registered'
+	| 'webauthn_removed'
+	| 'webauthn_renamed';
 
 export const AUDIT_EVENT_TYPES: readonly AuditEventType[] = [
 	'account_deleted',
@@ -50,6 +54,8 @@ export const AUDIT_EVENT_TYPES: readonly AuditEventType[] = [
 	'data_exported',
 	'email_verified',
 	'identity_conflict',
+	'identity_linked',
+	'identity_unlinked',
 	'impersonation_ended',
 	'impersonation_started',
 	'invitation_accepted',
@@ -74,7 +80,9 @@ export const AUDIT_EVENT_TYPES: readonly AuditEventType[] = [
 	'token_refreshed',
 	'token_revoked',
 	'webauthn_authenticated',
-	'webauthn_registered'
+	'webauthn_registered',
+	'webauthn_removed',
+	'webauthn_renamed'
 ];
 
 export const isAuditEventType = (value: string): value is AuditEventType =>

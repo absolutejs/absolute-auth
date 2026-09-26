@@ -6,5 +6,6 @@ export * from './runtimeTransport';
 export * from '../redirect';
 export {
 	runConditionalAuthentication,
+	runPasskeyAuthentication,
 	runPasskeyRegistration
 } from './passkeyHelpers';

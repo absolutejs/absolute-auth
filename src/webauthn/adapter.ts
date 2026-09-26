@@ -21,6 +21,8 @@ export type WebAuthnAuthenticationOptions = {
 // carries exactly what the package persists (no WebAuthn binary types leak out of the adapter).
 export type WebAuthnRegistrationResult = {
 	credential?: {
+		// Identifies the authenticator model or passkey provider (e.g. iCloud Keychain).
+		aaguid?: string;
 		backedUp?: boolean;
 		counter: number;
 		credentialId: string;

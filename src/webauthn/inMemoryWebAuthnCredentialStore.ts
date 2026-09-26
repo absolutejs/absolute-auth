@@ -22,6 +22,10 @@ export const createInMemoryWebAuthnCredentialStore =
 			removeCredential: async (credentialId) => {
 				credentials.delete(credentialId);
 			},
+			renameCredential: async (credentialId, name) => {
+				const credential = credentials.get(credentialId);
+				if (credential) credential.name = name;
+			},
 			saveCredential: async (credential) => {
 				const previous = credentials.get(credential.credentialId);
 				if (

@@ -6,6 +6,66 @@
 			"changes": [
 				{
 					"kind": "added",
+					"summary": "Passkey management: `GET`, `PATCH` (rename) and `DELETE` on `/auth/webauthn/credentials` for the signed-in user's own passkeys. Passkeys now have a `name` (webauthn migration 0003): the one passed at registration, or the provider's name from its AAGUID (iCloud Keychain, Google Password Manager, Windows Hello, 1Password…). `hasOtherSignInMethod` can protect the last passkey. The client gains `passkeys.rename`, a working `passkeys.list`, `runPasskeyRegistration(client, { name })` and `runPasskeyAuthentication` for a sign-in button.",
+					"symbols": [
+						"AuthClientRoutes",
+						"PasskeySummary",
+						"WebAuthnConfig",
+						"WebAuthnCredential",
+						"WebAuthnCredentialStore",
+						"WebAuthnRegistrationResult",
+						"createAuthClient",
+						"defaultPasskeyName",
+						"runPasskeyAuthentication",
+						"runPasskeyRegistration",
+						"useUpgradeToPasskey",
+						"webauthnCredentialsTable",
+						"webauthnRoutes"
+					]
+				},
+				{
+					"kind": "added",
+					"summary": "Sessions record how and where they signed in: `signInMethod` (provider name, `passkey`, `password`, `magic_link`, `otp`, `sso`) and the User-Agent (sessions migration 0003). `GET /auth/sessions` returns them with a coarse `device` (`{ browser, os }`) via `describeUserAgent`; pass the callback's new `request` to `instantiateUserSession` to record OAuth sign-ins. The client's `sessions.list` now returns the array the server sends.",
+					"symbols": [
+						"CallbackContext",
+						"InsantiateUserSessionProps",
+						"SessionData",
+						"createAuthClient",
+						"describeUserAgent",
+						"instantiateUserSession",
+						"oidcSsoRoutes",
+						"sessionRoutes",
+						"useSessions"
+					]
+				},
+				{
+					"kind": "added",
+					"summary": "Sign-in identities: several provider accounts can open one user. New `identities` config mounts `GET /auth/identities` and `DELETE /auth/identities/:id` (never removes the last way in unless `hasOtherSignInMethod` says so); `linkCallbackIdentity` links the OAuth callback's account to the signed-in user from `onLinkIdentity` and throws `AuthIdentityConflictError` when another user already owns it, so `onLinkIdentityConflict` finally runs. Postgres/Neon and in-memory stores; migration block `identities` creates `auth_identities` (compatible with existing app tables and the CLI importer) with a unique provider+subject index.",
+					"symbols": [
+						"AuditEventType",
+						"AuthConfig",
+						"AuthIdentity",
+						"AuthIdentityStore",
+						"BlockName",
+						"IdentitiesConfig",
+						"authIdentitiesTable",
+						"createAuthApplications",
+						"createInMemoryIdentityStore",
+						"createNeonIdentityStore",
+						"createPostgresIdentityStore",
+						"identityRoutes",
+						"linkCallbackIdentity",
+						"resolveCallbackIdentity"
+					]
+				}
+			],
+			"date": "2026-09-26",
+			"version": "0.92.0"
+		},
+		{
+			"changes": [
+				{
+					"kind": "added",
 					"summary": "Invitations accept an optional invitee name and personal note: stored with the invitation (organizations migration 0002), passed to onSendInvitation, and the name is returned when listing invitations. Name is trimmed to 200 characters; the note keeps line breaks and is limited to 2,000.",
 					"symbols": [
 						"OrganizationInvitation",
