@@ -28,7 +28,11 @@ export type OrganizationInvitation = {
 	email: string;
 	expiresAt: number;
 	invitationId: string;
+	/** Optional display name for the invitee, shown to administrators and in the email. */
+	inviteeName?: string;
 	inviterUserId?: string;
+	/** Optional personal note from the inviter, included in the invitation email. */
+	message?: string;
 	organizationId: OrganizationId;
 	roles: string[];
 	state: InvitationState;

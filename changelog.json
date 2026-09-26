@@ -6,6 +6,24 @@
 			"changes": [
 				{
 					"kind": "added",
+					"summary": "Invitations accept an optional invitee name and personal note: stored with the invitation (organizations migration 0002), passed to onSendInvitation, and the name is returned when listing invitations. Name is trimmed to 200 characters; the note keeps line breaks and is limited to 2,000.",
+					"symbols": [
+						"OrganizationInvitation",
+						"OrganizationInvitationMessage",
+						"inviteToOrganization",
+						"organizationInvitationsTable",
+						"organizationRoutes",
+						"createAuthApplications"
+					]
+				}
+			],
+			"date": "2026-09-26",
+			"version": "0.91.0"
+		},
+		{
+			"changes": [
+				{
+					"kind": "added",
 					"summary": "Add per-grant refresh-token family inventory and revocation: optional `listFamilies`, `getFamily` and `revokeFamily` store methods (in-memory and Postgres/Neon, with a family index migration), and pass the family id to `getAccessTokenClaims` so resource servers can reject access tokens from a revoked device immediately.",
 					"symbols": [
 						"OidcRefreshTokenFamily",
