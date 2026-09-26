@@ -8,7 +8,7 @@ import { isNonEmptyString } from '../typeGuards';
 import { userSessionIdTypebox } from '../typebox';
 import type { RouteString } from '../types';
 import { toSafeLocalPath } from '../redirect';
-import { resolveCookieSecure } from '../utils';
+import { resolveCookieSecure, readUserAgent } from '../utils';
 import {
 	DEFAULT_SSO_ROUTE,
 	DEFAULT_SSO_SESSION_TTL_MS,
@@ -144,6 +144,7 @@ export const oidcSsoRoutes = <UserType>({
 				})
 			},
 			async ({
+				request,
 				cookie: {
 					sso_nonce,
 					sso_organization,
@@ -237,7 +238,9 @@ export const oidcSsoRoutes = <UserType>({
 						cookieSecure,
 						inMemorySession: session,
 						sessionDurationMs,
-						user
+						signInMethod: 'sso',
+						user,
+						userAgent: readUserAgent(request)
 					});
 					await onSsoCallbackSuccess?.({
 						identity,

@@ -250,6 +250,7 @@ export default defineConfig([
 	},
 	{
 		files: [
+			'tests/identitiesPostgres.test.ts',
 			'tests/migrations.test.ts',
 			'tests/postgresInvitationDetails.test.ts',
 			'tests/postgresRefreshFamilies.test.ts',

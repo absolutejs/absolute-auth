@@ -495,3 +495,52 @@ independently, including safe failure states. Permanent invalid grants and ambig
 exchange atomic with the database: a process crash after external rotation may still
 require reconnecting. An already dispatched provider request cannot be recalled by
 local disconnect. Provider-wide consent revocation remains a separate explicit action.
+
+## Several ways to sign in to one account
+
+Add an `identities` block so Google, Microsoft, GitHub and other providers can all
+open the same user. Run the `identities` migration block to create `auth_identities`.
+
+```ts
+import {
+	auth,
+	createNeonIdentityStore,
+	linkCallbackIdentity,
+	resolveCallbackIdentity
+} from '@absolutejs/auth';
+
+const identityStore = createNeonIdentityStore(process.env.DATABASE_URL!);
+
+auth<User>({
+	identities: {
+		identityStore,
+		getUserId: (user) => user.sub,
+		// Allow removing the last provider only if they can still get in another way.
+		hasOtherSignInMethod: async ({ user }) =>
+			(await passkeyStore.listCredentialsByUser(user.sub)).length > 0
+	},
+	// Signed-in people link another provider by visiting
+	// /oauth2/<provider>/authorization?client=login&intent=link_identity
+	onLinkIdentity: async (context) => {
+		await linkCallbackIdentity({ context, identityStore, getUserId: (u) => u.sub });
+
+		return context.redirect('/profile?linked=1');
+	},
+	// Reached when that provider account already belongs to someone else.
+	onLinkIdentityConflict: ({ redirect }) => redirect('/profile?linked=conflict'),
+	onCallbackSuccess: async (context) => {
+		const { provider, providerSubject } = await resolveCallbackIdentity(context);
+		const identity = await identityStore.findIdentity(provider, providerSubject);
+		// …load the user by identity?.userId, then instantiateUserSession({ ...context })
+	}
+});
+```
+
+`GET /auth/identities` lists the caller's linked providers and
+`DELETE /auth/identities/:id` unlinks one. Linking a provider account that already
+belongs to another user throws `AuthIdentityConflictError`, which the callback routes
+to `onLinkIdentityConflict`.
+
+Passkeys have names and can be managed by their owner: `GET`, `PATCH` (rename) and
+`DELETE` on `/auth/webauthn/credentials`. Sessions record their sign-in method and
+browser, and `GET /auth/sessions` returns them as `{ signInMethod, device: { browser, os } }`.

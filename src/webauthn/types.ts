@@ -12,6 +12,8 @@ export type WebAuthnCredential = {
 	// 'singleDevice' | 'multiDevice', as classified by the adapter from the attestation.
 	deviceType?: string;
 	lastUsedAt?: number;
+	// A label the person chose, or one derived from the passkey provider at registration.
+	name?: string;
 	// base64url COSE public key used to verify assertions.
 	publicKey: string;
 	transports?: string[];
@@ -27,5 +29,7 @@ export type WebAuthnCredentialStore = {
 	) => Promise<WebAuthnCredential | undefined>;
 	listCredentialsByUser: (userId: string) => Promise<WebAuthnCredential[]>;
 	removeCredential: (credentialId: string) => Promise<void>;
+	// Optional so existing custom stores keep working; the rename route needs it.
+	renameCredential?: (credentialId: string, name: string) => Promise<void>;
 	saveCredential: (credential: WebAuthnCredential) => Promise<void>;
 };

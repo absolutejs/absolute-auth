@@ -32,7 +32,9 @@ export const authSessionsTable = pgTable(
 			string | number
 		>(),
 		refresh_token: text('refresh_token'),
+		sign_in_method: varchar('sign_in_method', { length: 64 }),
 		updated_at: timestamp('updated_at').notNull().defaultNow(),
+		user_agent: varchar('user_agent', { length: 512 }),
 		user_json: jsonb('user_json').$type<Record<string, unknown>>().notNull()
 	},
 	// Indexed so `deleteExpired` (DELETE WHERE expires_at_ms < now) is a range
@@ -93,7 +95,9 @@ const toSessionData = <UserType>(
 	expiresAt: row.expires_at_ms,
 	oauthSubject: row.oauth_subject_json ?? undefined,
 	refreshToken: row.refresh_token ?? undefined,
-	user: cloneUser(decodeUser(row.user_json))
+	signInMethod: row.sign_in_method ?? undefined,
+	user: cloneUser(decodeUser(row.user_json)),
+	userAgent: row.user_agent ?? undefined
 });
 
 const toUnregisteredSessionData = (
@@ -196,7 +200,9 @@ export const createPostgresAuthSessionStore = <
 					id,
 					oauth_subject_json: value.oauthSubject ?? null,
 					refresh_token: value.refreshToken ?? null,
+					sign_in_method: value.signInMethod ?? null,
 					updated_at: new Date(),
+					user_agent: value.userAgent ?? null,
 					user_json: value.user ?? {}
 				})
 				.onConflictDoUpdate({
@@ -206,7 +212,9 @@ export const createPostgresAuthSessionStore = <
 						expires_at_ms: value.expiresAt,
 						oauth_subject_json: value.oauthSubject ?? null,
 						refresh_token: value.refreshToken ?? null,
+						sign_in_method: value.signInMethod ?? null,
 						updated_at: new Date(),
+						user_agent: value.userAgent ?? null,
 						user_json: value.user ?? {}
 					},
 					target: authSessionsTable.id

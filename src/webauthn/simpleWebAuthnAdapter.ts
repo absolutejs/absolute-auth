@@ -161,11 +161,16 @@ export const createSimpleWebAuthnAdapter =
 				if (!result.verified || !result.registrationInfo) {
 					return { verified: false };
 				}
-				const { credential, credentialBackedUp, credentialDeviceType } =
-					result.registrationInfo;
+				const {
+					aaguid,
+					credential,
+					credentialBackedUp,
+					credentialDeviceType
+				} = result.registrationInfo;
 
 				return {
 					credential: {
+						aaguid,
 						backedUp: credentialBackedUp,
 						counter: credential.counter,
 						credentialId: credential.id,

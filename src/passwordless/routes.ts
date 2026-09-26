@@ -1,3 +1,4 @@
+import { readUserAgent } from '../utils';
 import { type Cookie, Elysia, t } from 'elysia';
 import { generateSecureToken, hashToken } from '../crypto';
 import { promoteToSession } from '../session/promote';
@@ -55,7 +56,9 @@ export const passwordlessRoutes = <UserType>({
 	const completeLogin = async (
 		email: string,
 		userSessionCookie: Cookie<UserSessionId | undefined>,
-		session: SessionRecord<UserType>
+		session: SessionRecord<UserType>,
+		signInMethod: 'magic_link' | 'otp',
+		request: Request
 	) => {
 		const existing = await getUserByEmail(email);
 		const user =
@@ -68,7 +71,9 @@ export const passwordlessRoutes = <UserType>({
 			cookieSecure,
 			inMemorySession: session,
 			sessionDurationMs,
-			user
+			signInMethod,
+			user,
+			userAgent: readUserAgent(request)
 		});
 		await emit?.({
 			at: Date.now(),
@@ -110,6 +115,7 @@ export const passwordlessRoutes = <UserType>({
 					{ body: t.Object({ token: t.String() }), cookie },
 					async ({
 						body: { token },
+						request,
 						cookie: { user_session_id },
 						status,
 						store: { session }
@@ -128,7 +134,9 @@ export const passwordlessRoutes = <UserType>({
 						const userSessionId = await completeLogin(
 							consumed.email,
 							user_session_id,
-							session
+							session,
+							'magic_link',
+							request
 						);
 						if (!userSessionId) {
 							return status(
@@ -179,6 +187,7 @@ export const passwordlessRoutes = <UserType>({
 					},
 					async ({
 						body: { code, email },
+						request,
 						cookie: { user_session_id },
 						status,
 						store: { session }
@@ -198,7 +207,9 @@ export const passwordlessRoutes = <UserType>({
 						const userSessionId = await completeLogin(
 							consumed.email,
 							user_session_id,
-							session
+							session,
+							'otp',
+							request
 						);
 						if (!userSessionId) {
 							return status(

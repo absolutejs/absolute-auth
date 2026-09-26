@@ -66,6 +66,7 @@ import {
 } from '../vc/postgresVcStores';
 import { vaultEntriesTable } from '../vault/postgresVaultStore';
 import { webauthnCredentialsTable } from '../webauthn/postgresWebAuthnCredentialStore';
+import { authIdentitiesTable } from '../identities/postgresIdentityStore';
 import { webhookDeliveriesTable } from '../webhooks/postgresStore';
 import { tablesToInitSql } from './generate';
 import type { BlockMigrations, Migration } from './types';
@@ -77,6 +78,7 @@ export type BlockName =
 	| 'audit'
 	| 'credentials'
 	| 'fga'
+	| 'identities'
 	| 'linkedProviders'
 	| 'lockout'
 	| 'mfa'
@@ -239,6 +241,22 @@ export const blockMigrations: Record<BlockName, BlockMigrations> = {
 		]
 	},
 	fga: initMigration('fga', [warrantsTable]),
+	identities: {
+		block: 'identities',
+		migrations: [
+			...initMigration('identities', [authIdentitiesTable]).migrations,
+			{
+				// Tables created by app code before this block existed lack these; the
+				// unique index is what keeps one provider account on one user.
+				id: '0002_last_used_and_unique_pair',
+				sql: [
+					'ALTER TABLE "auth_identities" ADD COLUMN IF NOT EXISTS "last_used_at" timestamp;',
+					'CREATE UNIQUE INDEX IF NOT EXISTS "auth_identities_provider_subject_idx" ON "auth_identities" ("auth_provider", "provider_subject");',
+					'CREATE INDEX IF NOT EXISTS "auth_identities_user_sub_idx" ON "auth_identities" ("user_sub");'
+				].join('\n')
+			}
+		]
+	},
 	linkedProviders: initMigration('linkedProviders', [
 		linkedProviderBindingsTable,
 		linkedProviderGrantsTable
@@ -300,7 +318,14 @@ export const blockMigrations: Record<BlockName, BlockMigrations> = {
 				authSessionsTable,
 				authUnregisteredSessionsTable
 			]).migrations,
-			sessionOAuthSubjectMigration
+			sessionOAuthSubjectMigration,
+			{
+				id: '0003_sign_in_device',
+				sql: [
+					'ALTER TABLE "auth_sessions" ADD COLUMN IF NOT EXISTS "sign_in_method" varchar(64);',
+					'ALTER TABLE "auth_sessions" ADD COLUMN IF NOT EXISTS "user_agent" varchar(512);'
+				].join('\n')
+			}
 		]
 	},
 	sso: initMigration('sso', [ssoConnectionsTable, samlServiceProvidersTable]),
@@ -317,6 +342,10 @@ export const blockMigrations: Record<BlockName, BlockMigrations> = {
 			{
 				id: '0002_server_challenges',
 				sql: tablesToInitSql([webauthnChallengesTable])
+			},
+			{
+				id: '0003_credential_names',
+				sql: 'ALTER TABLE "auth_webauthn_credentials" ADD COLUMN IF NOT EXISTS "name" varchar(100);'
 			}
 		]
 	},
