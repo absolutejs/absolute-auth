@@ -53,6 +53,9 @@ export type WebAuthnConfig<UserType> = {
 		userId: string;
 	}) => void | Promise<void>;
 	sessionDurationMs?: number;
+	// Keep a passkey sign-in's cookie for `sessionDurationMs` across browser
+	// restarts, instead of a browser-session cookie.
+	persistentSessionCookie?: boolean;
 	webauthnRoute?: RouteString;
 };
 

@@ -657,6 +657,9 @@ export type InsantiateUserSessionProps<UserType> = {
 	request?: Request;
 	/** Defaults to `authProvider`. */
 	signInMethod?: string;
+	/** Keep the session cookie for `sessionDurationMs`, across browser restarts,
+	 *  instead of dropping it when the browser closes. */
+	persistentCookie?: boolean;
 };
 export type JsonPrimitive = boolean | null | number | string;
 export type JsonValue = JsonPrimitive | JsonObject | JsonValue[];

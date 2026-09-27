@@ -81,7 +81,8 @@ export const instantiateUserSession = async <UserType>({
 	sessionDurationMs = MILLISECONDS_IN_A_DAY,
 	unregisteredSessionDurationMs = MILLISECONDS_IN_AN_HOUR,
 	request,
-	signInMethod
+	signInMethod,
+	persistentCookie
 }: InsantiateUserSessionProps<UserType>) => {
 	const authorization =
 		resolvedAuthorization ??
@@ -119,6 +120,9 @@ export const instantiateUserSession = async <UserType>({
 	const userSession = validateSession({ session, user_session_id });
 	const userSessionId = getUserSessionId({
 		cookieSecure,
+		maxAgeSeconds: persistentCookie
+			? Math.floor(sessionDurationMs / MILLISECONDS_IN_A_SECOND)
+			: undefined,
 		session,
 		unregisteredSession,
 		user_session_id
@@ -348,6 +352,9 @@ export const validateSession = <
 
 type GetUserSessionIdProps<UserType> = {
 	cookieSecure?: boolean;
+	// Keeps the cookie across browser restarts for this long; omit for a
+	// browser-session cookie.
+	maxAgeSeconds?: number;
 	user_session_id: Cookie<UserSessionId | undefined>;
 	session?: SessionRecord<UserType>;
 	unregisteredSession?: UnregisteredSessionRecord;
@@ -364,6 +371,7 @@ const clearExistingSession = <UserType>(
 
 export const getUserSessionId = <UserType>({
 	cookieSecure,
+	maxAgeSeconds,
 	user_session_id,
 	session,
 	unregisteredSession
@@ -378,6 +386,7 @@ export const getUserSessionId = <UserType>({
 
 	user_session_id.set({
 		httpOnly: true,
+		...(maxAgeSeconds === undefined ? {} : { maxAge: maxAgeSeconds }),
 		sameSite: 'lax',
 		secure: resolveCookieSecure(cookieSecure),
 		value: userSessionId
