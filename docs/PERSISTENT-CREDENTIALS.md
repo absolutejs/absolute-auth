@@ -12,7 +12,8 @@ The application owns user records. The auth package owns credentials and session
 
 ```ts
 import { auth } from '@absolutejs/auth/server';
-import { createPostgresAuthSessionStore, createPostgresCredentialStore, runMigrations } from '@absolutejs/auth';
+import { runBunMigrations } from '@absolutejs/auth/bun';
+import { createPostgresAuthSessionStore, createPostgresCredentialStore } from '@absolutejs/auth';
 import { SQL } from 'bun';
 import { Database } from 'bun:sqlite';
 import { drizzle } from 'drizzle-orm/bun-sql';
@@ -25,20 +26,11 @@ if (!databaseUrl)
   throw new Error(
     "AUTH_DATABASE_URL must point to the isolated acceptance database",
   );
-const migrationClient = new SQL({ url: databaseUrl, max: 1, prepare: false });
-try {
-  await runMigrations({
-    blocks: ["sessions", "credentials"],
-    client: {
-      query: async (text, values) => ({
-        rows: await migrationClient.unsafe(text, values ? [...values] : []),
-      }),
-    },
-    log: () => undefined,
-  });
-} finally {
-  await migrationClient.close();
-}
+await runBunMigrations({
+  databaseUrl,
+  blocks: ['sessions', 'credentials'],
+  log: () => undefined,
+});
 const authDb = drizzle({ client: new SQL(databaseUrl) });
 const decodeCustomer = (value: unknown): Customer => {
   if (typeof value !== "object" || value === null)

@@ -241,6 +241,14 @@ export default defineConfig([
 		}
 	},
 	{
+		files: ['src/bun.ts'],
+		rules: {
+			// This package-owned DDL transport executes the migration runner's SQL;
+			// application queries continue to require typed Drizzle builders.
+			'absolute/prefer-drizzle-query-builders': 'off'
+		}
+	},
+	{
 		files: ['tests/migrations.test.ts', 'tests/postgresSessionStore.test.ts'],
 		rules: {
 			// Migration SQL is the input under test; it cannot use a schema query builder.
