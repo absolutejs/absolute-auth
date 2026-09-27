@@ -21,6 +21,7 @@ import type {
 	SocketTicket,
 	SocketTicketStore
 } from './types';
+import { toRefreshFamily as toFamily } from './refreshFamilies';
 
 const DEFAULT_LIST_LIMIT = 100;
 
@@ -306,6 +307,17 @@ export const createInMemoryOidcRefreshTokenStore =
 
 				return deleted;
 			},
+			getFamily: async (familyId) => {
+				const family = families.get(familyId);
+				if (
+					!family ||
+					family.revoked ||
+					family.token.expiresAt <= Date.now()
+				)
+					return undefined;
+
+				return toFamily(family.token);
+			},
 			getToken: async (tokenHash) => activeForHash(tokenHash)?.token,
 			listClientIdsForUser: async (userId) => {
 				const now = Date.now();
@@ -341,12 +353,34 @@ export const createInMemoryOidcRefreshTokenStore =
 
 				return Array.from(connections.values());
 			},
+			listFamilies: async (userId, clientId) => {
+				const now = Date.now();
+
+				return Array.from(families.values())
+					.filter(
+						(family) =>
+							!family.revoked &&
+							family.token.userId === userId &&
+							family.token.expiresAt > now &&
+							(clientId === undefined ||
+								family.token.clientId === clientId)
+					)
+					.map((family) => toFamily(family.token))
+					.sort((left, right) => right.issuedAt - left.issuedAt);
+			},
 			revokeByConsumedToken: async (tokenHash) => {
 				const family = familyForConsumedHash(tokenHash);
 				if (!family) return false;
 				family.revoked = true;
 
 				return true;
+			},
+			revokeFamily: async (userId, familyId) => {
+				const family = families.get(familyId);
+				if (!family || family.token.userId !== userId) return false;
+				families.delete(familyId);
+
+				return !family.revoked;
 			},
 			rotateToken: async (currentTokenHash, replacement) => {
 				const family = activeForHash(currentTokenHash);

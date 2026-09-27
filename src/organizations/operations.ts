@@ -4,47 +4,33 @@ import { DEFAULT_INVITATION_TTL_MS, DEFAULT_OWNER_ROLES } from './config';
 import type {
 	Organization,
 	OrganizationInvitation,
-	OrganizationMembership,
 	OrganizationStore
 } from './types';
 
-// Store-backed primitives shared by the routes and reusable directly (e.g. seeding an org during
-// signup). Each is pure aside from the store calls, so they unit-test without an HTTP layer.
-
+export const MAX_INVITATION_MESSAGE_LENGTH = 2000;
+export const MAX_INVITEE_NAME_LENGTH = 200;
 export const acceptInvitation = async ({
 	organizationStore,
 	token,
-	userId
+	userId,
+	verifiedEmail
 }: {
 	organizationStore: OrganizationStore;
 	token: string;
 	userId: string;
+	/** Provider-verified email, never an unverified profile field or request body. */
+	verifiedEmail?: string;
 }) => {
-	const invitation = await organizationStore.getInvitationByTokenHash(
-		await hashToken(token)
-	);
-	if (!invitation || invitation.state !== 'pending') return undefined;
-	if (invitation.expiresAt < Date.now()) return undefined;
+	if (!verifiedEmail?.trim() || !organizationStore.acceptInvitation)
+		return undefined;
 
-	const now = Date.now();
-	await organizationStore.saveInvitation({
-		...invitation,
-		acceptedAt: now,
-		state: 'accepted'
+	return organizationStore.acceptInvitation({
+		now: Date.now(),
+		tokenHash: await hashToken(token),
+		userId,
+		verifiedEmail: verifiedEmail.trim().toLowerCase()
 	});
-	const membership: OrganizationMembership = {
-		createdAt: now,
-		organizationId: invitation.organizationId,
-		roles: invitation.roles,
-		status: 'active',
-		updatedAt: now,
-		userId
-	};
-	await organizationStore.saveMembership(membership);
-
-	return membership;
 };
-
 // JIT / domain-based org assignment. Call from your OAuth/credential-register success hook (or
 // SSO callback) to auto-add the new user to every org their email domain maps to — the WorkOS
 // "domain verification" pattern. Idempotent (skips orgs the user already belongs to). Returns
@@ -129,15 +115,24 @@ export const inviteToOrganization = async ({
 	inviterUserId,
 	organizationId,
 	organizationStore,
-	roles = []
+	roles = [],
+	inviteeName,
+	message
 }: {
 	email: string;
 	invitationDurationMs?: number;
+	inviteeName?: string;
 	inviterUserId?: string;
+	message?: string;
 	organizationId: OrganizationId;
 	organizationStore: OrganizationStore;
 	roles?: string[];
 }) => {
+	const name = inviteeName?.trim().slice(0, MAX_INVITEE_NAME_LENGTH);
+	const note = message
+		?.replace(/\r\n?/g, '\n')
+		.trim()
+		.slice(0, MAX_INVITATION_MESSAGE_LENGTH);
 	const token = generateSecureToken();
 	const now = Date.now();
 	const invitation: OrganizationInvitation = {
@@ -145,6 +140,8 @@ export const inviteToOrganization = async ({
 		email: email.trim().toLowerCase(),
 		expiresAt: now + invitationDurationMs,
 		invitationId: crypto.randomUUID(),
+		...(name ? { inviteeName: name } : {}),
+		...(note ? { message: note } : {}),
 		inviterUserId,
 		organizationId,
 		roles,

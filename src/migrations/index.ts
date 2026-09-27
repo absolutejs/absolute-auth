@@ -1,3 +1,4 @@
+import { webauthnChallengesTable } from '../webauthn/challengeStore';
 // Single export of every block's migrations. Consumers pick which blocks they enabled
 // in `auth()` and pass that subset to `runMigrations({ blocks: [...] })`, or omit `blocks`
 // to apply every migration the package ships. Adding a new block's migrations: import its
@@ -65,6 +66,7 @@ import {
 } from '../vc/postgresVcStores';
 import { vaultEntriesTable } from '../vault/postgresVaultStore';
 import { webauthnCredentialsTable } from '../webauthn/postgresWebAuthnCredentialStore';
+import { authIdentitiesTable } from '../identities/postgresIdentityStore';
 import { webhookDeliveriesTable } from '../webhooks/postgresStore';
 import { tablesToInitSql } from './generate';
 import type { BlockMigrations, Migration } from './types';
@@ -76,6 +78,7 @@ export type BlockName =
 	| 'audit'
 	| 'credentials'
 	| 'fga'
+	| 'identities'
 	| 'linkedProviders'
 	| 'lockout'
 	| 'mfa'
@@ -178,6 +181,24 @@ const oidcDeviceAudienceMigration: Migration = {
 	sql: 'ALTER TABLE "auth_oauth_device_authorizations" ADD COLUMN IF NOT EXISTS "audience" varchar(2048);'
 };
 
+// Optional invitee name and personal note on invitations.
+const organizationInvitationDetailsMigration: Migration = {
+	id: '0002_invitation_details',
+	sql: [
+		'ALTER TABLE "auth_organization_invitations" ADD COLUMN IF NOT EXISTS "invitee_name" varchar(200);',
+		'ALTER TABLE "auth_organization_invitations" ADD COLUMN IF NOT EXISTS "message" text;'
+	].join('\n')
+};
+
+// Per-family lookups back device inventories and per-request revocation checks.
+const oidcRefreshFamilyIndexMigration: Migration = {
+	id: '0006_refresh_token_family_index',
+	sql: [
+		'CREATE INDEX IF NOT EXISTS "auth_oauth_refresh_tokens_family_id_idx" ON "auth_oauth_refresh_tokens" ("family_id");',
+		'CREATE INDEX IF NOT EXISTS "auth_oauth_refresh_tokens_user_client_idx" ON "auth_oauth_refresh_tokens" ("user_id", "client_id");'
+	].join('\n')
+};
+
 const sessionOAuthSubjectMigration: Migration = {
 	id: '0002_oauth_subject',
 	sql: [
@@ -220,6 +241,22 @@ export const blockMigrations: Record<BlockName, BlockMigrations> = {
 		]
 	},
 	fga: initMigration('fga', [warrantsTable]),
+	identities: {
+		block: 'identities',
+		migrations: [
+			...initMigration('identities', [authIdentitiesTable]).migrations,
+			{
+				// Tables created by app code before this block existed lack these; the
+				// unique index is what keeps one provider account on one user.
+				id: '0002_last_used_and_unique_pair',
+				sql: [
+					'ALTER TABLE "auth_identities" ADD COLUMN IF NOT EXISTS "last_used_at" timestamp;',
+					'CREATE UNIQUE INDEX IF NOT EXISTS "auth_identities_provider_subject_idx" ON "auth_identities" ("auth_provider", "provider_subject");',
+					'CREATE INDEX IF NOT EXISTS "auth_identities_user_sub_idx" ON "auth_identities" ("user_sub");'
+				].join('\n')
+			}
+		]
+	},
 	linkedProviders: initMigration('linkedProviders', [
 		linkedProviderBindingsTable,
 		linkedProviderGrantsTable
@@ -255,14 +292,21 @@ export const blockMigrations: Record<BlockName, BlockMigrations> = {
 			oidcResourceAudienceMigration,
 			oidcRefreshTokenFamiliesMigration,
 			oidcSocketTicketsMigration,
-			oidcDeviceAudienceMigration
+			oidcDeviceAudienceMigration,
+			oidcRefreshFamilyIndexMigration
 		]
 	},
-	organizations: initMigration('organizations', [
-		organizationsTable,
-		organizationMembershipsTable,
-		organizationInvitationsTable
-	]),
+	organizations: {
+		block: 'organizations',
+		migrations: [
+			...initMigration('organizations', [
+				organizationsTable,
+				organizationMembershipsTable,
+				organizationInvitationsTable
+			]).migrations,
+			organizationInvitationDetailsMigration
+		]
+	},
 	passwordless: initMigration('passwordless', [passwordlessTokensTable]),
 	portal: initMigration('portal', [setupSessionsTable]),
 	roles: initMigration('roles', [rolesTable]),
@@ -274,7 +318,14 @@ export const blockMigrations: Record<BlockName, BlockMigrations> = {
 				authSessionsTable,
 				authUnregisteredSessionsTable
 			]).migrations,
-			sessionOAuthSubjectMigration
+			sessionOAuthSubjectMigration,
+			{
+				id: '0003_sign_in_device',
+				sql: [
+					'ALTER TABLE "auth_sessions" ADD COLUMN IF NOT EXISTS "sign_in_method" varchar(64);',
+					'ALTER TABLE "auth_sessions" ADD COLUMN IF NOT EXISTS "user_agent" varchar(512);'
+				].join('\n')
+			}
 		]
 	},
 	sso: initMigration('sso', [ssoConnectionsTable, samlServiceProvidersTable]),
@@ -284,7 +335,20 @@ export const blockMigrations: Record<BlockName, BlockMigrations> = {
 		vcCredentialNoncesTable,
 		vcPresentationRequestsTable
 	]),
-	webauthn: initMigration('webauthn', [webauthnCredentialsTable]),
+	webauthn: {
+		block: 'webauthn',
+		migrations: [
+			...initMigration('webauthn', [webauthnCredentialsTable]).migrations,
+			{
+				id: '0002_server_challenges',
+				sql: tablesToInitSql([webauthnChallengesTable])
+			},
+			{
+				id: '0003_credential_names',
+				sql: 'ALTER TABLE "auth_webauthn_credentials" ADD COLUMN IF NOT EXISTS "name" varchar(100);'
+			}
+		]
+	},
 	webhooks: initMigration('webhooks', [webhookDeliveriesTable])
 };
 

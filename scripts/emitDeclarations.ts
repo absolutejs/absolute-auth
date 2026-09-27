@@ -15,7 +15,7 @@ try {
 			'tsc',
 			'--emitDeclarationOnly',
 			'--project',
-			'tsconfig.json',
+			'tsconfig.build.json',
 			'--outDir',
 			staging
 		],

@@ -1,9 +1,10 @@
-import { and, desc, eq } from 'drizzle-orm';
+import { and, desc, eq, exists, gt, notExists, sql } from 'drizzle-orm';
 import {
 	bigint,
 	jsonb,
 	pgTable,
 	primaryKey,
+	text,
 	varchar
 } from 'drizzle-orm/pg-core';
 import { type AnyPgDatabase, createNeonDatabase } from '../stores/postgres';
@@ -30,7 +31,9 @@ export const organizationInvitationsTable = pgTable(
 		invitation_id: varchar('invitation_id', {
 			length: ID_LENGTH
 		}).primaryKey(),
+		invitee_name: varchar('invitee_name', { length: 200 }),
 		inviter_user_id: varchar('inviter_user_id', { length: ID_LENGTH }),
+		message: text('message'),
 		organization_id: varchar('organization_id', {
 			length: ID_LENGTH
 		}).notNull(),
@@ -101,7 +104,9 @@ const toInvitation = (row: InvitationRow): OrganizationInvitation => ({
 	email: row.email,
 	expiresAt: row.expires_at_ms,
 	invitationId: row.invitation_id,
+	...(row.invitee_name ? { inviteeName: row.invitee_name } : {}),
 	inviterUserId: row.inviter_user_id ?? undefined,
+	...(row.message ? { message: row.message } : {}),
 	organizationId: row.organization_id,
 	roles: row.roles,
 	state: row.state,
@@ -113,6 +118,86 @@ export const createNeonOrganizationStore = (databaseUrl: string) =>
 export const createPostgresOrganizationStore = <DB extends AnyPgDatabase>(
 	db: DB
 ): OrganizationStore => ({
+	acceptInvitation: async ({ now, tokenHash, userId, verifiedEmail }) => {
+		// A data-modifying CTE consumes the token and inserts membership in one
+		// statement, including on Neon HTTP where interactive transactions are unavailable.
+		const claimed = db.$with('claimed').as(
+			db
+				.update(organizationInvitationsTable)
+				.set({ accepted_at_ms: now, state: 'accepted' })
+				.where(
+					and(
+						eq(organizationInvitationsTable.token_hash, tokenHash),
+						eq(organizationInvitationsTable.state, 'pending'),
+						gt(organizationInvitationsTable.expires_at_ms, now),
+						sql`lower(trim(${organizationInvitationsTable.email})) = ${verifiedEmail}`,
+						exists(
+							db
+								.select()
+								.from(organizationsTable)
+								.where(
+									eq(
+										organizationsTable.organization_id,
+										organizationInvitationsTable.organization_id
+									)
+								)
+						),
+						notExists(
+							db
+								.select()
+								.from(organizationMembershipsTable)
+								.where(
+									and(
+										eq(
+											organizationMembershipsTable.organization_id,
+											organizationInvitationsTable.organization_id
+										),
+										eq(
+											organizationMembershipsTable.user_id,
+											userId
+										),
+										eq(
+											organizationMembershipsTable.status,
+											'suspended'
+										)
+									)
+								)
+						)
+					)
+				)
+				.returning({
+					organizationId:
+						organizationInvitationsTable.organization_id,
+					roles: organizationInvitationsTable.roles
+				})
+		);
+		const [row] = await db
+			.with(claimed)
+			.insert(organizationMembershipsTable)
+			.select(
+				db
+					.select({
+						created_at_ms: sql<number>`${now}`.as('created_at_ms'),
+						organization_id: claimed.organizationId,
+						roles: claimed.roles,
+						status: sql<'active'>`'active'`.as('status'),
+						updated_at_ms: sql<number>`${now}`.as('updated_at_ms'),
+						user_id: sql<string>`${userId}`.as('user_id')
+					})
+					.from(claimed)
+			)
+			.onConflictDoUpdate({
+				set: { user_id: userId },
+				target: [
+					organizationMembershipsTable.organization_id,
+					organizationMembershipsTable.user_id
+				]
+			})
+			.returning();
+
+		return row && row.status === 'active' ? toMembership(row) : undefined;
+	},
+
 	deleteOrganization: async (organizationId) => {
 		await db
 			.delete(organizationsTable)
@@ -218,7 +303,9 @@ export const createPostgresOrganizationStore = <DB extends AnyPgDatabase>(
 			email: invitation.email,
 			expires_at_ms: invitation.expiresAt,
 			invitation_id: invitation.invitationId,
+			invitee_name: invitation.inviteeName ?? null,
 			inviter_user_id: invitation.inviterUserId ?? null,
+			message: invitation.message ?? null,
 			organization_id: invitation.organizationId,
 			roles: invitation.roles,
 			state: invitation.state,

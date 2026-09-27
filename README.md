@@ -432,8 +432,20 @@ const credentialStore = createPostgresCredentialStore(db);
 
 Apply the `sessions` and `credentials` migrations before serving requests.
 `runMigrations` accepts a `MigrationClient` for non-Neon PostgreSQL drivers.
-With Bun SQL, use a separate `prepare: false` client for migration scripts,
-and the default prepared-query mode for application queries and JSON columns.
+On Bun, use the package-owned runner; it supports ordinary PostgreSQL over TCP
+(including local Docker databases) without a Neon WebSocket proxy:
+
+```ts
+import { runBunMigrations } from '@absolutejs/auth/bun';
+await runBunMigrations({ databaseUrl, blocks: ['sessions', 'credentials'] });
+```
+
+It owns and closes a separate unprepared connection, locks concurrent migration
+runs, and rolls back both DDL and journal entries on failure. Keep the default
+prepared-query mode for the application's Drizzle connection and JSON columns.
+Do not implement a raw SQL migration adapter in application code. The existing
+`runMigrations({ databaseUrl })` remains the Neon transport; custom clients remain
+supported for other runtimes.
 
 Studio's `absolute-auth setup` reads the selected adapter from
 `src/backend/packages/auth.config.ts`. Explicit memory storage skips database
@@ -442,3 +454,93 @@ a real `DATABASE_URL` and runs migrations. Missing or unknown selections fail
 with an actionable error; custom adapters must configure their own migrations.
 
 For a complete credentials-only Bun setup, see [Persistent email/password sign-in](docs/PERSISTENT-CREDENTIALS.md). It includes real migration and auth configuration APIs, durable user records, and driver settings.
+
+## Separately consented connected accounts
+
+Set `bindLinkingToSession: true` when using `onLinkConnector` or `onLinkIdentity`.
+Start authorization with an explicit `intent=link_connector` (or `link_identity`)
+and a named client configured with only that capability's scopes. The callback
+requires the same live session that started consent. Revalidate the user's current
+application access in the handler. Never interpret a connector callback as login.
+
+`resolveOAuthAuthorization(callbackContext)` resolves provider identity and tokens
+without creating a login session. Check actual returned scopes before saving grants.
+Compose `createEncryptedLinkedProviderGrantStore({store, cipher})` with a raw
+package grant store and `createSecretCipher(serverOnlyKey)` or a versioned cipher.
+Use the encrypted adapter for all token writes and the OAuth credential resolver;
+use an explicit metadata projection for browser responses. The adapter exposes
+plaintext only to trusted server callers and binds encrypted tokens to grant,
+owner, provider subject and token field. It rejects plaintext legacy rows; migrate
+existing rows deliberately before enabling it. Keep encryption keys outside the DB.
+
+Create grants/bindings and audit entries in one database transaction. Serialize
+connection replacement/disconnection with credential execution and refresh before
+enabling workers: the base grant store's ordinary upsert is not a refresh/revocation
+compare-and-swap protocol. Removing a grant locally is distinct from revoking an
+entire provider application consent, which can affect other connections.
+
+### Coordinated background credentials (0.88.0)
+
+Use `createCoordinatedOAuthLinkedProviderCredentialResolver({ transaction, cipher,
+providersConfiguration })` for background workers. Supply an **interactive Postgres
+transaction callback** yielding a Drizzle database, not a Neon HTTP batch. Renewal
+and failure reporting lock the grant row; `createLinkedProviderGrantStore(tx)`
+removal takes the same lock before deleting bindings. Reauthorization must lock
+that grant before reading/preserving a prior refresh token. Never resurrect an old
+ID with a separate upsert. Owner and binding association are checked on every lease.
+
+Call provider actions only after `getAccessToken` resolves: refresh is committed
+independently, including safe failure states. Permanent invalid grants and ambiguous
+20-second renewal timeouts require reconnection. Transactions cannot make the provider
+exchange atomic with the database: a process crash after external rotation may still
+require reconnecting. An already dispatched provider request cannot be recalled by
+local disconnect. Provider-wide consent revocation remains a separate explicit action.
+
+## Several ways to sign in to one account
+
+Add an `identities` block so Google, Microsoft, GitHub and other providers can all
+open the same user. Run the `identities` migration block to create `auth_identities`.
+
+```ts
+import {
+	auth,
+	createNeonIdentityStore,
+	linkCallbackIdentity,
+	resolveCallbackIdentity
+} from '@absolutejs/auth';
+
+const identityStore = createNeonIdentityStore(process.env.DATABASE_URL!);
+
+auth<User>({
+	identities: {
+		identityStore,
+		getUserId: (user) => user.sub,
+		// Allow removing the last provider only if they can still get in another way.
+		hasOtherSignInMethod: async ({ user }) =>
+			(await passkeyStore.listCredentialsByUser(user.sub)).length > 0
+	},
+	// Signed-in people link another provider by visiting
+	// /oauth2/<provider>/authorization?client=login&intent=link_identity
+	onLinkIdentity: async (context) => {
+		await linkCallbackIdentity({ context, identityStore, getUserId: (u) => u.sub });
+
+		return context.redirect('/profile?linked=1');
+	},
+	// Reached when that provider account already belongs to someone else.
+	onLinkIdentityConflict: ({ redirect }) => redirect('/profile?linked=conflict'),
+	onCallbackSuccess: async (context) => {
+		const { provider, providerSubject } = await resolveCallbackIdentity(context);
+		const identity = await identityStore.findIdentity(provider, providerSubject);
+		// …load the user by identity?.userId, then instantiateUserSession({ ...context })
+	}
+});
+```
+
+`GET /auth/identities` lists the caller's linked providers and
+`DELETE /auth/identities/:id` unlinks one. Linking a provider account that already
+belongs to another user throws `AuthIdentityConflictError`, which the callback routes
+to `onLinkIdentityConflict`.
+
+Passkeys have names and can be managed by their owner: `GET`, `PATCH` (rename) and
+`DELETE` on `/auth/webauthn/credentials`. Sessions record their sign-in method and
+browser, and `GET /auth/sessions` returns them as `{ signInMethod, device: { browser, os } }`.

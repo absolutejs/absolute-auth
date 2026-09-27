@@ -1,9 +1,10 @@
+import type { WebAuthnChallengeStore } from './challengeStore';
 import type { AuditEmitter } from '../audit/config';
 import { MILLISECONDS_IN_A_DAY } from '../constants';
 import type { AuthSessionStore } from '../session/types';
 import type { RouteString, UserSessionId } from '../types';
 import type { WebAuthnAdapter } from './adapter';
-import type { WebAuthnCredentialStore } from './types';
+import type { WebAuthnCredential, WebAuthnCredentialStore } from './types';
 
 const FIVE_MINUTES_MS = 300_000;
 
@@ -17,6 +18,8 @@ export const WEBAUTHN_CHALLENGE_COOKIE = 'webauthn_challenge';
 // authentication ceremony (passwordless sign-in → mints the same `SessionData<UserType>`) only
 // when this block is supplied. SAML-style: a `webauthnAdapter` wraps a vetted library.
 export type WebAuthnConfig<UserType> = {
+	challengeStore?: WebAuthnChallengeStore;
+	canRegister?: (user: UserType) => boolean | Promise<boolean>;
 	credentialStore: WebAuthnCredentialStore;
 	// Stable per-user key (e.g. the user's `sub`) — groups a user's passkeys and labels them.
 	getUserId: (user: UserType) => string;
@@ -35,6 +38,12 @@ export type WebAuthnConfig<UserType> = {
 	// Display handles shown in the authenticator UI during registration (default to the user id).
 	getUserDisplayName?: (user: UserType) => string;
 	getUserName?: (user: UserType) => string;
+	// Whether the user can still sign in another way once this passkey is removed. When
+	// supplied and it returns false, removing the user's last passkey is refused.
+	hasOtherSignInMethod?: (context: {
+		credential: WebAuthnCredential;
+		user: UserType;
+	}) => boolean | Promise<boolean>;
 	onWebAuthnAuthenticated?: (context: {
 		user: UserType;
 		userSessionId: UserSessionId;
@@ -44,6 +53,9 @@ export type WebAuthnConfig<UserType> = {
 		userId: string;
 	}) => void | Promise<void>;
 	sessionDurationMs?: number;
+	// Keep a passkey sign-in's cookie for `sessionDurationMs` across browser
+	// restarts, instead of a browser-session cookie.
+	persistentSessionCookie?: boolean;
 	webauthnRoute?: RouteString;
 };
 

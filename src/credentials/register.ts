@@ -1,3 +1,4 @@
+import { readUserAgent } from '../utils';
 import type { RouteString } from '../types';
 import { Elysia, t } from 'elysia';
 import { generateSecureToken, hashPassword, hashToken } from '../crypto';
@@ -184,7 +185,9 @@ export const credentialsRegisterRoute = <
 					cookieSecure,
 					inMemorySession: session,
 					sessionDurationMs,
-					user: created
+					signInMethod: 'password',
+					user: created,
+					userAgent: readUserAgent(request)
 				});
 				await onCredentialsLoginSuccess?.({
 					user: created,

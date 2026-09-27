@@ -22,7 +22,10 @@ export default defineConfig([
 			'**/*.min.css',
 			'**/compiled/**',
 			'.cache/**',
-			'.claude/**'
+			'.claude/**',
+			// Guide code blocks extracted by scripts/guideExamples.ts; the source of
+			// truth is the Markdown, which check:guide compiles.
+			'.guide-check/**'
 		]
 	},
 	{
@@ -241,7 +244,22 @@ export default defineConfig([
 		}
 	},
 	{
-		files: ['tests/migrations.test.ts', 'tests/postgresSessionStore.test.ts'],
+		files: ['src/bun.ts'],
+		rules: {
+			// This package-owned DDL transport executes the migration runner's SQL;
+			// application queries continue to require typed Drizzle builders.
+			'absolute/prefer-drizzle-query-builders': 'off'
+		}
+	},
+	{
+		files: [
+			'tests/identitiesPostgres.test.ts',
+			'tests/migrations.test.ts',
+			'tests/postgresInvitationDetails.test.ts',
+			'tests/postgresRefreshFamilies.test.ts',
+			'tests/postgresSessionStore.test.ts',
+			'tests/webauthnPostgres.test.ts'
+		],
 		rules: {
 			// Migration SQL is the input under test; it cannot use a schema query builder.
 			'absolute/prefer-drizzle-query-builders': 'off'

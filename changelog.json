@@ -6,6 +6,295 @@
 			"changes": [
 				{
 					"kind": "added",
+					"summary": "OAuth callbacks accept response_mode=form_post (Sign in with Apple): a POST to the callback route is re-issued as a same-site GET carrying only code, state, error, error_description and user, so SameSite=Lax state cookies are sent and the normal callback runs.",
+					"symbols": [
+						"createAuthApplications"
+					]
+				}
+			],
+			"date": "2026-09-26",
+			"version": "0.94.0"
+		},
+		{
+			"changes": [
+				{
+					"kind": "added",
+					"summary": "Optional persistent session cookies: `persistentCookie` on `instantiateUserSession` and `promoteToSession`, and `persistentSessionCookie` on the `webauthn` block, give the session cookie a Max-Age equal to the session length so a sign-in survives browser restarts. Without them the cookie still ends with the browser.",
+					"symbols": [
+						"InsantiateUserSessionProps",
+						"instantiateUserSession",
+						"WebAuthnConfig",
+						"webauthnRoutes",
+						"getUserSessionId"
+					]
+				}
+			],
+			"date": "2026-09-26",
+			"version": "0.93.0"
+		},
+		{
+			"changes": [
+				{
+					"kind": "added",
+					"summary": "Passkey management: `GET`, `PATCH` (rename) and `DELETE` on `/auth/webauthn/credentials` for the signed-in user's own passkeys. Passkeys now have a `name` (webauthn migration 0003): the one passed at registration, or the provider's name from its AAGUID (iCloud Keychain, Google Password Manager, Windows Hello, 1Password…). `hasOtherSignInMethod` can protect the last passkey. The client gains `passkeys.rename`, a working `passkeys.list`, `runPasskeyRegistration(client, { name })` and `runPasskeyAuthentication` for a sign-in button.",
+					"symbols": [
+						"AuthClientRoutes",
+						"PasskeySummary",
+						"WebAuthnConfig",
+						"WebAuthnCredential",
+						"WebAuthnCredentialStore",
+						"WebAuthnRegistrationResult",
+						"createAuthClient",
+						"defaultPasskeyName",
+						"runPasskeyAuthentication",
+						"runPasskeyRegistration",
+						"useUpgradeToPasskey",
+						"webauthnCredentialsTable",
+						"webauthnRoutes"
+					]
+				},
+				{
+					"kind": "added",
+					"summary": "Sessions record how and where they signed in: `signInMethod` (provider name, `passkey`, `password`, `magic_link`, `otp`, `sso`) and the User-Agent (sessions migration 0003). `GET /auth/sessions` returns them with a coarse `device` (`{ browser, os }`) via `describeUserAgent`; pass the callback's new `request` to `instantiateUserSession` to record OAuth sign-ins. The client's `sessions.list` now returns the array the server sends.",
+					"symbols": [
+						"CallbackContext",
+						"InsantiateUserSessionProps",
+						"SessionData",
+						"createAuthClient",
+						"describeUserAgent",
+						"instantiateUserSession",
+						"oidcSsoRoutes",
+						"sessionRoutes",
+						"useSessions"
+					]
+				},
+				{
+					"kind": "added",
+					"summary": "Sign-in identities: several provider accounts can open one user. New `identities` config mounts `GET /auth/identities` and `DELETE /auth/identities/:id` (never removes the last way in unless `hasOtherSignInMethod` says so); `linkCallbackIdentity` links the OAuth callback's account to the signed-in user from `onLinkIdentity` and throws `AuthIdentityConflictError` when another user already owns it, so `onLinkIdentityConflict` finally runs. Postgres/Neon and in-memory stores; migration block `identities` creates `auth_identities` (compatible with existing app tables and the CLI importer) with a unique provider+subject index.",
+					"symbols": [
+						"AuditEventType",
+						"AuthConfig",
+						"AuthIdentity",
+						"AuthIdentityStore",
+						"BlockName",
+						"IdentitiesConfig",
+						"authIdentitiesTable",
+						"createAuthApplications",
+						"createInMemoryIdentityStore",
+						"createNeonIdentityStore",
+						"createPostgresIdentityStore",
+						"identityRoutes",
+						"linkCallbackIdentity",
+						"resolveCallbackIdentity"
+					]
+				}
+			],
+			"date": "2026-09-26",
+			"version": "0.92.0"
+		},
+		{
+			"changes": [
+				{
+					"kind": "added",
+					"summary": "Invitations accept an optional invitee name and personal note: stored with the invitation (organizations migration 0002), passed to onSendInvitation, and the name is returned when listing invitations. Name is trimmed to 200 characters; the note keeps line breaks and is limited to 2,000.",
+					"symbols": [
+						"OrganizationInvitation",
+						"OrganizationInvitationMessage",
+						"inviteToOrganization",
+						"organizationInvitationsTable",
+						"organizationRoutes",
+						"createAuthApplications"
+					]
+				}
+			],
+			"date": "2026-09-26",
+			"version": "0.91.0"
+		},
+		{
+			"changes": [
+				{
+					"kind": "added",
+					"summary": "Add per-grant refresh-token family inventory and revocation: optional `listFamilies`, `getFamily` and `revokeFamily` store methods (in-memory and Postgres/Neon, with a family index migration), and pass the family id to `getAccessTokenClaims` so resource servers can reject access tokens from a revoked device immediately.",
+					"symbols": [
+						"OidcRefreshTokenFamily",
+						"OidcRefreshTokenStore",
+						"OidcProviderConfig",
+						"createInMemoryOidcRefreshTokenStore",
+						"createPostgresOidcRefreshTokenStore",
+						"createNeonOidcRefreshTokenStore"
+					]
+				}
+			],
+			"date": "2026-09-25",
+			"version": "0.90.0"
+		},
+		{
+			"changes": [
+				{
+					"kind": "security",
+					"summary": "Bind WebAuthn ceremonies to single-use server records, purpose, user and session; add a durable Postgres challenge store and prevent credential owner/key replacement or counter rollback.",
+					"symbols": [
+						"createPostgresWebAuthnChallengeStore",
+						"createInMemoryWebAuthnChallengeStore",
+						"webauthnChallengesTable",
+						"WebAuthnChallenge",
+						"WebAuthnChallengeStore",
+						"WebAuthnConfig",
+						"createAuthApplications",
+						"buildClientProviders",
+						"resolveProviderClientConfiguration",
+						"webauthnRoutes"
+					]
+				}
+			],
+			"date": "2026-09-24",
+			"version": "0.89.0"
+		},
+		{
+			"changes": [
+				{
+					"kind": "added",
+					"summary": "Add encrypted interactive-transaction OAuth credential coordination; serialize refresh and removal with grant row locks, persist recovery before returning failures, and reject stale or forged credential handles. Bound ambiguous token renewals and require reconnection after permanent failures.",
+					"symbols": [
+						"createCoordinatedOAuthLinkedProviderCredentialResolver"
+					]
+				}
+			],
+			"date": "2026-09-24",
+			"version": "0.88.0"
+		},
+		{
+			"changes": [
+				{
+					"kind": "fixed",
+					"summary": "Declare session and linking cookies on the OAuth authorization route so opt-in session binding accepts existing signed-in users. Add an authorization-start regression test.",
+					"symbols": [
+						"createAuthApplications"
+					]
+				}
+			],
+			"date": "2026-09-24",
+			"version": "0.87.1"
+		},
+		{
+			"changes": [
+				{
+					"kind": "added",
+					"summary": "Add owner-bound encrypted linked-provider grant storage, session-bound OAuth linking, and an exported OAuth authorization resolver for separately consented connectors.",
+					"symbols": [
+						"createEncryptedLinkedProviderGrantStore",
+						"resolveOAuthAuthorization",
+						"AuthConfig",
+						"createAuthApplications"
+					]
+				}
+			],
+			"date": "2026-09-24",
+			"version": "0.87.0"
+		},
+		{
+			"changes": [
+				{
+					"kind": "fixed",
+					"summary": "Allow authorized nonmember organization managers to list memberships. Revoke invitations when their delivery hook fails and return a sanitized retryable error.",
+					"symbols": [
+						"organizationRoutes",
+						"createAuthApplications"
+					]
+				}
+			],
+			"date": "2026-09-23",
+			"version": "0.86.1"
+		},
+		{
+			"changes": [
+				{
+					"kind": "breaking",
+					"migration": {
+						"instruction": "Configure organizations.getVerifiedEmail with provider-verified email evidence. Direct acceptInvitation callers must supply verifiedEmail. Custom OrganizationStore adapters must implement atomic acceptInvitation; older adapters fail closed.",
+						"manual": true
+					},
+					"summary": "Bind organization invitation acceptance to a verified email and atomically consume the invitation with membership creation. Deny expired, revoked, missing-organization and suspended-member invitations; preserve existing member roles.",
+					"symbols": [
+						"acceptInvitation",
+						"OrganizationsConfig",
+						"OrganizationStore",
+						"listUserOrganizations",
+						"organizationRoutes"
+					]
+				}
+			],
+			"date": "2026-09-23",
+			"version": "0.86.0"
+		},
+		{
+			"changes": [
+				{
+					"kind": "changed",
+					"summary": "Include Neon in the typed built-in provider registry and configuration resolution",
+					"symbols": [
+						"buildClientProviders",
+						"resolveProviderClientConfiguration"
+					]
+				},
+				{
+					"kind": "breaking",
+					"migration": {
+						"instruction": "Move createNeonProviderConfiguration results from customProviders.neon to providersConfiguration.neon. Neon is now a built-in Citra provider; credentials, scopes and offlineAccess inputs are unchanged.",
+						"manual": true
+					},
+					"summary": "Use the native Citra Neon provider for Auth configuration and linked-account refresh",
+					"symbols": [
+						"createNeonProviderConfiguration",
+						"neonProviderConfiguration"
+					]
+				}
+			],
+			"date": "2026-09-23",
+			"version": "0.85.0"
+		},
+		{
+			"changes": [
+				{
+					"kind": "added",
+					"summary": "Add a Neon partner OAuth preset with S256 PKCE, explicit management scopes and opt-in offline access",
+					"symbols": [
+						"createNeonProviderConfiguration",
+						"neonProviderConfiguration",
+						"NeonManagementScope",
+						"NeonProviderOptions"
+					]
+				}
+			],
+			"date": "2026-09-23",
+			"version": "0.84.0"
+		},
+		{
+			"changes": [
+				{
+					"kind": "added",
+					"summary": "Provide a Bun-native PostgreSQL migration entry point with transaction rollback, concurrency serialization and connection cleanup",
+					"symbols": [
+						"runBunMigrations",
+						"BunMigrationsOptions"
+					]
+				},
+				{
+					"kind": "changed",
+					"summary": "Regenerate createAuthApplications and oidcProviderRoutes declarations with equivalent property ordering; accepted inputs and runtime behavior are unchanged",
+					"symbols": [
+						"createAuthApplications",
+						"oidcProviderRoutes"
+					]
+				}
+			],
+			"date": "2026-09-23",
+			"version": "0.83.0"
+		},
+		{
+			"changes": [
+				{
+					"kind": "added",
 					"summary": "Expose a fixed-path sign-out subapp for directly inferred Eden clients and document Elysia 2 schema argument order",
 					"symbols": [
 						"createSignoutApi"

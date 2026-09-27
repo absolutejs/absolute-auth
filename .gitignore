@@ -59,3 +59,6 @@ package-lock.json
 
 # Claude 
 CLAUDE.md
+
+# guide example extraction (scripts/checkGuide.ts, tests)
+.guide-check/

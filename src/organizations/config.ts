@@ -17,7 +17,9 @@ export const DEFAULT_OWNER_ROLES = ['owner'];
 export type OrganizationInvitationMessage = {
 	email: string;
 	expiresAt: number;
+	inviteeName?: string;
 	inviterUserId?: string;
+	message?: string;
 	organizationId: OrganizationId;
 	token: string;
 };
@@ -28,6 +30,10 @@ export type OrganizationInvitationMessage = {
 // user table (mapped via `getUserId`) and any tighter authorization via the optional hooks.
 export type OrganizationsConfig<UserType> = {
 	getUserId: (user: UserType) => string;
+	/** Return only an independently verified email. Missing evidence denies acceptance. */
+	getVerifiedEmail?: (
+		user: UserType
+	) => string | undefined | Promise<string | undefined>;
 	organizationStore: OrganizationStore;
 	// Gate org creation (default: any authenticated user may create one and becomes its owner).
 	canCreateOrganization?: (user: UserType) => boolean | Promise<boolean>;

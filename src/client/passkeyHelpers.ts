@@ -43,11 +43,35 @@ export const runConditionalAuthentication = async (client: AuthClient) => {
 		return { data: null, error: errorFor(caught) };
 	}
 };
+// Signs in with a passkey from a button click: the browser shows its passkey picker.
+// Use `runConditionalAuthentication` instead for autofill on a username field.
+export const runPasskeyAuthentication = async (client: AuthClient) => {
+	if (typeof window === 'undefined' || !window.PublicKeyCredential) {
+		return {
+			data: null,
+			error: errorFor(new Error('webauthn_unavailable'))
+		};
+	}
+	const options = await client.passkeys.authenticateOptions();
+	if (options.error) return { data: null, error: options.error };
+	try {
+		const { startAuthentication } = await loadBrowser();
+		const credential = await startAuthentication({
+			optionsJSON: options.data
+		});
 
+		return client.passkeys.authenticateVerify(credential);
+	} catch (caught) {
+		return { data: null, error: errorFor(caught) };
+	}
+};
 // Runs the WebAuthn registration ceremony for the currently authenticated user. Used by
 // the "upgrade to passkey" prompt — after a password sign-in, surface a "save a passkey
 // to this device for next time?" CTA.
-export const runPasskeyRegistration = async (client: AuthClient) => {
+export const runPasskeyRegistration = async (
+	client: AuthClient,
+	{ name }: { name?: string } = {}
+) => {
 	if (typeof window === 'undefined' || !window.PublicKeyCredential) {
 		return {
 			data: null,
@@ -62,7 +86,7 @@ export const runPasskeyRegistration = async (client: AuthClient) => {
 			optionsJSON: options.data
 		});
 
-		return client.passkeys.registerVerify(credential);
+		return client.passkeys.registerVerify(credential, name);
 	} catch (caught) {
 		return { data: null, error: errorFor(caught) };
 	}

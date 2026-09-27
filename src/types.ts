@@ -33,6 +33,7 @@ import type { PortalConfig } from './portal/config';
 import type { RolesConfig } from './roles/config';
 import type { ScimConfig } from './scim/config';
 import type { SessionsConfig } from './session/sessionsConfig';
+import type { IdentitiesConfig } from './identities/config';
 import type { AuthSessionStore } from './session/types';
 import type { SSOConfig } from './sso/config';
 import type { TracingConfig } from './telemetry/tracing';
@@ -137,6 +138,11 @@ export type SessionData<UserType> = {
 	/** True for a guest/anonymous session (createAnonymousSession) that can later be
 	 *  upgraded by a real login. */
 	anonymous?: boolean;
+	/** How this session signed in: an OAuth provider name (`google`), `passkey`,
+	 *  `password`, `magic_link`, `otp` or `sso`. Shown in session lists. */
+	signInMethod?: string;
+	/** The browser's User-Agent at sign-in, for "Chrome on Windows" in session lists. */
+	userAgent?: string;
 };
 
 export type SessionRecord<UserType> = Record<
@@ -212,6 +218,8 @@ export type CallbackContext<UserType> = {
 	originUrl: string;
 	cookie: CallbackCookie;
 	currentUser?: UserType;
+	/** The callback request; pass it to `instantiateUserSession` to record the device. */
+	request?: Request;
 	status: typeof statusType;
 	redirect: typeof redirectType;
 };
@@ -498,6 +506,11 @@ export type AuthConfig<UserType> = {
 	 *  sessions) and `DELETE /auth/sessions/:id` (remote revoke). Requires an
 	 *  `authSessionStore` that can enumerate sessions. */
 	sessions?: SessionsConfig<NoInfer<UserType>>;
+	/** Sign-in identities: several provider accounts opening one user. Mounts
+	 *  `GET /auth/identities` (the caller's linked sign-in methods) and
+	 *  `DELETE /auth/identities/:id` (unlink, never the last way in). Link new ones from
+	 *  `onLinkIdentity` with `linkCallbackIdentity`. */
+	identities?: IdentitiesConfig<NoInfer<UserType>>;
 	/** Per-organization enterprise SSO (the WorkOS-style model). When present, mounts
 	 *  `GET {ssoRoute}/oidc/:organizationId/authorize` + `.../callback`, resolves the org's
 	 *  OIDC connection from `ssoConnectionStore`, verifies the id_token in-house against the
@@ -568,6 +581,8 @@ export type AuthConfig<UserType> = {
 	 *  constrained. */
 	htmx?: NoInfer<UserType> extends AuthHtmxUser ? AuthHtmxConfig : never;
 	unregisteredSessionDurationMs?: number;
+	/** Require connector/identity consent to return to the session that started it. */
+	bindLinkingToSession?: boolean;
 	resolveAuthIntent?: ResolveAuthIntent<NoInfer<UserType>>;
 	onAuthorizeSuccess?: OnAuthorizeSuccess;
 	onAuthorizeError?: OnAuthorizeError;
@@ -638,6 +653,13 @@ export type InsantiateUserSessionProps<UserType> = {
 	resolvedAuthorization?: ResolvedOAuthAuthorization;
 	sessionDurationMs?: number;
 	unregisteredSessionDurationMs?: number;
+	/** Records the sign-in device on the session (its User-Agent). */
+	request?: Request;
+	/** Defaults to `authProvider`. */
+	signInMethod?: string;
+	/** Keep the session cookie for `sessionDurationMs`, across browser restarts,
+	 *  instead of dropping it when the browser closes. */
+	persistentCookie?: boolean;
 };
 export type JsonPrimitive = boolean | null | number | string;
 export type JsonValue = JsonPrimitive | JsonObject | JsonValue[];
