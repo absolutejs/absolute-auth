@@ -3,17 +3,40 @@ import {
 	bigint,
 	boolean,
 	jsonb,
+	integer,
+	primaryKey,
 	pgTable,
 	smallint,
 	text,
 	varchar
 } from 'drizzle-orm/pg-core';
 import { type AnyPgDatabase, createNeonDatabase } from '../stores/postgres';
-import type { MfaEnrollment, MfaFactor, MFAStore } from './types';
+import {
+	createPostgresSmsChallengeStore,
+	mfaSmsChallengesTable
+} from './scopedSmsStore';
+import type {
+	MfaEnrollment,
+	MfaFactor,
+	MFAStore,
+	MfaAttemptFactor
+} from './types';
 
 const ID_LENGTH = 255;
 const PHONE_LENGTH = 20;
 
+export const mfaCodeAttemptsTable = pgTable(
+	'auth_mfa_code_attempts',
+	{
+		attempts: integer('attempts').notNull(),
+		factor: text('factor').$type<MfaAttemptFactor>().notNull(),
+		user_id: varchar('user_id', { length: ID_LENGTH }).notNull(),
+		window_started_at_ms: bigint('window_started_at_ms', {
+			mode: 'number'
+		}).notNull()
+	},
+	(table) => [primaryKey({ columns: [table.user_id, table.factor] })]
+);
 export const mfaEnrollmentsTable = pgTable('auth_mfa_enrollments', {
 	backup_code_hashes: jsonb('backup_code_hashes')
 		.$type<string[]>()
@@ -97,6 +120,59 @@ export const createPostgresMfaStore = <DB extends AnyPgDatabase>(
 	});
 
 	return {
+		claimCodeAttempt: async ({
+			userId,
+			factor,
+			maxAttempts,
+			windowMs,
+			now
+		}) => {
+			const table = mfaCodeAttemptsTable;
+			const expired = lte(table.window_started_at_ms, now - windowMs);
+			const rows = await db
+				.insert(table)
+				.values({
+					attempts: 1,
+					factor,
+					user_id: userId,
+					window_started_at_ms: now
+				})
+				.onConflictDoUpdate({
+					set: {
+						attempts: sql`CASE WHEN ${expired} THEN 1 ELSE ${table.attempts} + 1 END`,
+						window_started_at_ms: sql`CASE WHEN ${expired} THEN ${now} ELSE ${table.window_started_at_ms} END`
+					},
+					setWhere: sql`${expired} OR ${table.attempts} < ${maxAttempts}`,
+					target: [table.user_id, table.factor]
+				})
+				.returning();
+			const [claimed] = rows;
+			const current =
+				claimed ??
+				(
+					await db
+						.select()
+						.from(table)
+						.where(
+							and(
+								eq(table.user_id, userId),
+								eq(table.factor, factor)
+							)
+						)
+						.limit(1)
+				)[0];
+
+			// A concurrent successful verification may have cleared the row; fail closed for this request.
+			return {
+				allowed: claimed !== undefined,
+				attempts: current?.attempts ?? maxAttempts,
+				retryAfterMs: Math.max(
+					1,
+					(current?.window_started_at_ms ?? now) + windowMs - now
+				),
+				windowStartedAt: current?.window_started_at_ms ?? now
+			};
+		},
 		claimSmsChallenge: async ({
 			challengeId,
 			cooldownCutoff,
@@ -137,6 +213,31 @@ export const createPostgresMfaStore = <DB extends AnyPgDatabase>(
 					target: mfaEnrollmentsTable.user_id
 				})
 				.returning({ userId: mfaEnrollmentsTable.user_id });
+
+			return rows.length === 1;
+		},
+		completeCodeChallenge: async ({ userId, backupCodeHash, now }) => {
+			const table = mfaEnrollmentsTable;
+			const rows = await db
+				.update(table)
+				.set({
+					backup_code_hashes:
+						backupCodeHash === undefined
+							? undefined
+							: sql`(SELECT COALESCE(jsonb_agg(value), '[]'::jsonb) FROM jsonb_array_elements(${table.backup_code_hashes}) AS codes(value) WHERE value <> to_jsonb(${backupCodeHash}::text))`,
+					last_used_at_ms: now,
+					totp_failed_attempts: 0,
+					updated_at_ms: now
+				})
+				.where(
+					and(
+						eq(table.user_id, userId),
+						backupCodeHash === undefined
+							? undefined
+							: sql`${table.backup_code_hashes} @> ${JSON.stringify([backupCodeHash])}::jsonb`
+					)
+				)
+				.returning({ userId: table.user_id });
 
 			return rows.length === 1;
 		},
@@ -203,6 +304,8 @@ export const createPostgresMfaStore = <DB extends AnyPgDatabase>(
 
 			return row ? toEnrollment(row) : undefined;
 		},
+		getSmsChallengeStore: (scope) =>
+			createPostgresSmsChallengeStore(db, scope),
 		listEnrollments: async () => {
 			const rows = await db.select().from(mfaEnrollmentsTable);
 
@@ -233,8 +336,27 @@ export const createPostgresMfaStore = <DB extends AnyPgDatabase>(
 		},
 		removeEnrollment: async (userId) => {
 			await db
+				.delete(mfaSmsChallengesTable)
+				.where(eq(mfaSmsChallengesTable.user_id, userId));
+			await db
+				.delete(mfaCodeAttemptsTable)
+				.where(eq(mfaCodeAttemptsTable.user_id, userId));
+			await db
 				.delete(mfaEnrollmentsTable)
 				.where(eq(mfaEnrollmentsTable.user_id, userId));
+		},
+		resetCodeAttempts: async ({ userId, factor, attempt }) => {
+			const table = mfaCodeAttemptsTable;
+			await db
+				.delete(table)
+				.where(
+					and(
+						eq(table.user_id, userId),
+						eq(table.factor, factor),
+						eq(table.attempts, attempt.attempts),
+						eq(table.window_started_at_ms, attempt.windowStartedAt)
+					)
+				);
 		},
 		rollbackSmsChallenge: async ({ challengeId, previous, userId }) => {
 			if (previous) {
@@ -271,6 +393,42 @@ export const createPostgresMfaStore = <DB extends AnyPgDatabase>(
 					set: values,
 					target: mfaEnrollmentsTable.user_id
 				});
+		},
+		saveTotpEnrollment: async ({ expected, enrollment }) => {
+			const table = mfaEnrollmentsTable;
+			const values = toValues(enrollment);
+			if (!expected) {
+				const rows = await db
+					.insert(table)
+					.values(values)
+					.onConflictDoNothing()
+					.returning({ userId: table.user_id });
+
+				return rows.length === 1;
+			}
+			const rows = await db
+				.update(table)
+				.set({
+					backup_code_hashes: values.backup_code_hashes,
+					mfa_factors: values.mfa_factors,
+					totp_secret_ciphertext: values.totp_secret_ciphertext,
+					totp_verified: values.totp_verified,
+					updated_at_ms: values.updated_at_ms
+				})
+				.where(
+					and(
+						eq(table.user_id, enrollment.userId),
+						expected.factors === undefined
+							? isNull(table.mfa_factors)
+							: sql`${table.mfa_factors} = ${JSON.stringify(expected.factors)}::jsonb`,
+						sql`${table.backup_code_hashes} = ${JSON.stringify(expected.backupCodeHashes)}::jsonb`,
+						sql`${table.totp_secret_ciphertext} IS NOT DISTINCT FROM ${expected.totpSecretCiphertext ?? null}`,
+						eq(table.totp_verified, expected.totpVerified)
+					)
+				)
+				.returning({ userId: table.user_id });
+
+			return rows.length === 1;
 		}
 	};
 };

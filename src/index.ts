@@ -881,6 +881,7 @@ export { createInMemoryMfaStore } from './mfa/inMemoryMfaStore';
 export {
 	createNeonMfaStore,
 	createPostgresMfaStore,
+	mfaCodeAttemptsTable,
 	mfaEnrollmentsTable
 } from './mfa/postgresMfaStore';
 
@@ -1295,3 +1296,5 @@ export {
 	type WebAuthnChallengeStore,
 	type WebAuthnChallenge
 } from './webauthn/challengeStore';
+
+export { mfaSmsChallengesTable } from './mfa/scopedSmsStore';
