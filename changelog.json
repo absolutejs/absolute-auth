@@ -5,6 +5,24 @@
 		{
 			"changes": [
 				{
+					"kind": "added",
+					"summary": "`trustedOrigins` also accepts a function of the request, so a multi-tenant app can decide per request (for example, allow only the request’s own origin) instead of listing every origin up front.",
+					"symbols": [
+						"createAuthApplications",
+						"CredentialsConfig",
+						"isTrustedOrigin",
+						"oidcProviderRoutes",
+						"resolveOriginAllowed",
+						"TrustedOriginPolicy"
+					]
+				}
+			],
+			"date": "2026-09-27",
+			"version": "0.96.0"
+		},
+		{
+			"changes": [
+				{
 					"kind": "fixed",
 					"summary": "Use the chosen method name in TOTP QR account labels instead of internal user and factor identifiers. Preserve existing secrets and factor IDs.",
 					"symbols": [
