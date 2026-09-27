@@ -5,6 +5,82 @@
 		{
 			"changes": [
 				{
+					"kind": "fixed",
+					"summary": "Use the chosen method name in TOTP QR account labels instead of internal user and factor identifiers. Preserve existing secrets and factor IDs.",
+					"symbols": [
+						"mfaTotpRoutes"
+					]
+				},
+				{
+					"kind": "added",
+					"summary": "Allow a default authenticator label resolved from the signed-in user when the submitted name is blank. Preserve custom names and pending enrollments.",
+					"symbols": [
+						"MfaConfig",
+						"mfaTotpRoutes"
+					]
+				},
+				{
+					"kind": "fixed",
+					"summary": "docs/PERSISTENT-CREDENTIALS.md no longer mixes SQLite and PostgreSQL or gives stale migration advice: it has one complete PostgreSQL + Drizzle path and one SQLite path, the exact route list and session cookie, a typed guard, and current migration steps, and its code is typechecked against dist (check:guide) and run end to end in tests."
+				},
+				{
+					"kind": "fixed",
+					"summary": "Preserve pending MFA login cookies during authentication-status and protected-route checks. Read-only session resolution no longer expires browser cookies, preventing delayed unauthenticated responses from erasing a newer login. Expired server sessions are still removed, and pending sessions remain unauthenticated.",
+					"symbols": [
+						"protectRoutePlugin",
+						"requireAuthPlugin"
+					]
+				},
+				{
+					"kind": "breaking",
+					"migration": {
+						"instruction": "Run the mfa migration block before upgrading servers. Custom MFAStore implementations must add atomic claimCodeAttempt, completeCodeChallenge, and resetCodeAttempts methods. Handle HTTP 429 mfa_rate_limited responses with Retry-After and retryAfterMs. Recovery codes are opaque strings, not fixed eight-character values.",
+						"manual": true
+					},
+					"summary": "Replace permanent MFA lockouts with durable timed attempt budgets, independent recovery-code limits, and atomic recovery-code consumption. Previously locked accounts can authenticate again.",
+					"symbols": [
+						"MFAStore",
+						"MfaEnrollment",
+						"mfaChallenge",
+						"MfaConfig"
+					]
+				},
+				{
+					"kind": "breaking",
+					"migration": {
+						"instruction": "Custom MFAStore implementations must implement atomic saveTotpEnrollment. Setup now resumes pending enrollments. TOTP verification preserves existing recovery codes; an empty backupCodes array means existing codes remain unchanged. First-issuance responses can be replayed for ten minutes after a valid TOTP using an encrypted receipt in factor JSON. No SQL migration is required.",
+						"manual": true
+					},
+					"summary": "Make TOTP setup and verification retry-safe across instances; preserve recovery codes when adding devices, resume pending QR codes, and include device labels in authenticator account names.",
+					"symbols": [
+						"MFAStore",
+						"MfaEnrollment",
+						"TotpMfaFactor",
+						"withMfaFactors"
+					]
+				},
+				{
+					"kind": "breaking",
+					"migration": {
+						"instruction": "Run mfa/0008_scoped_sms_challenges before rollout. Custom MFAStore implementations must implement getSmsChallengeStore with durable atomic state per user, pending session, and factor, and support the sms_send attempt budget. SMS codes issued by old servers must be requested again after upgrading.",
+						"manual": true
+					},
+					"summary": "Isolate SMS sign-in codes and resend cooldowns by pending session and phone. Preserve concurrent users codes and return structured resend timing. Keep a separate account delivery budget (default ten attempts per five minutes).",
+					"symbols": [
+						"createAuthApplications",
+						"MFAStore",
+						"MfaConfig",
+						"mfaChallenge",
+						"mfaRoutes"
+					]
+				}
+			],
+			"date": "2026-09-27",
+			"version": "0.95.0"
+		},
+		{
+			"changes": [
+				{
 					"kind": "added",
 					"summary": "OAuth callbacks accept response_mode=form_post (Sign in with Apple): a POST to the callback route is re-issued as a same-site GET carrying only code, state, error, error_description and user, so SameSite=Lax state cookies are sent and the normal callback runs.",
 					"symbols": [
