@@ -353,4 +353,57 @@ describe('organization management overrides', () => {
 		expect(invitations).toHaveLength(1);
 		expect(invitations[0]?.state).toBe('revoked');
 	});
+	test('carries an optional invitee name and personal note to the email hook and listing', async () => {
+		const { app, invites } = await buildApp();
+		const cookie = await registerUser(app, 'owner@example.com');
+		const created = await post(
+			app,
+			'/auth/organizations',
+			{ name: 'Company' },
+			cookie
+		);
+		const { organization } = await created.json();
+		const path = `/auth/organizations/${organization.organizationId}/invitations`;
+		const response = await post(
+			app,
+			path,
+			{
+				email: 'Invitee@Example.com',
+				inviteeName: '  Pat Example ',
+				message: 'Welcome aboard!\r\nSee you Monday.'
+			},
+			cookie
+		);
+		expect(response.status).toBe(200);
+		expect(invites.at(-1)).toMatchObject({
+			email: 'invitee@example.com',
+			inviteeName: 'Pat Example',
+			message: 'Welcome aboard!\nSee you Monday.'
+		});
+		const listed = await (
+			await app.handle(
+				new Request(`http://localhost${path}`, { headers: { cookie } })
+			)
+		).json();
+		expect(listed.invitations[0].inviteeName).toBe('Pat Example');
+		expect(listed.invitations[0]).not.toHaveProperty('message');
+
+		const plain = await post(
+			app,
+			path,
+			{ email: 'other@example.com' },
+			cookie
+		);
+		expect(plain.status).toBe(200);
+		expect(invites.at(-1)).not.toHaveProperty('inviteeName');
+		expect(invites.at(-1)).not.toHaveProperty('message');
+
+		const tooLong = await post(
+			app,
+			path,
+			{ email: 'long@example.com', message: 'x'.repeat(2001) },
+			cookie
+		);
+		expect(tooLong.status).toBe(422);
+	});
 });

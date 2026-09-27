@@ -4,6 +4,7 @@ import {
 	jsonb,
 	pgTable,
 	primaryKey,
+	text,
 	varchar
 } from 'drizzle-orm/pg-core';
 import { type AnyPgDatabase, createNeonDatabase } from '../stores/postgres';
@@ -30,7 +31,9 @@ export const organizationInvitationsTable = pgTable(
 		invitation_id: varchar('invitation_id', {
 			length: ID_LENGTH
 		}).primaryKey(),
+		invitee_name: varchar('invitee_name', { length: 200 }),
 		inviter_user_id: varchar('inviter_user_id', { length: ID_LENGTH }),
+		message: text('message'),
 		organization_id: varchar('organization_id', {
 			length: ID_LENGTH
 		}).notNull(),
@@ -101,7 +104,9 @@ const toInvitation = (row: InvitationRow): OrganizationInvitation => ({
 	email: row.email,
 	expiresAt: row.expires_at_ms,
 	invitationId: row.invitation_id,
+	...(row.invitee_name ? { inviteeName: row.invitee_name } : {}),
 	inviterUserId: row.inviter_user_id ?? undefined,
+	...(row.message ? { message: row.message } : {}),
 	organizationId: row.organization_id,
 	roles: row.roles,
 	state: row.state,
@@ -298,7 +303,9 @@ export const createPostgresOrganizationStore = <DB extends AnyPgDatabase>(
 			email: invitation.email,
 			expires_at_ms: invitation.expiresAt,
 			invitation_id: invitation.invitationId,
+			invitee_name: invitation.inviteeName ?? null,
 			inviter_user_id: invitation.inviterUserId ?? null,
+			message: invitation.message ?? null,
 			organization_id: invitation.organizationId,
 			roles: invitation.roles,
 			state: invitation.state,

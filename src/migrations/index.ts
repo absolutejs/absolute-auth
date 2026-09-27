@@ -179,6 +179,15 @@ const oidcDeviceAudienceMigration: Migration = {
 	sql: 'ALTER TABLE "auth_oauth_device_authorizations" ADD COLUMN IF NOT EXISTS "audience" varchar(2048);'
 };
 
+// Optional invitee name and personal note on invitations.
+const organizationInvitationDetailsMigration: Migration = {
+	id: '0002_invitation_details',
+	sql: [
+		'ALTER TABLE "auth_organization_invitations" ADD COLUMN IF NOT EXISTS "invitee_name" varchar(200);',
+		'ALTER TABLE "auth_organization_invitations" ADD COLUMN IF NOT EXISTS "message" text;'
+	].join('\n')
+};
+
 // Per-family lookups back device inventories and per-request revocation checks.
 const oidcRefreshFamilyIndexMigration: Migration = {
 	id: '0006_refresh_token_family_index',
@@ -269,11 +278,17 @@ export const blockMigrations: Record<BlockName, BlockMigrations> = {
 			oidcRefreshFamilyIndexMigration
 		]
 	},
-	organizations: initMigration('organizations', [
-		organizationsTable,
-		organizationMembershipsTable,
-		organizationInvitationsTable
-	]),
+	organizations: {
+		block: 'organizations',
+		migrations: [
+			...initMigration('organizations', [
+				organizationsTable,
+				organizationMembershipsTable,
+				organizationInvitationsTable
+			]).migrations,
+			organizationInvitationDetailsMigration
+		]
+	},
 	passwordless: initMigration('passwordless', [passwordlessTokensTable]),
 	portal: initMigration('portal', [setupSessionsTable]),
 	roles: initMigration('roles', [rolesTable]),

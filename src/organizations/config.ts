@@ -17,7 +17,9 @@ export const DEFAULT_OWNER_ROLES = ['owner'];
 export type OrganizationInvitationMessage = {
 	email: string;
 	expiresAt: number;
+	inviteeName?: string;
 	inviterUserId?: string;
+	message?: string;
 	organizationId: OrganizationId;
 	token: string;
 };

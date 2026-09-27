@@ -7,9 +7,8 @@ import type {
 	OrganizationStore
 } from './types';
 
-// Store-backed primitives shared by the routes and reusable directly (e.g. seeding an org during
-// signup). Each is pure aside from the store calls, so they unit-test without an HTTP layer.
-
+export const MAX_INVITATION_MESSAGE_LENGTH = 2000;
+export const MAX_INVITEE_NAME_LENGTH = 200;
 export const acceptInvitation = async ({
 	organizationStore,
 	token,
@@ -32,7 +31,6 @@ export const acceptInvitation = async ({
 		verifiedEmail: verifiedEmail.trim().toLowerCase()
 	});
 };
-
 // JIT / domain-based org assignment. Call from your OAuth/credential-register success hook (or
 // SSO callback) to auto-add the new user to every org their email domain maps to — the WorkOS
 // "domain verification" pattern. Idempotent (skips orgs the user already belongs to). Returns
@@ -117,15 +115,24 @@ export const inviteToOrganization = async ({
 	inviterUserId,
 	organizationId,
 	organizationStore,
-	roles = []
+	roles = [],
+	inviteeName,
+	message
 }: {
 	email: string;
 	invitationDurationMs?: number;
+	inviteeName?: string;
 	inviterUserId?: string;
+	message?: string;
 	organizationId: OrganizationId;
 	organizationStore: OrganizationStore;
 	roles?: string[];
 }) => {
+	const name = inviteeName?.trim().slice(0, MAX_INVITEE_NAME_LENGTH);
+	const note = message
+		?.replace(/\r\n?/g, '\n')
+		.trim()
+		.slice(0, MAX_INVITATION_MESSAGE_LENGTH);
 	const token = generateSecureToken();
 	const now = Date.now();
 	const invitation: OrganizationInvitation = {
@@ -133,6 +140,8 @@ export const inviteToOrganization = async ({
 		email: email.trim().toLowerCase(),
 		expiresAt: now + invitationDurationMs,
 		invitationId: crypto.randomUUID(),
+		...(name ? { inviteeName: name } : {}),
+		...(note ? { message: note } : {}),
 		inviterUserId,
 		organizationId,
 		roles,
