@@ -22,7 +22,10 @@ export default defineConfig([
 			'**/*.min.css',
 			'**/compiled/**',
 			'.cache/**',
-			'.claude/**'
+			'.claude/**',
+			// Guide code blocks extracted by scripts/guideExamples.ts; the source of
+			// truth is the Markdown, which check:guide compiles.
+			'.guide-check/**'
 		]
 	},
 	{
