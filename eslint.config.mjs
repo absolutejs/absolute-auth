@@ -251,6 +251,7 @@ export default defineConfig([
 	{
 		files: [
 			'tests/migrations.test.ts',
+			'tests/postgresRefreshFamilies.test.ts',
 			'tests/postgresSessionStore.test.ts',
 			'tests/webauthnPostgres.test.ts'
 		],

@@ -5,6 +5,24 @@
 		{
 			"changes": [
 				{
+					"kind": "added",
+					"summary": "Add per-grant refresh-token family inventory and revocation: optional `listFamilies`, `getFamily` and `revokeFamily` store methods (in-memory and Postgres/Neon, with a family index migration), and pass the family id to `getAccessTokenClaims` so resource servers can reject access tokens from a revoked device immediately.",
+					"symbols": [
+						"OidcRefreshTokenFamily",
+						"OidcRefreshTokenStore",
+						"OidcProviderConfig",
+						"createInMemoryOidcRefreshTokenStore",
+						"createPostgresOidcRefreshTokenStore",
+						"createNeonOidcRefreshTokenStore"
+					]
+				}
+			],
+			"date": "2026-09-25",
+			"version": "0.90.0"
+		},
+		{
+			"changes": [
+				{
 					"kind": "security",
 					"summary": "Bind WebAuthn ceremonies to single-use server records, purpose, user and session; add a durable Postgres challenge store and prevent credential owner/key replacement or counter rollback.",
 					"symbols": [

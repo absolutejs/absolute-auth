@@ -179,6 +179,15 @@ const oidcDeviceAudienceMigration: Migration = {
 	sql: 'ALTER TABLE "auth_oauth_device_authorizations" ADD COLUMN IF NOT EXISTS "audience" varchar(2048);'
 };
 
+// Per-family lookups back device inventories and per-request revocation checks.
+const oidcRefreshFamilyIndexMigration: Migration = {
+	id: '0006_refresh_token_family_index',
+	sql: [
+		'CREATE INDEX IF NOT EXISTS "auth_oauth_refresh_tokens_family_id_idx" ON "auth_oauth_refresh_tokens" ("family_id");',
+		'CREATE INDEX IF NOT EXISTS "auth_oauth_refresh_tokens_user_client_idx" ON "auth_oauth_refresh_tokens" ("user_id", "client_id");'
+	].join('\n')
+};
+
 const sessionOAuthSubjectMigration: Migration = {
 	id: '0002_oauth_subject',
 	sql: [
@@ -256,7 +265,8 @@ export const blockMigrations: Record<BlockName, BlockMigrations> = {
 			oidcResourceAudienceMigration,
 			oidcRefreshTokenFamiliesMigration,
 			oidcSocketTicketsMigration,
-			oidcDeviceAudienceMigration
+			oidcDeviceAudienceMigration,
+			oidcRefreshFamilyIndexMigration
 		]
 	},
 	organizations: initMigration('organizations', [

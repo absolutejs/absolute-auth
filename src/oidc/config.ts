@@ -135,6 +135,10 @@ export type OidcProviderConfig<UserType> = {
 	getAccessTokenClaims?: (context: {
 		audience?: string;
 		clientId: string;
+		// Refresh-token family the access token is issued with. Absent for grants that
+		// issue no refresh token (token exchange). Stamp it into a claim and check
+		// `refreshTokenStore.getFamily` to make per-device revocation immediate.
+		familyId?: string;
 		scopes: string[];
 		sub: string;
 	}) => Record<string, unknown> | Promise<Record<string, unknown>>;
@@ -470,9 +474,11 @@ export const issueTokenSet = async <UserType>({
 	const accessTtl = resolveAccessTtl(config.accessTokenTtlMs, scopes);
 	const idTtl = config.idTokenTtlMs ?? DEFAULT_ID_TOKEN_TTL_MS;
 	const refreshTtl = config.refreshTokenTtlMs ?? DEFAULT_REFRESH_TOKEN_TTL_MS;
+	const tokenFamilyId = familyId ?? crypto.randomUUID();
 	const accessExtra = await config.getAccessTokenClaims?.({
 		audience,
 		clientId,
+		familyId: tokenFamilyId,
 		scopes,
 		sub
 	});
@@ -510,7 +516,7 @@ export const issueTokenSet = async <UserType>({
 		createdAt: now,
 		dpopJkt,
 		expiresAt: now + refreshTtl,
-		familyId: familyId ?? crypto.randomUUID(),
+		familyId: tokenFamilyId,
 		scopes,
 		tokenHash: await hashToken(refreshToken),
 		userId: sub

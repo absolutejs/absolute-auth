@@ -32,6 +32,7 @@ import type {
 	SocketTicket,
 	SocketTicketStore
 } from './types';
+import { toRefreshFamily } from './refreshFamilies';
 
 const URL_LENGTH = 2048;
 const DEFAULT_LIST_LIMIT = 100;
@@ -677,6 +678,21 @@ export const createPostgresOidcRefreshTokenStore = <DB extends AnyPgDatabase>(
 
 		return deleted.length;
 	},
+	getFamily: async (familyId) => {
+		const [row] = await db
+			.select()
+			.from(oauthRefreshTokensTable)
+			.where(
+				and(
+					eq(oauthRefreshTokensTable.family_id, familyId),
+					isNull(oauthRefreshTokensTable.revoked_at_ms),
+					gt(oauthRefreshTokensTable.expires_at_ms, Date.now())
+				)
+			)
+			.limit(1);
+
+		return row ? toRefreshFamily(toRefresh(row)) : undefined;
+	},
 	getToken: async (tokenHash) => {
 		const [row] = await db
 			.select()
@@ -721,6 +737,24 @@ export const createPostgresOidcRefreshTokenStore = <DB extends AnyPgDatabase>(
 
 		return rows;
 	},
+	listFamilies: async (userId, clientId) => {
+		const rows = await db
+			.select()
+			.from(oauthRefreshTokensTable)
+			.where(
+				and(
+					eq(oauthRefreshTokensTable.user_id, userId),
+					clientId === undefined
+						? undefined
+						: eq(oauthRefreshTokensTable.client_id, clientId),
+					isNull(oauthRefreshTokensTable.revoked_at_ms),
+					gt(oauthRefreshTokensTable.expires_at_ms, Date.now())
+				)
+			)
+			.orderBy(desc(oauthRefreshTokensTable.created_at_ms));
+
+		return rows.map((row) => toRefreshFamily(toRefresh(row)));
+	},
 	revokeByConsumedToken: async (tokenHash) => {
 		const rows = await db
 			.update(oauthRefreshTokensTable)
@@ -734,6 +768,19 @@ export const createPostgresOidcRefreshTokenStore = <DB extends AnyPgDatabase>(
 			.returning({ familyId: oauthRefreshTokensTable.family_id });
 
 		return rows.length > 0;
+	},
+	revokeFamily: async (userId, familyId) => {
+		const deleted = await db
+			.delete(oauthRefreshTokensTable)
+			.where(
+				and(
+					eq(oauthRefreshTokensTable.user_id, userId),
+					eq(oauthRefreshTokensTable.family_id, familyId)
+				)
+			)
+			.returning({ revokedAt: oauthRefreshTokensTable.revoked_at_ms });
+
+		return deleted.some((row) => row.revokedAt === null);
 	},
 	rotateToken: async (currentTokenHash, replacement) => {
 		const active = and(
