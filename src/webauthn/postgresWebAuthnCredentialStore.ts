@@ -12,6 +12,7 @@ import type { WebAuthnCredential, WebAuthnCredentialStore } from './types';
 
 const ID_LENGTH = 255;
 const DEVICE_TYPE_LENGTH = 32;
+export const PASSKEY_NAME_LENGTH = 100;
 
 export const webauthnCredentialsTable = pgTable('auth_webauthn_credentials', {
 	backed_up: boolean('backed_up'),
@@ -20,6 +21,7 @@ export const webauthnCredentialsTable = pgTable('auth_webauthn_credentials', {
 	credential_id: varchar('credential_id', { length: ID_LENGTH }).primaryKey(),
 	device_type: varchar('device_type', { length: DEVICE_TYPE_LENGTH }),
 	last_used_at_ms: bigint('last_used_at_ms', { mode: 'number' }),
+	name: varchar('name', { length: PASSKEY_NAME_LENGTH }),
 	public_key: text('public_key').notNull(),
 	transports: jsonb('transports').$type<string[]>(),
 	user_id: varchar('user_id', { length: ID_LENGTH }).notNull()
@@ -35,6 +37,7 @@ const toCredential = (row: WebAuthnRow): WebAuthnCredential => ({
 	credentialId: row.credential_id,
 	deviceType: row.device_type ?? undefined,
 	lastUsedAt: row.last_used_at_ms ?? undefined,
+	name: row.name ?? undefined,
 	publicKey: row.public_key,
 	transports: row.transports ?? undefined,
 	userId: row.user_id
@@ -47,6 +50,7 @@ const toValues = (credential: WebAuthnCredential): WebAuthnInsert => ({
 	credential_id: credential.credentialId,
 	device_type: credential.deviceType ?? null,
 	last_used_at_ms: credential.lastUsedAt ?? null,
+	name: credential.name ?? null,
 	public_key: credential.publicKey,
 	transports: credential.transports ?? null,
 	user_id: credential.userId
@@ -77,6 +81,12 @@ export const createPostgresWebAuthnCredentialStore = <DB extends AnyPgDatabase>(
 	removeCredential: async (credentialId) => {
 		await db
 			.delete(webauthnCredentialsTable)
+			.where(eq(webauthnCredentialsTable.credential_id, credentialId));
+	},
+	renameCredential: async (credentialId, name) => {
+		await db
+			.update(webauthnCredentialsTable)
+			.set({ name })
 			.where(eq(webauthnCredentialsTable.credential_id, credentialId));
 	},
 	saveCredential: async (credential) => {

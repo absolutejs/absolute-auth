@@ -34,6 +34,8 @@ const readOptionalString = (value: object, property: string) => {
 	return typeof candidate === 'string' ? candidate : undefined;
 };
 
+const USER_AGENT_LENGTH = 512;
+
 export const defineAuthConfig = <UserType>(
 	configuration: AuthConfig<UserType>
 ) => configuration;
@@ -77,7 +79,9 @@ export const instantiateUserSession = async <UserType>({
 	onNewUser,
 	resolvedAuthorization,
 	sessionDurationMs = MILLISECONDS_IN_A_DAY,
-	unregisteredSessionDurationMs = MILLISECONDS_IN_AN_HOUR
+	unregisteredSessionDurationMs = MILLISECONDS_IN_AN_HOUR,
+	request,
+	signInMethod
 }: InsantiateUserSessionProps<UserType>) => {
 	const authorization =
 		resolvedAuthorization ??
@@ -135,7 +139,9 @@ export const instantiateUserSession = async <UserType>({
 			expiresAt: Date.now() + sessionDurationMs,
 			oauthSubject,
 			refreshToken,
-			user
+			signInMethod: signInMethod ?? authProvider,
+			user,
+			userAgent: readUserAgent(request)
 		};
 
 		return void 0;
@@ -164,6 +170,9 @@ export const instantiateUserSession = async <UserType>({
 
 	return response;
 };
+export const readUserAgent = (request?: Request) =>
+	request?.headers.get('user-agent')?.slice(0, USER_AGENT_LENGTH) ||
+	undefined;
 // Cookie Secure flag resolution. An explicit `cookieSecure` on AuthConfig
 // overrides; otherwise we look at NODE_ENV.
 // Secure by default. Only the explicit local-dev / test environments opt out

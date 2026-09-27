@@ -51,7 +51,13 @@ test.skipIf(!url)(
 			const db = drizzle({ client: first });
 			await createPostgresAuthSessionStore(db, decodeUser).setSession(
 				id,
-				{ authenticatedAt: Date.now(), expiresAt, user }
+				{
+					authenticatedAt: Date.now(),
+					expiresAt,
+					signInMethod: 'passkey',
+					user,
+					userAgent: 'Mozilla/5.0 (Macintosh) Safari/605'
+				}
 			);
 			await createPostgresCredentialStore(db).saveCredential({
 				createdAt: Date.now(),
@@ -70,7 +76,12 @@ test.skipIf(!url)(
 		try {
 			const db = drizzle({ client: second });
 			const sessions = createPostgresAuthSessionStore(db, decodeUser);
-			expect((await sessions.getSession(id))?.user).toEqual(user);
+			const stored = await sessions.getSession(id);
+			expect(stored?.user).toEqual(user);
+			expect(stored?.signInMethod).toBe('passkey');
+			expect(stored?.userAgent).toBe(
+				'Mozilla/5.0 (Macintosh) Safari/605'
+			);
 			expect(
 				(
 					await createPostgresCredentialStore(

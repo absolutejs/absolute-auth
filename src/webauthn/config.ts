@@ -4,7 +4,7 @@ import { MILLISECONDS_IN_A_DAY } from '../constants';
 import type { AuthSessionStore } from '../session/types';
 import type { RouteString, UserSessionId } from '../types';
 import type { WebAuthnAdapter } from './adapter';
-import type { WebAuthnCredentialStore } from './types';
+import type { WebAuthnCredential, WebAuthnCredentialStore } from './types';
 
 const FIVE_MINUTES_MS = 300_000;
 
@@ -38,6 +38,12 @@ export type WebAuthnConfig<UserType> = {
 	// Display handles shown in the authenticator UI during registration (default to the user id).
 	getUserDisplayName?: (user: UserType) => string;
 	getUserName?: (user: UserType) => string;
+	// Whether the user can still sign in another way once this passkey is removed. When
+	// supplied and it returns false, removing the user's last passkey is refused.
+	hasOtherSignInMethod?: (context: {
+		credential: WebAuthnCredential;
+		user: UserType;
+	}) => boolean | Promise<boolean>;
 	onWebAuthnAuthenticated?: (context: {
 		user: UserType;
 		userSessionId: UserSessionId;

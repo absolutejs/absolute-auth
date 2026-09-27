@@ -2,6 +2,7 @@ import { Elysia, t } from 'elysia';
 import { loadSessionFromSource } from '../session/access';
 import type { SessionsRouteProps } from '../session/sessionsConfig';
 import { sessionStore } from '../session/state';
+import { describeUserAgent } from '../session/device';
 import { listUserSessions } from '../session/userSessions';
 import { isUserSessionId } from '../typeGuards';
 import { userSessionIdTypebox } from '../typebox';
@@ -10,8 +11,10 @@ import type { UserSessionId } from '../types';
 type SessionSummary = {
 	authenticatedAt?: number;
 	current: boolean;
+	device?: { browser?: string; os?: string };
 	expiresAt: number;
 	id: UserSessionId;
+	signInMethod?: string;
 };
 
 // `GET /auth/sessions` lists the caller's active sessions; `DELETE /auth/sessions/:id`
@@ -56,8 +59,10 @@ export const sessionRoutes = <UserType>({
 				const list: SessionSummary[] = sessions.map((entry) => ({
 					authenticatedAt: entry.session.authenticatedAt,
 					current: entry.id === user_session_id.value,
+					device: describeUserAgent(entry.session.userAgent),
 					expiresAt: entry.session.expiresAt,
-					id: entry.id
+					id: entry.id,
+					signInMethod: entry.session.signInMethod
 				}));
 
 				return status('OK', { sessions: list });

@@ -1,5 +1,5 @@
 import { createOAuth2Client } from 'citra';
-import { Elysia } from 'elysia';
+import { type AnyElysia, Elysia } from 'elysia';
 import { apiKeysRoutes } from './apikeys/routes';
 import { assertTokenRouteConfiguration } from './apikeys/tokenRoutes';
 import { agentAuthRoutes } from './agents/routes';
@@ -44,6 +44,7 @@ import { profile } from './routes/profile';
 import { refresh } from './routes/refresh';
 import { revoke } from './routes/revoke';
 import { sessionRoutes } from './routes/sessions';
+import { identityRoutes } from './identities/routes';
 import { signout } from './routes/signout';
 import { userStatus } from './routes/userStatus';
 import { scimRoutes } from './scim/routes';
@@ -134,6 +135,7 @@ const buildAuthApplications = async <UserType>(
 		passwordless,
 		lockout,
 		sessions,
+		identities,
 		sso,
 		scim,
 		apikeys,
@@ -507,6 +509,7 @@ const buildAuthApplications = async <UserType>(
 		sessions
 			? sessionRoutes<UserType>({ ...sessions, authSessionStore })
 			: new Elysia(),
+
 		sso
 			? oidcSsoRoutes<UserType>({
 					...sso,
@@ -591,6 +594,15 @@ const buildAuthApplications = async <UserType>(
 		agentAuthRoutes(resolvedAgentAuth)
 	]);
 
+	// Kept apart from the other groups so each stays within TypeScript's union limits.
+	const signInMethodRoutes: AnyElysia = identities
+		? identityRoutes<UserType>({
+				...identities,
+				authSessionStore,
+				emit: auditEmit
+			})
+		: new Elysia();
+
 	const featureRoutes = new Elysia({
 		name: '@absolutejs/auth/feature-routes',
 		seed: pluginSeed
@@ -599,6 +611,10 @@ const buildAuthApplications = async <UserType>(
 		organizationFeatureRoutes,
 		extendedFeatureRoutes
 	]);
+	// Mounted without widening `featureRoutes`' type, which is already at the limit of
+	// what TypeScript can represent; the routes are live either way.
+	const mountable: AnyElysia = featureRoutes;
+	mountable.use(signInMethodRoutes);
 
 	const authContext = createAuthContext<UserType>({
 		accessTokens: oidcConfig
@@ -720,6 +736,8 @@ export {
 	type AbsoluteAuthSyncContext
 } from './syncBridge';
 export { sessionRoutes } from './routes/sessions';
+export { describeUserAgent } from './session/device';
+export * from './identities';
 export { stepUpPlugin } from './routes/stepUp';
 export * from './session/sessionsConfig';
 export {
@@ -1192,7 +1210,8 @@ export {
 export * from './webauthn/adapter';
 export * from './webauthn/config';
 export * from './webauthn/types';
-export { webauthnRoutes } from './webauthn/routes';
+export { webauthnRoutes, type PasskeySummary } from './webauthn/routes';
+export { defaultPasskeyName } from './webauthn/passkeyNames';
 export { createInMemoryWebAuthnCredentialStore } from './webauthn/inMemoryWebAuthnCredentialStore';
 export {
 	createNeonWebAuthnCredentialStore,

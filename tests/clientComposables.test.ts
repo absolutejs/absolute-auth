@@ -91,7 +91,7 @@ describe('svelte composables (end-to-end via writable stores)', () => {
 		const client = createAuthClient({
 			fetch: stubFetch((url) => {
 				if (url.endsWith('/auth/sessions')) {
-					return new Response(JSON.stringify(sessions));
+					return new Response(JSON.stringify({ sessions }));
 				}
 				if (url.includes('/auth/sessions/')) {
 					sessions = sessions.filter(

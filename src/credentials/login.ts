@@ -10,7 +10,7 @@ import { persistWhen, promoteToSession } from '../session/promote';
 import { sessionStore } from '../session/state';
 import { withSpan } from '../telemetry/tracing';
 import { userSessionIdTypebox } from '../typebox';
-import { resolveCookieSecure } from '../utils';
+import { resolveCookieSecure, readUserAgent } from '../utils';
 import {
 	type CredentialRouteProps,
 	DEFAULT_CREDENTIAL_SESSION_TTL_MS
@@ -217,7 +217,9 @@ export const credentialsLoginRoute = <
 					cookieSecure,
 					inMemorySession: session,
 					sessionDurationMs,
-					user
+					signInMethod: 'password',
+					user,
+					userAgent: readUserAgent(request)
 				});
 				await onCredentialsLoginSuccess?.({ user, userSessionId });
 

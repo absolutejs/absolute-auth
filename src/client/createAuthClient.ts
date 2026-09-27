@@ -9,6 +9,18 @@ import type {
 	PublicKeyCredentialRequestOptionsJSON
 } from '@simplewebauthn/browser';
 import { getAuthClientRuntimeTransport } from './runtimeTransport';
+import type { IdentitySummary } from '../identities/routes';
+import type { PasskeySummary } from '../webauthn/routes';
+
+export type SessionSummary = {
+	authenticatedAt?: number;
+	current: boolean;
+	device?: { browser?: string; os?: string };
+	expiresAt: number;
+	id: string;
+	signInMethod?: string;
+};
+export type { IdentitySummary, PasskeySummary };
 
 export type AuthClientError = {
 	body: unknown;
@@ -41,6 +53,8 @@ export type AuthClientRoutes = {
 	passwordReset?: string;
 	passwordResetRequest?: string;
 	register?: string;
+	identities?: string;
+	linkIdentity?: string;
 	sessions?: string;
 	signout?: string;
 	status?: string;
@@ -49,6 +63,8 @@ export type AuthClientRoutes = {
 const DEFAULT_ROUTES: Required<AuthClientRoutes> = {
 	emailVerify: '/auth/verify-email',
 	emailVerifyRequest: '/auth/verify-email/request',
+	identities: '/auth/identities',
+	linkIdentity: '/oauth2/:provider/authorization',
 	login: '/auth/login',
 	magicLinkRequest: '/auth/passwordless/magic-link',
 	magicLinkVerify: '/auth/passwordless/magic-link/verify',
@@ -184,12 +200,39 @@ export const createAuthClient = ({
 
 	const del = <T>(path: string) => request<T>(path, { method: 'DELETE' });
 
+	// The server wraps lists in an object; callers get the array.
+	const unwrap = async <K extends string, T>(
+		pending: Promise<AuthClientResult<Record<K, T[]>>>,
+		key: K
+	) => {
+		const result = await pending;
+
+		return result.error ? fail(result.error) : succeed(result.data[key]);
+	};
+
 	return {
 		emailVerification: {
 			request: (body: { email: string }) =>
 				post<{ ok: true }>(resolvedRoutes.emailVerifyRequest, body),
 			verify: (body: { token: string }) =>
 				post<{ ok: true }>(resolvedRoutes.emailVerify, body)
+		},
+		identities: {
+			// Where to send the browser to link another sign-in method while signed in.
+			// The callback returns to the page the link was followed from.
+			linkUrl: (provider: string) =>
+				`${baseUrl}${resolvedRoutes.linkIdentity.replace(':provider', encodeURIComponent(provider))}?client=login&intent=link_identity`,
+			list: () =>
+				unwrap(
+					get<{ identities: IdentitySummary[] }>(
+						resolvedRoutes.identities
+					),
+					'identities'
+				),
+			remove: (identityId: string) =>
+				del<{ removed: string }>(
+					`${resolvedRoutes.identities}/${encodeURIComponent(identityId)}`
+				)
 		},
 		mfa: {
 			challenge: (body: { code: string }) =>
@@ -221,19 +264,35 @@ export const createAuthClient = ({
 					resolvedRoutes.passkeyAuthenticateVerify,
 					response
 				),
-			list: () => get<unknown[]>(resolvedRoutes.passkeyList),
+			list: () =>
+				unwrap(
+					get<{ credentials: PasskeySummary[] }>(
+						resolvedRoutes.passkeyList
+					),
+					'credentials'
+				),
 			registerOptions: () =>
 				post<PublicKeyCredentialCreationOptionsJSON>(
 					resolvedRoutes.passkeyRegisterOptions
 				),
-			registerVerify: (response: unknown) =>
-				post<{ ok: true }>(
+			// `name` is optional; without it the server names the passkey after its
+			// provider ("iCloud Keychain").
+			registerVerify: (response: unknown, name?: string) =>
+				post<{ credentialId: string; verified: true }>(
 					resolvedRoutes.passkeyRegisterVerify,
-					response
+					name && response && typeof response === 'object'
+						? { ...response, name }
+						: response
 				),
 			remove: (credentialId: string) =>
-				del<{ ok: true }>(
+				del<{ removed: string }>(
 					`${resolvedRoutes.passkeyRemove}/${encodeURIComponent(credentialId)}`
+				),
+			rename: (credentialId: string, name: string) =>
+				post<PasskeySummary>(
+					`${resolvedRoutes.passkeyList}/${encodeURIComponent(credentialId)}`,
+					{ name },
+					'PATCH'
 				)
 		},
 		passwordless: {
@@ -252,9 +311,15 @@ export const createAuthClient = ({
 				post<{ ok: true }>(resolvedRoutes.passwordResetRequest, body)
 		},
 		sessions: {
-			list: () => get<unknown[]>(resolvedRoutes.sessions),
+			list: () =>
+				unwrap(
+					get<{ sessions: SessionSummary[] }>(
+						resolvedRoutes.sessions
+					),
+					'sessions'
+				),
 			revoke: (sessionId: string) =>
-				del<{ ok: true }>(
+				del<{ revoked: string }>(
 					`${resolvedRoutes.sessions}/${encodeURIComponent(sessionId)}`
 				)
 		},

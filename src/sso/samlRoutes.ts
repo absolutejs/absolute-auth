@@ -1,3 +1,4 @@
+import { readUserAgent } from '../utils';
 import { Elysia, t } from 'elysia';
 import { createSessionCompatibilityLayer } from '../session/access';
 import { clearSession, promoteToSession } from '../session/promote';
@@ -185,7 +186,9 @@ export const samlSsoRoutes = <UserType>({
 								sessionIndex: profile.sessionIndex
 							},
 							sessionDurationMs,
-							user
+							signInMethod: 'sso',
+							user,
+							userAgent: readUserAgent(request)
 						});
 						await onSsoCallbackSuccess?.({
 							identity,

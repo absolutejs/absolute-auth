@@ -66,6 +66,7 @@ export const callback = <UserType>({
 		async ({
 			status,
 			redirect,
+			request,
 			store: { session, unregisteredSession },
 			cookie,
 			cookie: {
@@ -236,6 +237,7 @@ export const callback = <UserType>({
 						providerConfiguration,
 						providerInstance,
 						redirect,
+						request,
 						session: callbackSession,
 						status,
 						tokenResponse,
