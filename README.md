@@ -392,3 +392,53 @@ using it has expired; duplicate key IDs fail closed.
 ## Note
 
 This project uses Bun and is built for Elysia.
+
+## OAuth and API credential token routes
+
+As of 0.79.0, `apiKeysRoutes()` and `auth({ apikeys })` serve the
+`client_credentials` grant at `/auth/api/token` by default. OIDC authorization
+code and refresh grants continue to use `/oauth2/token`. This keeps separately
+mounted plugins from replacing each other's token handler.
+
+Update enterprise integrations and displayed token URLs to `/auth/api/token`.
+API-only applications can retain the previous URL by explicitly setting
+`apikeys.tokenRoute: '/oauth2/token'`, provided no OIDC handler uses that path.
+
+Prefer configuring both features in `auth({ oidc, apikeys })`: conflicting token
+paths are rejected during construction, including a trailing-slash alias.
+When mounting standalone plugins with custom paths, the consumer must keep
+the paths distinct; Elysia does not reject arbitrary duplicate routes.
+
+### Persistent sessions with an existing PostgreSQL client
+
+Use `createPostgresAuthSessionStore(db, decodeUser)` with an existing Drizzle
+PostgreSQL client. It uses the same session tables as the Neon convenience
+adapter; `decodeUser` validates the stored user shape when a session is read.
+Pair it with `createPostgresCredentialStore(db)` for persistent passwords.
+Your application must also persist its own user records.
+
+```ts
+import { SQL } from 'bun';
+import { drizzle } from 'drizzle-orm/bun-sql';
+import { createPostgresAuthSessionStore, createPostgresCredentialStore } from '@absolutejs/auth';
+
+const databaseUrl = process.env.DATABASE_URL;
+if (!databaseUrl) throw new Error('DATABASE_URL is required');
+const client = new SQL(databaseUrl);
+const db = drizzle({ client });
+const sessionStore = createPostgresAuthSessionStore(db, decodeUser);
+const credentialStore = createPostgresCredentialStore(db);
+```
+
+Apply the `sessions` and `credentials` migrations before serving requests.
+`runMigrations` accepts a `MigrationClient` for non-Neon PostgreSQL drivers.
+With Bun SQL, use a separate `prepare: false` client for migration scripts,
+and the default prepared-query mode for application queries and JSON columns.
+
+Studio's `absolute-auth setup` reads the selected adapter from
+`src/backend/packages/auth.config.ts`. Explicit memory storage skips database
+migrations and warns that sessions reset on restart. The Neon adapter requires
+a real `DATABASE_URL` and runs migrations. Missing or unknown selections fail
+with an actionable error; custom adapters must configure their own migrations.
+
+For a complete credentials-only Bun setup, see [Persistent email/password sign-in](docs/PERSISTENT-CREDENTIALS.md). It includes real migration and auth configuration APIs, durable user records, and driver settings.

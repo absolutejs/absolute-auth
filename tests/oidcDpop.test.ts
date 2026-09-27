@@ -94,7 +94,8 @@ describe('DPoP proof verification (RFC 9449)', () => {
 
 	test('rejects query-bearing htu claims and private proof keys', async () => {
 		const key = await generateSigningKey();
-		if (!('privateJwk' in key)) throw new Error('Expected an exportable key');
+		if (!('privateJwk' in key))
+			throw new Error('Expected an exportable key');
 
 		expect(
 			await verifyDpopProof({

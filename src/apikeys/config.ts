@@ -13,7 +13,7 @@ import type {
 	ApiPrincipal
 } from './types';
 
-export const DEFAULT_TOKEN_ROUTE: RouteString = '/oauth2/token';
+export const DEFAULT_TOKEN_ROUTE: RouteString = '/auth/api/token';
 
 const ACCESS_TOKEN_PREFIX = 'at_';
 const API_KEY_PREFIX = 'sk_';
@@ -41,7 +41,7 @@ export type ApiKeysConfig = {
 	/** Static API keys. Used by the exported `verifyApiKey` / `resolveApiPrincipal`
 	 *  helpers; the consumer wires its own management + guard routes. */
 	apiKeyStore?: ApiKeyStore;
-	/** Path of the client_credentials token endpoint (defaults to `/oauth2/token`). */
+	/** Path of the client_credentials token endpoint (defaults to `/auth/api/token`). */
 	tokenRoute?: RouteString;
 };
 

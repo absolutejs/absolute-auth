@@ -53,11 +53,28 @@ const runSignOut = async <UserType>(
 	}
 };
 
-export const signout = <UserType>({
+/** Fixed path for directly typed Eden clients; the same session revocation and
+ * cookie-clearing implementation as auth's configurable sign-out route. */
+export const createSignoutApi = <UserType>(configuration: {
+	authSessionStore: AuthSessionStore<UserType>;
+	onSignOut?: OnSignOut<UserType>;
+}) =>
+	createSignoutRoute({
+		...configuration,
+		onSignOut: configuration.onSignOut,
+		signoutRoute: '/oauth2/signout'
+	});
+export const signout = <UserType>(configuration: SignOutProps<UserType>) =>
+	createSignoutRoute({
+		...configuration,
+		signoutRoute: configuration.signoutRoute ?? '/oauth2/signout'
+	});
+
+const createSignoutRoute = <UserType, const Route extends RouteString>({
 	authSessionStore,
-	signoutRoute = '/oauth2/signout',
+	signoutRoute,
 	onSignOut
-}: SignOutProps<UserType>) =>
+}: Omit<SignOutProps<UserType>, 'signoutRoute'> & { signoutRoute: Route }) =>
 	new Elysia().use(sessionStore<UserType>()).delete(
 		signoutRoute,
 		{

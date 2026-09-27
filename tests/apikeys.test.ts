@@ -210,7 +210,7 @@ describe('token endpoint', () => {
 		});
 
 		const ok = await app.handle(
-			new Request('http://localhost/oauth2/token', {
+			new Request('http://localhost/auth/api/token', {
 				body: new URLSearchParams({
 					client_id: clientId,
 					client_secret: clientSecret,
@@ -227,7 +227,7 @@ describe('token endpoint', () => {
 		expect(typeof okBody.access_token).toBe('string');
 
 		const wrongGrant = await app.handle(
-			new Request('http://localhost/oauth2/token', {
+			new Request('http://localhost/auth/api/token', {
 				body: new URLSearchParams({ grant_type: 'password' }),
 				method: 'POST'
 			})
@@ -235,7 +235,7 @@ describe('token endpoint', () => {
 		expect(wrongGrant.status).toBe(HTTP_BAD_REQUEST);
 
 		const badClient = await app.handle(
-			new Request('http://localhost/oauth2/token', {
+			new Request('http://localhost/auth/api/token', {
 				body: new URLSearchParams({
 					client_id: clientId,
 					client_secret: 'cs_wrong',
@@ -266,7 +266,7 @@ describe('token endpoint', () => {
 			'base64'
 		);
 		const response = await app.handle(
-			new Request('http://localhost/oauth2/token', {
+			new Request('http://localhost/auth/api/token', {
 				body: new URLSearchParams({
 					grant_type: 'client_credentials'
 				}),
@@ -280,7 +280,7 @@ describe('token endpoint', () => {
 	test('mounts nothing when stores are absent', async () => {
 		const app = await auth({ providersConfiguration: {} });
 		const response = await app.handle(
-			new Request('http://localhost/oauth2/token', {
+			new Request('http://localhost/auth/api/token', {
 				body: new URLSearchParams({
 					grant_type: 'client_credentials'
 				}),

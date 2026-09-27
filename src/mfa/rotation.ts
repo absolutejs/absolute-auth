@@ -1,5 +1,11 @@
 import { decryptTotpSecret, encryptTotpSecret } from './secret';
-import type { MfaEnrollment, MFAStore } from './types';
+import {
+	getMfaFactors,
+	type MfaEnrollment,
+	type MfaFactor,
+	type MFAStore,
+	withMfaFactors
+} from './types';
 
 export type MfaKeyRotationResult = {
 	alreadyRotated: number;
@@ -45,25 +51,45 @@ const planEnrollment = async (
 	oldKey: string,
 	newKey: string
 ) => {
-	const ciphertext = enrollment.totpSecretCiphertext;
-	if (ciphertext === undefined || ciphertext.length === 0) {
+	const factors = getMfaFactors(enrollment);
+	const totpFactors = factors.filter((factor) => factor.type === 'totp');
+	if (totpFactors.length === 0) {
 		const plan: EnrollmentPlan = { kind: 'skip' };
 
 		return plan;
 	}
-	const secret = await tryDecrypt(ciphertext, oldKey);
-	if (secret === undefined) {
-		await ensureReadable(ciphertext, newKey, enrollment.userId);
+	let rotated = false;
+	const nextFactors = await Promise.all(
+		factors.map(async (factor): Promise<MfaFactor> => {
+			if (factor.type !== 'totp') return factor;
+			const secret = await tryDecrypt(factor.secretCiphertext, oldKey);
+			if (secret === undefined) {
+				await ensureReadable(
+					factor.secretCiphertext,
+					newKey,
+					enrollment.userId
+				);
+
+				return factor;
+			}
+			rotated = true;
+
+			return {
+				...factor,
+				secretCiphertext: await encryptTotpSecret(secret, newKey)
+			};
+		})
+	);
+	if (!rotated) {
 		const plan: EnrollmentPlan = { kind: 'already' };
 
 		return plan;
 	}
 	const plan: EnrollmentPlan = {
-		enrollment: {
-			...enrollment,
-			totpSecretCiphertext: await encryptTotpSecret(secret, newKey),
-			updatedAt: Date.now()
-		},
+		enrollment: withMfaFactors(
+			{ ...enrollment, updatedAt: Date.now() },
+			nextFactors
+		),
 		kind: 'rotate'
 	};
 

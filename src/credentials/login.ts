@@ -1,3 +1,4 @@
+import type { RouteString } from '../types';
 import { Elysia, t } from 'elysia';
 import { MILLISECONDS_IN_AN_HOUR } from '../constants';
 import { hashPassword, verifyPassword } from '../crypto';
@@ -27,7 +28,17 @@ const dummyPasswordHash = () =>
 		'absolutejs-auth-timing-equalizer'
 	));
 
-export const credentialsLogin = <UserType>({
+export const credentialsLogin = <UserType>(
+	configuration: CredentialRouteProps<UserType>
+) =>
+	credentialsLoginRoute<UserType, RouteString>({
+		...configuration,
+		loginRoute: configuration.loginRoute ?? '/auth/login'
+	});
+export const credentialsLoginRoute = <
+	UserType,
+	const Route extends RouteString = RouteString
+>({
 	authSessionStore,
 	checkBreachesOnLogin,
 	cookieSecure,
@@ -36,7 +47,7 @@ export const credentialsLogin = <UserType>({
 	getUserByEmail,
 	isMfaRequired,
 	lockoutGuard,
-	loginRoute = '/auth/login',
+	loginRoute,
 	onCredentialsLoginError,
 	onCredentialsLoginSuccess,
 	onUntrustedOrigin,
@@ -45,7 +56,9 @@ export const credentialsLogin = <UserType>({
 	requireEmailVerification = false,
 	sessionDurationMs = DEFAULT_CREDENTIAL_SESSION_TTL_MS,
 	trustedOrigins
-}: CredentialRouteProps<UserType>) =>
+}: Omit<CredentialRouteProps<UserType>, 'loginRoute'> & {
+	loginRoute: Route;
+}) =>
 	new Elysia().use(sessionStore<UserType>()).post(
 		loginRoute,
 		{

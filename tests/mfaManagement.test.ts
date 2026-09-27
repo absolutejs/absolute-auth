@@ -27,9 +27,14 @@ const buildApp = async () => {
 	return { app: new Elysia().use(mfaManagementRoutes(config)), mfaStore };
 };
 
-const request = (app: Elysia, method: 'DELETE' | 'GET', authenticated = true) =>
+const request = (
+	app: Elysia,
+	method: 'DELETE' | 'GET',
+	authenticated = true,
+	path = '/auth/mfa'
+) =>
 	app.handle(
-		new Request('http://localhost/auth/mfa', {
+		new Request(`http://localhost${path}`, {
 			headers: authenticated
 				? { cookie: `user_session_id=${TEST_SESSION_ID}` }
 				: undefined,
@@ -62,9 +67,67 @@ describe('MFA management', () => {
 		expect(await response.json()).toEqual({
 			backupCodesRemaining: 2,
 			enabled: true,
+			factors: [
+				{
+					id: 'legacy-totp',
+					label: 'Authenticator app',
+					phone: null,
+					type: 'totp'
+				},
+				{
+					id: 'legacy-sms',
+					label: 'Text message',
+					phone: '********1234',
+					type: 'sms'
+				}
+			],
 			smsBackup: { enabled: true, phone: '********1234' },
 			totp: { enabled: true }
 		});
+	});
+
+	test('removes one labeled factor without disabling the others', async () => {
+		const { app, mfaStore } = await buildApp();
+		await mfaStore.saveEnrollment({
+			backupCodeHashes: ['recovery'],
+			createdAt: Date.now(),
+			factors: [
+				{
+					id: 'alex-phone',
+					label: 'Alex',
+					phone: '+12125550100',
+					type: 'sms',
+					verified: true
+				},
+				{
+					id: 'kyle-authenticator',
+					label: 'Kyle',
+					secretCiphertext: 'secret',
+					type: 'totp',
+					verified: true
+				}
+			],
+			smsPhone: '+12125550100',
+			smsVerified: true,
+			totpSecretCiphertext: 'secret',
+			totpVerified: true,
+			updatedAt: Date.now(),
+			userId: USER_ID
+		});
+
+		const response = await request(
+			app,
+			'DELETE',
+			true,
+			'/auth/mfa/factors/alex-phone'
+		);
+		expect(response.status).toBe(200);
+		const enrollment = await mfaStore.getEnrollment(USER_ID);
+		expect(enrollment?.factors?.map(({ id }) => id)).toEqual([
+			'kyle-authenticator'
+		]);
+		expect(enrollment?.totpVerified).toBe(true);
+		expect(enrollment?.smsVerified).toBe(false);
 	});
 
 	test('removes the persisted enrollment', async () => {

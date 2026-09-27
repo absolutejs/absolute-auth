@@ -1,6 +1,7 @@
 import { neon } from '@neondatabase/serverless';
 import { eq, lt } from 'drizzle-orm';
-import { drizzle, NeonHttpDatabase } from 'drizzle-orm/neon-http';
+import { drizzle } from 'drizzle-orm/neon-http';
+import type { AnyPgDatabase } from '../stores/postgres';
 import {
 	type AnyPgTable,
 	bigint,
@@ -106,14 +107,25 @@ const toUnregisteredSessionData = (
 	userIdentity: cloneRecord(row.user_identity_json ?? undefined)
 });
 
+/** Convenience adapter for Neon HTTP. Use createPostgresAuthSessionStore with
+ * your existing Drizzle client for Bun SQL, node-postgres, or postgres.js. */
 export const createNeonAuthSessionStore = <UserType>(
 	databaseUrl: string,
 	decodeUser: SessionUserDecoder<UserType>
-): AuthSessionStore<UserType> => {
-	const sql = neon(databaseUrl);
-	const db: NeonHttpDatabase = drizzle({ client: sql });
+) =>
+	createPostgresAuthSessionStore(
+		drizzle({ client: neon(databaseUrl) }),
+		decodeUser
+	);
 
-	return {
+export const createPostgresAuthSessionStore = <
+	UserType,
+	DB extends AnyPgDatabase
+>(
+	db: DB,
+	decodeUser: SessionUserDecoder<UserType>
+) => {
+	const store: AuthSessionStore<UserType> = {
 		deleteExpired: async () => {
 			const rows = await db
 				.delete(authSessionsTable)
@@ -228,4 +240,6 @@ export const createNeonAuthSessionStore = <UserType>(
 				});
 		}
 	};
+
+	return store;
 };

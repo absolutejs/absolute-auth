@@ -11,11 +11,16 @@ const base64Url = (value: Uint8Array) => {
 /** Derive a non-reversible local Sync partition without persisting user PII. */
 export const deriveAuthSyncNamespace = async ({
 	clientId,
+	digestSha256 = async (value) =>
+		new Uint8Array(
+			await crypto.subtle.digest('SHA-256', new Uint8Array(value))
+		),
 	issuer,
 	partition,
 	subject
 }: {
 	clientId: string;
+	digestSha256?: (value: Uint8Array) => Promise<Uint8Array>;
 	issuer: string;
 	partition?: string;
 	subject: string;
@@ -24,14 +29,13 @@ export const deriveAuthSyncNamespace = async ({
 		throw new TypeError(
 			'Auth Sync namespace requires issuer, clientId, and subject.'
 		);
-	const digest = await crypto.subtle.digest(
-		'SHA-256',
+	const digest = await digestSha256(
 		new TextEncoder().encode(
 			JSON.stringify([issuer, clientId, subject, partition ?? null])
 		)
 	);
 
-	return `auth:v1:${base64Url(new Uint8Array(digest))}`;
+	return `auth:v1:${base64Url(digest)}`;
 };
 
 export const readAuthSyncPartition = (user: unknown) => {

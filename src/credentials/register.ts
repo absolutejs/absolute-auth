@@ -1,3 +1,4 @@
+import type { RouteString } from '../types';
 import { Elysia, t } from 'elysia';
 import { generateSecureToken, hashPassword, hashToken } from '../crypto';
 import { resolveOriginAllowed } from '../csrf';
@@ -13,7 +14,17 @@ import { promoteToSession } from '../session/promote';
 import { withSpan } from '../telemetry/tracing';
 import { evaluatePassword } from './passwordPolicy';
 
-export const credentialsRegister = <UserType>({
+export const credentialsRegister = <UserType>(
+	configuration: CredentialRouteProps<UserType>
+) =>
+	credentialsRegisterRoute<UserType, RouteString>({
+		...configuration,
+		registerRoute: configuration.registerRoute ?? '/auth/register'
+	});
+export const credentialsRegisterRoute = <
+	UserType,
+	const Route extends RouteString = RouteString
+>({
 	authSessionStore,
 	cookieSecure,
 	credentialStore,
@@ -26,13 +37,15 @@ export const credentialsRegister = <UserType>({
 	onSendEmail,
 	onUntrustedOrigin,
 	passwordPolicy,
-	registerRoute = '/auth/register',
+	registerRoute,
 	requireEmailVerification = false,
 	revealRegistrationConflicts = false,
 	sessionDurationMs = DEFAULT_CREDENTIAL_SESSION_TTL_MS,
 	trustedOrigins,
 	verificationTokenDurationMs = DEFAULT_VERIFICATION_TOKEN_TTL_MS
-}: CredentialRouteProps<UserType>) =>
+}: Omit<CredentialRouteProps<UserType>, 'registerRoute'> & {
+	registerRoute: Route;
+}) =>
 	new Elysia().use(sessionStore<UserType>()).post(
 		registerRoute,
 		{

@@ -1,3 +1,4 @@
+import { credentialsIntegrationSource } from './credentials/integration';
 import {
 	defineImplementation,
 	defineManifest,
@@ -168,7 +169,7 @@ export const manifest = defineManifest<AuthConfig<unknown>, never>()({
 					}
 				]
 			},
-			title: 'Your Postgres database (recommended)',
+			title: 'Neon Postgres (persistent sessions)',
 			wiring: {
 				code: 'createNeonAuthSessionStore(${env.DATABASE_URL} ?? "", decodeSessionUserRecord)',
 				imports: [
@@ -200,20 +201,20 @@ export const manifest = defineManifest<AuthConfig<unknown>, never>()({
 	],
 	lifecycle: [
 		{
-			// The CLI falls back to the DATABASE_URL env var for --db.
-			command: 'bunx absolute-auth migrate',
+			// Setup inspects the selected adapter before requiring a database.
+			command: 'bunx absolute-auth setup',
 			id: 'migrate',
 			idempotent: true,
 			kind: 'migration',
-			title: 'Set up the sign-in tables in your database',
+			title: 'Set up the selected sign-in storage',
 			when: 'after-install'
 		},
 		{
-			command: 'bunx absolute-auth migrate',
+			command: 'bunx absolute-auth setup',
 			id: 'migrate-upgrade',
 			idempotent: true,
 			kind: 'migration',
-			title: 'Apply new sign-in tables after upgrading',
+			title: 'Upgrade the selected sign-in storage',
 			when: 'after-upgrade'
 		}
 	],
@@ -227,21 +228,13 @@ export const manifest = defineManifest<AuthConfig<unknown>, never>()({
 		}
 	],
 	requires: {
-		env: [
-			{
-				description:
-					'Postgres connection string (sign-in tables live here)',
-				example: 'postgres://user:pass@host/db',
-				key: 'DATABASE_URL',
-				secret: true
-			},
-			...providerEnv
-		],
+		env: providerEnv,
 		peers: [{ name: 'elysia', range: '>=1.0', reason: 'plugin host' }],
 		services: [
 			{
 				description: 'Stores accounts, sessions, and audit events',
-				id: 'postgres'
+				id: 'postgres',
+				optional: true
 			}
 		]
 	},
@@ -251,7 +244,10 @@ export const manifest = defineManifest<AuthConfig<unknown>, never>()({
 			configPath: 'authSessionStore',
 			contract: 'auth/session-store',
 			description: 'Where live sign-in sessions are kept',
-			known: ['@absolutejs/auth#postgres', '@absolutejs/auth#memory'],
+			known: [
+				'@absolutejs/auth#createNeonAuthSessionStore',
+				'@absolutejs/auth#createInMemoryAuthSessionStore'
+			],
 			required: true
 		},
 		verificationProvider: {
@@ -264,6 +260,42 @@ export const manifest = defineManifest<AuthConfig<unknown>, never>()({
 		}
 	},
 	tools: {
+		get_credentials_integration: tool.workspace({
+			annotations: { readOnlyHint: true },
+			authorization: {
+				approval: 'never',
+				audience: 'admin',
+				effects: ['read'],
+				requiredScopes: ['auth:inspect']
+			},
+			capabilities: ['read'],
+			description:
+				'Get the package-owned typed email/password API and protected account route recipe. Reuse createCredentialsApi rather than inventing request wrappers. Requires application-owned user callbacks, a durable session and credential store, and real email delivery.',
+			input: Type.Object({}),
+			handler: () =>
+				JSON.stringify({
+					configurationModule: 'credentials.config.ts',
+					requiredBindings: [
+						'authSessionStore',
+						'credentialStore',
+						'getUserByEmail',
+						'onCreateCredentialUser',
+						'onSendEmail'
+					],
+					requiredExport: 'credentialsConfiguration',
+					routes: [
+						'POST /auth/register',
+						'POST /auth/login',
+						'POST /auth/verify-email',
+						'POST /auth/verify-email/request',
+						'POST /auth/reset-password',
+						'POST /auth/reset-password/request'
+					],
+					source: credentialsIntegrationSource,
+					validation:
+						'Typecheck the generated module and run signup, login, verification, reset and protected-route tests. Never replace missing infrastructure with an in-memory production store or no-op email delivery.'
+				})
+		}),
 		list_sign_in_providers: tool.workspace({
 			annotations: { readOnlyHint: true },
 			authorization: {
@@ -301,7 +333,7 @@ export const manifest = defineManifest<AuthConfig<unknown>, never>()({
 	wiring: [
 		{
 			description:
-				'Sign in with Google, GitHub, and 60+ other services. Add email/password later from settings.',
+				'Sign in with Google, GitHub, and 60+ other services. For email/password use get_credentials_integration and supply application-owned user, storage and email bindings.',
 			id: 'default',
 			server: {
 				code: [
