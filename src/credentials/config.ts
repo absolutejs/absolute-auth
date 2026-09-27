@@ -2,6 +2,7 @@ import { MILLISECONDS_IN_A_DAY, MILLISECONDS_IN_AN_HOUR } from '../constants';
 import type { LockoutGuard } from '../lockout/config';
 import type { AuthSessionStore } from '../session/types';
 import type { OrganizationId } from '../tenancy';
+import type { TrustedOriginPolicy } from '../csrf';
 import type { RouteString, StatusReturn, UserSessionId } from '../types';
 import type { PasswordPolicy } from './passwordPolicy';
 import type { CredentialStore } from './types';
@@ -115,9 +116,10 @@ export type CredentialsConfig<UserType> = {
 	resetPasswordRoute?: RouteString;
 	resetTokenDurationMs?: number;
 	sessionDurationMs?: number;
-	/** When set, login/register reject requests whose `Origin` header is not in
-	 *  this list (defense against login/registration CSRF). Omit to disable. */
-	trustedOrigins?: readonly string[];
+	/** When set, login/register reject requests whose Origin is not allowed by
+	 *  this list or request-aware policy (defense against login/registration
+	 *  CSRF). Omit to disable. */
+	trustedOrigins?: TrustedOriginPolicy;
 	verificationTokenDurationMs?: number;
 	verifyEmailRoute?: RouteString;
 };
