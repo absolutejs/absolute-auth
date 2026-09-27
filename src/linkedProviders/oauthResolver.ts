@@ -156,9 +156,25 @@ export const createOAuthLinkedProviderCredentialResolver = async ({
 				);
 			}
 
-			const tokenResponse = await providerClient.refreshAccessToken(
-				grant.refreshTokenCiphertext
-			);
+			// A timed-out exchange may have rotated the token at the provider. Fail
+			// closed instead of racing another refresh with the old refresh token.
+			let timer: ReturnType<typeof setTimeout> | undefined;
+			const tokenResponse = await Promise.race([
+				providerClient.refreshAccessToken(grant.refreshTokenCiphertext),
+				new Promise<never>((_resolve, reject) => {
+					timer = setTimeout(
+						() =>
+							reject(
+								new LinkedProviderCredentialError(
+									'refresh_outcome_unknown',
+									'reconnect',
+									'Authorization renewal timed out. Reconnect your account.'
+								)
+							),
+						20000
+					);
+				})
+			]).finally(() => clearTimeout(timer));
 			const refreshedAt = Date.now();
 			const grantedScopes = getGrantedScopes(
 				Reflect.get(tokenResponse, 'scope'),

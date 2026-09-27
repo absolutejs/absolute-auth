@@ -1,3 +1,4 @@
+import { webauthnChallengesTable } from '../webauthn/challengeStore';
 // Single export of every block's migrations. Consumers pick which blocks they enabled
 // in `auth()` and pass that subset to `runMigrations({ blocks: [...] })`, or omit `blocks`
 // to apply every migration the package ships. Adding a new block's migrations: import its
@@ -284,7 +285,16 @@ export const blockMigrations: Record<BlockName, BlockMigrations> = {
 		vcCredentialNoncesTable,
 		vcPresentationRequestsTable
 	]),
-	webauthn: initMigration('webauthn', [webauthnCredentialsTable]),
+	webauthn: {
+		block: 'webauthn',
+		migrations: [
+			...initMigration('webauthn', [webauthnCredentialsTable]).migrations,
+			{
+				id: '0002_server_challenges',
+				sql: tablesToInitSql([webauthnChallengesTable])
+			}
+		]
+	},
 	webhooks: initMigration('webhooks', [webhookDeliveriesTable])
 };
 

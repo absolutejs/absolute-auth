@@ -23,6 +23,14 @@ export const createInMemoryWebAuthnCredentialStore =
 				credentials.delete(credentialId);
 			},
 			saveCredential: async (credential) => {
+				const previous = credentials.get(credential.credentialId);
+				if (
+					previous &&
+					(previous.userId !== credential.userId ||
+						previous.publicKey !== credential.publicKey ||
+						credential.counter < previous.counter)
+				)
+					throw new Error('Credential ownership or counter conflict');
 				credentials.set(
 					credential.credentialId,
 					cloneCredential(credential)

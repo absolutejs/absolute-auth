@@ -1,3 +1,4 @@
+import type { WebAuthnChallengeStore } from './challengeStore';
 import type { AuditEmitter } from '../audit/config';
 import { MILLISECONDS_IN_A_DAY } from '../constants';
 import type { AuthSessionStore } from '../session/types';
@@ -17,6 +18,8 @@ export const WEBAUTHN_CHALLENGE_COOKIE = 'webauthn_challenge';
 // authentication ceremony (passwordless sign-in → mints the same `SessionData<UserType>`) only
 // when this block is supplied. SAML-style: a `webauthnAdapter` wraps a vetted library.
 export type WebAuthnConfig<UserType> = {
+	challengeStore?: WebAuthnChallengeStore;
+	canRegister?: (user: UserType) => boolean | Promise<boolean>;
 	credentialStore: WebAuthnCredentialStore;
 	// Stable per-user key (e.g. the user's `sub`) — groups a user's passkeys and labels them.
 	getUserId: (user: UserType) => string;

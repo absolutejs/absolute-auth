@@ -568,6 +568,8 @@ export type AuthConfig<UserType> = {
 	 *  constrained. */
 	htmx?: NoInfer<UserType> extends AuthHtmxUser ? AuthHtmxConfig : never;
 	unregisteredSessionDurationMs?: number;
+	/** Require connector/identity consent to return to the session that started it. */
+	bindLinkingToSession?: boolean;
 	resolveAuthIntent?: ResolveAuthIntent<NoInfer<UserType>>;
 	onAuthorizeSuccess?: OnAuthorizeSuccess;
 	onAuthorizeError?: OnAuthorizeError;

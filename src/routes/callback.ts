@@ -28,6 +28,7 @@ type CallbackProps<UserType> = {
 	authSessionStore?: AuthSessionStore<UserType>;
 	clientProviders: ClientProviders;
 	callbackRoute?: RouteString;
+	bindLinkingToSession?: boolean;
 	resolveAuthIntent?: ResolveAuthIntent<UserType>;
 	onCallbackSuccess: OnCallbackSuccess<UserType>;
 	onLinkIdentity?: OnLinkIdentity<UserType>;
@@ -41,6 +42,7 @@ export const callback = <UserType>({
 	clientProviders,
 	callbackRoute = '/oauth2/callback',
 	resolveAuthIntent,
+	bindLinkingToSession,
 	onCallbackSuccess,
 	onLinkIdentity,
 	onLinkIdentityConflict,
@@ -53,6 +55,7 @@ export const callback = <UserType>({
 			cookie: t.Cookie({
 				auth_client: authClientOption,
 				auth_intent: authIntentOption,
+				auth_link_session: t.Optional(t.String()),
 				auth_provider: t.Optional(authProviderOption),
 				code_verifier: t.Optional(t.String()),
 				origin_url: t.Optional(t.String()),
@@ -72,7 +75,8 @@ export const callback = <UserType>({
 				user_session_id,
 				auth_provider,
 				auth_client,
-				auth_intent
+				auth_intent,
+				auth_link_session
 			},
 			query: { code, state: callback_state }
 		}) =>
@@ -203,6 +207,22 @@ export const callback = <UserType>({
 						})) ??
 						'login';
 					auth_intent.remove();
+					const linking =
+						authIntent === 'link_connector' ||
+						authIntent === 'link_identity';
+					const startedSession = auth_link_session?.value;
+					auth_link_session?.remove();
+					if (
+						bindLinkingToSession &&
+						linking &&
+						(!currentUser ||
+							!startedSession ||
+							startedSession !== user_session_id.value)
+					)
+						return status(
+							'Unauthorized',
+							'The linking session changed. Start again.'
+						);
 
 					const userSessionId =
 						user_session_id.value ?? crypto.randomUUID();

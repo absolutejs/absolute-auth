@@ -21,3 +21,6 @@ export {
 	type LinkedProviderGrantRow
 } from './neonStores';
 export { createInMemoryLinkedProviderStores } from './inMemoryStores';
+export { createEncryptedLinkedProviderGrantStore } from './encryptedStore';
+
+export { createCoordinatedOAuthLinkedProviderCredentialResolver } from './coordinatedResolver';
