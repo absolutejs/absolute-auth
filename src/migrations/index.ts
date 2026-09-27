@@ -1,4 +1,5 @@
 import { webauthnChallengesTable } from '../webauthn/challengeStore';
+import { mfaSmsChallengesTable } from '../mfa/scopedSmsStore';
 // Single export of every block's migrations. Consumers pick which blocks they enabled
 // in `auth()` and pass that subset to `runMigrations({ blocks: [...] })`, or omit `blocks`
 // to apply every migration the package ships. Adding a new block's migrations: import its
@@ -30,7 +31,10 @@ import {
 	linkedProviderGrantsTable
 } from '../linkedProviders/neonStores';
 import { lockoutsTable } from '../lockout/postgresLockoutStore';
-import { mfaEnrollmentsTable } from '../mfa/postgresMfaStore';
+import {
+	mfaCodeAttemptsTable,
+	mfaEnrollmentsTable
+} from '../mfa/postgresMfaStore';
 import {
 	oauthBackchannelAuthRequestsTable,
 	oauthClientAssertionJtisTable,
@@ -270,7 +274,15 @@ export const blockMigrations: Record<BlockName, BlockMigrations> = {
 			mfaTotpLockoutMigration,
 			mfaSmsDeliveryPolicyMigration,
 			mfaSmsAtomicChallengeMigration,
-			mfaMultipleFactorsMigration
+			mfaMultipleFactorsMigration,
+			{
+				id: '0007_timed_code_attempts',
+				sql: tablesToInitSql([mfaCodeAttemptsTable])
+			},
+			{
+				id: '0008_scoped_sms_challenges',
+				sql: tablesToInitSql([mfaSmsChallengesTable])
+			}
 		]
 	},
 	oidc: {

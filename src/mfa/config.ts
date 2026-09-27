@@ -14,10 +14,13 @@ export const DEFAULT_MFA_MANAGEMENT_AUTH_MAX_AGE_MS =
 export const DEFAULT_MFA_SESSION_TTL_MS = MILLISECONDS_IN_A_DAY;
 export const DEFAULT_SMS_CODE_LENGTH = 6;
 const SMS_CODE_TTL_MINUTES = 5;
+export const DEFAULT_MFA_CODE_ATTEMPT_WINDOW_MS =
+	5 * SECONDS_IN_A_MINUTE * MILLISECONDS_IN_A_SECOND;
 export const DEFAULT_SMS_CODE_TTL_MS =
 	SMS_CODE_TTL_MINUTES * SECONDS_IN_A_MINUTE * MILLISECONDS_IN_A_SECOND;
 export const DEFAULT_SMS_MAX_ATTEMPTS = 3;
 export const DEFAULT_SMS_RESEND_COOLDOWN_MS = 30 * MILLISECONDS_IN_A_SECOND;
+export const DEFAULT_SMS_SEND_MAX_ATTEMPTS = 10;
 export const DEFAULT_TOTP_MAX_ATTEMPTS = 5;
 
 // Out-of-band SMS delivery payload. The plaintext `code` is handed to the consumer's sender
@@ -34,6 +37,8 @@ export type MfaConfig<UserType> = {
 	mfaStore: MFAStore;
 	// Stable per-user key for the store (e.g. the user's `sub`).
 	getUserId: (user: UserType) => string;
+	/** Default authenticator label when no name is supplied, e.g. the signed-in email. */
+	getDefaultTotpLabel?: (user: UserType) => string | null | undefined;
 	// Resolve the parked (unregistered) identity back into a user during a challenge.
 	// For credentials this is `(identity) => getUserByEmail(identity.email)`.
 	getChallengeUser: (
@@ -65,13 +70,19 @@ export type MfaConfig<UserType> = {
 	smsCodeLength?: number;
 	smsCodeTtlMs?: number;
 	smsMaxAttempts?: number;
-	/** Minimum delay between code sends for the same enrollment. */
+	/** Account-wide delivery-attempt ceiling; independent of per-login resend cooldowns. */
+	smsSendMaxAttempts?: number;
+	smsSendWindowMs?: number;
+	/** Minimum delay between sends to the same phone within a pending login. */
 	smsResendCooldownMs?: number;
 	smsSetupRoute?: RouteString;
 	smsVerifyRoute?: RouteString;
-	// Max consecutive failed TOTP/backup-code verifications at the login challenge before
-	// the second-factor step locks out. Independent of the first-factor (password) lockout.
+	/** Maximum code checks per timed window, shared across authenticators. */
 	totpMaxAttempts?: number;
+	/** Recovery codes have an independent attempt budget. */
+	backupCodeMaxAttempts?: number;
+	/** Fixed window; blocked requests never extend it. Default: five minutes. */
+	codeAttemptWindowMs?: number;
 	totpSetupRoute?: RouteString;
 	totpVerifyRoute?: RouteString;
 };

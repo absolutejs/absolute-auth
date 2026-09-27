@@ -155,9 +155,8 @@ export const getStatusFromSource = async <UserType>({
 		userSessionId
 	});
 
-	if (!userSession && userSessionId) {
-		user_session_id.remove();
-	}
+	// Status reads must not clear cookies: this ID may identify a pending MFA
+	// session, or a delayed response may overwrite a newer login cookie.
 
 	return {
 		error: null,

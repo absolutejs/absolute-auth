@@ -11,6 +11,9 @@ export type SmsMfaFactor = {
 };
 
 export type TotpMfaFactor = {
+	/** Encrypted first-enrollment receipt, replayable only briefly after a valid TOTP. */
+	recoveryReceipt?: string;
+	recoveryReceiptExpiresAt?: number;
 	id: string;
 	label: string;
 	secretCiphertext: string;
@@ -47,9 +50,7 @@ export type MfaEnrollment = {
 	// E.164 phone number the SMS code is delivered to.
 	smsPhone?: string;
 	smsVerified: boolean;
-	// Count of consecutive failed TOTP/backup-code verifications at the login challenge.
-	// Tracked separately from any first-factor (password) lockout and reset to 0 on a
-	// successful second-factor verification. Independent of `smsFailedAttempts`.
+	/** @deprecated Legacy counter. Timed, atomic challenge limits supersede it. */
 	totpFailedAttempts?: number;
 	// TOTP secret encrypted at rest (AES-GCM) when an encryption key is configured,
 	// otherwise the raw base32 secret. Never the user's typed code.
@@ -59,7 +60,60 @@ export type MfaEnrollment = {
 	userId: string;
 };
 
+export type MfaAttemptFactor = 'totp' | 'backup_codes' | 'sms_send';
+export type MfaAttempt = {
+	allowed: boolean;
+	attempts: number;
+	retryAfterMs: number;
+	windowStartedAt: number;
+};
+
+export type SmsChallengeScope = {
+	userId: string;
+	sessionId: string;
+	factorId: string;
+	expiresAt: number;
+};
+export type SmsChallengeStore = Pick<
+	MFAStore,
+	| 'claimSmsChallenge'
+	| 'completeSmsChallenge'
+	| 'finalizeSmsChallenge'
+	| 'getEnrollment'
+	| 'recordSmsFailure'
+	| 'rollbackSmsChallenge'
+>;
+
 export type MFAStore = {
+	/** Durable SMS state isolated to this pending login and selected phone. */
+	getSmsChallengeStore: (
+		scope: SmsChallengeScope
+	) => Promise<SmsChallengeStore>;
+	/** Compare-and-swap TOTP fields and recovery hashes only; preserve unrelated SMS state. */
+	saveTotpEnrollment: (input: {
+		expected: MfaEnrollment | undefined;
+		enrollment: MfaEnrollment;
+	}) => Promise<boolean>;
+	/** Reserve before checking a code. Must be atomic across all server instances. */
+	claimCodeAttempt: (input: {
+		userId: string;
+		factor: MfaAttemptFactor;
+		maxAttempts: number;
+		windowMs: number;
+		now: number;
+	}) => Promise<MfaAttempt>;
+	/** Atomically consume a recovery hash, if supplied, and update only challenge fields. */
+	completeCodeChallenge: (input: {
+		userId: string;
+		backupCodeHash?: string;
+		now: number;
+	}) => Promise<boolean>;
+	/** Clear only the reservation just completed, without erasing concurrent attempts. */
+	resetCodeAttempts: (input: {
+		userId: string;
+		factor: MfaAttemptFactor;
+		attempt: MfaAttempt;
+	}) => Promise<void>;
 	/** Atomically reserves the SMS slot only when the resend cooldown has elapsed. */
 	claimSmsChallenge: (input: {
 		challengeId: string;
