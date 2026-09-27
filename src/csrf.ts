@@ -4,10 +4,15 @@
 // pass `trustedOrigins` to enforce it. A missing Origin header on a configured
 // route is treated as untrusted (returns false), since browsers send Origin on
 // cross-site and same-origin POSTs.
+export type TrustedOriginPolicy =
+	| readonly string[]
+	| ((request: Request) => boolean);
+
 export const isTrustedOrigin = (
 	request: Request,
-	trustedOrigins?: readonly string[]
+	trustedOrigins?: TrustedOriginPolicy
 ) => {
+	if (typeof trustedOrigins === 'function') return trustedOrigins(request);
 	if (trustedOrigins === undefined || trustedOrigins.length === 0) {
 		return true;
 	}
@@ -33,7 +38,7 @@ export const resolveOriginAllowed = async ({
 		request: Request;
 	}) => void | Promise<void>;
 	request: Request;
-	trustedOrigins?: readonly string[];
+	trustedOrigins?: TrustedOriginPolicy;
 }) => {
 	if (isTrustedOrigin(request, trustedOrigins)) return true;
 	await onUntrustedOrigin?.({

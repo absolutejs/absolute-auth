@@ -139,6 +139,18 @@ describe('origin CSRF check (F8c)', () => {
 		);
 	});
 
+	test('isTrustedOrigin supports request-aware multi-tenant policies', () => {
+		const sameOrigin = (request: Request) => {
+			const origin = request.headers.get('origin');
+
+			return origin !== null && origin === new URL(request.url).origin;
+		};
+		expect(isTrustedOrigin(req('http://localhost'), sameOrigin)).toBe(true);
+		expect(isTrustedOrigin(req('https://evil.com'), sameOrigin)).toBe(
+			false
+		);
+	});
+
 	test('login rejects an untrusted Origin with 403, allows a trusted one', async () => {
 		const config: CredentialsConfig<TestUser> = {
 			credentialStore: createInMemoryCredentialStore(),
