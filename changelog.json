@@ -5,6 +5,38 @@
 		{
 			"changes": [
 				{
+					"kind": "breaking",
+					"migration": {
+						"instruction": "Apply identities/0003_canonical_account_compatibility or an equivalent application-journal migration before using native identity storage with UUID identity IDs. Pass --writer to committed CLI imports with a module exporting transactional writeAuthImport; preserve canonical IDs and put hashes in auth_credentials.",
+						"manual": true
+					},
+					"summary": "Widen native identity IDs for migrated accounts. Credential sign-in revokes the previous session. Committed CLI imports require an application writer instead of assuming users(sub,email,password).",
+					"symbols": [
+						"authIdentitiesTable",
+						"credentialsLogin",
+						"credentialsRegister"
+					]
+				},
+				{
+					"kind": "added",
+					"summary": "Add canonical-account credential operations, UUID-referencing identity schemas, and durable session promotion for application-owned signup flows.",
+					"symbols": [
+						"prepareAccountPassword",
+						"insertAccountCredential",
+						"authenticateAccountPassword",
+						"changeAccountPassword",
+						"defineAuthIdentitiesTable",
+						"createAccountSession",
+						"loadUnregisteredSessionFromSource"
+					]
+				}
+			],
+			"date": "2026-10-02",
+			"version": "0.97.0"
+		},
+		{
+			"changes": [
+				{
 					"kind": "added",
 					"summary": "`trustedOrigins` also accepts a function of the request, so a multi-tenant app can decide per request (for example, allow only the request’s own origin) instead of listing every origin up front.",
 					"symbols": [

@@ -1,5 +1,10 @@
 import type { Cookie } from 'elysia';
-import type { SessionData, SessionRecord, UserSessionId } from '../types';
+import type {
+	SessionData,
+	SessionRecord,
+	UnregisteredSessionRecord,
+	UserSessionId
+} from '../types';
 import { resolveCookieSecure } from '../utils';
 import { createSessionCompatibilityLayer } from './access';
 import type { AuthSessionStore } from './types';
@@ -49,6 +54,12 @@ export const persistWhen = async (
 };
 
 type PromoteToSessionProps<UserType> = {
+	revokePreviousSession?: boolean;
+	inMemoryUnregisteredSession?: UnregisteredSessionRecord;
+	oauth?: Pick<
+		SessionData<UserType>,
+		'accessToken' | 'refreshToken' | 'oauthSubject'
+	>;
 	anonymous?: boolean;
 	authSessionStore?: AuthSessionStore<UserType>;
 	cookie: Cookie<UserSessionId | undefined>;
@@ -65,11 +76,18 @@ type PromoteToSessionProps<UserType> = {
 	userAgent?: string;
 };
 
+/** Single-account sign-in rotates and revokes; internal impersonation/ring flows may retain a prior session. */
+export const createAccountSession = <UserType>(
+	props: Omit<PromoteToSessionProps<UserType>, 'revokePreviousSession'>
+) => promoteToSession({ ...props, revokePreviousSession: true });
 // Creates a registered session for a non-OAuth (credential / MFA-promoted / SSO) user and
 // rotates the session cookie. Deliberately omits `accessToken` — these sessions are not
 // backed by an OAuth provider token. Shared by credential register/login, the MFA challenge
 // route, and the SSO callbacks. `samlLogout` carries the SAML SP-initiated SLO context.
 export const promoteToSession = async <UserType>({
+	revokePreviousSession = false,
+	inMemoryUnregisteredSession,
+	oauth,
 	anonymous,
 	authSessionStore,
 	cookie,
@@ -93,6 +111,7 @@ export const promoteToSession = async <UserType>({
 	const userSessionId = crypto.randomUUID();
 
 	const data: SessionData<UserType> = {
+		...oauth,
 		authenticatedAt: Date.now(),
 		expiresAt: Date.now() + sessionDurationMs,
 		user
@@ -102,6 +121,13 @@ export const promoteToSession = async <UserType>({
 	if (anonymous === true) data.anonymous = true;
 	if (signInMethod !== undefined) data.signInMethod = signInMethod;
 	if (userAgent !== undefined) data.userAgent = userAgent;
+	const previousId = cookie.value;
+	if (previousId) {
+		if (revokePreviousSession) delete targetSession[previousId];
+		delete compatibilityLayer.unregisteredSession[previousId];
+		if (inMemoryUnregisteredSession)
+			delete inMemoryUnregisteredSession[previousId];
+	}
 	targetSession[userSessionId] = data;
 	cookie.set({
 		httpOnly: true,

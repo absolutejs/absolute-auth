@@ -1,5 +1,8 @@
 import { and, asc, eq } from 'drizzle-orm';
 import {
+	type AnyPgColumn,
+	uuid,
+	index,
 	jsonb,
 	pgTable,
 	timestamp,
@@ -11,35 +14,44 @@ import { type AnyPgDatabase, createNeonDatabase } from '../stores/postgres';
 import type { JsonObject } from '../types';
 import { identityId, type AuthIdentity, type AuthIdentityStore } from './types';
 
-const ID_LENGTH = 255;
+const ID_LENGTH = 512;
+const SUBJECT_LENGTH = 320;
 const PROVIDER_LENGTH = 64;
 
 // Same shape apps and the CLI importer already use for `auth_identities`, plus
 // `last_used_at` and a unique (provider, subject) index so one provider account can
 // never open two users.
-export const authIdentitiesTable = pgTable(
-	'auth_identities',
-	{
-		auth_provider: varchar('auth_provider', {
-			length: PROVIDER_LENGTH
-		}).notNull(),
-		created_at: timestamp('created_at').notNull().defaultNow(),
-		id: varchar('id', { length: ID_LENGTH }).primaryKey(),
-		last_used_at: timestamp('last_used_at'),
-		metadata: jsonb('metadata').$type<JsonObject>().default({}),
-		provider_subject: varchar('provider_subject', {
-			length: ID_LENGTH
-		}).notNull(),
-		updated_at: timestamp('updated_at').notNull().defaultNow(),
-		user_sub: varchar('user_sub', { length: ID_LENGTH }).notNull()
-	},
-	(table) => [
-		uniqueIndex('auth_identities_provider_subject_idx').on(
-			table.auth_provider,
-			table.provider_subject
-		)
-	]
-);
+export const defineAuthIdentitiesTable = (userReference?: () => AnyPgColumn) =>
+	pgTable(
+		'auth_identities',
+		{
+			auth_provider: varchar('auth_provider', {
+				length: PROVIDER_LENGTH
+			}).notNull(),
+			created_at: timestamp('created_at').notNull().defaultNow(),
+			id: varchar('id', { length: ID_LENGTH }).primaryKey(),
+			last_used_at: timestamp('last_used_at'),
+			metadata: jsonb('metadata').$type<JsonObject>().default({}),
+			provider_subject: varchar('provider_subject', {
+				length: SUBJECT_LENGTH
+			}).notNull(),
+			updated_at: timestamp('updated_at').notNull().defaultNow(),
+			user_sub: userReference
+				? uuid('user_sub')
+						.notNull()
+						.references(userReference, { onDelete: 'cascade' })
+				: varchar('user_sub', { length: ID_LENGTH }).notNull()
+		},
+		(table) => [
+			index('auth_identities_user_idx').on(table.user_sub),
+			uniqueIndex('auth_identities_provider_subject_idx').on(
+				table.auth_provider,
+				table.provider_subject
+			)
+		]
+	);
+
+export const authIdentitiesTable = defineAuthIdentitiesTable();
 
 type IdentityRow = typeof authIdentitiesTable.$inferSelect;
 

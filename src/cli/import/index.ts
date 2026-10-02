@@ -7,7 +7,6 @@
 // new source means: drop a `<source>.ts` parser that returns
 // `ImportResult`, register it here, done.
 
-import { neon } from '@neondatabase/serverless';
 import { auth0Importer } from './auth0';
 import { clerkImporter } from './clerk';
 import { luciaImporter } from './lucia';
@@ -23,84 +22,55 @@ export const importers: Record<string, Importer> = {
 	supabase: supabaseImporter
 };
 
+export type AuthImportWriter = (
+	result: ImportResult,
+	context: { databaseUrl: string }
+) => Promise<{ userCount: number; identityCount: number }>;
+
 export type ImportOptions = {
 	commit: boolean;
 	databaseUrl: string;
+	/** Application adapter must transact user/credential/identity writes and retain stable IDs. */
+	writer?: AuthImportWriter;
 };
 
-// Write the parsed records into the DB. Pre-flight by checking the
-// `users` + `auth_identities` tables exist (the consumer should have
-// run `bunx absolute-auth migrate` first). The writer assigns a fresh
-// UUID `sub` to each imported user — we don't reuse the source's
-// primary key as our `sub`, because most sources hand out short opaque
-// strings that aren't UUIDs.
 export const runImport = async (
 	result: ImportResult,
 	options: ImportOptions
 ) => {
-	const sql = neon(options.databaseUrl);
-
-	// Map source externalId → fresh UUID sub so we can link identities
-	// after the user inserts land.
-	const subByExternalId = new Map<string, string>();
+	const ids = new Set<string>();
+	const emails = new Set<string>();
 	for (const user of result.users) {
-		subByExternalId.set(user.externalId, crypto.randomUUID());
+		if (ids.has(user.externalId))
+			throw new Error('Duplicate source user ID');
+		ids.add(user.externalId);
+		const email = user.email.trim().toLowerCase();
+		if (emails.has(email))
+			throw new Error(
+				'Normalized email collision: resolve accounts explicitly before importing'
+			);
+		emails.add(email);
 	}
-
-	if (!options.commit) {
-		// Dry run: just summarise.
+	const pairs = new Set<string>();
+	for (const identity of result.identities) {
+		if (!ids.has(identity.userExternalId))
+			throw new Error('Identity references an unknown source user');
+		const pair = JSON.stringify([
+			identity.authProvider,
+			identity.providerSubject
+		]);
+		if (pairs.has(pair)) throw new Error('Duplicate provider identity');
+		pairs.add(pair);
+	}
+	if (!options.commit)
 		return {
 			identityCount: result.identities.length,
 			userCount: result.users.length
 		};
-	}
+	if (!options.writer)
+		throw new Error(
+			'Committed imports require --writer: an application adapter that preserves canonical user IDs and atomically writes users, auth_credentials and identities. Auth does not own your users schema.'
+		);
 
-	// Real run: insert users one at a time (per-source uniqueness keys
-	// vary; INSERT ... ON CONFLICT DO NOTHING on email keeps the writer
-	// idempotent for repeated runs).
-	for (const user of result.users) {
-		const sub = subByExternalId.get(user.externalId);
-		await sql`
-			INSERT INTO users (sub, email, password, family_name, given_name, email_verified, created_at)
-			VALUES (
-				${sub},
-				${user.email.toLowerCase().trim()},
-				${user.passwordHash ?? null},
-				${user.familyName ?? null},
-				${user.givenName ?? null},
-				${user.emailVerified},
-				to_timestamp(${user.createdAtMs} / 1000.0)
-			)
-			ON CONFLICT (email) DO NOTHING
-		`;
-	}
-
-	// Insert identities. Skip rows whose source user we didn't insert
-	// (e.g. email-collision dedupe). The lookup goes through email
-	// because `subByExternalId` is in-process — we need to resolve the
-	// canonical sub from whatever's in the DB now.
-	let insertedIdentities = 0;
-	for (const identity of result.identities) {
-		const sub = subByExternalId.get(identity.userExternalId);
-		if (sub === undefined) continue;
-		const inserted = await sql`
-			INSERT INTO auth_identities (id, auth_provider, provider_subject, user_sub, metadata)
-			VALUES (
-				${`${identity.authProvider}:${identity.providerSubject}`},
-				${identity.authProvider},
-				${identity.providerSubject},
-				${sub},
-				${identity.metadata ?? {}}
-			)
-			ON CONFLICT (auth_provider, provider_subject) DO NOTHING
-			RETURNING id
-		`;
-		if (Array.isArray(inserted) && inserted.length > 0)
-			insertedIdentities++;
-	}
-
-	return {
-		identityCount: insertedIdentities,
-		userCount: result.users.length
-	};
+	return options.writer(result, { databaseUrl: options.databaseUrl });
 };

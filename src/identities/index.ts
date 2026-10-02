@@ -5,6 +5,7 @@ export { linkCallbackIdentity, resolveCallbackIdentity } from './link';
 export { createInMemoryIdentityStore } from './inMemoryIdentityStore';
 export {
 	authIdentitiesTable,
+	defineAuthIdentitiesTable,
 	createNeonIdentityStore,
 	createPostgresIdentityStore
 } from './postgresIdentityStore';
