@@ -258,6 +258,16 @@ export const blockMigrations: Record<BlockName, BlockMigrations> = {
 					'CREATE UNIQUE INDEX IF NOT EXISTS "auth_identities_provider_subject_idx" ON "auth_identities" ("auth_provider", "provider_subject");',
 					'CREATE INDEX IF NOT EXISTS "auth_identities_user_sub_idx" ON "auth_identities" ("user_sub");'
 				].join('\n')
+			},
+			{
+				id: '0003_canonical_account_compatibility',
+				sql: [
+					'ALTER TABLE "auth_identities" ADD COLUMN IF NOT EXISTS "metadata" jsonb DEFAULT \'{}\'::jsonb;',
+					'ALTER TABLE "auth_identities" ADD COLUMN IF NOT EXISTS "updated_at" timestamp NOT NULL DEFAULT now();',
+					'ALTER TABLE "auth_identities" ALTER COLUMN "id" DROP DEFAULT;',
+					'ALTER TABLE "auth_identities" ALTER COLUMN "id" TYPE varchar(512) USING "id"::text;',
+					'ALTER TABLE "auth_identities" ALTER COLUMN "provider_subject" TYPE varchar(320);'
+				].join('\n')
 			}
 		]
 	},

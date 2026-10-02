@@ -11,7 +11,7 @@ import {
 	DEFAULT_CREDENTIAL_SESSION_TTL_MS,
 	DEFAULT_VERIFICATION_TOKEN_TTL_MS
 } from './config';
-import { promoteToSession } from '../session/promote';
+import { createAccountSession as promoteToSession } from '../session/promote';
 import { withSpan } from '../telemetry/tracing';
 import { evaluatePassword } from './passwordPolicy';
 

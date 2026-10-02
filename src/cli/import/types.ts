@@ -27,7 +27,7 @@ export type ImportedUser = {
 	familyName?: string;
 	givenName?: string;
 	// Password hash in its original format (bcrypt / argon2id / scrypt).
-	// `@absolutejs/auth` writes it verbatim into users.password; the
+	// The application import writer stores it in auth_credentials; the
 	// rehash-on-next-login dance is handled by the credentials block at
 	// runtime (it sniffs argon2id headers and reverifies via bcryptjs/scrypt
 	// for legacy formats, then rewrites to argon2id on success).

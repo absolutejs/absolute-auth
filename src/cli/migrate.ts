@@ -1,4 +1,6 @@
 #!/usr/bin/env bun
+import { resolve } from 'node:path';
+import { pathToFileURL } from 'node:url';
 // CLI dispatcher. The bin entry `absolute-auth` lands here; the first
 // positional decides which subcommand we run.
 //
@@ -10,7 +12,7 @@
 //   import   read a user export from another auth library, insert into our schema
 //   help     print this message
 
-import { importers, runImport } from './import';
+import { importers, runImport, type AuthImportWriter } from './import';
 import { runSetup } from './setup';
 import { blockMigrations, type BlockName, runMigrations } from '../migrations';
 
@@ -47,6 +49,7 @@ Arguments:
 
 Options:
   --db, --database-url    Postgres connection string (falls back to DATABASE_URL env)
+  --writer <module>       Application module exporting transactional writeAuthImport (required with --commit)
   --commit                Without this, the run is a dry-run (counts only, no inserts)
   --help                  Print this message
 `;
@@ -119,6 +122,11 @@ const applyImportArgument = (
 	}
 	if (next === '--db' || next === '--database-url') {
 		parsed.databaseUrl = args.shift();
+
+		return;
+	}
+	if (next === '--writer') {
+		args.shift();
 
 		return;
 	}
@@ -221,7 +229,20 @@ const runImportCommand = async (argv: string[]) => {
 	process.stdout.write(
 		`[${source}] parsed ${result.users.length} user(s), ${result.identities.length} identity row(s).\n`
 	);
-	const counts = await runImport(result, { commit, databaseUrl: resolved });
+	const writerIndex = argv.indexOf('--writer');
+	const writerPath = writerIndex >= 0 ? argv[writerIndex + 1] : undefined;
+	let writer: AuthImportWriter | undefined;
+	if (commit && writerPath) {
+		const module = await import(pathToFileURL(resolve(writerPath)).href);
+		if (typeof module.writeAuthImport !== 'function')
+			throw new Error('Writer module must export writeAuthImport');
+		writer = module.writeAuthImport;
+	}
+	const counts = await runImport(result, {
+		commit,
+		databaseUrl: resolved,
+		writer
+	});
 	if (commit) {
 		process.stdout.write(
 			`[${source}] inserted ${counts.userCount} user(s), ${counts.identityCount} new identity row(s). ✓\n`

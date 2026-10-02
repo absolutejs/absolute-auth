@@ -196,3 +196,30 @@ export const loadSessionFromSource = async <UserType>({
 
 	return userSession;
 };
+
+/** Read pending OAuth signup without clearing a valid pending-session cookie. */
+export const loadUnregisteredSessionFromSource = async ({
+	authSessionStore,
+	unregisteredSession,
+	userSessionId
+}: {
+	authSessionStore?: Pick<
+		AuthSessionStore<unknown>,
+		'getUnregisteredSession' | 'removeUnregisteredSession'
+	>;
+	unregisteredSession?: UnregisteredSessionRecord;
+	userSessionId?: UserSessionId;
+}) => {
+	if (!userSessionId) return undefined;
+	const pending = authSessionStore
+		? await authSessionStore.getUnregisteredSession(userSessionId)
+		: unregisteredSession?.[userSessionId];
+	if (pending && pending.expiresAt > Date.now()) return pending;
+	if (pending) {
+		if (authSessionStore)
+			await authSessionStore.removeUnregisteredSession(userSessionId);
+		else if (unregisteredSession) delete unregisteredSession[userSessionId];
+	}
+
+	return undefined;
+};

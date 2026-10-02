@@ -1298,3 +1298,20 @@ export {
 } from './webauthn/challengeStore';
 
 export { mfaSmsChallengesTable } from './mfa/scopedSmsStore';
+
+export {
+	prepareAccountPassword,
+	insertAccountCredential,
+	authenticateAccountPassword,
+	changeAccountPassword
+} from './credentials/accounts';
+export { createAccountSession } from './session/promote';
+export {
+	getStatusFromSource,
+	loadSessionFromSource,
+	loadUnregisteredSessionFromSource
+} from './session/access';
+export {
+	authSessionsTable,
+	authUnregisteredSessionsTable
+} from './session/neonStore';
