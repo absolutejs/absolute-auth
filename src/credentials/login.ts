@@ -6,7 +6,10 @@ import { resolveOriginAllowed } from '../csrf';
 import { rehashCredentialPassword } from './import';
 import { isLegacyHash } from './legacyHashers';
 import { createSessionCompatibilityLayer } from '../session/access';
-import { persistWhen, createAccountSession as promoteToSession } from '../session/promote';
+import {
+	persistWhen,
+	createAccountSession as promoteToSession
+} from '../session/promote';
 import { sessionStore } from '../session/state';
 import { withSpan } from '../telemetry/tracing';
 import { userSessionIdTypebox } from '../typebox';
