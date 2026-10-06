@@ -5,6 +5,70 @@
 		{
 			"changes": [
 				{
+					"detail": "`StatusReturn` picked `code` from Elysia's `ElysiaStatus`, which Elysia 2.0.0-beta.21 removed (the status box now carries `status` and `response`). Every `status(...)` returned from an auth callback (`onCallbackSuccess`, `getUser`, `onNewUser`, `onLinkConnector`, `onLinkIdentity`) was a type error on that Elysia. `StatusReturn` now picks `status` and `response`, which every Elysia 2 beta has, so it works on 2.0.0-beta.6 and beta.21 alike. Runtime behavior is unchanged: `isStatusResponse` already detected a status box by `status`.",
+					"kind": "fixed",
+					"summary": "Auth callbacks can return `status(...)` on Elysia 2.0.0-beta.21",
+					"symbols": [
+						"StatusReturn"
+					]
+				},
+				{
+					"detail": "These exports return Elysia apps, plugins or route handlers, so their generated declarations now inline Elysia 2.0.0-beta.21's context types (its `status()` signature, `set.redirect` typed as `never`, and type references from `elysia` instead of `elysia/types`), because the package is now built against that Elysia. Their parameters and behavior are unchanged; they type-check against both 2.0.0-beta.6 and 2.0.0-beta.21.",
+					"kind": "changed",
+					"summary": "Exports that return Elysia apps or plugins carry Elysia 2.0.0-beta.21's types",
+					"symbols": [
+						"agentAuthContextPlugin",
+						"agentAuthPlugin",
+						"apiKeysRoutes",
+						"auth",
+						"complianceRoutes",
+						"createAuthApplications",
+						"createAuthContext",
+						"createAuthHtmxRoutes",
+						"createCredentialsApi",
+						"createSignoutApi",
+						"credentialRoutes",
+						"credentialsEmailVerification",
+						"credentialsLogin",
+						"credentialsPasswordReset",
+						"credentialsRegister",
+						"mfaChallenge",
+						"mfaManagementRoutes",
+						"mfaRoutes",
+						"mfaSmsRoutes",
+						"mfaTotpRoutes",
+						"nativePushRoutes",
+						"oidcProviderRoutes",
+						"oidcSsoRoutes",
+						"organizationRoutes",
+						"passwordlessRoutes",
+						"portalRoutes",
+						"protectPermissionPlugin",
+						"protectRoutePlugin",
+						"pushRoutes",
+						"requireAuthPlugin",
+						"roleRoutes",
+						"samlIdpRoutes",
+						"samlSsoRoutes",
+						"scimRoutes",
+						"sessionCleanup",
+						"sessionRoutes",
+						"sessionStore",
+						"ssoDiscoveryRoute",
+						"statusListRoutes",
+						"stepUpPlugin",
+						"vciRoutes",
+						"vpRoutes",
+						"webauthnRoutes"
+					]
+				}
+			],
+			"date": "2026-10-06",
+			"version": "0.85.1"
+		},
+		{
+			"changes": [
+				{
 					"kind": "changed",
 					"summary": "Include Neon in the typed built-in provider registry and configuration resolution",
 					"symbols": [

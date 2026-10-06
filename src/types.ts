@@ -167,9 +167,14 @@ export type ResolvedOAuthAuthorization = {
 	tokenType?: string;
 };
 
+// `status` + `response` is the shape every Elysia 2 beta shares: through
+// 2.0.0-beta.6 `status` is a getter beside `code`, and from 2.0.0-beta.21
+// `code` is gone. Picking `code` made every `status(...)` returned from an
+// auth callback a type error on newer Elysia; `isStatusResponse` already
+// detects a status box by `status` at runtime.
 export type StatusReturn = Pick<
 	ElysiaStatus<number | keyof StatusMap, unknown>,
-	'code' | 'response'
+	'response' | 'status'
 >;
 
 export type OnNewUser<UserType> = (
