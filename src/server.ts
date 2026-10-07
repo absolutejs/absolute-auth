@@ -54,7 +54,8 @@ export {
 	type VerificationStartResult
 } from './verification/types';
 export type { NodeSamlAdapterOptions } from './sso/nodeSamlAdapter';
-export { createNodeSamlAdapter } from './sso/nodeSamlAdapter';
+// Runtime SAML support belongs to @absolutejs/auth/saml so credentials-only
+// server bundles do not need the optional XML/crypto peer.
 export type { SsoIdentity, SSOConfig } from './sso/config';
 export type { SSOConnection, SSOConnectionStore } from './sso/types';
 export { createPostgresSsoConnectionStore } from './sso/postgresSsoConnectionStore';

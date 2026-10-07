@@ -15,20 +15,23 @@ const sharedBuildOptions: { external: string[]; target: 'bun' } = {
 };
 
 describe('optional dependency package boundaries', () => {
-	test('the main entry does not pull in the optional node-saml adapter', async () => {
-		const result = await Bun.build({
-			...sharedBuildOptions,
-			entrypoints: ['src/index.ts']
-		});
+	test.each(['src/index.ts', 'src/server.ts'])(
+		'%s does not pull in optional protocol adapters',
+		async (entrypoint) => {
+			const result = await Bun.build({
+				...sharedBuildOptions,
+				entrypoints: [entrypoint]
+			});
 
-		expect(result.success).toBe(true);
-		expect(result.outputs).toHaveLength(1);
-		const [output] = result.outputs;
-		if (output === undefined)
-			throw new Error('main bundle was not emitted');
-		expect(await output.text()).not.toContain('@node-saml/node-saml');
-		expect(await output.text()).not.toContain('@simplewebauthn/server');
-	});
+			expect(result.success).toBe(true);
+			expect(result.outputs).toHaveLength(1);
+			const [output] = result.outputs;
+			if (output === undefined)
+				throw new Error('main bundle was not emitted');
+			expect(await output.text()).not.toContain('@node-saml/node-saml');
+			expect(await output.text()).not.toContain('@simplewebauthn/server');
+		}
+	);
 
 	test('the saml subpath owns the optional node-saml import', async () => {
 		const result = await Bun.build({

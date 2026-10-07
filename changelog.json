@@ -5,6 +5,27 @@
 		{
 			"changes": [
 				{
+					"kind": "breaking",
+					"migration": {
+						"instruction": "Import createNodeSamlAdapter from @absolutejs/auth/saml instead of @absolutejs/auth/server. Credentials and other server imports remain unchanged.",
+						"moved": {
+							"from": "@absolutejs/auth/server",
+							"symbol": "createNodeSamlAdapter",
+							"to": "@absolutejs/auth/saml"
+						}
+					},
+					"summary": "Keep the optional Node SAML adapter out of the general server entry so password-only applications compile without the SAML peer",
+					"symbols": [
+						"createNodeSamlAdapter"
+					]
+				}
+			],
+			"date": "2026-10-07",
+			"version": "0.99.0"
+		},
+		{
+			"changes": [
+				{
 					"kind": "changed",
 					"summary": "Provider configuration declarations accept the new Procore sandbox and production credentials",
 					"symbols": [
