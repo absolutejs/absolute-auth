@@ -5,6 +5,25 @@
 		{
 			"changes": [
 				{
+					"kind": "fixed",
+					"summary": "Bundle Citra 0.30.2 so Intuit linked-provider token exchange and refresh use Basic client authentication."
+				},
+				{
+					"kind": "changed",
+					"summary": "Bundled provider declarations now reflect Citra 0.30.2, including Intuit Basic authentication and HubSpot introspection configuration.",
+					"symbols": [
+						"createAuthApplications",
+						"buildClientProviders",
+						"oidcProviderRoutes"
+					]
+				}
+			],
+			"date": "2026-10-07",
+			"version": "0.97.2"
+		},
+		{
+			"changes": [
+				{
 					"detail": "`StatusReturn` picked `code` from Elysia's `ElysiaStatus`, which Elysia 2.0.0-beta.21 removed (the status box now carries `status` and `response`). Every `status(...)` returned from an auth callback was a type error on that Elysia. `StatusReturn` now picks `status` and `response`, which every Elysia 2 beta has. Runtime behavior is unchanged. Also shipped as 0.85.1 for consumers pinned to 0.85.",
 					"kind": "fixed",
 					"summary": "Auth callbacks can return `status(...)` on Elysia 2.0.0-beta.21",
@@ -61,7 +80,7 @@
 			"changes": [
 				{
 					"kind": "added",
-					"summary": "`trustedOrigins` also accepts a function of the request, so a multi-tenant app can decide per request (for example, allow only the request’s own origin) instead of listing every origin up front.",
+					"summary": "`trustedOrigins` also accepts a function of the request, so a multi-tenant app can decide per request (for example, allow only the request\u2019s own origin) instead of listing every origin up front.",
 					"symbols": [
 						"createAuthApplications",
 						"CredentialsConfig",
@@ -185,7 +204,7 @@
 			"changes": [
 				{
 					"kind": "added",
-					"summary": "Passkey management: `GET`, `PATCH` (rename) and `DELETE` on `/auth/webauthn/credentials` for the signed-in user's own passkeys. Passkeys now have a `name` (webauthn migration 0003): the one passed at registration, or the provider's name from its AAGUID (iCloud Keychain, Google Password Manager, Windows Hello, 1Password…). `hasOtherSignInMethod` can protect the last passkey. The client gains `passkeys.rename`, a working `passkeys.list`, `runPasskeyRegistration(client, { name })` and `runPasskeyAuthentication` for a sign-in button.",
+					"summary": "Passkey management: `GET`, `PATCH` (rename) and `DELETE` on `/auth/webauthn/credentials` for the signed-in user's own passkeys. Passkeys now have a `name` (webauthn migration 0003): the one passed at registration, or the provider's name from its AAGUID (iCloud Keychain, Google Password Manager, Windows Hello, 1Password\u2026). `hasOtherSignInMethod` can protect the last passkey. The client gains `passkeys.rename`, a working `passkeys.list`, `runPasskeyRegistration(client, { name })` and `runPasskeyAuthentication` for a sign-in button.",
 					"symbols": [
 						"AuthClientRoutes",
 						"PasskeySummary",
