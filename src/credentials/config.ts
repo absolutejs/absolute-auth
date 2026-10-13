@@ -51,6 +51,12 @@ export type CredentialsConfig<UserType> = {
 		user: UserType,
 		context?: { headers: Record<string, string | undefined>; ip?: string }
 	) => boolean | Promise<boolean>;
+	// The header a CDN in front of this app sets to the client's address, such as
+	// `cf-connecting-ip` (Cloudflare) or `do-connecting-ip` (DigitalOcean App
+	// Platform). Only that CDN can be trusted to set it, and any client can send
+	// it otherwise, so it is read only when named here. Without it the client IP
+	// is the first `x-forwarded-for` entry, which a reverse proxy sets.
+	clientIpHeader?: string;
 	// Optional custom password verifier — overrides the default `Bun.password.verify`
 	// (which already handles argon2id + bcrypt natively). Wire this when imported
 	// credentials use a non-bcrypt/argon2 algorithm (Auth0 PBKDF2, AWS Cognito
