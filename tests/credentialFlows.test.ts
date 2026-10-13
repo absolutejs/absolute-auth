@@ -170,6 +170,42 @@ describe('credential login', () => {
 		expect(response.status).toBe(200);
 		expect(await response.json()).toMatchObject({ status: 'mfa_required' });
 	});
+
+	/* Any client can send a CDN's address header to an app with no CDN in
+	 * front of it. The address feeds MFA and risk decisions, so it is read
+	 * only from the header the consumer names. */
+	test('trusts a CDN client-address header only when the consumer names it', async () => {
+		const seen: (string | undefined)[] = [];
+		const login = async (clientIpHeader?: string) => {
+			const { app } = buildHarness({
+				...(clientIpHeader ? { clientIpHeader } : {}),
+				isMfaRequired: (_user, context) => {
+					seen.push(context?.ip);
+
+					return false;
+				}
+			});
+			await registerUser(app, 'ip@example.com', 'supersecret');
+			await app.handle(
+				new Request('http://localhost/auth/login', {
+					body: JSON.stringify({
+						email: 'ip@example.com',
+						password: 'supersecret'
+					}),
+					headers: {
+						'cf-connecting-ip': '6.6.6.6',
+						'content-type': 'application/json',
+						'do-connecting-ip': '7.7.7.7',
+						'x-forwarded-for': '203.0.113.9, 10.0.0.1'
+					},
+					method: 'POST'
+				})
+			);
+		};
+		await login();
+		await login('cf-connecting-ip');
+		expect(seen).toEqual(['203.0.113.9', '6.6.6.6']);
+	});
 });
 
 describe('password reset flow', () => {

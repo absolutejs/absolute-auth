@@ -44,6 +44,7 @@ export const credentialsLoginRoute = <
 >({
 	authSessionStore,
 	checkBreachesOnLogin,
+	clientIpHeader,
 	cookieSecure,
 	credentialStore,
 	enforceTrustedOrigins,
@@ -97,13 +98,15 @@ export const credentialsLoginRoute = <
 					ip?: string;
 				} = {
 					headers: headerBag,
-					// IP resolution priority: Cloudflare's `cf-connecting-ip` (when CF
-					// reaches us directly), DigitalOcean App Platform's `do-connecting-ip`
-					// (CF→DO drops cf-* but DO substitutes its own), then the first
-					// `x-forwarded-for` entry as a generic fallback.
+					// A CDN's client-address header counts only when the consumer
+					// names it (`clientIpHeader`): any client can send
+					// `cf-connecting-ip` to an app with no CDN in front, and the address
+					// feeds MFA and risk decisions. Otherwise the first
+					// `x-forwarded-for` entry, which the reverse proxy sets.
 					ip:
-						headerBag['cf-connecting-ip'] ??
-						headerBag['do-connecting-ip'] ??
+						(clientIpHeader
+							? headerBag[clientIpHeader.toLowerCase()]?.trim()
+							: undefined) ??
 						headerBag['x-forwarded-for']?.split(',')[0]?.trim() ??
 						undefined
 				};
