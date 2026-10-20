@@ -96,6 +96,10 @@ const canonicalizeRequestUrl = (requestUrl: string, issuer: string) => {
 		const base = new URL(issuer);
 		url.protocol = base.protocol;
 		url.host = base.host;
+		// Assigning a host without a port keeps the old one, so behind a
+		// proxy on an internal port (e.g. :46048) return_to kept it and the
+		// consent page rejected the cross-origin link.
+		url.port = base.port;
 
 		return url.toString();
 	} catch {

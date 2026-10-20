@@ -5,6 +5,16 @@
 		{
 			"changes": [
 				{
+					"kind": "fixed",
+					"summary": "OIDC return_to drops the internal port behind a proxy, so the consent page accepts it (AI apps could not finish connecting behind PaaS edges)"
+				}
+			],
+			"date": "2026-10-20",
+			"version": "0.99.2"
+		},
+		{
+			"changes": [
+				{
 					"detail": "The client address given to `isMfaRequired` came from `cf-connecting-ip` or `do-connecting-ip` whenever a request carried one. Any client can send those headers to an app that has no Cloudflare or DigitalOcean App Platform in front of it, so the address MFA and risk rules see could be chosen by the caller. A CDN header is now read only when `credentials.clientIpHeader` names it; otherwise the address is the first `x-forwarded-for` entry, which the reverse proxy sets.",
 					"kind": "security",
 					"summary": "Read a CDN client-address header only when credentials.clientIpHeader names it",
