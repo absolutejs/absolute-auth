@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, test } from 'bun:test';
+import { afterAll, beforeEach, describe, expect, test } from 'bun:test';
 import { auth } from '../src/index';
 import {
 	createInMemoryAuthorizationCodeStore,
@@ -23,6 +23,7 @@ const RP_B = 'rp-b';
 const RP_C_NO_BACKCHANNEL = 'rp-c';
 const SESSION_ID: UserSessionId = '11111111-1111-4111-8111-111111111111';
 const USER_SUB = 'user-alice';
+const originalFetch = globalThis.fetch;
 
 type Captured = {
 	body: string;
@@ -149,6 +150,11 @@ const buildApp = async ({
 };
 
 describe('OIDC end_session (RP-initiated logout)', () => {
+	// buildApp records back-channel deliveries through globalThis.fetch; put
+	// the real one back so later files do not inherit the recorder.
+	afterAll(() => {
+		globalThis.fetch = originalFetch;
+	});
 	let captured: Captured[] = [];
 
 	beforeEach(() => {
