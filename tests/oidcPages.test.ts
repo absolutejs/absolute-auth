@@ -81,7 +81,7 @@ describe('OAuth connection pages', () => {
 		);
 		const response = oauthPageResponse(approved);
 		expect(response.headers.get('cache-control')).toBe('no-store');
-		expect(response.headers.get('referrer-policy')).toBe('no-referrer');
+		expect(response.headers.get('referrer-policy')).toBe('strict-origin');
 		expect(response.headers.get('content-security-policy')).toContain(
 			"frame-ancestors 'none'"
 		);

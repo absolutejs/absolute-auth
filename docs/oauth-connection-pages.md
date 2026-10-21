@@ -1,6 +1,6 @@
 # OAuth connection screens
 
-Import `renderOAuthConsentPage`, `renderOAuthStatusPage`, and `oauthPageResponse` from `@absolutejs/auth/oidc`. These server-rendered, responsive light/dark screens accept a brand name and optional same-origin logo path. All text and hidden fields are escaped; navigation and form URLs must be same-origin paths. The response helper disables caching, referrer disclosure, scripts, and framing.
+Import `renderOAuthConsentPage`, `renderOAuthStatusPage`, and `oauthPageResponse` from `@absolutejs/auth/oidc`. These server-rendered, responsive light/dark screens accept a brand name and optional same-origin logo path. All text and hidden fields are escaped; navigation and form URLs must be same-origin paths. The response helper disables caching, referrer path/query disclosure, scripts, and framing.
 
 ```ts
 import {

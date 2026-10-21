@@ -3,6 +3,19 @@
 	"name": "@absolutejs/auth",
 	"releases": [
 		{
+			"version": "0.100.1",
+			"date": "2026-10-21",
+			"changes": [
+				{
+					"kind": "fixed",
+					"summary": "Preserve the browser Origin on approval form submissions while withholding referrer paths and query parameters",
+					"symbols": [
+						"oauthPageResponse"
+					]
+				}
+			]
+		},
+		{
 			"version": "0.100.0",
 			"date": "2026-10-21",
 			"changes": [

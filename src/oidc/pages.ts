@@ -141,7 +141,7 @@ export const oauthPageResponse = (html: string, status = HTTP_OK) =>
 			'content-security-policy':
 				"default-src 'none'; style-src 'unsafe-inline'; img-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'",
 			'content-type': 'text/html; charset=utf-8',
-			'referrer-policy': 'no-referrer',
+			'referrer-policy': 'strict-origin',
 			'x-content-type-options': 'nosniff'
 		},
 		status
