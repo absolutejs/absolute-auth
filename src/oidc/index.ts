@@ -60,3 +60,13 @@ export type {
 	SocketTicket,
 	SocketTicketStore
 } from './types';
+
+export {
+	renderOAuthConsentPage,
+	renderOAuthStatusPage,
+	oauthPageResponse,
+	type OAuthPageBrand,
+	type OAuthPageAction,
+	type OAuthConsentPageOptions,
+	type OAuthStatusPageOptions
+} from './pages';

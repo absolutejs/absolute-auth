@@ -3,6 +3,25 @@
 	"name": "@absolutejs/auth",
 	"releases": [
 		{
+			"version": "0.100.0",
+			"date": "2026-10-21",
+			"changes": [
+				{
+					"kind": "added",
+					"summary": "Shared branded OAuth consent, device-code confirmation, handoff, completion and recovery screens with private script-free response headers",
+					"symbols": [
+						"renderOAuthConsentPage",
+						"renderOAuthStatusPage",
+						"oauthPageResponse",
+						"OAuthPageBrand",
+						"OAuthPageAction",
+						"OAuthConsentPageOptions",
+						"OAuthStatusPageOptions"
+					]
+				}
+			]
+		},
+		{
 			"changes": [
 				{
 					"kind": "fixed",

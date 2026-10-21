@@ -606,3 +606,7 @@ A separate `sms_send` attempt budget limits account-wide delivery attempts to te
 per five minutes by default (`smsSendMaxAttempts` / `smsSendWindowMs`). It does not
 invalidate issued codes or block authenticator/recovery verification. SMS senders
 must throw on delivery failure; scoped rollback preserves the previous challenge.
+
+## Branded OAuth connection screens
+
+Use the shared consent, handoff, completion, and recovery screens from `@absolutejs/auth/oidc`. See [OAuth connection screens](docs/oauth-connection-pages.md) for hosted MCP installation and device-flow integration.
