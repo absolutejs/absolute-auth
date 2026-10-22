@@ -65,7 +65,7 @@ export const requireAuthPlugin = <UserType>({
 				return { authPrincipal, user: authPrincipal?.user ?? null };
 			}
 		)
-		.beforeHandle(({ user, status }) =>
+		.onBeforeHandle(({ user, status }) =>
 			// Returning undefined lets the request continue to the handler;
 			// returning the 401 short-circuits it (fail closed).
 			user === null

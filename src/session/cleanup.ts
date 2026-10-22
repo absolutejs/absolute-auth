@@ -29,9 +29,11 @@ export const sessionCleanup = <UserType>({
 	const sessionState: SessionRecord<UserType> = {};
 	const unregisteredSessionState: UnregisteredSessionRecord = {};
 
+	/* The sweep follows the server's own start and stop: Elysia
+	 * 2.0.0-rc.0 removed the setup/cleanup lifecycle it ran on. */
 	return new Elysia({ name: 'sessionCleanup' })
 		.use(sessionStore(sessionState, unregisteredSessionState))
-		.setup(() => {
+		.onStart(() => {
 			intervalId = setInterval(async () => {
 				await performCleanup({
 					authSessionStore,
@@ -42,7 +44,7 @@ export const sessionCleanup = <UserType>({
 				});
 			}, cleanupIntervalMs);
 		})
-		.cleanup(() => {
+		.onStop(() => {
 			if (intervalId) {
 				clearInterval(intervalId);
 				intervalId = null;

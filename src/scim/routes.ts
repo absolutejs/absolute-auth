@@ -79,7 +79,7 @@ export const scimRoutes = ({
 		new Elysia()
 			// Okta / Azure AD send `Content-Type: application/scim+json`, which Elysia does not
 			// parse as JSON by default.
-			.parse(({ contentType, request }) =>
+			.onParse(({ contentType, request }) =>
 				contentType === SCIM_CONTENT_TYPE ? request.json() : undefined
 			)
 			.get(spcRoute, async ({ headers, request }) => {
