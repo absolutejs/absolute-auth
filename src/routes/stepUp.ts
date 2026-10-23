@@ -1,3 +1,5 @@
+import { hasRecentAuthentication } from '../mfa/recentAuth';
+import { recentAuthenticationRequired } from '../reauthentication';
 import { Elysia, StatusMap, t, type ElysiaStatus } from 'elysia';
 import { loadSessionFromSource } from '../session/access';
 import { sessionStore } from '../session/state';
@@ -7,12 +9,13 @@ import { pluginDependencySeed } from '../pluginIdentity';
 
 type ReauthFailError = {
 	readonly code: 'Unauthorized';
+	readonly reason: 'reauthentication_required';
 	readonly message: 'Recent authentication required';
 };
 
 type ReauthFailureResponse = ElysiaStatus<
 	'Unauthorized',
-	'Recent authentication required',
+	ReturnType<typeof recentAuthenticationRequired>,
 	(typeof StatusMap)['Unauthorized']
 >;
 
@@ -58,20 +61,20 @@ export const stepUpPlugin = <UserType>({
 						session,
 						userSessionId: user_session_id.value
 					}).then(async (userSession) => {
-						const authenticatedAt = userSession?.authenticatedAt;
 						const isRecent =
-							authenticatedAt !== undefined &&
-							Date.now() - authenticatedAt <= maxAgeMs;
+							userSession &&
+							hasRecentAuthentication(userSession, maxAgeMs);
 
 						if (!userSession || !isRecent) {
 							return (
 								(await handleAuthFail?.({
 									code: 'Unauthorized',
-									message: 'Recent authentication required'
+									message: 'Recent authentication required',
+									reason: 'reauthentication_required'
 								})) ??
 								status(
 									'Unauthorized',
-									'Recent authentication required'
+									recentAuthenticationRequired()
 								)
 							);
 						}

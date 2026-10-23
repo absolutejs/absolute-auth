@@ -740,11 +740,7 @@ export { describeUserAgent } from './session/device';
 export * from './identities';
 export { stepUpPlugin } from './routes/stepUp';
 export * from './session/sessionsConfig';
-export {
-	endImpersonation,
-	isImpersonating,
-	startImpersonation
-} from './session/impersonation';
+export * from './session/impersonation';
 export {
 	createAnonymousSession,
 	isAnonymousSession
@@ -1315,3 +1311,5 @@ export {
 	authSessionsTable,
 	authUnregisteredSessionsTable
 } from './session/neonStore';
+
+export * from './reauthentication';

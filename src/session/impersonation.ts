@@ -1,23 +1,78 @@
 import type { Cookie } from 'elysia';
 import type { AuditEvent } from '../audit/types';
-import { MILLISECONDS_IN_AN_HOUR } from '../constants';
-import type {
-	Impersonator,
-	SessionData,
-	SessionRecord,
-	UserSessionId
-} from '../types';
+import {
+	MILLISECONDS_IN_AN_HOUR,
+	MILLISECONDS_IN_A_MINUTE
+} from '../constants';
+import { hasRecentAuthentication } from '../mfa/recentAuth';
+import type { Impersonator, SessionData, SessionRecord, UserSessionId } from '../types';
 import { resolveCookieSecure } from '../utils';
 import { loadSessionFromSource } from './access';
 import { promoteToSession } from './promote';
 import type { AuthSessionStore } from './types';
 
-const DEFAULT_IMPERSONATION_TTL_MS = MILLISECONDS_IN_AN_HOUR;
-
+export const MAX_IMPERSONATION_REASON_LENGTH = 500;
+export const MIN_IMPERSONATION_REASON_LENGTH = 10;
+const DEFAULT_AUTH_MAX_AGE_MS = 5 * MILLISECONDS_IN_A_MINUTE;
+export type ImpersonationMode = 'ghost' | 'sandbox' | 'live';
+const MODE_FLAGS = {
+	ghost: { readOnly: true, suppressSideEffects: false },
+	live: { readOnly: false, suppressSideEffects: false },
+	sandbox: { readOnly: false, suppressSideEffects: true }
+} as const;
 type Emit = (event: AuditEvent) => Promise<void> | void;
-
-// Point the session cookie back at `target` (the admin's own session) if it exists, else
-// clear it. Shared by the audit-failure rollback and impersonation exit.
+type SessionOptions<UserType> = {
+	authSessionStore?: AuthSessionStore<UserType>;
+	cookie: Cookie<UserSessionId | undefined>;
+	cookieSecure?: boolean;
+	emit: Emit;
+	inMemorySession: SessionRecord<UserType>;
+};
+type AuthorizationOptions<UserType> = {
+	/** Read current application permissions/MFA policy, not a stale session role. */
+	authorize: (
+		actor: UserType,
+		target: UserType
+	) => boolean | Promise<boolean>;
+	getUserId: (user: UserType) => string;
+	getActorEmail?: (user: UserType) => string | undefined;
+	maxAuthAgeMs?: number;
+};
+export class ImpersonationError extends Error {
+	constructor(
+		readonly code: string,
+		readonly status: 400 | 401 | 403 | 409 | 500,
+		message: string
+	) {
+		super(message);
+		this.name = 'ImpersonationError';
+	}
+}
+const requireAudit = (emit: Emit) => {
+	if (typeof emit !== 'function')
+		throw new ImpersonationError(
+			'impersonation_configuration',
+			500,
+			'Impersonation requires a durable audit sink.'
+		);
+};
+const requireRecent = <UserType>(
+	session: SessionData<UserType>,
+	maxAgeMs: number
+) => {
+	if (!Number.isFinite(maxAgeMs) || maxAgeMs <= 0)
+		throw new ImpersonationError(
+			'impersonation_configuration',
+			500,
+			'Invalid impersonation authentication policy.'
+		);
+	if (!hasRecentAuthentication(session, maxAgeMs))
+		throw new ImpersonationError(
+			'reauthentication_required',
+			401,
+			'Recent authentication required'
+		);
+};
 const restoreCookieTo = (
 	cookie: Cookie<UserSessionId | undefined>,
 	target: UserSessionId | undefined,
@@ -30,159 +85,238 @@ const restoreCookieTo = (
 	}
 	cookie.set({
 		httpOnly: true,
+		path: '/',
 		sameSite: 'lax',
 		secure: resolveCookieSecure(cookieSecure),
 		value: target
 	});
 };
+/** Recheck the original actor's current authority before changing the member-session mode. */
+export const changeImpersonationMode = async <UserType>({
+	authSessionStore,
+	authorize,
+	cookie,
+	emit,
+	getUserId,
+	inMemorySession,
+	maxAuthAgeMs = DEFAULT_AUTH_MAX_AGE_MS,
+	mode
+}: SessionOptions<UserType> &
+	AuthorizationOptions<UserType> & { mode: ImpersonationMode }) => {
+	requireAudit(emit);
+	const currentId = cookie.value;
+	const current = await loadSessionFromSource({
+		authSessionStore,
+		session: inMemorySession,
+		userSessionId: currentId
+	});
+	if (!currentId || !current?.impersonator)
+		throw new ImpersonationError(
+			'impersonation_required',
+			400,
+			'Not currently impersonating.'
+		);
+	const actor = await loadSessionFromSource({
+		authSessionStore,
+		session: inMemorySession,
+		userSessionId: current.impersonator.returnToSessionId
+	});
+	if (
+		!actor ||
+		actor.anonymous ||
+		actor.impersonator ||
+		getUserId(actor.user) !== current.impersonator.actorId
+	)
+		throw new ImpersonationError(
+			'authentication_required',
+			401,
+			'Exit the member view and sign in again.'
+		);
+	if (!Object.hasOwn(MODE_FLAGS, mode))
+		throw new ImpersonationError(
+			'impersonation_mode_invalid',
+			400,
+			'Choose a valid member-view mode.'
+		);
+	if (mode !== 'ghost') requireRecent(actor, maxAuthAgeMs);
+	if (
+		typeof authorize !== 'function' ||
+		!(await authorize(actor.user, current.user))
+	)
+		throw new ImpersonationError(
+			'impersonation_forbidden',
+			403,
+			'Your permission to view this member account is no longer available.'
+		);
+	const updated: SessionData<UserType> = {
+		...current,
+		impersonator: { ...current.impersonator, ...MODE_FLAGS[mode] }
+	};
+	if (authSessionStore) await authSessionStore.setSession(currentId, updated);
+	else inMemorySession[currentId] = updated;
+	try {
+		await emit({
+			at: Date.now(),
+			metadata: {
+				actorEmail: current.impersonator.actorEmail,
+				actorId: current.impersonator.actorId,
+				mode,
+				reason: current.impersonator.reason
+			},
+			type: 'impersonation_mode_changed',
+			userId: getUserId(current.user)
+		});
+	} catch (error) {
+		if (authSessionStore)
+			await authSessionStore.setSession(currentId, current);
+		else inMemorySession[currentId] = current;
+		throw error;
+	}
 
-// Exit impersonation: remove the impersonation session, then restore the admin's original
-// session (its `returnToSessionId`) if it's still valid, otherwise clear the cookie. Emits
-// an `impersonation_ended` audit event. Returns whether the admin session was restored.
+	return { mode, ...MODE_FLAGS[mode] };
+};
+/** End remains available without fresh authentication; a failed audit must not strand an invalid cookie. */
 export const endImpersonation = async <UserType>({
 	authSessionStore,
 	cookie,
 	cookieSecure,
 	emit,
+	getUserId,
 	inMemorySession
-}: {
-	authSessionStore?: AuthSessionStore<UserType>;
-	cookie: Cookie<UserSessionId | undefined>;
-	cookieSecure?: boolean;
-	emit?: Emit;
-	inMemorySession: SessionRecord<UserType>;
-}) => {
+}: SessionOptions<UserType> & { getUserId: (user: UserType) => string }) => {
+	requireAudit(emit);
 	const currentId = cookie.value;
 	if (currentId === undefined) return { restored: false };
-
 	const current = await loadSessionFromSource({
 		authSessionStore,
 		removeExpired: false,
 		session: inMemorySession,
 		userSessionId: currentId
 	});
-	const impersonator = current?.impersonator;
-
-	// Only tear down a session that is actually an impersonation session. Calling this on a
-	// normal session must NOT silently log the user out — leave it intact and report no-op.
-	if (impersonator === undefined) return { restored: false };
-
+	const actor = current?.impersonator;
+	if (!actor) return { restored: false };
+	await emit({
+		at: Date.now(),
+		metadata: {
+			actorEmail: actor.actorEmail,
+			actorId: actor.actorId,
+			reason: actor.reason
+		},
+		type: 'impersonation_ended',
+		userId: getUserId(current.user)
+	});
 	if (authSessionStore) await authSessionStore.removeSession(currentId);
 	else delete inMemorySession[currentId];
-
-	await emit?.({
-		at: Date.now(),
-		metadata:
-			impersonator === undefined
-				? undefined
-				: { actorId: impersonator.actorId },
-		type: 'impersonation_ended'
+	const prior = await loadSessionFromSource({
+		authSessionStore,
+		session: inMemorySession,
+		userSessionId: actor.returnToSessionId
 	});
+	restoreCookieTo(
+		cookie,
+		prior ? actor.returnToSessionId : undefined,
+		cookieSecure
+	);
 
-	const returnTo = impersonator?.returnToSessionId;
-	const prior =
-		returnTo === undefined
-			? undefined
-			: await loadSessionFromSource({
-					authSessionStore,
-					session: inMemorySession,
-					userSessionId: returnTo
-				});
-	if (prior !== undefined && returnTo !== undefined) {
-		cookie.set({
-			httpOnly: true,
-			sameSite: 'lax',
-			secure: resolveCookieSecure(cookieSecure),
-			value: returnTo
-		});
-
-		return { restored: true };
-	}
-
-	cookie.remove();
-
-	return { restored: false };
+	return { restored: Boolean(prior) };
 };
-
-// Whether a session was created via admin impersonation.
 export const isImpersonating = <UserType>(
 	session: SessionData<UserType> | undefined
 ) => session?.impersonator !== undefined;
-
-// Begin impersonating `user` as an admin. Mints a (short-lived, auto-expiring) registered
-// session for the target, stamped with the impersonator metadata (RFC 8693 actor
-// semantics), captures the caller's current session so `endImpersonation` can restore it,
-// rotates the cookie, and emits an `impersonation_started` audit event. Privileged — gate
-// it behind your admin auth AND a step-up (`requireRecentAuth`) on your own route; `reason`
-// is required and recorded.
-//
-// Security invariants enforced here (do not rely on the integrator to repeat them):
-//   - NESTED IMPERSONATION is refused by default. If the caller's current session is itself
-//     an impersonation session, this throws unless `allowNested: true`. RFC 8693 models a
-//     delegation chain by NESTING `act` claims, but the flat `impersonator` stamp cannot
-//     represent a chain — a second start would silently overwrite the prior actor and let an
-//     actor escalate through a target that holds the impersonate grant. Default-off is the
-//     safe choice for admin "view as user".
-//   - AUDIT ATOMICITY: the `impersonation_started` event is emitted AFTER the session is
-//     minted but, if `emit` throws, the freshly minted impersonation session is rolled back
-//     and the admin's cookie restored before rethrowing — there is no privileged session
-//     that outlives a failed audit write. Provide `emit` (a durable sink) in production.
+/** Canonical privileged transition: caller identity, freshness, policy, reason and audit are mandatory. */
 export const startImpersonation = async <UserType>({
-	allowNested = false,
 	authSessionStore,
+	authorize,
 	cookie,
 	cookieSecure,
 	emit,
+	getActorEmail,
 	getUserId,
-	impersonator,
 	inMemorySession,
-	sessionDurationMs = DEFAULT_IMPERSONATION_TTL_MS,
+	maxAuthAgeMs = DEFAULT_AUTH_MAX_AGE_MS,
+	mode = 'ghost',
+	reason,
+	sessionDurationMs = MILLISECONDS_IN_AN_HOUR,
 	user
-}: {
-	allowNested?: boolean;
-	authSessionStore?: AuthSessionStore<UserType>;
-	cookie: Cookie<UserSessionId | undefined>;
-	cookieSecure?: boolean;
-	emit?: Emit;
-	getUserId?: (user: UserType) => string;
-	impersonator: {
-		actorEmail?: string;
-		actorId: string;
-		readOnly?: boolean;
+}: SessionOptions<UserType> &
+	AuthorizationOptions<UserType> & {
+		mode?: ImpersonationMode;
 		reason: string;
-		suppressSideEffects?: boolean;
-	};
-	inMemorySession: SessionRecord<UserType>;
-	sessionDurationMs?: number;
-	user: UserType;
-}) => {
+		sessionDurationMs?: number;
+		user: UserType;
+	}) => {
+	requireAudit(emit);
 	const callerSessionId = cookie.value;
-
-	// Refuse to start a new impersonation from a session that is already impersonating.
-	if (!allowNested && callerSessionId !== undefined) {
-		const caller = await loadSessionFromSource({
-			authSessionStore,
-			removeExpired: false,
-			session: inMemorySession,
-			userSessionId: callerSessionId
-		});
-		if (isImpersonating(caller)) {
-			throw new Error(
-				'startImpersonation: caller session is already impersonating; nested impersonation is disabled (pass allowNested to override)'
-			);
-		}
-	}
-
+	const caller = await loadSessionFromSource({
+		authSessionStore,
+		session: inMemorySession,
+		userSessionId: callerSessionId
+	});
+	if (!caller || caller.anonymous)
+		throw new ImpersonationError(
+			'authentication_required',
+			401,
+			'Sign in before viewing a member account.'
+		);
+	if (isImpersonating(caller))
+		throw new ImpersonationError(
+			'impersonation_nested',
+			409,
+			'End the current impersonation before starting another.'
+		);
+	requireRecent(caller, maxAuthAgeMs);
+	const actorId = getUserId(caller.user);
+	const targetId = getUserId(user);
+	if (!actorId || !targetId || actorId === targetId)
+		throw new ImpersonationError(
+			'impersonation_target_invalid',
+			400,
+			'Choose a different member account.'
+		);
+	const normalizedReason = reason.trim();
+	if (
+		normalizedReason.length < MIN_IMPERSONATION_REASON_LENGTH ||
+		normalizedReason.length > MAX_IMPERSONATION_REASON_LENGTH
+	)
+		throw new ImpersonationError(
+			'impersonation_reason_invalid',
+			400,
+			`Document a specific reason (${MIN_IMPERSONATION_REASON_LENGTH}–${MAX_IMPERSONATION_REASON_LENGTH} characters).`
+		);
+	if (
+		!Object.hasOwn(MODE_FLAGS, mode) ||
+		!Number.isFinite(sessionDurationMs) ||
+		sessionDurationMs <= 0 ||
+		sessionDurationMs > MILLISECONDS_IN_AN_HOUR
+	)
+		throw new ImpersonationError(
+			'impersonation_configuration',
+			400,
+			'Invalid impersonation mode or duration.'
+		);
+	if (
+		typeof authorize !== 'function' ||
+		!(await authorize(caller.user, user))
+	)
+		throw new ImpersonationError(
+			'impersonation_forbidden',
+			403,
+			'You do not have permission to view this member account.'
+		);
+	if (caller.expiresAt <= Date.now())
+		throw new ImpersonationError(
+			'authentication_required',
+			401,
+			'Sign in before viewing a member account.'
+		);
+	requireRecent(caller, maxAuthAgeMs);
 	const stamp: Impersonator = {
-		actorEmail: impersonator.actorEmail,
-		actorId: impersonator.actorId,
-		readOnly: impersonator.readOnly,
-		reason: impersonator.reason,
-		// promoteToSession keeps the caller's existing session; capture it (before the
-		// cookie rotates) so exit can return the admin to it.
+		actorEmail: getActorEmail?.(caller.user),
+		actorId,
+		reason: normalizedReason,
 		returnToSessionId: callerSessionId,
 		startedAt: Date.now(),
-		suppressSideEffects: impersonator.suppressSideEffects
+		...MODE_FLAGS[mode]
 	};
 	const sessionId = await promoteToSession({
 		authSessionStore,
@@ -190,26 +324,29 @@ export const startImpersonation = async <UserType>({
 		cookieSecure,
 		impersonator: stamp,
 		inMemorySession,
-		sessionDurationMs,
+		sessionDurationMs: Math.min(
+			sessionDurationMs,
+			caller.expiresAt - Date.now()
+		),
 		user
 	});
-
 	try {
-		await emit?.({
+		await emit({
 			at: Date.now(),
-			metadata: { actorId: stamp.actorId, reason: stamp.reason },
+			metadata: {
+				actorEmail: stamp.actorEmail,
+				actorId,
+				mode,
+				reason: normalizedReason
+			},
 			type: 'impersonation_started',
-			userId: getUserId?.(user)
+			userId: targetId
 		});
-	} catch (auditError) {
-		// Audit write failed — undo the privileged session so it cannot outlive its missing
-		// audit record, restore the admin's cookie, and surface the failure to the caller.
+	} catch (error) {
 		if (authSessionStore) await authSessionStore.removeSession(sessionId);
 		else delete inMemorySession[sessionId];
-
-		restoreCookieTo(cookie, stamp.returnToSessionId, cookieSecure);
-
-		throw auditError;
+		restoreCookieTo(cookie, callerSessionId, cookieSecure);
+		throw error;
 	}
 
 	return sessionId;

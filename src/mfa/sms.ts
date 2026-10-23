@@ -1,3 +1,4 @@
+import { recentAuthenticationRequired } from '../reauthentication';
 import { Elysia, t } from 'elysia';
 import { constantTimeEqual, hashToken } from '../crypto';
 import { loadSessionFromSource } from '../session/access';
@@ -287,7 +288,7 @@ export const mfaSmsRoutes = <UserType>({
 				) {
 					return status(
 						'Unauthorized',
-						'Recent authentication required'
+						recentAuthenticationRequired()
 					);
 				}
 
@@ -397,7 +398,7 @@ export const mfaSmsRoutes = <UserType>({
 				) {
 					return status(
 						'Unauthorized',
-						'Recent authentication required'
+						recentAuthenticationRequired()
 					);
 				}
 

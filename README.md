@@ -610,3 +610,31 @@ must throw on delivery failure; scoped rollback preserves the previous challenge
 ## Branded OAuth connection screens
 
 Use the shared consent, handoff, completion, and recovery screens from `@absolutejs/auth/oidc`. See [OAuth connection screens](docs/oauth-connection-pages.md) for hosted MCP installation and device-flow integration.
+
+
+### Impersonation policy (0.102)
+
+`startImpersonation` owns the session boundary. It requires a live, non-guest,
+non-impersonated actor session, recent authentication (five minutes by default),
+a specific reason, an authorization callback, and a durable audit callback.
+Actor identity is derived from the session using `getUserId`; callers cannot supply
+an actor ID. The default mode is `ghost` (read-only). `sandbox` and `live` must be
+chosen explicitly. The application must enforce the resulting read-only and
+side-effect suppression flags on its own writes and external integrations.
+
+Pass `authorize(actor, target)` to read current permissions and any application
+MFA requirements. Return `true` only when access is allowed. This callback is
+required again by `changeImpersonationMode`, which also validates the original
+actor session and recent authentication before enabling actions. Mode changes
+are audited and rolled back if the audit write fails. `endImpersonation` requires
+`emit` and `getUserId`, remains available without fresh authentication, and restores
+the original session only if it is still valid.
+
+This replaces the old `impersonator` input and `allowNested` escape hatch. Supply
+`reason`, optional `mode`, `authorize`, `getUserId`, optional `getActorEmail`, and
+`emit` instead. `ImpersonationError` carries safe `status`, `code`, and `message`
+fields suitable for an API response. A valid but insufficiently recent session
+receives `reauthentication_required`; the client export
+`isRecentAuthenticationRequired(error)` identifies that condition. Session expiry
+is confirmed through the status endpoint before the browser guard redirects,
+so a verification-required response can reach the application's recovery UI.

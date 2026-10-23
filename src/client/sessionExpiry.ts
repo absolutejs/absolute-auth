@@ -5,6 +5,7 @@ const DEFAULT_RETURN_URL_PARAM = 'returnUrl';
 const DEFAULT_SIGN_IN_PATH = '/signin';
 const DEFAULT_STATUS_PATH = '/oauth2/status';
 const HTTP_UNAUTHORIZED = 401;
+const STATUS_CHECK_TIMEOUT_MS = 5_000;
 
 export type SessionExpiredContext = {
 	returnTo: string;
@@ -66,7 +67,8 @@ export const buildSessionExpiredSignInUrl = ({
 
 /**
  * Installs one browser-wide session-expiry guard. It intercepts 401 responses
- * only for explicitly protected same-origin requests and rechecks the auth
+ * only for explicitly protected same-origin requests, confirms actual session
+ * expiry before redirecting, and rechecks the auth
  * status route when a backgrounded or bfcached page becomes active again.
  */
 export const installSessionExpiryGuard = (
@@ -139,7 +141,9 @@ export const installSessionExpiryGuard = (
 				response.status === HTTP_UNAUTHORIZED &&
 				protectedRequest(input)
 			) {
-				expire();
+				// A step-up/MFA requirement can return 401 while the session is valid.
+				// Preserve that response for the caller instead of starting a sign-in loop.
+				await check();
 			}
 
 			return response;
@@ -155,7 +159,8 @@ export const installSessionExpiryGuard = (
 			const response = await nativeFetch(statusPath, {
 				cache: 'no-store',
 				credentials: 'include',
-				headers: { accept: 'application/json' }
+				headers: { accept: 'application/json' },
+				signal: AbortSignal.timeout(STATUS_CHECK_TIMEOUT_MS)
 			});
 			if (!response.ok) return false;
 			const payload: unknown = await response.json();

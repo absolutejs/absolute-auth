@@ -9,3 +9,6 @@ export {
 	runPasskeyAuthentication,
 	runPasskeyRegistration
 } from './passkeyHelpers';
+
+export { isRecentAuthenticationRequired } from '../reauthentication';
+export type { ImpersonationMode } from '../session/impersonation';

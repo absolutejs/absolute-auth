@@ -51,14 +51,12 @@ const buildApp = () => {
 				await startImpersonation({
 					authSessionStore,
 					cookie: user_session_id,
-					impersonator: {
-						actorId: admin.sub,
-						readOnly: true,
-						reason: 'support ticket #42'
-					},
 					inMemorySession: session,
+					reason: 'support ticket #42',
 					sessionDurationMs: HOUR_MS,
 					user: target,
+					authorize: (actor) => actor.sub === admin.sub,
+					emit: () => undefined,
 					getUserId: (user) => user.sub
 				});
 
@@ -103,16 +101,15 @@ const buildApp = () => {
 					await startImpersonation({
 						authSessionStore,
 						cookie: user_session_id,
-						impersonator: {
-							actorId: admin.sub,
-							reason: 'support ticket #43'
-						},
 						inMemorySession: session,
+						reason: 'support ticket #43',
 						sessionDurationMs: HOUR_MS,
 						user: target,
+						authorize: (actor) => actor.sub === admin.sub,
 						emit: () => {
 							throw new Error('audit sink down');
-						}
+						},
+						getUserId: (user) => user.sub
 					});
 
 					return { threw: false };
@@ -129,13 +126,13 @@ const buildApp = () => {
 					await startImpersonation({
 						authSessionStore,
 						cookie: user_session_id,
-						impersonator: {
-							actorId: 'user-alice',
-							reason: 'chaining'
-						},
 						inMemorySession: session,
+						reason: 'nested support case',
 						sessionDurationMs: HOUR_MS,
-						user: { email: 'bob@acme.test', sub: 'user-bob' }
+						user: { email: 'bob@acme.test', sub: 'user-bob' },
+						authorize: (actor) => actor.sub === admin.sub,
+						emit: () => undefined,
+						getUserId: (user) => user.sub
 					});
 
 					return { threw: false };
@@ -167,7 +164,9 @@ const buildApp = () => {
 				endImpersonation({
 					authSessionStore,
 					cookie: user_session_id,
-					inMemorySession: session
+					inMemorySession: session,
+					emit: () => undefined,
+					getUserId: (user) => user.sub
 				})
 		);
 };

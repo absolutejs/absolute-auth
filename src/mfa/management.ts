@@ -1,3 +1,4 @@
+import { recentAuthenticationRequired } from '../reauthentication';
 import { Elysia, t } from 'elysia';
 import { loadSessionFromSource } from '../session/access';
 import { sessionStore } from '../session/state';
@@ -123,7 +124,7 @@ export const mfaManagementRoutes = <UserType>({
 				) {
 					return status(
 						'Unauthorized',
-						'Recent authentication required'
+						recentAuthenticationRequired()
 					);
 				}
 
@@ -160,7 +161,7 @@ export const mfaManagementRoutes = <UserType>({
 				) {
 					return status(
 						'Unauthorized',
-						'Recent authentication required'
+						recentAuthenticationRequired()
 					);
 				}
 				const userId = getUserId(userSession.user);

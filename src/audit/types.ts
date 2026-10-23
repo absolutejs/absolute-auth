@@ -14,6 +14,7 @@ export type AuditEventType =
 	| 'identity_conflict'
 	| 'identity_linked'
 	| 'identity_unlinked'
+	| 'impersonation_mode_changed'
 	| 'impersonation_ended'
 	| 'impersonation_started'
 	| 'invitation_accepted'
@@ -57,6 +58,7 @@ export const AUDIT_EVENT_TYPES: readonly AuditEventType[] = [
 	'identity_linked',
 	'identity_unlinked',
 	'impersonation_ended',
+	'impersonation_mode_changed',
 	'impersonation_started',
 	'invitation_accepted',
 	'invitation_created',

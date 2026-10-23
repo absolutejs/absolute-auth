@@ -1,3 +1,4 @@
+import { recentAuthenticationRequired } from '../reauthentication';
 import { Elysia, t } from 'elysia';
 import {
 	createTotpKeyUri,
@@ -221,7 +222,7 @@ export const mfaTotpRoutes = <UserType>({
 				) {
 					return status(
 						'Unauthorized',
-						'Recent authentication required'
+						recentAuthenticationRequired()
 					);
 				}
 
@@ -288,7 +289,7 @@ export const mfaTotpRoutes = <UserType>({
 				) {
 					return status(
 						'Unauthorized',
-						'Recent authentication required'
+						recentAuthenticationRequired()
 					);
 				}
 

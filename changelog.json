@@ -3,12 +3,55 @@
 	"name": "@absolutejs/auth",
 	"releases": [
 		{
+			"version": "0.102.0",
+			"date": "2026-10-23",
+			"changes": [
+				{
+					"kind": "breaking",
+					"summary": "Make impersonation fail closed at the package boundary: require current authorization and auditing, derive actor identity from a live session, enforce recent authentication and reason validation, and default to read-only mode. Replace caller-supplied actor stamps and nested overrides with the canonical mode/reason API.",
+					"symbols": [
+						"startImpersonation",
+						"endImpersonation",
+						"ImpersonationError"
+					],
+					"migration": {
+						"instruction": "Replace caller-supplied impersonator and allowNested options with reason, mode, authorize, getUserId, and emit. Delegate mode changes to changeImpersonationMode. Use isRecentAuthenticationRequired with structured step-up errors.",
+						"manual": true
+					}
+				},
+				{
+					"kind": "added",
+					"summary": "Centralize audited impersonation mode changes with actor permission revalidation and rollback on audit failure.",
+					"symbols": [
+						"changeImpersonationMode",
+						"AuditEventType"
+					]
+				},
+				{
+					"kind": "fixed",
+					"summary": "Confirm session expiry before redirecting protected-request 401 responses, and expose a stable reauthentication_required error contract across step-up and MFA routes.",
+					"symbols": [
+						"installSessionExpiryGuard",
+						"isRecentAuthenticationRequired",
+						"recentAuthenticationRequired",
+						"auth",
+						"createAuthApplications",
+						"createAuthContext",
+						"mfaRoutes",
+						"mfaManagementRoutes",
+						"mfaTotpRoutes",
+						"mfaSmsRoutes"
+					]
+				}
+			]
+		},
+		{
 			"changes": [
 				{
 					"detail": "Elysia 2.0.0-rc.0 renamed every lifecycle hook to its `on` form and removed `setup`/`cleanup`. auth's peer range accepted it (`^2.0.0-beta.6`), so an app that installed the newer Elysia got an auth that called `.setup()` and crashed at boot. auth now builds against Elysia 2.0.0-rc.0 and requires `^2.0.0-rc.0`: its hooks use the new names, and the session sweep starts and stops with the server (`onStart`/`onStop`).",
 					"kind": "breaking",
 					"migration": {
-						"instruction": "Upgrade `elysia` and every `@elysia/*` package to 2.0.0-rc.0 (or later 2.x), then rename lifecycle hooks in your app: request → onRequest, beforeHandle → onBeforeHandle, afterHandle → onAfterHandle, afterResponse → onAfterResponse, error → onError, parse → onParse, transform → onTransform. `setup`/`cleanup` become `onStart`/`onStop`.",
+						"instruction": "Upgrade `elysia` and every `@elysia/*` package to 2.0.0-rc.0 (or later 2.x), then rename lifecycle hooks in your app: request \u2192 onRequest, beforeHandle \u2192 onBeforeHandle, afterHandle \u2192 onAfterHandle, afterResponse \u2192 onAfterResponse, error \u2192 onError, parse \u2192 onParse, transform \u2192 onTransform. `setup`/`cleanup` become `onStart`/`onStop`.",
 						"manual": true
 					},
 					"summary": "Requires Elysia 2.0.0-rc.0: hooks use the `on` names, and the session sweep follows server start and stop",
@@ -236,7 +279,7 @@
 			"changes": [
 				{
 					"kind": "added",
-					"summary": "`trustedOrigins` also accepts a function of the request, so a multi-tenant app can decide per request (for example, allow only the request’s own origin) instead of listing every origin up front.",
+					"summary": "`trustedOrigins` also accepts a function of the request, so a multi-tenant app can decide per request (for example, allow only the request\u2019s own origin) instead of listing every origin up front.",
 					"symbols": [
 						"createAuthApplications",
 						"CredentialsConfig",
@@ -360,7 +403,7 @@
 			"changes": [
 				{
 					"kind": "added",
-					"summary": "Passkey management: `GET`, `PATCH` (rename) and `DELETE` on `/auth/webauthn/credentials` for the signed-in user's own passkeys. Passkeys now have a `name` (webauthn migration 0003): the one passed at registration, or the provider's name from its AAGUID (iCloud Keychain, Google Password Manager, Windows Hello, 1Password…). `hasOtherSignInMethod` can protect the last passkey. The client gains `passkeys.rename`, a working `passkeys.list`, `runPasskeyRegistration(client, { name })` and `runPasskeyAuthentication` for a sign-in button.",
+					"summary": "Passkey management: `GET`, `PATCH` (rename) and `DELETE` on `/auth/webauthn/credentials` for the signed-in user's own passkeys. Passkeys now have a `name` (webauthn migration 0003): the one passed at registration, or the provider's name from its AAGUID (iCloud Keychain, Google Password Manager, Windows Hello, 1Password\u2026). `hasOtherSignInMethod` can protect the last passkey. The client gains `passkeys.rename`, a working `passkeys.list`, `runPasskeyRegistration(client, { name })` and `runPasskeyAuthentication` for a sign-in button.",
 					"symbols": [
 						"AuthClientRoutes",
 						"PasskeySummary",
