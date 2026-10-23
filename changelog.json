@@ -3,6 +3,21 @@
 	"name": "@absolutejs/auth",
 	"releases": [
 		{
+			"version": "0.102.1",
+			"date": "2026-10-23",
+			"changes": [
+				{
+					"kind": "fixed",
+					"summary": "Export shared impersonation reason limits and mode types through the browser-safe client entry so applications never import server auth code to validate their forms.",
+					"symbols": [
+						"MAX_IMPERSONATION_REASON_LENGTH",
+						"MIN_IMPERSONATION_REASON_LENGTH",
+						"ImpersonationMode"
+					]
+				}
+			]
+		},
+		{
 			"version": "0.102.0",
 			"date": "2026-10-23",
 			"changes": [

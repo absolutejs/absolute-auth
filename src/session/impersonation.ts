@@ -11,10 +11,9 @@ import { loadSessionFromSource } from './access';
 import { promoteToSession } from './promote';
 import type { AuthSessionStore } from './types';
 
-export const MAX_IMPERSONATION_REASON_LENGTH = 500;
-export const MIN_IMPERSONATION_REASON_LENGTH = 10;
+import { MAX_IMPERSONATION_REASON_LENGTH, MIN_IMPERSONATION_REASON_LENGTH, type ImpersonationMode } from '../impersonationPolicy';
+export { MAX_IMPERSONATION_REASON_LENGTH, MIN_IMPERSONATION_REASON_LENGTH, type ImpersonationMode } from '../impersonationPolicy';
 const DEFAULT_AUTH_MAX_AGE_MS = 5 * MILLISECONDS_IN_A_MINUTE;
-export type ImpersonationMode = 'ghost' | 'sandbox' | 'live';
 const MODE_FLAGS = {
 	ghost: { readOnly: true, suppressSideEffects: false },
 	live: { readOnly: false, suppressSideEffects: false },

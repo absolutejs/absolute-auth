@@ -11,4 +11,4 @@ export {
 } from './passkeyHelpers';
 
 export { isRecentAuthenticationRequired } from '../reauthentication';
-export type { ImpersonationMode } from '../session/impersonation';
+export { MAX_IMPERSONATION_REASON_LENGTH, MIN_IMPERSONATION_REASON_LENGTH, type ImpersonationMode } from '../impersonationPolicy';
