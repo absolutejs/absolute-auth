@@ -455,6 +455,21 @@ with an actionable error; custom adapters must configure their own migrations.
 
 For a complete credentials-only Bun setup, see [Persistent email/password sign-in](docs/PERSISTENT-CREDENTIALS.md). It includes real migration and auth configuration APIs, durable user records, and driver settings.
 
+## OAuth callback sessions
+
+For login, the OAuth callback rotates `user_session_id` before invoking
+`onCallbackSuccess`: it removes the prior session and pending signup records,
+sets an HttpOnly, SameSite=Lax cookie (respecting `cookieSecure`), and supplies
+the fresh ID as `context.userSessionId`. Custom handlers can store their new
+session under that ID. `context.currentUser` is a snapshot from before rotation;
+resolve the authenticated provider identity when choosing the login account.
+
+Prefer `instantiateUserSession` to construct the session. It rotates again and
+sets its own cookie options, including optional persistence. After calling it,
+read `context.cookie.user_session_id.value` for the final ID; the context's
+`userSessionId` is an earlier snapshot. Identity and connector linking retain
+the existing session ID and must not create a new login session.
+
 ## Separately consented connected accounts
 
 Set `bindLinkingToSession: true` when using `onLinkConnector` or `onLinkIdentity`.

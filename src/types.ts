@@ -219,6 +219,9 @@ export type CallbackContext<UserType> = {
 	tokenResponse: OAuth2TokenResponse;
 	session: SessionRecord<UserType>;
 	unregisteredSession: UnregisteredSessionRecord;
+	/** Fresh, cookie-backed ID for login; prior records are removed from the
+	 *  context. Linking retains the existing ID. instantiateUserSession rotates
+	 *  again: after calling it, use cookie.user_session_id.value, not this snapshot. */
 	userSessionId: UserSessionId;
 	originUrl: string;
 	cookie: CallbackCookie;

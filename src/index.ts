@@ -465,6 +465,7 @@ const buildAuthApplications = async <UserType>(
 			bindLinkingToSession,
 			callbackRoute,
 			clientProviders,
+			cookieSecure: resolvedCookieSecure,
 			onCallbackError,
 			onCallbackSuccess: auditedOnCallbackSuccess,
 			onLinkConnector,

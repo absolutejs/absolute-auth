@@ -23,11 +23,13 @@ import {
 	ResolveAuthIntent,
 	RouteString
 } from '../types';
+import { getUserSessionId } from '../utils';
 
 type CallbackProps<UserType> = {
 	authSessionStore?: AuthSessionStore<UserType>;
 	clientProviders: ClientProviders;
 	callbackRoute?: RouteString;
+	cookieSecure?: boolean;
 	bindLinkingToSession?: boolean;
 	resolveAuthIntent?: ResolveAuthIntent<UserType>;
 	onCallbackSuccess: OnCallbackSuccess<UserType>;
@@ -71,6 +73,7 @@ export const callback = <UserType>({
 	authSessionStore,
 	clientProviders,
 	callbackRoute = '/oauth2/callback',
+	cookieSecure,
 	resolveAuthIntent,
 	bindLinkingToSession,
 	onCallbackSuccess,
@@ -269,8 +272,17 @@ export const callback = <UserType>({
 								'The linking session changed. Start again.'
 							);
 
-						const userSessionId =
-							user_session_id.value ?? crypto.randomUUID();
+						// Login must never promote a browser-supplied ID into an
+						// authenticated session. Linking retains its existing owner.
+						const userSessionId = linking
+							? (user_session_id.value ?? crypto.randomUUID())
+							: getUserSessionId({
+									cookieSecure,
+									session: callbackSession,
+									unregisteredSession:
+										callbackUnregisteredSession,
+									user_session_id
+								});
 						const callbackContext = {
 							authClient: clientName,
 							authIntent,
