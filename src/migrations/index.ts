@@ -241,7 +241,16 @@ export const blockMigrations: Record<BlockName, BlockMigrations> = {
 				credentialResetTokensTable,
 				credentialVerificationTokensTable
 			]).migrations,
-			credentialDeferredUserMigration
+			credentialDeferredUserMigration,
+			{
+				id: '0003_single_reset_token_per_email',
+				sql: [
+					// Old rows have no issue timestamp. Invalidate ambiguous duplicates
+					// rather than guessing which link was most recently requested.
+					'DELETE FROM "auth_credential_reset_tokens" WHERE "email" IN (SELECT "email" FROM "auth_credential_reset_tokens" GROUP BY "email" HAVING count(*) > 1);',
+					'CREATE UNIQUE INDEX IF NOT EXISTS "auth_credential_reset_tokens_email_idx" ON "auth_credential_reset_tokens" ("email");'
+				].join('\n')
+			}
 		]
 	},
 	fga: initMigration('fga', [warrantsTable]),

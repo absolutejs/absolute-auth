@@ -49,7 +49,12 @@ export const createInMemoryCredentialStore = (): CredentialStore => {
 			);
 		},
 		saveResetToken: async (token) => {
-			resetTokens.set(token.tokenHash, cloneToken(token));
+			const email = token.email.toLowerCase();
+			for (const [hash, existing] of resetTokens) {
+				if (existing.email.toLowerCase() === email)
+					resetTokens.delete(hash);
+			}
+			resetTokens.set(token.tokenHash, { ...cloneToken(token), email });
 		},
 		saveVerificationToken: async (token) => {
 			verificationTokens.set(token.tokenHash, cloneToken(token));

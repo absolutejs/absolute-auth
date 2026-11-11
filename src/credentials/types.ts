@@ -39,6 +39,7 @@ export type CredentialStore = {
 		email: string
 	) => Promise<CredentialRecord | undefined>;
 	saveCredential: (credential: CredentialRecord) => Promise<void>;
+	/** Atomically replace any prior reset token for the normalized email. */
 	saveResetToken: (token: CredentialToken) => Promise<void>;
 	saveVerificationToken: (token: CredentialToken) => Promise<void>;
 	setEmailVerified: (email: string) => Promise<void>;

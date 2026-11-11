@@ -1,5 +1,5 @@
 {
-	"version": "0.102.3",
+	"version": "0.103.0",
 	"name": "@absolutejs/auth",
 	"description": "An authorization library for absolutejs",
 	"repository": {
@@ -82,6 +82,7 @@
 	"devDependencies": {
 		"@absolutejs/absolute": "^0.20.0-beta.0",
 		"@absolutejs/changelog": "^0.6.0",
+		"@electric-sql/pglite": "^0.5.16",
 		"@elysia/eden": "2.0.0-rc.0",
 		"@eslint/js": "^10.0.1",
 		"@node-saml/node-saml": "5.1.0",

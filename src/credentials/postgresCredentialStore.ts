@@ -5,6 +5,7 @@ import {
 	jsonb,
 	pgTable,
 	text,
+	uniqueIndex,
 	varchar
 } from 'drizzle-orm/pg-core';
 import { type AnyPgDatabase, createNeonDatabase } from '../stores/postgres';
@@ -35,17 +36,31 @@ export const credentialsTable = pgTable('auth_credentials', {
 	user_id: varchar('user_id', { length: ID_LENGTH })
 });
 
-const createTokenTable = (name: string) =>
-	pgTable(name, {
-		email: varchar('email', { length: EMAIL_LENGTH }).notNull(),
-		expires_at_ms: bigint('expires_at_ms', { mode: 'number' }).notNull(),
-		token_hash: varchar('token_hash', {
-			length: TOKEN_HASH_LENGTH
-		}).primaryKey()
-	});
+const createTokenTable = (name: string, uniqueEmail = false) =>
+	pgTable(
+		name,
+		{
+			email: varchar('email', { length: EMAIL_LENGTH }).notNull(),
+			expires_at_ms: bigint('expires_at_ms', {
+				mode: 'number'
+			}).notNull(),
+			token_hash: varchar('token_hash', {
+				length: TOKEN_HASH_LENGTH
+			}).primaryKey()
+		},
+		(table) =>
+			uniqueEmail
+				? [
+						uniqueIndex(
+							'auth_credential_reset_tokens_email_idx'
+						).on(table.email)
+					]
+				: []
+	);
 
 export const credentialResetTokensTable = createTokenTable(
-	'auth_credential_reset_tokens'
+	'auth_credential_reset_tokens',
+	true
 );
 export const credentialVerificationTokensTable = createTokenTable(
 	'auth_credential_verification_tokens'
@@ -83,7 +98,8 @@ const toToken = (row: TokenRow): CredentialToken => ({
 const saveToken = async <DB extends AnyPgDatabase>(
 	db: DB,
 	table: TokenTable,
-	token: CredentialToken
+	token: CredentialToken,
+	replaceByEmail = false
 ) => {
 	const values: TokenInsert = {
 		email: token.email.toLowerCase(),
@@ -93,7 +109,10 @@ const saveToken = async <DB extends AnyPgDatabase>(
 	await db
 		.insert(table)
 		.values(values)
-		.onConflictDoUpdate({ set: values, target: table.token_hash });
+		.onConflictDoUpdate({
+			set: values,
+			target: replaceByEmail ? table.email : table.token_hash
+		});
 };
 
 const consumeToken = async <DB extends AnyPgDatabase>(
@@ -102,13 +121,11 @@ const consumeToken = async <DB extends AnyPgDatabase>(
 	tokenHash: string
 ) => {
 	const [row] = await db
-		.select()
-		.from(table)
+		.delete(table)
 		.where(eq(table.token_hash, tokenHash))
-		.limit(1);
+		.returning();
 	if (!row) return undefined;
 
-	await db.delete(table).where(eq(table.token_hash, tokenHash));
 	if (row.expires_at_ms < Date.now()) return undefined;
 
 	return toToken(row);
@@ -149,7 +166,8 @@ export const createPostgresCredentialStore = <DB extends AnyPgDatabase>(
 			target: credentialsTable.email
 		});
 	},
-	saveResetToken: (token) => saveToken(db, credentialResetTokensTable, token),
+	saveResetToken: (token) =>
+		saveToken(db, credentialResetTokensTable, token, true),
 	saveVerificationToken: (token) =>
 		saveToken(db, credentialVerificationTokensTable, token),
 	setEmailVerified: async (email) => {
