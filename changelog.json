@@ -5,6 +5,20 @@
 		{
 			"changes": [
 				{
+					"kind": "fixed",
+					"summary": "Reject malformed registration email addresses before saving credentials or sending verification. Share browser-safe normalization for plus aliases and internationalized domains; reject URL paths, ports, queries and fragments in email domains.",
+					"symbols": [
+						"credentialsRegister",
+						"normalizeEmailAddress"
+					]
+				}
+			],
+			"date": "2026-11-11",
+			"version": "0.103.1"
+		},
+		{
+			"changes": [
+				{
 					"kind": "breaking",
 					"migration": {
 						"instruction": "Run the credentials migration block before deploying: 0003_single_reset_token_per_email creates the unique reset-email index and invalidates ambiguous pre-existing duplicate links. Custom CredentialStore implementations must atomically replace previous reset tokens for the normalized email.",

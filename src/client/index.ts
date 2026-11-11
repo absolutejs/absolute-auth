@@ -12,3 +12,5 @@ export {
 
 export { isRecentAuthenticationRequired } from '../reauthentication';
 export { MAX_IMPERSONATION_REASON_LENGTH, MIN_IMPERSONATION_REASON_LENGTH, type ImpersonationMode } from '../impersonationPolicy';
+
+export { normalizeEmailAddress } from '../emailAddress';

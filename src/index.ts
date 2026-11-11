@@ -1314,3 +1314,5 @@ export {
 } from './session/neonStore';
 
 export * from './reauthentication';
+
+export { normalizeEmailAddress } from './emailAddress';

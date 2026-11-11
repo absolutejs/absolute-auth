@@ -1,3 +1,4 @@
+import { normalizeEmailAddress } from '../emailAddress';
 import type { RouteString } from '../types';
 import { Elysia, t } from 'elysia';
 import { generateSecureToken, hashPassword, hashToken } from '../crypto';
@@ -30,7 +31,8 @@ export const credentialsPasswordResetRoute = <
 			`${resetPasswordRoute}/request`,
 			{ body: t.Object({ email: t.String() }) },
 			async ({ body: { email }, status }) => {
-				const normalizedEmail = email.trim().toLowerCase();
+				const normalizedEmail =
+					normalizeEmailAddress(email) ?? email.trim().toLowerCase();
 				const credential =
 					await credentialStore.getCredentialByEmail(normalizedEmail);
 

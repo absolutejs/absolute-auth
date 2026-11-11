@@ -1,3 +1,4 @@
+import { normalizeEmailAddress } from '../emailAddress';
 import { readUserAgent } from '../utils';
 import type { RouteString } from '../types';
 import { Elysia, t } from 'elysia';
@@ -76,9 +77,12 @@ export const credentialsRegisterRoute = <
 				) {
 					return status('Forbidden', 'Request origin is not allowed');
 				}
-				const normalizedEmail = email.trim().toLowerCase();
-				if (!normalizedEmail.includes('@')) {
-					return status('Bad Request', 'A valid email is required');
+				const normalizedEmail = normalizeEmailAddress(email);
+				if (!normalizedEmail) {
+					return status(
+						'Bad Request',
+						'Enter a valid email address, such as name@example.com'
+					);
 				}
 
 				const policy = await evaluatePassword(password, passwordPolicy);

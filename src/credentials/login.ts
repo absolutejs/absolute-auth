@@ -1,3 +1,4 @@
+import { normalizeEmailAddress } from '../emailAddress';
 import type { RouteString } from '../types';
 import { Elysia, t } from 'elysia';
 import { MILLISECONDS_IN_AN_HOUR } from '../constants';
@@ -110,7 +111,8 @@ export const credentialsLoginRoute = <
 						headerBag['x-forwarded-for']?.split(',')[0]?.trim() ??
 						undefined
 				};
-				const normalizedEmail = email.trim().toLowerCase();
+				const normalizedEmail =
+					normalizeEmailAddress(email) ?? email.trim().toLowerCase();
 				const lockState = lockoutGuard
 					? await lockoutGuard.check(normalizedEmail)
 					: undefined;
