@@ -6,6 +6,16 @@
 			"changes": [
 				{
 					"kind": "fixed",
+					"summary": "An account with no password yet can set one through Forgot password"
+				}
+			],
+			"date": "2026-11-12",
+			"version": "0.103.2"
+		},
+		{
+			"changes": [
+				{
+					"kind": "fixed",
 					"summary": "Reject malformed registration email addresses before saving credentials or sending verification. Share browser-safe normalization for plus aliases and internationalized domains; reject URL paths, ports, queries and fragments in email domains.",
 					"symbols": [
 						"credentialsRegister",
