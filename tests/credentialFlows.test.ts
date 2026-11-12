@@ -256,6 +256,68 @@ describe('password reset flow', () => {
 	});
 });
 
+describe('an account with no password yet', () => {
+	test('sets its first password through a reset link', async () => {
+		const { app, sent, users } = buildHarness();
+		// Imported from another platform, or signed up with Google: a user,
+		// no credential.
+		users.set('imported@example.com', {
+			email: 'imported@example.com',
+			sub: 'user:imported'
+		});
+
+		const requested = await postJson(app, '/auth/reset-password/request', {
+			email: 'Imported@Example.com'
+		});
+		expect(requested.status).toBe(200);
+		const link = sent.find((message) => message.type === 'reset_password');
+		expect(link?.email).toBe('imported@example.com');
+
+		const confirmed = await postJson(app, '/auth/reset-password', {
+			password: 'firstpassword',
+			token: link?.token ?? ''
+		});
+		expect(confirmed.status).toBe(200);
+		const login = await postJson(app, '/auth/login', {
+			email: 'imported@example.com',
+			password: 'firstpassword'
+		});
+		expect(login.status).toBe(200);
+	});
+
+	test('cannot be claimed by registering its email', async () => {
+		const { app, credentialStore, users } = buildHarness();
+		users.set('imported@example.com', {
+			email: 'imported@example.com',
+			sub: 'user:imported'
+		});
+
+		const registered = await registerUser(
+			app,
+			'imported@example.com',
+			'attackerpass'
+		);
+		expect(registered.status).toBe(201);
+		expect(
+			await credentialStore.getCredentialByEmail('imported@example.com')
+		).toBeUndefined();
+		const login = await postJson(app, '/auth/login', {
+			email: 'imported@example.com',
+			password: 'attackerpass'
+		});
+		expect(login.status).toBe(401);
+	});
+
+	test('an unknown email still gets no link and the same answer', async () => {
+		const { app, sent } = buildHarness();
+		const requested = await postJson(app, '/auth/reset-password/request', {
+			email: 'nobody@example.com'
+		});
+		expect(requested.status).toBe(200);
+		expect(sent).toHaveLength(0);
+	});
+});
+
 describe('registration session behavior', () => {
 	test('auto-logs in on registration by default', async () => {
 		const { app } = buildHarness();

@@ -18,6 +18,7 @@ export const credentialsPasswordResetRoute = <
 	const Route extends RouteString = RouteString
 >({
 	credentialStore,
+	getUserByEmail,
 	onPasswordReset,
 	onSendEmail,
 	passwordPolicy,
@@ -40,11 +41,14 @@ export const credentialsPasswordResetRoute = <
 				// A pending registration is not an account and cannot use account
 				// recovery as an alternate materialization path. It must complete the
 				// explicit email-verification flow first.
-				if (
-					credential &&
-					credential.status === 'active' &&
-					credential.registrationData === undefined
-				) {
+				// An account with no password yet (imported from another
+				// platform, or OAuth-only) sets its first one here: the emailed
+				// link proves the inbox, as a reset does.
+				const recoverable = credential
+					? credential.status === 'active' &&
+						credential.registrationData === undefined
+					: Boolean(await getUserByEmail(normalizedEmail));
+				if (recoverable) {
 					const token = generateSecureToken();
 					const expiresAt = Date.now() + resetTokenDurationMs;
 					await credentialStore.saveResetToken({
